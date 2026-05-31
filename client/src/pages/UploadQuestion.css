@@ -1,0 +1,1156 @@
+/* ============================================
+   Upload Question — Premium Styling
+   Matches TopKorbo warm design system
+   ============================================ */
+
+/* ---- Page Layout ---- */
+.uq-workspace {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  padding: 32px 32px 180px;
+  max-width: 960px;
+  margin: 0 auto;
+  animation: uqFadeIn 0.5s ease-out;
+}
+
+@keyframes uqFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Section Cards ---- */
+.uq-section {
+  background: var(--bg-card);
+  border: 1px solid rgba(75, 46, 43, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.uq-section:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(192, 133, 82, 0.18);
+}
+
+.uq-section__title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uq-section__title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(192, 133, 82, 0.12);
+  color: var(--sky-blue);
+  flex-shrink: 0;
+}
+
+.uq-section__desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+/* ---- Type Toggle ---- */
+.uq-type-toggle {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.uq-type-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border: 2px solid rgba(75, 46, 43, 0.1);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.uq-type-btn:hover {
+  border-color: rgba(192, 133, 82, 0.3);
+  background: rgba(192, 133, 82, 0.06);
+}
+
+.uq-type-btn--active {
+  border-color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.1);
+  color: var(--sky-blue);
+  box-shadow: 0 2px 12px rgba(192, 133, 82, 0.15);
+}
+
+.uq-type-btn--active:hover {
+  border-color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.14);
+}
+
+/* ---- LaTeX Editor Area ---- */
+.uq-latex-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---- Math Keyboard / Toolbar ---- */
+.uq-math-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(192, 133, 82, 0.04);
+  border: 1px solid rgba(192, 133, 82, 0.15);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+
+.uq-math-toolbar__label {
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--sky-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px dashed rgba(192, 133, 82, 0.15);
+  padding-bottom: 6px;
+  display: block;
+}
+
+.uq-math-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom Scrollbar for Math Buttons */
+.uq-math-buttons::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.uq-math-buttons::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.uq-math-buttons::-webkit-scrollbar-thumb {
+  background: rgba(192, 133, 82, 0.2);
+  border-radius: 4px;
+}
+
+.uq-math-buttons::-webkit-scrollbar-thumb:hover {
+  background: rgba(192, 133, 82, 0.35);
+}
+
+.uq-math-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--white);
+  border: 1px solid rgba(75, 46, 43, 0.12);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.uq-math-btn:hover {
+  border-color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(192, 133, 82, 0.12);
+}
+
+.uq-math-btn:active {
+  transform: translateY(0);
+}
+
+.uq-math-btn .katex {
+  font-size: 0.95em;
+}
+
+/* ---- Editor Row (Textarea + Upload Column) ---- */
+.uq-editor-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.uq-editor-row__textarea-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.uq-editor-row__upload-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+}
+
+/* ---- Diagram Upload Dropzone ---- */
+.uq-diagram-upload-dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 16px;
+  background: var(--bg-primary);
+  border: 2px dashed rgba(192, 133, 82, 0.25);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.uq-diagram-upload-dropzone:hover {
+  border-color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.06);
+  box-shadow: 0 4px 12px rgba(192, 133, 82, 0.05);
+}
+
+.uq-diagram-upload-icon {
+  color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.1);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  transition: transform var(--transition-base);
+}
+
+.uq-diagram-upload-dropzone:hover .uq-diagram-upload-icon {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.uq-diagram-upload-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.uq-diagram-upload-subtext {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ---- Diagram Preview Card ---- */
+.uq-diagram-preview-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--white);
+  border: 1.5px solid rgba(192, 133, 82, 0.18);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.uq-diagram-preview-img {
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.uq-diagram-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.uq-diagram-remove-btn:hover {
+  background: #DC2626;
+  color: var(--white);
+  border-color: #DC2626;
+}
+
+/* ---- Live Preview Diagram Styles ---- */
+.uq-preview-diagram-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  padding: 10px;
+  background: var(--white);
+  border: 1px solid rgba(192, 133, 82, 0.12);
+  border-radius: var(--radius-sm);
+}
+
+.uq-preview-diagram {
+  max-height: 200px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* ---- Recent Card Diagram Styles ---- */
+.uq-recent-card__diagram {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid rgba(192, 133, 82, 0.12);
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.uq-recent-card__diagram img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.uq-textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 16px 18px;
+  border: 1.5px solid rgba(75, 46, 43, 0.12);
+  border-radius: var(--radius-md);
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  resize: vertical;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+}
+
+.uq-textarea:focus {
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.12);
+}
+
+.uq-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ---- LaTeX Preview ---- */
+.uq-preview-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.uq-preview-box {
+  min-height: 56px;
+  padding: 18px 20px;
+  background: rgba(255, 248, 240, 0.7);
+  border: 1px dashed rgba(192, 133, 82, 0.25);
+  border-radius: var(--radius-md);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.uq-preview-box--empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.88rem;
+}
+
+.uq-preview-box .katex {
+  font-size: 1.15em;
+}
+
+/* ---- MCQ Options ---- */
+.uq-options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.uq-option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-primary);
+  border: 1.5px solid rgba(75, 46, 43, 0.08);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.uq-option-row:hover {
+  border-color: rgba(192, 133, 82, 0.2);
+}
+
+.uq-option-row--correct {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.uq-option-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(192, 133, 82, 0.1);
+  color: var(--sky-blue);
+  font-weight: 800;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.uq-option-row--correct .uq-option-letter {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.uq-option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uq-option-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(75, 46, 43, 0.1);
+  border-radius: 8px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  background: var(--white);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.uq-option-input:focus {
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 0 2px rgba(192, 133, 82, 0.1);
+}
+
+.uq-option-preview {
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 248, 240, 0.6);
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  overflow-x: auto;
+}
+
+.uq-option-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.uq-correct-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.uq-correct-radio input[type="radio"] {
+  accent-color: #059669;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.uq-option-remove-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uq-option-remove-btn:hover {
+  color: #DC2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.uq-add-option-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: 2px dashed rgba(192, 133, 82, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--sky-blue);
+  font-weight: 650;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.uq-add-option-btn:hover {
+  border-color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.04);
+}
+
+.uq-add-option-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Form Fields / Dropdowns ---- */
+.uq-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.uq-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.uq-form-group--full {
+  grid-column: 1 / -1;
+}
+
+.uq-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.uq-select,
+.uq-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid rgba(75, 46, 43, 0.12);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--white);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  appearance: none;
+}
+
+.uq-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235c4d4c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.uq-select:focus,
+.uq-input:focus {
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.1);
+}
+
+/* ---- Tags Section ---- */
+.uq-tags-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.uq-tag-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--bg-primary);
+  border: 1.5px solid rgba(75, 46, 43, 0.08);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  flex-wrap: wrap;
+}
+
+.uq-tag-card:hover {
+  border-color: rgba(192, 133, 82, 0.2);
+}
+
+.uq-tag-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.uq-tag-badge--board {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.uq-tag-badge--admission {
+  background: rgba(168, 85, 247, 0.1);
+  color: #7c3aed;
+}
+
+.uq-tag-fields {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.uq-tag-fields .uq-select,
+.uq-tag-fields .uq-input {
+  min-width: 120px;
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+}
+
+.uq-tag-remove-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.uq-tag-remove-btn:hover {
+  color: #DC2626;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.uq-add-tag-row {
+  display: flex;
+  gap: 10px;
+}
+
+.uq-add-tag-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: 2px dashed rgba(192, 133, 82, 0.2);
+  border-radius: var(--radius-sm);
+  background: none;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.uq-add-tag-btn:hover {
+  border-color: currentColor;
+  background: rgba(192, 133, 82, 0.04);
+}
+
+.uq-add-tag-btn--board {
+  color: #2563eb;
+}
+
+.uq-add-tag-btn--admission {
+  color: #7c3aed;
+}
+
+/* ---- Submit Bar ---- */
+.uq-submit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.uq-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 40px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-cta);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-base);
+}
+
+.uq-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.uq-submit-btn:active {
+  transform: translateY(0);
+}
+
+.uq-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- Success / Error Toast ---- */
+.uq-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  animation: uqSlideIn 0.35s ease-out;
+}
+
+@keyframes uqSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.uq-toast--success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.uq-toast--error {
+  background: rgba(220, 38, 38, 0.08);
+  color: #DC2626;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+/* ---- Recent Questions List ---- */
+.uq-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.uq-recent-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--bg-primary);
+  border: 1px solid rgba(75, 46, 43, 0.06);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.uq-recent-card:hover {
+  border-color: rgba(192, 133, 82, 0.15);
+  box-shadow: var(--shadow-sm);
+}
+
+.uq-recent-card__type-badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.uq-recent-card__type-badge--mcq {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.uq-recent-card__type-badge--written {
+  background: rgba(234, 179, 8, 0.12);
+  color: #b45309;
+}
+
+.uq-recent-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.uq-recent-card__question {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  overflow-x: auto;
+}
+
+.uq-recent-card__meta {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.uq-recent-card__tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.uq-recent-card__tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(192, 133, 82, 0.08);
+  color: var(--sky-blue);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .uq-workspace {
+    padding: 0 16px 32px;
+  }
+
+  .uq-section {
+    padding: 20px 18px;
+  }
+
+  .uq-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .uq-type-toggle {
+    flex-direction: column;
+  }
+
+  .uq-tag-card {
+    flex-direction: column;
+  }
+
+  .uq-tag-fields {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .uq-tag-fields .uq-select,
+  .uq-tag-fields .uq-input {
+    width: 100%;
+  }
+
+  .uq-add-tag-row {
+    flex-direction: column;
+  }
+
+  .uq-submit-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .uq-submit-btn {
+    justify-content: center;
+  }
+
+  .uq-option-row {
+    flex-direction: column;
+  }
+
+  .uq-option-actions {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* ==========================================================================
+   Floating / Docked Math Keyboard
+   ========================================================================== */
+.uq-keyboard-dock {
+  position: fixed;
+  bottom: 0;
+  left: 280px; /* Offset for desktop sidebar width */
+  right: 0;
+  background: var(--white);
+  border-top: 2px solid rgba(192, 133, 82, 0.2);
+  box-shadow: 0 -10px 40px rgba(75, 46, 43, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: uqKeyboardSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+@keyframes uqKeyboardSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.uq-keyboard-dock__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: rgba(192, 133, 82, 0.05);
+  border-bottom: 1px solid rgba(192, 133, 82, 0.12);
+  gap: 16px;
+}
+
+.uq-keyboard-dock__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  color: var(--sky-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.uq-keyboard-dock__tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+  flex: 1;
+}
+
+.uq-keyboard-dock__tab-btn {
+  background: none;
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.uq-keyboard-dock__tab-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  color: var(--sky-blue);
+}
+
+.uq-keyboard-dock__tab-btn--active {
+  background: var(--sky-blue);
+  color: var(--white) !important;
+  box-shadow: 0 2px 8px rgba(192, 133, 82, 0.25);
+}
+
+.uq-keyboard-dock__close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.uq-keyboard-dock__close-btn:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #DC2626;
+}
+
+.uq-keyboard-dock__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 24px 20px;
+  max-height: 150px;
+  overflow-y: auto;
+  background: #FFFBF7;
+}
+
+.uq-keyboard-dock__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--white);
+  border: 1px solid rgba(75, 46, 43, 0.12);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.uq-keyboard-dock__key:hover {
+  border-color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(192, 133, 82, 0.14);
+}
+
+.uq-keyboard-dock__key:active {
+  transform: translateY(0);
+}
+
+.uq-keyboard-dock__key .katex {
+  font-size: 1.05em;
+}
+
+/* Floating Keyboard Toggle Button */
+.uq-keyboard-toggle-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 32px;
+  background: var(--gradient-cta);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-glow);
+  z-index: 999;
+  transition: all var(--transition-base);
+  animation: uqKeyboardBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes uqKeyboardBounceIn {
+  from { opacity: 0; transform: scale(0.8) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.uq-keyboard-toggle-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(192, 133, 82, 0.3);
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .uq-keyboard-dock {
+    left: 0;
+  }
+  
+  .uq-keyboard-dock__header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  
+  .uq-keyboard-dock__title {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .uq-keyboard-dock__close-btn {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+  }
+  
+  .uq-keyboard-dock__tabs {
+    width: 100%;
+    margin-right: 28px;
+  }
+  
+  .uq-keyboard-dock__body {
+    padding: 12px 16px 16px;
+    gap: 6px;
+    max-height: 120px;
+  }
+  
+  .uq-keyboard-dock__key {
+    min-width: 38px;
+    height: 34px;
+    padding: 0 8px;
+  }
+  
+  .uq-keyboard-toggle-btn {
+    bottom: 16px;
+    right: 16px;
+    padding: 10px 16px;
+  }
+}
+

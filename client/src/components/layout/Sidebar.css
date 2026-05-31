@@ -1,0 +1,335 @@
+/* ============================================
+   Sidebar Base Styling
+   ============================================ */
+.dashboard-sidebar {
+  width: 280px;
+  background-color: var(--white);
+  border-right: 1.5px solid rgba(75, 46, 43, 0.12);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-sidebar__logo-container {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(75, 46, 43, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.dashboard-sidebar__logo-svg {
+  width: 38px;
+  height: 38px;
+}
+
+.dashboard-sidebar__logo-text {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.dashboard-sidebar__nav {
+  flex: 1;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+.dashboard-sidebar__menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dashboard-sidebar__menu-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.dashboard-sidebar__menu-btn:hover {
+  background-color: rgba(230, 204, 178, 0.2);
+  color: var(--text-primary);
+}
+
+.dashboard-sidebar__menu-btn--active {
+  background-color: var(--sky-blue);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.15);
+}
+
+.dashboard-sidebar__menu-btn--active:hover {
+  background-color: var(--sky-blue);
+  color: var(--white);
+}
+
+.dashboard-sidebar__footer {
+  padding: 20px;
+  border-top: 1px solid rgba(75, 46, 43, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: rgba(255, 248, 240, 0.5);
+}
+
+.dashboard-sidebar__logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: none;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: var(--radius-sm);
+  color: #DC2626;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dashboard-sidebar__logout-btn:hover {
+  background-color: rgba(220, 38, 38, 0.08);
+  border-color: #DC2626;
+}
+
+.dashboard-sidebar__divider {
+  border: 0;
+  height: 1px;
+  background-color: rgba(75, 46, 43, 0.08);
+  margin: 0;
+}
+
+.dashboard-sidebar__profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-sidebar__avatar-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--white);
+  box-shadow: 0 2px 8px rgba(140, 90, 60, 0.15);
+  background-color: var(--sky-blue);
+  flex-shrink: 0;
+}
+
+.dashboard-sidebar__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dashboard-sidebar__avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.dashboard-sidebar__user-info {
+  overflow: hidden;
+}
+
+.dashboard-sidebar__user-name {
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.dashboard-sidebar__user-email {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* ============================================
+   Collapsible Sidebar Premium Styling Overrides
+   ============================================ */
+.dashboard-sidebar--collapsed {
+  width: 80px !important;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar__logo-container {
+  flex-direction: column-reverse;
+  gap: 16px;
+  padding: 24px 8px;
+  align-items: center;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar__logo {
+  justify-content: center;
+  width: 100%;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar__menu-btn {
+  justify-content: center;
+  padding: 12px;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar__menu-icon {
+  margin: 0;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar__footer {
+  padding: 20px 8px;
+  align-items: center;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar__profile {
+  justify-content: center;
+  width: 100%;
+}
+
+/* Sidebar Toggle Button styling matching uploaded screen */
+.dashboard-sidebar__toggle-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background-color: #F3F4F6;
+  border: 1.2px solid #E5E7EB;
+  border-radius: 8px;
+  color: #4B5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dashboard-sidebar__toggle-btn:hover {
+  background-color: #E5E7EB;
+  color: #1F2937;
+  transform: scale(1.03);
+}
+
+.dashboard-sidebar__toggle-icon {
+  stroke-width: 2.2;
+}
+
+/* Custom premium hover tooltips */
+.dashboard-sidebar__toggle-tooltip {
+  position: absolute;
+  top: 50%;
+  left: 125%;
+  transform: translateY(-50%) translateX(10px);
+  background-color: #000000;
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Tooltip arrow pointing to the button */
+.dashboard-sidebar__toggle-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #000000 transparent transparent;
+}
+
+.dashboard-sidebar__toggle-btn:hover .dashboard-sidebar__toggle-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Yellow highlighted target for 'sidebar' keyword */
+.dashboard-sidebar__toggle-tooltip .tooltip-target {
+  color: #D4A373;
+}
+
+/* If collapsed, adjust tooltip positions to remain perfectly visible */
+.dashboard-sidebar--collapsed .dashboard-sidebar__toggle-tooltip {
+  left: 125%;
+}
+
+/* ============================================
+   Responsive Layout Breakpoints (Mobile/Tablet)
+   ============================================ */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    width: 100% !important;
+    height: auto;
+    border-right: none;
+    border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
+  }
+
+  .dashboard-sidebar__nav {
+    display: none;
+  }
+
+  .dashboard-sidebar__footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+  }
+
+  .dashboard-sidebar__logout-btn {
+    width: auto;
+  }
+
+  .dashboard-sidebar__divider {
+    display: none;
+  }
+}
