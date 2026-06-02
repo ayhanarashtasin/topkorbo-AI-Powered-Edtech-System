@@ -16,7 +16,7 @@ const questionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['mcq', 'written'],
+    enum: ['mcq', 'written', 'cq'],
     required: [true, 'Question type is required']
   },
   // MCQ options — each option has LaTeX text and a correctness flag
@@ -26,6 +26,16 @@ const questionSchema = new mongoose.Schema({
       isCorrect: { type: Boolean, default: false }
     }
   ],
+  // CQ (Creative Question) details
+  cq: {
+    description: { type: String },
+    parts: [
+      {
+        label: { type: String, enum: ['a', 'b', 'c', 'd'] },
+        text: { type: String }
+      }
+    ]
+  },
   subject: {
     type: String,
     required: [true, 'Subject is required'],
@@ -80,7 +90,7 @@ const questionSchema = new mongoose.Schema({
   }
 });
 
-// Validate MCQ questions must have at least 2 options
+// Validate questions based on type (MCQ/CQ)
 questionSchema.pre('validate', function (next) {
   if (this.type === 'mcq') {
     const validOptions = (this.options || []).filter(o => o.text && o.text.trim());
@@ -93,6 +103,18 @@ questionSchema.pre('validate', function (next) {
     const hasCorrect = validOptions.some(o => o.isCorrect);
     if (!hasCorrect) {
       return next(new Error('MCQ questions must have at least one correct answer'));
+    }
+  } else if (this.type === 'cq') {
+    if (!this.cq || !this.cq.description || !this.cq.description.trim()) {
+      return next(new Error('Creative Question must have a description (stem)'));
+    }
+    const parts = this.cq.parts || [];
+    if (parts.length !== 4) {
+      return next(new Error('Creative Question must have exactly 4 sub-questions (a, b, c, d)'));
+    }
+    const hasEmpty = parts.some(p => !p.text || !p.text.trim());
+    if (hasEmpty) {
+      return next(new Error('All 4 sub-questions must be filled'));
     }
   }
   next();

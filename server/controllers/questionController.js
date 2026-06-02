@@ -31,8 +31,8 @@ exports.createQuestion = async (req, res, next) => {
     if (!questionText || !questionText.trim()) {
       return ApiResponse.error(res, 'Question text is required', 400);
     }
-    if (!type || !['mcq', 'written'].includes(type)) {
-      return ApiResponse.error(res, 'Valid question type (mcq/written) is required', 400);
+    if (!type || !['mcq', 'written', 'cq'].includes(type)) {
+      return ApiResponse.error(res, 'Valid question type (mcq/written/cq) is required', 400);
     }
     if (!subject) {
       return ApiResponse.error(res, 'Subject is required', 400);
@@ -58,7 +58,8 @@ exports.createQuestion = async (req, res, next) => {
       chapter,
       topic,
       tags: tags || [],
-      options: type === 'mcq' ? (options || []) : []
+      options: (type === 'mcq' || type === 'written') ? (options || []) : [],
+      cq: type === 'cq' ? req.body.cq : undefined
     };
 
     const question = await Question.create(questionData);

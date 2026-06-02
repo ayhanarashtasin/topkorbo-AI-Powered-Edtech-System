@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiUpload, HiPencilAlt, HiCheckCircle, HiX, HiPlus, HiTrash, HiDocumentText, HiClipboardList } from 'react-icons/hi';
+import { HiUpload, HiPencilAlt, HiCheckCircle, HiX, HiPlus, HiTrash, HiDocumentText, HiClipboardList, HiLightBulb } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -287,6 +287,15 @@ export default function UploadQuestion() {
     { text: '', isCorrect: false },
     { text: '', isCorrect: false },
   ]);
+  const [showWrittenOptions, setShowWrittenOptions] = useState(false);
+  // CQ (Creative Question) — HSC Bangladesh format: stem + 4 sub-questions a-d
+  const [cqDescription, setCqDescription] = useState('');
+  const [cqParts, setCqParts] = useState([
+    { label: 'a', text: '' },
+    { label: 'b', text: '' },
+    { label: 'c', text: '' },
+    { label: 'd', text: '' },
+  ]);
   const [subject, setSubject] = useState('');
   const [paper, setPaper] = useState('');
   const [chapter, setChapter] = useState('');
@@ -384,6 +393,10 @@ export default function UploadQuestion() {
       textarea = document.getElementById('uq-question-textarea');
     } else if (focusedInput.type === 'option' && focusedInput.index !== null) {
       textarea = document.getElementById(`uq-option-input-${focusedInput.index}`);
+    } else if (focusedInput.type === 'cq-desc') {
+      textarea = document.getElementById('uq-cq-description-textarea');
+    } else if (focusedInput.type === 'cq-part' && focusedInput.index !== null) {
+      textarea = document.getElementById(`uq-cq-part-input-${focusedInput.index}`);
     }
 
     if (!textarea) return;
@@ -396,8 +409,12 @@ export default function UploadQuestion() {
 
     if (focusedInput.type === 'question') {
       setQuestionText(newText);
-    } else {
+    } else if (focusedInput.type === 'option') {
       updateOption(focusedInput.index, 'text', newText);
+    } else if (focusedInput.type === 'cq-desc') {
+      setCqDescription(newText);
+    } else if (focusedInput.type === 'cq-part') {
+      setCqParts(prev => prev.map((p, i) => i === focusedInput.index ? { ...p, text: newText } : p));
     }
 
     // Refocus and place cursor appropriately
@@ -475,10 +492,15 @@ export default function UploadQuestion() {
     if (!chapter) { showToast('error', t('uq.error.chapter_required')); return; }
     if (!topic.trim()) { showToast('error', t('uq.error.topic_required')); return; }
 
-    if (questionType === 'mcq') {
+    if (questionType === 'mcq' || (questionType === 'written' && showWrittenOptions)) {
       const validOpts = options.filter(o => o.text.trim());
       if (validOpts.length < 2) { showToast('error', t('uq.error.min_options')); return; }
       if (!validOpts.some(o => o.isCorrect)) { showToast('error', t('uq.error.correct_required')); return; }
+    }
+
+    if (questionType === 'cq') {
+      const filledParts = cqParts.filter(p => p.text.trim());
+      if (filledParts.length < 4) { showToast('error', t('uq.cq.error.parts_required')); return; }
     }
 
     setIsSubmitting(true);
@@ -489,7 +511,7 @@ export default function UploadQuestion() {
         questionText: questionText.trim(),
         imageUrl: imageUrl,
         type: questionType,
-        options: questionType === 'mcq' ? options.filter(o => o.text.trim()) : [],
+        options: (questionType === 'mcq' || (questionType === 'written' && showWrittenOptions)) ? options.filter(o => o.text.trim()) : [],
         subject,
         paper,
         chapter,
@@ -499,6 +521,13 @@ export default function UploadQuestion() {
           return t.university && t.year;
         })
       };
+
+      if (questionType === 'cq') {
+        body.cq = {
+          description: questionText.trim(),
+          parts: cqParts.map(p => ({ label: p.label, text: p.text.trim() }))
+        };
+      }
 
       const res = await fetch(`${base}/questions`, {
         method: 'POST',
@@ -517,6 +546,14 @@ export default function UploadQuestion() {
           { text: '', isCorrect: false },
           { text: '', isCorrect: false },
           { text: '', isCorrect: false },
+        ]);
+        setShowWrittenOptions(false);
+        setCqDescription('');
+        setCqParts([
+          { label: 'a', text: '' },
+          { label: 'b', text: '' },
+          { label: 'c', text: '' },
+          { label: 'd', text: '' },
         ]);
         setSubject('');
         setPaper('');
@@ -590,6 +627,14 @@ export default function UploadQuestion() {
                 <HiPencilAlt size={18} />
                 {t('uq.type.written')}
               </button>
+              <button
+                type="button"
+                className={`uq-type-btn ${questionType === 'cq' ? 'uq-type-btn--active' : ''}`}
+                onClick={() => setQuestionType('cq')}
+              >
+                <HiLightBulb size={18} />
+                {t('uq.type.cq')}
+              </button>
             </div>
           </div>
 
@@ -621,7 +666,7 @@ export default function UploadQuestion() {
                         type="button"
                         className="uq-diagram-remove-btn"
                         onClick={removeImage}
-                        title={language === 'en' ? 'Remove Diagram' : 'ডায়াগ্রাম মুছুন'}
+                        title={language === 'en' ? 'Remove Diagram' : 'ডায়াগ্রাম মুছুন'}
                       >
                         <HiTrash size={16} />
                         <span>{language === 'en' ? 'Remove' : 'মুছুন'}</span>
@@ -638,8 +683,21 @@ export default function UploadQuestion() {
                       />
                       <span className="uq-diagram-upload-icon"><HiUpload size={24} /></span>
                       <span className="uq-diagram-upload-text">
-                        {language === 'en' ? 'Add Math/Physics Diagram' : 'ডায়াগ্রাম বা ছবি যোগ করুন'}
-                      </span>
+                        {language === 'en'
+                  ? (focusedInput.type === 'question'
+                      ? 'Active Input: Question Text'
+                      : focusedInput.type === 'cq-desc'
+                        ? 'Active Input: CQ Description'
+                        : focusedInput.type === 'cq-part'
+                          ? 'Active Input: CQ Sub-question'
+                          : 'Active Input: MCQ Option')
+                  : (focusedInput.type === 'question'
+                      ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
+                      : focusedInput.type === 'cq-desc'
+                        ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
+                        : focusedInput.type === 'cq-part'
+                          ? 'সক্রিয় ইনপুট: CQ উপ-প্রশ্ন'
+                          : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
                       <span className="uq-diagram-upload-subtext">
                         {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
                       </span>
@@ -668,8 +726,71 @@ export default function UploadQuestion() {
             </div>
           </div>
 
+          {/* ── Section: Written Options Toggle (conditional) ── */}
+          {questionType === 'written' && (
+            <div className="uq-section">
+              <div className="uq-section__title">
+                <span className="uq-section__title-icon"><HiClipboardList size={18} /></span>
+                {language === 'en' ? 'Descriptive Options' : 'বর্ণনামূলক অপশন'}
+              </div>
+              <p className="uq-section__desc">
+                {language === 'en' 
+                  ? 'Would you like to include multiple choice options for this descriptive/written question?' 
+                  : 'আপনি কি এই বর্ণনামূলক/লিখিত প্রশ্নের সাথে বহুনির্বাচনী অপশন যুক্ত করতে চান?'}
+              </p>
+              <div style={{ marginTop: '12px' }}>
+                <label className="uq-correct-radio" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showWrittenOptions}
+                    onChange={e => setShowWrittenOptions(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--sky-blue)', cursor: 'pointer' }}
+                  />
+                  <span>
+                    {language === 'en' ? 'Add multiple choice options (MCQ)' : 'বহুনির্বাচনী অপশন (MCQ) যুক্ত করুন'}
+                  </span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* ── Section 3: CQ Sub-questions (conditional) ── */}
+          {questionType === 'cq' && (
+            <div className="uq-section">
+              <div className="uq-section__title">
+                <span className="uq-section__title-icon"><HiLightBulb size={18} /></span>
+                {t('uq.section.cq')}
+              </div>
+              <p className="uq-section__desc">{t('uq.section.cq.desc')}</p>
+              <div className="uq-options-grid">
+                {cqParts.map((part, idx) => (
+                  <div key={part.label} className="uq-option-row">
+                    <span className="uq-option-letter">{part.label.toUpperCase()}</span>
+                    <div className="uq-option-content">
+                      <input
+                        type="text"
+                        id={`uq-cq-part-input-${idx}`}
+                        className="uq-option-input"
+                        value={part.text}
+                        onChange={e => setCqParts(prev => prev.map((p, i) => i === idx ? { ...p, text: e.target.value } : p))}
+                        onFocus={() => setFocusedInput({ type: 'cq-part', index: idx })}
+                        placeholder={`${t('uq.cq.part.placeholder')} ${part.label.toUpperCase()}`}
+                      />
+                      {part.text.trim() && (
+                        <div
+                          className="uq-option-preview"
+                          dangerouslySetInnerHTML={{ __html: renderLatex(part.text) }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Section 3: MCQ Options (conditional) ── */}
-          {questionType === 'mcq' && (
+          {(questionType === 'mcq' || (questionType === 'written' && showWrittenOptions)) && (
             <div className="uq-section">
               <div className="uq-section__title">
                 <span className="uq-section__title-icon"><HiCheckCircle size={18} /></span>
@@ -906,6 +1027,19 @@ export default function UploadQuestion() {
                         className="uq-recent-card__question"
                         dangerouslySetInnerHTML={{ __html: renderLatex(q.questionText.length > 120 ? q.questionText.slice(0, 120) + '…' : q.questionText) }}
                       />
+                      {q.type === 'cq' && q.cq && q.cq.parts && (
+                        <div className="uq-recent-card__cq-parts">
+                          {q.cq.parts.map((p, idx) => (
+                            <div key={idx} className="uq-recent-card__cq-part">
+                              <span className="uq-recent-card__cq-part-label">{p.label.toUpperCase()}: </span>
+                              <span
+                                className="uq-recent-card__cq-part-text"
+                                dangerouslySetInnerHTML={{ __html: renderLatex(p.text) }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <span className="uq-recent-card__meta">
                         {q.subject} · {q.paper} Paper · {q.chapter}
                       </span>
@@ -937,8 +1071,20 @@ export default function UploadQuestion() {
               <HiClipboardList size={16} />
               <span>
                 {language === 'en'
-                  ? `Active Input: ${focusedInput.type === 'question' ? 'Question Text' : `MCQ Option ${String.fromCharCode(65 + focusedInput.index)}`}`
-                  : `সক্রিয় ইনপুট: ${focusedInput.type === 'question' ? 'প্রশ্নের টেক্সট' : `MCQ অপশন ${String.fromCharCode(65 + focusedInput.index)}`}`}
+                  ? (focusedInput.type === 'question'
+                      ? 'Active Input: Question Text'
+                      : focusedInput.type === 'cq-desc'
+                        ? 'Active Input: CQ Description'
+                        : focusedInput.type === 'cq-part'
+                          ? `Active Input: CQ Sub-question ${focusedInput.index + 1}`
+                          : `Active Input: MCQ Option ${String.fromCharCode(65 + focusedInput.index)}`)
+                  : (focusedInput.type === 'question'
+                      ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
+                      : focusedInput.type === 'cq-desc'
+                        ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
+                        : focusedInput.type === 'cq-part'
+                          ? `সক্রিয় ইনপুট: CQ উপ-প্রশ্ন ${focusedInput.index + 1}`
+                          : `সক্রিয় ইনপুট: MCQ অপশন ${String.fromCharCode(65 + focusedInput.index)}`)}
               </span>
             </div>
             <div className="uq-keyboard-dock__tabs">
