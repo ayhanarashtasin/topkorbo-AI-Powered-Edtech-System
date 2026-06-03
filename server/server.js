@@ -57,6 +57,50 @@ app.get('/api/health', (req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 TopKorbo Server running on port ${PORT}`);
 });
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Error: Port ${PORT} is already in use.`);
+    console.error(`💡 To fix this manually, you can run:`);
+    console.error(`   Windows (PowerShell): Stop-Process -Id (Get-NetTCPConnection -LocalPort ${PORT}).OwningProcess -Force`);
+    console.error(`   Linux/macOS: kill -9 $(lsof -t -i:${PORT})`);
+    console.error(`\nAttempting to automatically free port ${PORT}...`);
+
+    try {
+      const { execSync } = require('child_process');
+      if (process.platform === 'win32') {
+        const output = execSync('netstat -ano', { encoding: 'utf8' });
+        const lines = output.split('\n');
+        let killed = false;
+        for (const line of lines) {
+          if (line.includes(`:${PORT}`) && line.includes('LISTENING')) {
+            const parts = line.trim().split(/\s+/);
+            const pid = parts[parts.length - 1];
+            if (pid && !isNaN(pid) && pid !== '0') {
+              console.log(`Killing process with PID ${pid} occupying port ${PORT}...`);
+              execSync(`taskkill /F /PID ${pid}`);
+              killed = true;
+            }
+          }
+        }
+        if (killed) {
+          console.log(`✅ Port ${PORT} freed! Please restart the server.`);
+        } else {
+          console.log(`Could not identify the listening process on port ${PORT}.`);
+        }
+      } else {
+        execSync(`kill -9 $(lsof -t -i:${PORT})`);
+        console.log(`✅ Port ${PORT} freed! Please restart the server.`);
+      }
+    } catch (killError) {
+      console.error(`⚠️ Could not automatically free port ${PORT}:`, killError.message);
+    }
+    process.exit(1);
+  } else {
+    throw err;
+  }
+});
+

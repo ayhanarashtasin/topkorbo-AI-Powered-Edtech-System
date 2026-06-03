@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import LandingPage from './pages/LandingPage';
@@ -8,29 +9,48 @@ import BecomeTeacher from './pages/BecomeTeacher';
 import Setting from './pages/Setting';
 import UploadQuestion from './pages/UploadQuestion';
 import QuestionBank from './pages/QuestionBank';
+import MockTest from './pages/MockTest';
+import MockTestExam from './pages/MockTestExam';
 import './styles/index.css';
 import './styles/animations.css';
 
 function AppContent() {
   return (
-    <Routes>
-      <Route 
-        path="/" 
-        element={
-          <>
-            <Navbar />
-            <LandingPage />
-            <Footer />
-          </>
-        } 
+    <>
+      <Toaster 
+        position="top-right" 
+        toastOptions={{ 
+          duration: 4000,
+          style: {
+            background: '#333',
+            color: '#fff',
+            fontWeight: '500',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }
+        }} 
       />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/qbank" element={<QuestionBank />} />
-      <Route path="/setting" element={<Setting />} />
-      <Route path="/settings" element={<Setting />} />
-      <Route path="/teacher" element={<BecomeTeacher />} />
-      <Route path="/upload-question" element={<UploadQuestion />} />
-    </Routes>
+      <Routes>
+        <Route 
+          path="/" 
+          element={
+            <>
+              <Navbar />
+              <LandingPage />
+              <Footer />
+            </>
+          } 
+        />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/qbank" element={<QuestionBank />} />
+        <Route path="/setting" element={<Setting />} />
+        <Route path="/settings" element={<Setting />} />
+        <Route path="/teacher" element={<BecomeTeacher />} />
+        <Route path="/upload-question" element={<UploadQuestion />} />
+        <Route path="/mock-test" element={<MockTest />} />
+        <Route path="/mock-test/exam" element={<MockTestExam />} />
+      </Routes>
+    </>
   );
 }
 

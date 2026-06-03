@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
@@ -28,6 +28,11 @@ export default function Sidebar({ activeTab, user }) {
       id: 'qbank',
       label: t('db.menu.qbank'),
       icon: <HiBookOpen size={20} />
+    });
+    menuItems.push({
+      id: 'mock-test',
+      label: t('db.menu.mock_test'),
+      icon: <HiClipboardList size={20} />
     });
   }
 
@@ -110,6 +115,7 @@ export default function Sidebar({ activeTab, user }) {
                   if (item.id === 'teacher') navigate('/teacher');
                   else if (item.id === 'qbank') navigate('/qbank');
                   else if (item.id === 'upload-question') navigate('/upload-question');
+                  else if (item.id === 'mock-test') navigate('/mock-test');
                   else navigate('/dashboard');
                 }}
                 className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''}`}

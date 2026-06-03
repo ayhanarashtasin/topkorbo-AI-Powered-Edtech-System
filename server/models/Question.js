@@ -67,6 +67,10 @@ const questionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Topic is required']
   },
+  solution: {
+    type: String,
+    default: ''
+  },
   // Flexible tag system for Board and Admission categorization
   tags: [
     {

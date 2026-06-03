@@ -301,6 +301,7 @@ export default function UploadQuestion() {
   const [chapter, setChapter] = useState('');
   const [topic, setTopic] = useState('');
   const [tags, setTags] = useState([]);
+  const [solution, setSolution] = useState('');
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -391,6 +392,8 @@ export default function UploadQuestion() {
     let textarea;
     if (focusedInput.type === 'question') {
       textarea = document.getElementById('uq-question-textarea');
+    } else if (focusedInput.type === 'solution') {
+      textarea = document.getElementById('uq-solution-textarea');
     } else if (focusedInput.type === 'option' && focusedInput.index !== null) {
       textarea = document.getElementById(`uq-option-input-${focusedInput.index}`);
     } else if (focusedInput.type === 'cq-desc') {
@@ -409,6 +412,8 @@ export default function UploadQuestion() {
 
     if (focusedInput.type === 'question') {
       setQuestionText(newText);
+    } else if (focusedInput.type === 'solution') {
+      setSolution(newText);
     } else if (focusedInput.type === 'option') {
       updateOption(focusedInput.index, 'text', newText);
     } else if (focusedInput.type === 'cq-desc') {
@@ -516,6 +521,7 @@ export default function UploadQuestion() {
         paper,
         chapter,
         topic: topic.trim(),
+        solution: solution.trim(),
         tags: tags.filter(t => {
           if (t.category === 'board') return t.board && t.year;
           return t.university && t.year;
@@ -541,6 +547,7 @@ export default function UploadQuestion() {
         // Reset form
         setQuestionText('');
         setImageUrl('');
+        setSolution('');
         setOptions([
           { text: '', isCorrect: true },
           { text: '', isCorrect: false },
@@ -686,18 +693,22 @@ export default function UploadQuestion() {
                         {language === 'en'
                   ? (focusedInput.type === 'question'
                       ? 'Active Input: Question Text'
-                      : focusedInput.type === 'cq-desc'
-                        ? 'Active Input: CQ Description'
-                        : focusedInput.type === 'cq-part'
-                          ? 'Active Input: CQ Sub-question'
-                          : 'Active Input: MCQ Option')
+                      : focusedInput.type === 'solution'
+                        ? 'Active Input: Solution'
+                        : focusedInput.type === 'cq-desc'
+                          ? 'Active Input: CQ Description'
+                          : focusedInput.type === 'cq-part'
+                            ? 'Active Input: CQ Sub-question'
+                            : 'Active Input: MCQ Option')
                   : (focusedInput.type === 'question'
                       ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
-                      : focusedInput.type === 'cq-desc'
-                        ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
-                        : focusedInput.type === 'cq-part'
-                          ? 'সক্রিয় ইনপুট: CQ উপ-প্রশ্ন'
-                          : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
+                      : focusedInput.type === 'solution'
+                        ? 'সক্রিয় ইনপুট: সমাধান ব্যাখ্যা'
+                        : focusedInput.type === 'cq-desc'
+                          ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
+                          : focusedInput.type === 'cq-part'
+                            ? 'সক্রিয় ইনপুট: CQ উপ-প্রশ্ন'
+                            : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
                       <span className="uq-diagram-upload-subtext">
                         {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
                       </span>
@@ -851,6 +862,42 @@ export default function UploadQuestion() {
               </div>
             </div>
           )}
+
+          {/* ── Section: Solution Explanation (LaTeX Editor) ── */}
+          <div className="uq-section animate-fade-in">
+            <div className="uq-section__title">
+              <span className="uq-section__title-icon"><HiLightBulb size={18} /></span>
+              {language === 'en' ? 'Solution Explanation' : 'সমাধান ব্যাখ্যা'}
+            </div>
+            <p className="uq-section__desc">
+              {language === 'en'
+                ? 'Provide a step-by-step solution to help students. LaTeX formulas ($x$ and $$x$$) are fully supported.'
+                : 'শিক্ষার্থীদের বোঝার জন্য ধাপে ধাপে সমাধান ব্যাখ্যা প্রদান করুন। LaTeX ফর্মুলা ($x$ এবং $$x$$) সমর্থন করে।'}
+            </p>
+            <div className="uq-latex-editor">
+              <textarea
+                id="uq-solution-textarea"
+                className="uq-textarea"
+                value={solution}
+                onChange={e => setSolution(e.target.value)}
+                onFocus={() => setFocusedInput({ type: 'solution', index: null })}
+                placeholder={language === 'en' ? 'Type step-by-step solution explanation here...' : 'এখানে সমাধান ব্যাখ্যা টাইপ করুন...'}
+                rows={4}
+              />
+              <span className="uq-preview-label">{t('uq.preview')}</span>
+              <div
+                className={`uq-preview-box ${!solution.trim() ? 'uq-preview-box--empty' : ''}`}
+              >
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: solution.trim()
+                      ? renderLatex(solution)
+                      : (language === 'en' ? 'LaTeX preview of the solution explanation will appear here…' : 'সমাধান ব্যাখ্যার LaTeX প্রিভিউ এখানে দেখা যাবে…')
+                  }}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* ── Section 4: Subject / Paper / Chapter / Topic ── */}
           <div className="uq-section">

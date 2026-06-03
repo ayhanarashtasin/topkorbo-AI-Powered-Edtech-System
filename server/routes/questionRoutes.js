@@ -11,4 +11,12 @@ router.post('/', auth, questionController.createQuestion);
 // @route   GET /api/questions/mine
 router.get('/mine', auth, questionController.getMyQuestions);
 
+// @desc    Get topics by subject, paper, and chapter
+// @route   GET /api/questions/topics
+router.get('/topics', auth, questionController.getTopicsForMockTest);
+
+// @desc    Fetch questions for mock test with filters
+// @route   POST /api/questions/mock-test
+router.post('/mock-test', auth, questionController.fetchMockTestQuestions);
+
 module.exports = router;
