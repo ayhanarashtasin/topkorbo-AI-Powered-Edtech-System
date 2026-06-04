@@ -7,6 +7,54 @@ import 'katex/dist/katex.min.css';
 import Confetti from 'react-confetti';
 import './MockTestExam.css';
 
+const BOARD_ABBRS = {
+  'Dhaka': 'DB',
+  'Comilla': 'CB',
+  'Rajshahi': 'RB',
+  'Jessore': 'JB',
+  'Chittagong': 'CtgB',
+  'Sylhet': 'SB',
+  'Barishal': 'BB',
+  'Dinajpur': 'DjB',
+  'Mymensingh': 'MB',
+  'Madrasa': 'MadB',
+  'Technical': 'TB'
+};
+
+const UNIV_ABBRS = {
+  'Dhaka University': 'DU',
+  'Chittagong University': 'CU',
+  'Rajshahi University': 'RU',
+  'Jahangirnagar University': 'JU',
+  'Agriculture (Cluster)': 'AGRI',
+  'GST (Cluster)': 'GST',
+  'CKRUET (Cluster)': 'CKRUET',
+  'IBA (DU)': 'IBA'
+};
+
+const getTagAbbreviation = (tag) => {
+  if (!tag) return '';
+  const yearStr = tag.year ? String(tag.year).slice(-2) : '';
+  
+  if (tag.category === 'board') {
+    const boardAbbr = BOARD_ABBRS[tag.board] || (tag.board ? `${tag.board.charAt(0).toUpperCase()}B` : '');
+    return yearStr ? `${boardAbbr}-${yearStr}` : boardAbbr;
+  } else {
+    const univ = tag.university || '';
+    const univAbbr = UNIV_ABBRS[univ] || univ;
+    return yearStr ? `${univAbbr}-${yearStr}` : univAbbr;
+  }
+};
+
+const getTagTitle = (tag) => {
+  if (!tag) return '';
+  if (tag.category === 'board') {
+    return `${tag.board} Board ${tag.year ? `- ${tag.year}` : ''}`;
+  } else {
+    return `${tag.university} ${tag.unit ? `(${tag.unit})` : ''} ${tag.year ? `- ${tag.year}` : ''}`;
+  }
+};
+
 export default function MockTestExam() {
   const { language } = useLanguage();
   const navigate = useNavigate();
@@ -21,13 +69,15 @@ export default function MockTestExam() {
   const [explanationModalQuestion, setExplanationModalQuestion] = useState(null);
   const [explanationTab, setExplanationTab] = useState('manual'); // 'manual' | 'ai' | 'video'
   const [filterType, setFilterType] = useState('all'); // 'all' | 'correct' | 'skipped' | 'wrong'
+  const [fromQbank, setFromQbank] = useState(false);
 
   useEffect(() => {
     const storedQuestions = sessionStorage.getItem('mock_exam_questions');
     const storedConfig = sessionStorage.getItem('mock_exam_config');
+    const storedFromQbank = sessionStorage.getItem('mock_exam_from_qbank') === 'true';
 
     if (!storedQuestions || !storedConfig) {
-      navigate('/mock-test');
+      navigate(storedFromQbank ? '/qbank' : '/mock-test');
       return;
     }
 
@@ -37,9 +87,10 @@ export default function MockTestExam() {
       setQuestions(parsedQuestions);
       setConfig(parsedConfig);
       setTimeLeft(parsedConfig.duration * 60);
+      setFromQbank(storedFromQbank);
     } catch (e) {
       console.error('Failed to parse exam data', e);
-      navigate('/mock-test');
+      navigate(storedFromQbank ? '/qbank' : '/mock-test');
     }
   }, [navigate]);
 
@@ -126,9 +177,10 @@ export default function MockTestExam() {
       'mock_exam_duration',
       'mock_negative_marking',
       'mock_exam_questions',
-      'mock_exam_config'
+      'mock_exam_config',
+      'mock_exam_from_qbank'
     ].forEach((key) => sessionStorage.removeItem(key));
-    navigate('/mock-test');
+    navigate(fromQbank ? '/qbank' : '/mock-test');
   };
 
   const handleOptionSelect = (questionId, optionIndex) => {
@@ -198,11 +250,15 @@ export default function MockTestExam() {
     <div className={`exam-room-container ${showResultModal ? 'exam-room-container--dimmed' : ''}`}>
       <header className={`exam-header-card ${isReviewMode ? 'exam-header-card--review' : ''}`}>
         {isReviewMode && (
-          <button type="button" className="exam-back-btn" onClick={() => navigate('/mock-test')}>
+          <button type="button" className="exam-back-btn" onClick={() => navigate(fromQbank ? '/qbank' : '/mock-test')}>
             <HiArrowLeft size={22} />
           </button>
         )}
-        <h1 className="exam-title">{language === 'en' ? 'Mock Test' : 'মক পরীক্ষা'}</h1>
+        <h1 className="exam-title">
+          {fromQbank
+            ? (language === 'en' ? 'Question Bank Exam' : 'প্রশ্নব্যাংক পরীক্ষা')
+            : (language === 'en' ? 'Mock Test' : 'মক পরীক্ষা')}
+        </h1>
 
         {isReviewMode ? (
           <>
@@ -244,7 +300,9 @@ export default function MockTestExam() {
               </button>
             </div>
             <button type="button" className="exam-start-again-btn" onClick={handleStartAgain}>
-              {language === 'en' ? 'Back to Mock Test' : 'মক টেস্টে ফিরে যাও'}
+              {fromQbank
+                ? (language === 'en' ? 'Back to Question Bank' : 'প্রশ্নব্যাংকে ফিরে যাও')
+                : (language === 'en' ? 'Back to Mock Test' : 'মক টেস্টে ফিরে যাও')}
             </button>
           </>
         ) : (
@@ -288,17 +346,36 @@ export default function MockTestExam() {
           return (
             <div key={questionKey} className="exam-question-card">
               {isReviewMode && (
-                <button
-                  type="button"
-                  className="exam-explanation-btn"
-                  onClick={() => {
-                    setExplanationModalQuestion(q);
-                    setExplanationTab('manual');
-                  }}
-                  title={language === 'en' ? 'Show Explanation' : 'ব্যাখ্যা দেখুন'}
-                >
-                  <HiEye size={20} />
-                </button>
+                <div className="exam-question-actions-top">
+                  {q.tags && q.tags.length > 0 && (
+                    <div className="exam-question-tags-wrapper">
+                      {q.tags.map((tag, tIdx) => {
+                        const abbr = getTagAbbreviation(tag);
+                        if (!abbr) return null;
+                        return (
+                          <span
+                            key={tIdx}
+                            className={`exam-question-tag exam-question-tag--${tag.category}`}
+                            title={getTagTitle(tag)}
+                          >
+                            {abbr}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="exam-explanation-btn"
+                    onClick={() => {
+                      setExplanationModalQuestion(q);
+                      setExplanationTab('manual');
+                    }}
+                    title={language === 'en' ? 'Show Explanation' : 'ব্যাখ্যা দেখুন'}
+                  >
+                    <HiEye size={20} />
+                  </button>
+                </div>
               )}
 
               <div className="exam-question-top">

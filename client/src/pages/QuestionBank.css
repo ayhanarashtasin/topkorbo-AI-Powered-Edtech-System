@@ -441,26 +441,85 @@
 }
 
 /* College card color themes */
-.qbank-card--college-0 { --college-color: #3B82F6; }
-.qbank-card--college-1 { --college-color: #8B5CF6; }
-.qbank-card--college-2 { --college-color: #EC4899; }
-.qbank-card--college-3 { --college-color: #F59E0B; }
-.qbank-card--college-4 { --college-color: #10B981; }
-.qbank-card--college-5 { --college-color: #EF4444; }
-.qbank-card--college-6 { --college-color: #06B6D4; }
-.qbank-card--college-7 { --college-color: #6366F1; }
-.qbank-card--college-8 { --college-color: #14B8A6; }
-.qbank-card--college-9 { --college-color: #F43F5E; }
-.qbank-card--college-10 { --college-color: #84CC16; }
-.qbank-card--college-11 { --college-color: #D946EF; }
-.qbank-card--college-12 { --college-color: #0EA5E9; }
-.qbank-card--college-13 { --college-color: #F97316; }
-.qbank-card--college-14 { --college-color: #64748B; }
-.qbank-card--college-15 { --college-color: #A855F7; }
-.qbank-card--college-16 { --college-color: #22C55E; }
-.qbank-card--college-17 { --college-color: #EAB308; }
-.qbank-card--college-18 { --college-color: #DC2626; }
-.qbank-card--college-19 { --college-color: #2563EB; }
+.qbank-card--college-0 {
+  --college-color: #3B82F6;
+}
+
+.qbank-card--college-1 {
+  --college-color: #8B5CF6;
+}
+
+.qbank-card--college-2 {
+  --college-color: #EC4899;
+}
+
+.qbank-card--college-3 {
+  --college-color: #F59E0B;
+}
+
+.qbank-card--college-4 {
+  --college-color: #10B981;
+}
+
+.qbank-card--college-5 {
+  --college-color: #EF4444;
+}
+
+.qbank-card--college-6 {
+  --college-color: #06B6D4;
+}
+
+.qbank-card--college-7 {
+  --college-color: #6366F1;
+}
+
+.qbank-card--college-8 {
+  --college-color: #14B8A6;
+}
+
+.qbank-card--college-9 {
+  --college-color: #F43F5E;
+}
+
+.qbank-card--college-10 {
+  --college-color: #84CC16;
+}
+
+.qbank-card--college-11 {
+  --college-color: #D946EF;
+}
+
+.qbank-card--college-12 {
+  --college-color: #0EA5E9;
+}
+
+.qbank-card--college-13 {
+  --college-color: #F97316;
+}
+
+.qbank-card--college-14 {
+  --college-color: #64748B;
+}
+
+.qbank-card--college-15 {
+  --college-color: #A855F7;
+}
+
+.qbank-card--college-16 {
+  --college-color: #22C55E;
+}
+
+.qbank-card--college-17 {
+  --college-color: #EAB308;
+}
+
+.qbank-card--college-18 {
+  --college-color: #DC2626;
+}
+
+.qbank-card--college-19 {
+  --college-color: #2563EB;
+}
 
 .qbank-card--college {
   background: linear-gradient(135deg, color-mix(in srgb, var(--college-color) 8%, transparent) 0%, rgba(255, 255, 255, 0.6) 100%);
@@ -642,4 +701,720 @@
   .qbank-locked-card {
     padding: 32px 20px;
   }
+}
+
+/* ==========================================================================
+   Options Page & Modal Dialog Styles
+   ========================================================================== */
+
+.qbank-options-page {
+  padding: 0 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.qbank-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(192, 133, 82, 0.05);
+  border: 1px solid rgba(192, 133, 82, 0.2);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  color: #8C5A3C;
+  font-family: var(--font-body);
+  font-weight: 750;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  margin-bottom: 20px;
+}
+
+.qbank-back-btn:hover {
+  background: rgba(192, 133, 82, 0.1);
+  border-color: rgba(192, 133, 82, 0.4);
+  transform: translateX(-4px);
+}
+
+.qbank-options-header-info {
+  margin-top: 10px;
+}
+
+.qbank-options-header-info h2 {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #8C5A3C;
+  margin: 0 0 6px 0;
+}
+
+.qbank-options-header-info p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.qbank-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.qbank-option-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1.5px solid rgba(192, 133, 82, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  box-shadow: 0 6px 20px rgba(140, 90, 60, 0.03);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  box-sizing: border-box;
+}
+
+.qbank-option-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08), 0 0 20px color-mix(in srgb, var(--option-color) 15%, transparent);
+  border-color: color-mix(in srgb, var(--option-color) 40%, transparent);
+}
+
+.qbank-option-card__visual {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-base);
+}
+
+.qbank-option-card:hover .qbank-option-card__visual {
+  transform: scale(1.1) rotate(2deg);
+}
+
+.qbank-option-card__info {
+  flex: 1;
+}
+
+.qbank-option-card__info h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.qbank-option-card__info p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.qbank-option-card__action {
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--option-color);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  transition: all var(--transition-base);
+}
+
+.qbank-option-card:hover .qbank-option-card__action {
+  transform: translateX(4px);
+}
+
+/* Modal Overlay & Card Styling */
+.qbank-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: qbFadeIn 0.2s ease-out;
+}
+
+.qbank-modal-card {
+  position: relative;
+  width: min(500px, 100%);
+  background: #FFFFFF;
+  border: 4px solid #E2E8F0;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
+  padding: 40px 32px 32px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: qbModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.qbank-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #F1F5F9;
+  color: #64748B;
+  border: 2px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qbank-modal-close:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+  transform: scale(1.05);
+}
+
+.qbank-modal-icon-wrapper {
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.qbank-modal-card h2 {
+  margin: 0 0 4px 0;
+  font-size: 1.5rem;
+  font-family: var(--font-heading);
+  color: #0F172A;
+  font-weight: 800;
+}
+
+.qbank-modal-subject {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #64748B;
+  background: #F1F5F9;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.qbank-modal-desc {
+  margin: 0 0 28px 0;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.qbank-modal-cta {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  background: #8C5A3C;
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 1rem;
+  border: none;
+  box-shadow: 0 4px 0 #6d432b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qbank-modal-cta:hover {
+  background: #73482F;
+}
+
+.qbank-modal-cta:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #6d432b;
+}
+
+@keyframes qbFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes qbModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .qbank-options-page {
+    padding: 0 16px;
+  }
+}
+
+/* ==========================================================================
+   Source List (Board / College question banks) – new screen shown after
+   selecting MCQ in Academic Prep.
+   ========================================================================== */
+
+.qbank-source-section {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qbank-source-section + .qbank-source-section {
+  margin-top: 40px;
+}
+
+.qbank-source-section-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #8C5A3C;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px 0;
+}
+
+.qbank-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.qbank-source-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1.5px solid rgba(192, 133, 82, 0.18);
+  border-radius: var(--radius-lg);
+  padding: 22px 22px 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(140, 90, 60, 0.04);
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.qbank-source-card--board {
+  border-color: rgba(59, 130, 246, 0.22);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(255, 255, 255, 0.7) 100%);
+}
+
+.qbank-source-card--college {
+  border-color: rgba(236, 72, 153, 0.22);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%);
+}
+
+.qbank-source-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08);
+}
+
+.qbank-source-card--board:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.12), 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+
+.qbank-source-card--college:hover {
+  border-color: rgba(236, 72, 153, 0.5);
+  box-shadow: 0 12px 30px rgba(236, 72, 153, 0.12), 0 0 0 2px rgba(236, 72, 153, 0.08);
+}
+
+.qbank-source-card__glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192, 133, 82, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.qbank-source-card--board .qbank-source-card__glow {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+}
+
+.qbank-source-card--college .qbank-source-card__glow {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, transparent 70%);
+}
+
+.qbank-source-card__title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.qbank-source-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.qbank-source-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.qbank-source-card__action {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(192, 133, 82, 0.2);
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: #8C5A3C;
+  transition: all var(--transition-base);
+}
+
+.qbank-source-card--board .qbank-source-card__action {
+  color: #1D4ED8;
+}
+
+.qbank-source-card--college .qbank-source-card__action {
+  color: #BE185D;
+}
+
+.qbank-source-card:hover .qbank-source-card__action {
+  transform: translateX(4px);
+}
+
+/* ─── Source Action Modal (Start Exam / Show Questions) ─────────────────── */
+
+.qbank-source-modal {
+  position: relative;
+  width: min(420px, 100%);
+  background: #FFFFFF;
+  border: 4px solid #E2E8F0;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
+  padding: 32px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: qbModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.qbank-source-modal--wide {
+  width: min(560px, 100%);
+  max-height: min(80vh, 720px);
+}
+
+.qbank-source-modal__summary {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.qbank-source-modal__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: #EFF6FF;
+  color: #1D4ED8;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border: 2px solid #DBEAFE;
+}
+
+.qbank-source-modal__badge--college {
+  background: #FDF2F8;
+  color: #BE185D;
+  border-color: #FBCFE8;
+}
+
+.qbank-source-modal__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0F172A;
+  text-align: center;
+}
+
+.qbank-source-modal__chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.qbank-source-modal__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.qbank-source-modal__actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.qbank-source-modal__btn {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qbank-source-modal__btn--primary {
+  background: #15803D;
+  color: #FFFFFF;
+  border: 2px solid #15803D;
+  box-shadow: 0 4px 0 #14532D;
+}
+
+.qbank-source-modal__btn--primary:hover {
+  background: #166534;
+}
+
+.qbank-source-modal__btn--primary:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #14532D;
+}
+
+.qbank-source-modal__btn--secondary {
+  background: #FFFFFF;
+  color: #15803D;
+  border: 2px solid #15803D;
+  box-shadow: 0 4px 0 #DCFCE7;
+}
+
+.qbank-source-modal__btn--secondary:hover {
+  background: #F0FDF4;
+}
+
+.qbank-source-modal__btn--secondary:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #DCFCE7;
+}
+
+.qbank-source-modal__btn--ghost {
+  background: #FFFFFF;
+  color: #475569;
+  border: 2px solid #E2E8F0;
+  box-shadow: 0 4px 0 #E2E8F0;
+}
+
+.qbank-source-modal__btn--ghost:hover {
+  background: #F8FAFC;
+  color: #0F172A;
+}
+
+.qbank-source-modal__btn--ghost:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #E2E8F0;
+}
+
+/* Source preview list (inside the modal when "Show Questions" is picked) */
+.qbank-source-preview {
+  width: 100%;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 2px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 8px 4px;
+  background: #F8FAFC;
+  margin-bottom: 4px;
+}
+
+.qbank-source-preview__loading {
+  padding: 28px 16px;
+  text-align: center;
+  color: #64748B;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.qbank-source-preview__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.qbank-source-preview__item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px dashed #E2E8F0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #0F172A;
+}
+
+.qbank-source-preview__item:last-child {
+  border-bottom: none;
+}
+
+.qbank-source-preview__num {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  color: #1D4ED8;
+  flex-shrink: 0;
+  min-width: 24px;
+}
+
+.qbank-source-preview__text {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Categorized sections for Admission Segment */
+.qbank-admission-container {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.qbank-admission-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.qbank-admission-group-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 850;
+  color: #8C5A3C;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
+  padding-bottom: 8px;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.qbank-group-icon {
+  color: #C08552;
+  flex-shrink: 0;
+}
+
+.qbank-group-badge {
+  background: rgba(192, 133, 82, 0.08);
+  color: #8C5A3C;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 1px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(192, 133, 82, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 20px;
+  margin-left: 4px;
+}
+
+/* Admission Segment Button Controls */
+.qbank-admission-segments {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.qbank-segment-btn {
+  background: rgba(192, 133, 82, 0.05);
+  border: 1.5px solid rgba(192, 133, 82, 0.2);
+  padding: 8px 20px;
+  font-family: var(--font-body);
+  font-weight: 750;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qbank-segment-btn:hover {
+  background: rgba(192, 133, 82, 0.1);
+  color: #8C5A3C;
+  border-color: rgba(192, 133, 82, 0.45);
+}
+
+.qbank-segment-btn--active {
+  background: #8C5A3C !important;
+  color: var(--white) !important;
+  border-color: #8C5A3C !important;
+  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.18);
 }

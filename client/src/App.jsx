@@ -9,6 +9,8 @@ import BecomeTeacher from './pages/BecomeTeacher';
 import Setting from './pages/Setting';
 import UploadQuestion from './pages/UploadQuestion';
 import QuestionBank from './pages/QuestionBank';
+import BoardQuestionsView from './pages/BoardQuestionsView';
+import VarsityWrittenView from './pages/VarsityWrittenView';
 import MockTest from './pages/MockTest';
 import MockTestExam from './pages/MockTestExam';
 import './styles/index.css';
@@ -43,6 +45,8 @@ function AppContent() {
         />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/qbank" element={<QuestionBank />} />
+        <Route path="/qbank/source-questions" element={<BoardQuestionsView />} />
+        <Route path="/qbank/varsity-written" element={<VarsityWrittenView />} />
         <Route path="/setting" element={<Setting />} />
         <Route path="/settings" element={<Setting />} />
         <Route path="/teacher" element={<BecomeTeacher />} />

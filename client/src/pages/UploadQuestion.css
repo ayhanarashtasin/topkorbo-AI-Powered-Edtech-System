@@ -657,6 +657,11 @@
   color: #2563eb;
 }
 
+.uq-tag-badge--college {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
 .uq-tag-badge--admission {
   background: rgba(168, 85, 247, 0.1);
   color: #7c3aed;
@@ -723,6 +728,10 @@
 
 .uq-add-tag-btn--board {
   color: #2563eb;
+}
+
+.uq-add-tag-btn--college {
+  color: #059669;
 }
 
 .uq-add-tag-btn--admission {

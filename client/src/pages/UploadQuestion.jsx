@@ -153,9 +153,32 @@ const UNIVERSITIES = [
   { id: 'AGRI', name: 'Agriculture (Cluster)', units: ['Agriculture'] },
 ];
 
+const COLLEGES = [
+  'Notre Dame College', 'Dhaka College', 'Rajuk Uttara Model College',
+  'Viqarunnisa Noon College', 'Holy Cross College', 'Adamjee Cantonment College',
+  'Ideal College', 'Dhaka City College', 'Government Science College',
+  'Shaheed Bir Uttam Lt. Anwar Girls College', 'Milestone College',
+  'BIRDEM Nursing College', 'Begum Rokeya University, Rangpur',
+  'Chittagong College', 'Rajshahi College', 'Jahangirnagar University School & College',
+  'Comilla Victoria College', 'Barishal Cadet College', 'Mymensingh Girls Cadet College',
+  'Sylhet Cadet College', 'Faujdarhat Cadet College'
+];
+
 // Generate year options (2015..current+1)
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: currentYear - 2014 }, (_, i) => String(currentYear + 1 - i));
+
+// Session options (e.g. 19-20, 20-21, 22-23) — Bangladesh varsity admission
+// sessions. Sessions start in 2015-16 so the first year part is "15". Most
+// recent session first.
+const SESSIONS = Array.from(
+  { length: currentYear - 2014 },
+  (_, i) => {
+    const start = String(currentYear + 1 - i);
+    const endShort = String((currentYear + 1 - i + 1) % 100).padStart(2, '0');
+    return `${start.slice(-2)}-${endShort}`;
+  }
+);
 
 const KEYBOARD_TABS = {
   essentials: {
@@ -280,6 +303,7 @@ export default function UploadQuestion() {
   // Form state
   const [questionText, setQuestionText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [solutionImageUrl, setSolutionImageUrl] = useState('');
   const [questionType, setQuestionType] = useState('mcq');
   const [options, setOptions] = useState([
     { text: '', isCorrect: true },
@@ -387,6 +411,26 @@ export default function UploadQuestion() {
     setImageUrl('');
   };
 
+  const handleSolutionImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('error', language === 'en' ? 'Image must be under 2MB' : 'ছবি ২ মেগাবাইটের কম হতে হবে');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSolutionImageUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeSolutionImage = () => {
+    setSolutionImageUrl('');
+  };
+
   // ── LaTeX helper ──
   const insertLatexSymbol = (symbol) => {
     let textarea;
@@ -466,6 +510,8 @@ export default function UploadQuestion() {
   const addTag = (category) => {
     if (category === 'board') {
       setTags(prev => [...prev, { category: 'board', board: '', year: '' }]);
+    } else if (category === 'college') {
+      setTags(prev => [...prev, { category: 'college', college: '', year: '' }]);
     } else {
       setTags(prev => [...prev, { category: 'admission', university: '', unit: '', year: '' }]);
     }
@@ -522,8 +568,10 @@ export default function UploadQuestion() {
         chapter,
         topic: topic.trim(),
         solution: solution.trim(),
+        solutionImageUrl: solutionImageUrl,
         tags: tags.filter(t => {
           if (t.category === 'board') return t.board && t.year;
+          if (t.category === 'college') return t.college && t.year;
           return t.university && t.year;
         })
       };
@@ -548,6 +596,7 @@ export default function UploadQuestion() {
         setQuestionText('');
         setImageUrl('');
         setSolution('');
+        setSolutionImageUrl('');
         setOptions([
           { text: '', isCorrect: true },
           { text: '', isCorrect: false },
@@ -871,23 +920,68 @@ export default function UploadQuestion() {
             </div>
             <p className="uq-section__desc">
               {language === 'en'
-                ? 'Provide a step-by-step solution to help students. LaTeX formulas ($x$ and $$x$$) are fully supported.'
-                : 'শিক্ষার্থীদের বোঝার জন্য ধাপে ধাপে সমাধান ব্যাখ্যা প্রদান করুন। LaTeX ফর্মুলা ($x$ এবং $$x$$) সমর্থন করে।'}
+                ? 'Provide a step-by-step solution to help students. LaTeX formulas ($x$ and $$x$$) are fully supported. You may also attach an image of the worked solution.'
+                : 'শিক্ষার্থীদের বোঝার জন্য ধাপে ধাপে সমাধান ব্যাখ্যা প্রদান করুন। LaTeX ফর্মুলা ($x$ এবং $$x$$) সমর্থন করে। আপনি চাইলে সমাধানের একটি ছবিও সংযুক্ত করতে পারেন।'}
             </p>
             <div className="uq-latex-editor">
-              <textarea
-                id="uq-solution-textarea"
-                className="uq-textarea"
-                value={solution}
-                onChange={e => setSolution(e.target.value)}
-                onFocus={() => setFocusedInput({ type: 'solution', index: null })}
-                placeholder={language === 'en' ? 'Type step-by-step solution explanation here...' : 'এখানে সমাধান ব্যাখ্যা টাইপ করুন...'}
-                rows={4}
-              />
+              <div className="uq-editor-row">
+                <div className="uq-editor-row__textarea-col">
+                  <textarea
+                    id="uq-solution-textarea"
+                    className="uq-textarea"
+                    value={solution}
+                    onChange={e => setSolution(e.target.value)}
+                    onFocus={() => setFocusedInput({ type: 'solution', index: null })}
+                    placeholder={language === 'en' ? 'Type step-by-step solution explanation here...' : 'এখানে সমাধান ব্যাখ্যা টাইপ করুন...'}
+                    rows={6}
+                  />
+                </div>
+                <div className="uq-editor-row__upload-col">
+                  {solutionImageUrl ? (
+                    <div className="uq-diagram-preview-card animate-bounce-in">
+                      <img src={solutionImageUrl} alt="Solution Image" className="uq-diagram-preview-img" />
+                      <button
+                        type="button"
+                        className="uq-diagram-remove-btn"
+                        onClick={removeSolutionImage}
+                        title={language === 'en' ? 'Remove Solution Image' : 'সমাধানের ছবি মুছুন'}
+                      >
+                        <HiTrash size={16} />
+                        <span>{language === 'en' ? 'Remove' : 'মুছুন'}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <label htmlFor="uq-solution-image-upload" className="uq-diagram-upload-dropzone">
+                      <input
+                        type="file"
+                        id="uq-solution-image-upload"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleSolutionImageUpload}
+                      />
+                      <span className="uq-diagram-upload-icon"><HiUpload size={24} /></span>
+                      <span className="uq-diagram-upload-text">
+                        {language === 'en'
+                          ? 'Upload solution image (optional)'
+                          : 'সমাধানের ছবি আপলোড করুন (ঐচ্ছিক)'}
+                      </span>
+                      <span className="uq-diagram-upload-subtext">
+                        {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
+                      </span>
+                    </label>
+                  )}
+                </div>
+              </div>
+
               <span className="uq-preview-label">{t('uq.preview')}</span>
               <div
-                className={`uq-preview-box ${!solution.trim() ? 'uq-preview-box--empty' : ''}`}
+                className={`uq-preview-box ${!solution.trim() && !solutionImageUrl ? 'uq-preview-box--empty' : ''}`}
               >
+                {solutionImageUrl && (
+                  <div className="uq-preview-diagram-wrapper">
+                    <img src={solutionImageUrl} alt="Solution" className="uq-preview-diagram" />
+                  </div>
+                )}
                 <div
                   dangerouslySetInnerHTML={{
                     __html: solution.trim()
@@ -973,11 +1067,20 @@ export default function UploadQuestion() {
               {t('uq.section.tags')}
             </div>
             <p className="uq-section__desc">{t('uq.section.tags.desc')}</p>
+            <p className="uq-section__desc" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {language === 'en'
+                ? 'Add at least one tag so the question can be matched when students select a standard, board, or college in mock tests and the question bank.'
+                : 'মক টেস্ট ও প্রশ্ন ব্যাঙ্কে শিক্ষার্থীরা স্ট্যান্ডার্ড, বোর্ড বা কলেজ নির্বাচন করলে প্রশ্নটি মিলে যাওয়ার জন্য অন্তত একটি ট্যাগ যোগ করুন।'}
+            </p>
             <div className="uq-tags-container">
               {tags.map((tag, idx) => (
                 <div key={idx} className="uq-tag-card">
                   <span className={`uq-tag-badge uq-tag-badge--${tag.category}`}>
-                    {tag.category === 'board' ? (language === 'en' ? 'Board' : 'বোর্ড') : (language === 'en' ? 'Admission' : 'ভর্তি')}
+                    {tag.category === 'board'
+                      ? (language === 'en' ? 'Board' : 'বোর্ড')
+                      : tag.category === 'college'
+                        ? (language === 'en' ? 'College' : 'কলেজ')
+                        : (language === 'en' ? 'Admission' : 'ভর্তি')}
                   </span>
                   <div className="uq-tag-fields">
                     {tag.category === 'board' ? (
@@ -985,6 +1088,17 @@ export default function UploadQuestion() {
                         <select className="uq-select" value={tag.board} onChange={e => updateTag(idx, 'board', e.target.value)}>
                           <option value="">{language === 'en' ? 'Select Board' : 'বোর্ড নির্বাচন করুন'}</option>
                           {BOARDS.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        <select className="uq-select" value={tag.year} onChange={e => updateTag(idx, 'year', e.target.value)}>
+                          <option value="">{language === 'en' ? 'Year' : 'সাল'}</option>
+                          {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                      </>
+                    ) : tag.category === 'college' ? (
+                      <>
+                        <select className="uq-select" value={tag.college} onChange={e => updateTag(idx, 'college', e.target.value)}>
+                          <option value="">{language === 'en' ? 'Select College' : 'কলেজ নির্বাচন করুন'}</option>
+                          {COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <select className="uq-select" value={tag.year} onChange={e => updateTag(idx, 'year', e.target.value)}>
                           <option value="">{language === 'en' ? 'Year' : 'সাল'}</option>
@@ -1009,8 +1123,8 @@ export default function UploadQuestion() {
                           ))}
                         </select>
                         <select className="uq-select" value={tag.year} onChange={e => updateTag(idx, 'year', e.target.value)}>
-                          <option value="">{language === 'en' ? 'Year' : 'সাল'}</option>
-                          {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                          <option value="">{language === 'en' ? 'Session' : 'সেশন'}</option>
+                          {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </>
                     )}
@@ -1026,6 +1140,10 @@ export default function UploadQuestion() {
                 <button type="button" className="uq-add-tag-btn uq-add-tag-btn--board" onClick={() => addTag('board')}>
                   <HiPlus size={14} />
                   {t('uq.tag.add_board')}
+                </button>
+                <button type="button" className="uq-add-tag-btn uq-add-tag-btn--college" onClick={() => addTag('college')}>
+                  <HiPlus size={14} />
+                  {t('uq.tag.add_college')}
                 </button>
                 <button type="button" className="uq-add-tag-btn uq-add-tag-btn--admission" onClick={() => addTag('admission')}>
                   <HiPlus size={14} />
@@ -1096,7 +1214,9 @@ export default function UploadQuestion() {
                             <span key={i} className="uq-recent-card__tag">
                               {tag.category === 'board'
                                 ? `${tag.board} ${tag.year}`
-                                : `${tag.university} ${tag.unit ? '· ' + tag.unit : ''} ${tag.year}`}
+                                : tag.category === 'college'
+                                  ? `${tag.college} ${tag.year}`
+                                  : `${tag.university} ${tag.unit ? '· ' + tag.unit : ''} ${tag.year}`}
                             </span>
                           ))}
                         </div>

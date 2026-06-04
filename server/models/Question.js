@@ -71,19 +71,25 @@ const questionSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  // Flexible tag system for Board and Admission categorization
+  solutionImageUrl: {
+    type: String,
+    default: ''
+  },
+  // Flexible tag system for Board, Admission and College categorization
   tags: [
     {
       category: {
         type: String,
-        enum: ['board', 'admission'],
+        enum: ['board', 'admission', 'college'],
         required: true
       },
-      // For board tags
+      // For board tags (e.g. "Dhaka", "Chittagong")
       board: { type: String },
       // For admission tags
       university: { type: String },
       unit: { type: String },
+      // For college tags (e.g. "Notre Dame College", "Dhaka College")
+      college: { type: String },
       // Common
       year: { type: String }
     }

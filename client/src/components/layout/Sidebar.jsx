@@ -8,6 +8,18 @@ export default function Sidebar({ activeTab, user }) {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
 
+  // Defensive defaults so the sidebar never crashes if the parent passes a
+  // partial `user` (e.g. during the initial render before /auth/me resolves).
+  const safeUser = {
+    name: 'Student',
+    avatar: '',
+    role: 'student',
+    ...(user || {})
+  };
+  const userInitial = (safeUser.name && safeUser.name.length)
+    ? safeUser.name.charAt(0).toUpperCase()
+    : 'S';
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
     localStorage.getItem('topkorbo_sidebar_collapsed') === 'true'
   );
@@ -23,7 +35,7 @@ export default function Sidebar({ activeTab, user }) {
   ];
 
   // Show Question Bank for students, tutors, and teachers
-  if (user.role === 'student' || user.role === 'tutor' || user.role === 'teacher') {
+  if (safeUser.role === 'student' || safeUser.role === 'tutor' || safeUser.role === 'teacher') {
     menuItems.push({
       id: 'qbank',
       label: t('db.menu.qbank'),
@@ -37,7 +49,7 @@ export default function Sidebar({ activeTab, user }) {
   }
 
   // Show teacher application tab only for tutors or approved teachers
-  if (user.role === 'tutor' || user.role === 'teacher') {
+  if (safeUser.role === 'tutor' || safeUser.role === 'teacher') {
     menuItems.push({
       id: 'teacher',
       label: t('db.menu.teacher'),
@@ -46,7 +58,7 @@ export default function Sidebar({ activeTab, user }) {
   }
 
   // Show Upload Question tab only for teachers
-  if (user.role === 'teacher') {
+  if (safeUser.role === 'teacher') {
     menuItems.push({
       id: 'upload-question',
       label: t('db.menu.upload_question'),
@@ -113,7 +125,13 @@ export default function Sidebar({ activeTab, user }) {
               <button
                 onClick={() => {
                   if (item.id === 'teacher') navigate('/teacher');
-                  else if (item.id === 'qbank') navigate('/qbank');
+                  else if (item.id === 'qbank') {
+                    sessionStorage.removeItem('qbank_selected_subject_id');
+                    sessionStorage.removeItem('qbank_selected_prep_stream');
+                    sessionStorage.removeItem('qbank_selected_source_context');
+                    window.dispatchEvent(new Event('reset-qbank'));
+                    navigate('/qbank');
+                  }
                   else if (item.id === 'upload-question') navigate('/upload-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
                   else navigate('/dashboard');
@@ -140,17 +158,17 @@ export default function Sidebar({ activeTab, user }) {
           title={t('db.menu.settings')}
         >
           <div className="dashboard-sidebar__avatar-wrapper">
-            {user.avatar ? (
-              <img src={user.avatar} referrerPolicy="no-referrer" alt="Profile" className="dashboard-sidebar__avatar" />
+            {safeUser.avatar ? (
+              <img src={safeUser.avatar} referrerPolicy="no-referrer" alt="Profile" className="dashboard-sidebar__avatar" />
             ) : (
               <div className="dashboard-sidebar__avatar-placeholder">
-                {user.name.charAt(0).toUpperCase()}
+                {userInitial}
               </div>
             )}
           </div>
           {!isSidebarCollapsed && (
             <div className="dashboard-sidebar__user-info">
-              <h4 className="dashboard-sidebar__user-name">{user.name}</h4>
+              <h4 className="dashboard-sidebar__user-name">{safeUser.name}</h4>
             </div>
           )}
         </div>

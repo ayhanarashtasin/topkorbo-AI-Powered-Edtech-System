@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiFire, HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiMinusCircle, HiAcademicCap, HiBeaker, HiBookOpen, HiCollection, HiPencil, HiDocumentText, HiPhotograph, HiLightningBolt, HiChevronDown, HiChevronUp, HiX } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
@@ -166,10 +166,21 @@ export default function MockTest() {
   });
 
   // Step state: 1 = Subject Selection, 2 = Paper & Chapter Config, 3 = Exam Settings
-  const [step, setStep] = useState(() => {
-    const saved = sessionStorage.getItem('mock_test_step');
-    return saved ? parseInt(saved) : 1;
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stepParam = searchParams.get('step');
+  const step = stepParam ? parseInt(stepParam) : 1;
+
+  const setStep = (nextStep) => {
+    setSearchParams({ step: String(nextStep) });
+  };
+
+  // Restore step from sessionStorage on load if searchParam is not present
+  useEffect(() => {
+    const savedStep = sessionStorage.getItem('mock_test_step');
+    if (!stepParam && savedStep && savedStep !== '1') {
+      setSearchParams({ step: savedStep }, { replace: true });
+    }
+  }, [stepParam, setSearchParams]);
 
   // Step 3: Exam configuration states
   const [examStandard, setExamStandard] = useState(() => sessionStorage.getItem('mock_exam_standard') || '');
@@ -238,7 +249,8 @@ export default function MockTest() {
         'mock_exam_duration',
         'mock_negative_marking',
         'mock_exam_questions',
-        'mock_exam_config'
+        'mock_exam_config',
+        'mock_exam_from_qbank'
       ].forEach((key) => sessionStorage.removeItem(key));
       
       setStep(1);
@@ -557,6 +569,7 @@ export default function MockTest() {
           standard: examStandard,
           totalQuestions: data.data.total
         }));
+        sessionStorage.removeItem('mock_exam_from_qbank');
 
         navigate('/mock-test/exam');
       } else {

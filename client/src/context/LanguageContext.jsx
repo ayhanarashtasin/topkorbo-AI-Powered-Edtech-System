@@ -33,8 +33,12 @@ export function LanguageProvider({ children }) {
     setLanguage(prev => prev === 'en' ? 'bn' : 'en');
   }, []);
 
-  const t = useCallback((key) => {
-    return translations[key] || key;
+  const t = useCallback((key, params) => {
+    const value = translations[key] || key;
+    if (!params || typeof value !== 'string') return value;
+    return value.replace(/\{(\w+)\}/g, (_, name) => {
+      return params[name] !== undefined ? String(params[name]) : `{${name}}`;
+    });
   }, [translations]);
 
   return (
