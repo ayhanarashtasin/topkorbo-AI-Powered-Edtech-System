@@ -138,4 +138,149 @@
   }
 }
 
+/* ============================================
+   Upcoming Contests Panel for Teacher Mode
+   ============================================ */
+.dashboard-workspace--teacher {
+  display: flex !important;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.dashboard-upcoming-contests {
+  width: 320px;
+  background-color: var(--white);
+  border: 1.5px solid rgba(192, 133, 82, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(140, 90, 60, 0.04);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.upcoming-contests-header h3 {
+  margin: 0 0 16px 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
+  padding-bottom: 10px;
+}
+
+.upcoming-contests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom Scrollbar for list */
+.upcoming-contests-list::-webkit-scrollbar {
+  width: 4px;
+}
+.upcoming-contests-list::-webkit-scrollbar-track {
+  background: rgba(192, 133, 82, 0.05);
+  border-radius: 2px;
+}
+.upcoming-contests-list::-webkit-scrollbar-thumb {
+  background: rgba(192, 133, 82, 0.2);
+  border-radius: 2px;
+}
+
+.contest-card-upcoming {
+  background-color: #FFFBF7;
+  border: 1.2px solid rgba(192, 133, 82, 0.12);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+}
+
+.contest-card-upcoming:hover {
+  border-color: rgba(192, 133, 82, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(192, 133, 82, 0.06);
+}
+
+.contest-card-upcoming__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.contest-badge-icon {
+  font-size: 1rem;
+}
+
+.contest-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contest-card-upcoming__details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contest-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.detail-icon {
+  opacity: 0.85;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upcoming-contests-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+}
+
+.upcoming-contests-empty .empty-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.upcoming-contests-empty p {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .dashboard-workspace--teacher {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dashboard-upcoming-contests {
+    width: 100%;
+  }
+}
+
+
 

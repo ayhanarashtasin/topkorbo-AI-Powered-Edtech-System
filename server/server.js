@@ -28,6 +28,7 @@ const errorHandler = require('./middleware/errorHandler');
 const landingRoutes = require('./routes/landingRoutes');
 const authRoutes = require('./routes/authRoutes');
 const questionRoutes = require('./routes/questionRoutes');
+const contestRoutes = require('./routes/contestRoutes');
 
 // Load Passport Configuration
 require('./config/passport');
@@ -48,6 +49,7 @@ app.use(passport.initialize());
 app.use('/api/landing', landingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
+app.use('/api/contests', contestRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
