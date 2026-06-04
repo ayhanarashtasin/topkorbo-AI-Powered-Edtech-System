@@ -32,6 +32,8 @@ const getSourceAbbreviation = (type, name, year) => {
   if (type === 'board') {
     const abbr = BOARD_ABBRS[name] || (name ? `${name.charAt(0).toUpperCase()}B` : 'BD');
     return yearStr ? `${abbr} ${yearStr}` : abbr;
+  } else if (type === 'admission') {
+    return yearStr ? `${name.toUpperCase()} ${year}` : name.toUpperCase();
   } else {
     const collegeAbbrs = {
       'Notre Dame College': 'NDC',
@@ -132,7 +134,7 @@ export default function BoardQuestionsView() {
   }, [navigate]);
 
   useEffect(() => {
-    if (!name || !subject || !paper) {
+    if (!name || (sourceType !== 'admission' && (!subject || !paper))) {
       setLoading(false);
       return;
     }
@@ -143,13 +145,14 @@ export default function BoardQuestionsView() {
         const token = localStorage.getItem('topkorbo_token');
         const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const params = new URLSearchParams({
-          subject,
-          paper,
           sourceType,
           name,
           type: questionType
         });
+        if (subject) params.append('subject', subject);
+        if (paper) params.append('paper', paper);
         if (year) params.append('year', year);
+        if (state.shift) params.append('shift', state.shift);
 
         const response = await fetch(`${backendBaseUrl}/questions/by-source?${params.toString()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -165,7 +168,7 @@ export default function BoardQuestionsView() {
       }
     };
     fetchQuestions();
-  }, [subject, paper, sourceType, name, year, questionType]);
+  }, [subject, paper, sourceType, name, year, questionType, state.shift]);
 
   const toBnNum = (numStr) => {
     const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -174,21 +177,22 @@ export default function BoardQuestionsView() {
 
   const title = useMemo(() => {
     if (language === 'en') {
-      const label = sourceType === 'board' ? 'Board' : 'College';
+      const label = sourceType === 'board' ? 'Board' : sourceType === 'admission' ? 'Admission' : 'College';
       return `${name} ${label}${year ? ' ' + year : ''}`;
     } else {
-      const label = sourceType === 'board' ? 'বোর্ড' : 'কলেজ';
+      const label = sourceType === 'board' ? 'বোর্ড' : sourceType === 'admission' ? 'ভর্তি' : 'কলেজ';
       return `${name} ${label}${year ? ' ' + toBnNum(year) : ''}`;
     }
   }, [sourceType, name, year, language]);
 
   const subtitle = useMemo(() => {
+    const timeLimit = sourceType === 'admission' ? (language === 'en' ? '1 Hour' : '১ ঘন্টা') : (language === 'en' ? '25 mins' : '২৫ মিনিট');
     if (language === 'en') {
-      return `Questions: ${questions.length} · Time: 25 mins`;
+      return `Questions: ${questions.length} · Time: ${timeLimit}`;
     } else {
-      return `প্রশ্ন ${toBnNum(questions.length)} · সময় ২৫ মিনিট`;
+      return `প্রশ্ন ${toBnNum(questions.length)} · সময় ${timeLimit}`;
     }
-  }, [questions.length, language]);
+  }, [questions.length, language, sourceType]);
 
   const translatedSubject = useMemo(() => {
     const subjectMap = {
@@ -237,7 +241,7 @@ export default function BoardQuestionsView() {
     }));
   };
 
-  if (!name || !subject) {
+  if (!name || (sourceType !== 'admission' && !subject)) {
     return (
       <div className="exam-room-container">
         <header className="exam-header-card">
@@ -280,11 +284,13 @@ export default function BoardQuestionsView() {
         )}
       </header>
 
-      <h2 className="bqv-subject-title">
-        {language === 'en'
-          ? `${subject} ${paper ? paper + ' Paper' : ''} (${questions.length})`
-          : `${translatedSubject} ${translatedPaper ? '(' + translatedPaper + ' পত্র)' : ''} (${toBnNum(questions.length)})`}
-      </h2>
+      {sourceType !== 'admission' && (
+        <h2 className="bqv-subject-title">
+          {language === 'en'
+            ? `${subject} ${paper ? paper + ' Paper' : ''} (${questions.length})`
+            : `${translatedSubject} ${translatedPaper ? '(' + translatedPaper + ' পত্র)' : ''} (${toBnNum(questions.length)})`}
+        </h2>
+      )}
 
       <div className="exam-questions-list">
         {loading ? (

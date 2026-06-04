@@ -23,6 +23,10 @@ router.get('/sources', auth, questionController.getQuestionSources);
 // @route   GET /api/questions/by-source
 router.get('/by-source', auth, questionController.getQuestionsBySource);
 
+// @desc    Get admission question cards for a specific university (grouped by year/shift)
+// @route   GET /api/questions/admission-cards
+router.get('/admission-cards', auth, questionController.getAdmissionQuestionCards);
+
 // @desc    Get distinct university (varsity admission) sources for a given
 //          subject/paper/type (Question Bank Varsity Admission flow)
 // @route   GET /api/questions/varsity-sources

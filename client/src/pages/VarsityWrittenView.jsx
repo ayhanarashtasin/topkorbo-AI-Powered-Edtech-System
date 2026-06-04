@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { HiArrowLeft, HiAcademicCap, HiCalendar } from 'react-icons/hi';
 import { useLanguage } from '../hooks/useLanguage';
 import './VarsityWrittenView.css';
@@ -20,10 +20,11 @@ const PAPER_MAP = { 1: '1st', 2: '2nd' };
 
 const VarsityWrittenView = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { language, t } = useLanguage();
 
-  const subjectParam = searchParams.get('subject') || '';
+  const universityParam = searchParams.get('university') || 'DU';
+  const subjectParam = searchParams.get('subject') || 'math_1';
   const paperParam = searchParams.get('paper') || '1';
 
   const subjectKey = SUBJECT_KEY_MAP[subjectParam] || 'Higher Math';
@@ -43,7 +44,11 @@ const VarsityWrittenView = () => {
       try {
         const token = localStorage.getItem('topkorbo_token');
         const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const params = new URLSearchParams({ subject: subjectKey, paper: paperLabel });
+        const params = new URLSearchParams({ 
+          subject: subjectKey, 
+          paper: paperLabel,
+          university: universityParam
+        });
         const response = await fetch(`${backendBaseUrl}/questions/varsity-written?${params.toString()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -63,7 +68,7 @@ const VarsityWrittenView = () => {
 
     fetchWritten();
     return () => { cancelled = true; };
-  }, [subjectKey, paperLabel]);
+  }, [subjectKey, paperLabel, universityParam]);
 
   const chapters = useMemo(() => {
     const set = new Set();
@@ -87,24 +92,84 @@ const VarsityWrittenView = () => {
         <button
           type="button"
           className="qbank-back-btn"
-          onClick={() => navigate(`/qbank?subject=${subjectParam}&stream=varsity`)}
+          onClick={() => navigate(`/qbank?university=${universityParam}&view=chooser`)}
         >
           <HiArrowLeft size={16} />
           <span>{language === 'en' ? 'Back to Formats' : 'ফরম্যাটে ফিরে যান'}</span>
         </button>
         <div className="qbank-options-header-info">
           <h2>
-            {language === 'en'
-              ? `${subjectKey} - Varsity Written`
-              : `${subjectKey} - বিশ্ববিদ্যালয় লিখিত`}
+            {universityParam.toUpperCase()} {language === 'en' ? 'Written Question Bank' : 'লিখিত প্রশ্নব্যাংক'}
           </h2>
           <p>
             {language === 'en'
-              ? `Read all written admission questions (${paperLabel} Paper) from past varsity exams.`
-              : `অতীতের বিশ্ববিদ্যালয় ভর্তি পরীক্ষার সকল লিখিত প্রশ্ন পড়ুন (${paperLabel} পত্র)।`}
+              ? `Review written questions from past admission exams for ${universityParam.toUpperCase()}.`
+              : `${universityParam.toUpperCase()}-এর বিগত বছরের ভর্তি পরীক্ষার লিখিত প্রশ্নসমূহ রিভিউ করুন।`}
           </p>
         </div>
       </header>
+
+      {/* Subject & Paper Selector Row */}
+      <div className="varsity-written-selectors">
+        <div className="varsity-written-selector-group">
+          <label>{language === 'en' ? 'Select Subject:' : 'বিষয় নির্বাচন করুন:'}</label>
+          <div className="varsity-written-btn-row">
+            {[
+              { id: 'physics_1', base: 'physics', labelEn: 'Physics', labelBn: 'পদার্থবিজ্ঞান' },
+              { id: 'chemistry_1', base: 'chemistry', labelEn: 'Chemistry', labelBn: 'রসায়ন' },
+              { id: 'math_1', base: 'math', labelEn: 'Higher Math', labelBn: 'উচ্চতর গণিত' },
+              { id: 'biology_1', base: 'biology', labelEn: 'Biology', labelBn: 'জীববিজ্ঞান' }
+            ].map(sub => {
+              const isActive = subjectParam.startsWith(sub.base);
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  className={`varsity-written-select-btn ${isActive ? 'is-active' : ''}`}
+                  onClick={() => {
+                    setSearchParams({
+                      university: universityParam,
+                      subject: isActive ? subjectParam : `${sub.base}_1`,
+                      paper: paperParam
+                    });
+                  }}
+                >
+                  {language === 'en' ? sub.labelEn : sub.labelBn}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="varsity-written-selector-group">
+          <label>{language === 'en' ? 'Select Paper:' : 'পত্র নির্বাচন করুন:'}</label>
+          <div className="varsity-written-btn-row">
+            {[
+              { val: '1', labelEn: '1st Paper', labelBn: '১ম পত্র' },
+              { val: '2', labelEn: '2nd Paper', labelBn: '২য় পত্র' }
+            ].map(p => {
+              const isActive = paperParam === p.val;
+              const subBase = subjectParam.split('_')[0];
+              return (
+                <button
+                  key={p.val}
+                  type="button"
+                  className={`varsity-written-select-btn ${isActive ? 'is-active' : ''}`}
+                  onClick={() => {
+                    setSearchParams({
+                      university: universityParam,
+                      subject: `${subBase}_${p.val}`,
+                      paper: p.val
+                    });
+                  }}
+                >
+                  {language === 'en' ? p.labelEn : p.labelBn}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       <div className="varsity-written-stats">
         <div className="varsity-written-stat">

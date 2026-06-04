@@ -258,36 +258,48 @@ exports.getQuestionSources = async (req, res, next) => {
  * @access  Private
  * @query   subject    – 'Physics' | 'Chemistry' | 'Higher Math' | 'Biology'
  *          paper      – '1st' | '2nd'
- *          sourceType – 'board' | 'college'
- *          name       – board name (e.g. "Dinajpur") or college name
+ *          sourceType – 'board' | 'college' | 'admission'
+ *          name       – board name (e.g. "Dinajpur"), college name, or university code (e.g. "RU")
  *          year       – optional (e.g. "2023")
  *          type       – optional 'mcq' | 'cq' | 'written'
+ *          shift      – optional (e.g. "1st Shift") – only for admission
  */
 exports.getQuestionsBySource = async (req, res, next) => {
   try {
-    const { subject, paper, sourceType, name, year, type } = req.query;
+    const { subject, paper, sourceType, name, year, type, shift } = req.query;
 
-    if (!subject || !paper || !sourceType || !name) {
+    if (!sourceType || !name) {
       return ApiResponse.error(
         res,
-        'subject, paper, sourceType, and name are required query params',
+        'sourceType and name are required query params',
         400
       );
     }
 
-    if (!['board', 'college'].includes(sourceType)) {
-      return ApiResponse.error(res, "sourceType must be 'board' or 'college'", 400);
+    if (!['board', 'college', 'admission'].includes(sourceType)) {
+      return ApiResponse.error(res, "sourceType must be 'board', 'college', or 'admission'", 400);
     }
 
-    const match = {
-      subject,
-      paper,
-      'tags.category': sourceType,
-      [sourceType === 'board' ? 'tags.board' : 'tags.college']: name
-    };
-    if (year) {
-      match['tags.year'] = year;
+    // For board/college, subject and paper are required
+    if (sourceType !== 'admission' && (!subject || !paper)) {
+      return ApiResponse.error(res, 'subject and paper are required for board/college sources', 400);
     }
+
+    const match = {};
+
+    if (sourceType === 'admission') {
+      match['tags.category'] = 'admission';
+      match['tags.university'] = name;
+      if (year) match['tags.year'] = year;
+      if (shift) match['tags.shift'] = shift;
+    } else {
+      match.subject = subject;
+      match.paper = paper;
+      match['tags.category'] = sourceType;
+      match[sourceType === 'board' ? 'tags.board' : 'tags.college'] = name;
+      if (year) match['tags.year'] = year;
+    }
+
     if (type && ['mcq', 'cq', 'written'].includes(type)) {
       match.type = type;
     }
@@ -381,18 +393,24 @@ exports.getVarsityAdmissionSources = async (req, res, next) => {
  */
 exports.getVarsityWrittenQuestions = async (req, res, next) => {
   try {
-    const { subject, paper } = req.query;
+    const { subject, paper, university } = req.query;
 
     if (!subject || !paper) {
       return ApiResponse.error(res, 'subject and paper are required query params', 400);
     }
 
-    const questions = await Question.find({
+    const match = {
       subject,
       paper,
       type: 'written',
       'tags.category': 'admission'
-    })
+    };
+
+    if (university) {
+      match['tags.university'] = university.toUpperCase();
+    }
+
+    const questions = await Question.find(match)
       .select('-teacher -__v')
       .sort({ createdAt: -1 })
       .lean();
@@ -401,6 +419,70 @@ exports.getVarsityWrittenQuestions = async (req, res, next) => {
       questions,
       total: questions.length
     }, 'Varsity written questions fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Get admission question "cards" for a specific university. Groups
+ *          questions by (year, shift, type) so the front-end can render a
+ *          grid of source cards similar to the Academic MCQ board cards.
+ * @route   GET /api/questions/admission-cards
+ * @access  Private
+ * @query   university – e.g. 'RU', 'DU', 'CU', 'GST', 'AGRI', …
+ *          type       – optional 'mcq' | 'written' (filter by question type)
+ */
+exports.getAdmissionQuestionCards = async (req, res, next) => {
+  try {
+    const { university, type } = req.query;
+
+    if (!university) {
+      return ApiResponse.error(res, 'university is a required query param', 400);
+    }
+
+    const baseMatch = {
+      'tags.category': 'admission',
+      'tags.university': university.toUpperCase()
+    };
+    if (type && ['mcq', 'cq', 'written'].includes(type)) {
+      baseMatch.type = type;
+    }
+
+    const cards = await Question.aggregate([
+      { $match: baseMatch },
+      { $unwind: '$tags' },
+      {
+        $match: {
+          'tags.category': 'admission',
+          'tags.university': university.toUpperCase()
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: '$tags.year',
+            shift: '$tags.shift',
+            type: '$type'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          university: { $literal: university.toUpperCase() },
+          year: { $ifNull: ['$_id.year', ''] },
+          shift: { $ifNull: ['$_id.shift', ''] },
+          type: '$_id.type',
+          count: 1,
+          time: { $literal: '1 hour' }
+        }
+      },
+      { $sort: { year: -1, shift: 1, type: 1 } }
+    ]);
+
+    return ApiResponse.success(res, { cards }, 'Admission question cards fetched successfully');
   } catch (err) {
     next(err);
   }

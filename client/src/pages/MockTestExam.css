@@ -226,16 +226,16 @@
 
 .exam-floating-status-box {
   position: fixed;
-  top: 30px;
-  right: 30px;
+  top: 20px;
+  right: 20px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border: 2px solid #E2E8F0;
-  border-radius: 16px;
-  padding: 12px 18px;
+  border-radius: 12px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
   z-index: 100;
   animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -249,20 +249,22 @@
 .exam-status-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   color: #0F172A;
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
 }
 
 .exam-status-icon {
   color: #64748B;
+  width: 16px;
+  height: 16px;
 }
 
 .exam-status-divider {
-  width: 2px;
-  height: 24px;
+  width: 1px;
+  height: 18px;
   background: #E2E8F0;
   border-radius: 2px;
 }
@@ -271,23 +273,23 @@
   background: #10B981;
   color: #FFFFFF;
   border: none;
-  padding: 8px 20px;
-  border-radius: 10px;
+  padding: 6px 14px;
+  border-radius: 8px;
   font-family: var(--font-heading);
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   cursor: pointer;
-  box-shadow: 0 4px 0 #059669;
+  box-shadow: 0 3px 0 #059669;
   transition: all 0.15s ease;
-  margin-left: 8px;
+  margin-left: 2px;
 }
 
 .exam-submit-btn-floating:active {
-  transform: translateY(4px);
+  transform: translateY(3px);
   box-shadow: 0 0 0 #059669;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1150px) {
   .exam-floating-status-box {
     top: auto;
     bottom: 20px;

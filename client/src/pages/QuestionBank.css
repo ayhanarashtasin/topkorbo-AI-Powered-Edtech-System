@@ -708,9 +708,14 @@
    ========================================================================== */
 
 .qbank-options-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   padding: 0 40px;
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .qbank-back-btn {
@@ -1417,4 +1422,42 @@
   color: var(--white) !important;
   border-color: #8C5A3C !important;
   box-shadow: 0 4px 12px rgba(140, 90, 60, 0.18);
+}
+
+/* ─── Admission Source Cards Grid & Cards ──────────────────────────────── */
+
+.qbank-source-card--admission {
+  border-color: rgba(140, 90, 60, 0.22);
+  background: linear-gradient(135deg, rgba(192, 133, 82, 0.06) 0%, rgba(255, 255, 255, 0.7) 100%);
+}
+
+.qbank-source-card--admission:hover {
+  border-color: #8C5A3C;
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.12), 0 0 0 2px rgba(192, 133, 82, 0.08);
+}
+
+.qbank-source-card--admission .qbank-source-card__glow {
+  background: radial-gradient(circle, rgba(192, 133, 82, 0.15) 0%, transparent 70%);
+}
+
+.qbank-source-card__shift-badge {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #8C5A3C;
+  background: rgba(192, 133, 82, 0.08);
+  border: 1px solid rgba(192, 133, 82, 0.2);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  margin-top: -4px;
+}
+
+.qbank-source-card--admission .qbank-source-card__action {
+  color: #8C5A3C;
+}
+
+.qbank-source-modal__badge--admission {
+  background: #FEF3C7;
+  color: #D97706;
+  border-color: #FCD34D;
 }

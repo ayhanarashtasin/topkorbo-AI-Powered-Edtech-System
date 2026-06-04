@@ -88,6 +88,7 @@ const questionSchema = new mongoose.Schema({
       // For admission tags
       university: { type: String },
       unit: { type: String },
+      shift: { type: String },
       // For college tags (e.g. "Notre Dame College", "Dhaka College")
       college: { type: String },
       // Common

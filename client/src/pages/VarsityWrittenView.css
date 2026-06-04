@@ -338,3 +338,74 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   line-height: 1.55;
 }
+
+/* ─── Premium Selectors Styles ──────────────────────────────────────────── */
+
+.varsity-written-selectors {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.varsity-written-selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.varsity-written-selector-group label {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 600;
+}
+
+.varsity-written-btn-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.varsity-written-select-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.varsity-written-select-btn:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fff;
+}
+
+.varsity-written-select-btn.is-active {
+  background: #F59E0B !important;
+  color: #000 !important;
+  border-color: #F59E0B !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .varsity-written-selectors {
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1rem;
+  }
+  .varsity-written-select-btn {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+  }
+}

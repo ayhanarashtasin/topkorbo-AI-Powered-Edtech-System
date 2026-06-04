@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -24,6 +24,9 @@ import {
 import Sidebar from '../components/layout/Sidebar';
 import './QuestionBank.css';
 
+const MCQ_ONLY_UNIVERSITIES = ['GST', 'AGRI', 'CU', 'JU', 'RU'];
+const MCQ_WRITTEN_UNIVERSITIES = ['DU'];
+
 export default function QuestionBank() {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
@@ -37,11 +40,14 @@ export default function QuestionBank() {
   const [activeFormatModal, setActiveFormatModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [boardSources, setBoardSources] = useState([]);
-  const [collegeSources, setCollegeSources] = useState([]);
   // Modal shown when a board/college card is clicked. Holds the source payload
   // and which sub-screen is active: 'menu' (two CTAs) or 'preview' (list of Qs).
   const [activeSourceModal, setActiveSourceModal] = useState(null); // { source }
   const [sourcesLoading, setSourcesLoading] = useState(false);
+
+  // ── Admission Question Bank state ──
+  const [varsityCards, setVarsityCards] = useState([]);
+  const [varsityCardsLoading, setVarsityCardsLoading] = useState(false);
   const [user, setUser] = useState({
     name: localStorage.getItem('topkorbo_name') || 'Ayhan Arash Tasin',
     avatar: localStorage.getItem('topkorbo_avatar') || '',
@@ -369,15 +375,34 @@ export default function QuestionBank() {
     { id: 'ju', name: 'JU', color: 'var(--univ-ju)', bnName: 'জাবি', category: 'university' },
     { id: 'ru', name: 'RU', color: 'var(--univ-ru)', bnName: 'রাবি', category: 'university' },
     { id: 'buet', name: 'BUET', color: 'var(--univ-buet)', bnName: 'বুয়েট', category: 'engineering' },
-    { id: 'ckruet', name: 'CKRUET', color: 'var(--univ-ckruet)', bnName: 'চুয়েট-কুয়েট-রুয়েট গুচ্ছ', category: 'engineering' },
     { id: 'ruet', name: 'RUET', color: 'var(--univ-ruet)', bnName: 'রুয়েট', category: 'engineering' },
     { id: 'kuet', name: 'KUET', color: 'var(--univ-kuet)', bnName: 'কুয়েট', category: 'engineering' },
-    { id: 'mist', name: 'MIST', color: 'var(--univ-mist)', bnName: 'এমআইএসটি', category: 'university' },
+    { id: 'mist', name: 'MIST', color: 'var(--univ-mist)', bnName: 'এমআইএসটি', category: 'engineering' },
     { id: 'cuet', name: 'CUET', color: 'var(--univ-cuet)', bnName: 'চুয়েট', category: 'engineering' },
-    { id: 'butex', name: 'BUTEX', color: 'var(--univ-butex)', bnName: 'বুটেক্স', category: 'university' },
-    { id: 'iba', name: 'IBA', color: 'var(--univ-iba)', bnName: 'আইবিএ', category: 'university' },
+    { id: 'butex', name: 'BUTEX', color: 'var(--univ-butex)', bnName: 'বুটেক্স', category: 'engineering' },
     { id: 'iut', name: 'IUT', color: 'var(--univ-iut)', bnName: 'আইইউটি', category: 'engineering' }
   ];
+
+  const varsityIdFromUrl = searchParams.get('university');
+  const selectedVarsity = useMemo(() => {
+    if (!varsityIdFromUrl) return null;
+    return admissionVarsities.find(v => v.id.toUpperCase() === varsityIdFromUrl.toUpperCase()) || null;
+  }, [varsityIdFromUrl]);
+
+  const isMcqWritten = useMemo(() => {
+    if (!selectedVarsity) return false;
+    return MCQ_WRITTEN_UNIVERSITIES.includes(selectedVarsity.id.toUpperCase());
+  }, [selectedVarsity]);
+
+  const varsityView = useMemo(() => {
+    if (!selectedVarsity) return null;
+    return searchParams.get('view') || (isMcqWritten ? 'chooser' : 'cards');
+  }, [selectedVarsity, isMcqWritten, searchParams]);
+
+  const varsityQuestionType = useMemo(() => {
+    if (!selectedVarsity) return 'mcq';
+    return searchParams.get('type') || 'mcq';
+  }, [selectedVarsity, searchParams]);
 
   const selectedSubject = useMemo(() => {
     if (!subjectParam) return null;
@@ -412,7 +437,6 @@ export default function QuestionBank() {
     const fetchSources = async () => {
       setSourcesLoading(true);
       setBoardSources([]);
-      setCollegeSources([]);
       try {
         const token = localStorage.getItem('topkorbo_token');
         const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -427,7 +451,6 @@ export default function QuestionBank() {
         const resData = await response.json();
         if (resData.success && resData.data) {
           setBoardSources(resData.data.boards || []);
-          setCollegeSources(resData.data.colleges || []);
         }
       } catch (err) {
         console.error('Error fetching question sources:', err);
@@ -446,6 +469,20 @@ export default function QuestionBank() {
     window.addEventListener('reset-qbank', handleReset);
     return () => window.removeEventListener('reset-qbank', handleReset);
   }, [setSearchParams]);
+
+  // Sync activeSubTab when university query parameter is active
+  useEffect(() => {
+    if (varsityIdFromUrl) {
+      setActiveSubTab('admission');
+    }
+  }, [varsityIdFromUrl]);
+
+  // Fetch admission cards when selectedVarsity, view, or type changes
+  useEffect(() => {
+    if (selectedVarsity && varsityView === 'cards') {
+      fetchAdmissionCards(selectedVarsity.id.toUpperCase(), varsityQuestionType);
+    }
+  }, [selectedVarsity, varsityView, varsityQuestionType]);
 
   const handleSubjectClick = (subject) => {
     const targetPapers = [
@@ -559,23 +596,167 @@ export default function QuestionBank() {
     setActiveSourceModal(null);
   };
 
-  const getAvailableOptions = (subjectId) => {
-    if (!subjectId) return [];
-    // The qbank now exposes only Academic Prep per subject. Varsity /
-    // Engineering / Medical admission cards have been removed.
-    return [
-      {
-        id: 'academic',
-        titleEn: 'Academic Prep',
-        titleBn: 'একাডেমিক প্রস্তুতি',
-        descEn: 'HSC Board Exam questions, chapter-wise analysis, and practice tests.',
-        descBn: 'এইচএসসি বোর্ড পরীক্ষার প্রশ্ন, অধ্যায়ভিত্তিক বিশ্লেষণ এবং অনুশীলন পরীক্ষা।',
-        icon: <HiBookOpen size={28} />,
-        color: 'var(--univ-du)',
-        gradient: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'
-      }
-    ];
+  const handleVarsityCardClick = (varsity) => {
+    const uniId = varsity.id.toUpperCase();
+    if (MCQ_WRITTEN_UNIVERSITIES.includes(uniId)) {
+      setSearchParams({ university: uniId, view: 'chooser' });
+    } else {
+      setSearchParams({ university: uniId, view: 'cards', type: 'mcq' });
+    }
   };
+
+  const fetchAdmissionCards = async (university, type) => {
+    setVarsityCardsLoading(true);
+    setVarsityCards([]);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const params = new URLSearchParams({ university });
+      if (type) params.append('type', type);
+
+      const response = await fetch(`${backendBaseUrl}/questions/admission-cards?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const resData = await response.json();
+      if (resData.success && resData.data?.cards) {
+        setVarsityCards(resData.data.cards);
+      }
+    } catch (err) {
+      console.error('Error fetching admission cards:', err);
+    } finally {
+      setVarsityCardsLoading(false);
+    }
+  };
+
+  const handleVarsityTypeChoice = (type) => {
+    if (type === 'written') {
+      // Navigate to the dedicated varsity written view
+      navigate(`/qbank/varsity-written?university=${selectedVarsity.id.toUpperCase()}`);
+      return;
+    }
+    setSearchParams({ university: selectedVarsity.id.toUpperCase(), view: 'cards', type });
+  };
+
+  const handleVarsitySourceCardClick = async (card) => {
+    // Fetch the actual questions for this card and start exam / show questions
+    try {
+      setSourcesLoading(true);
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+      // Use the existing by-source-like approach but for admission questions
+      const match = {
+        'tags.category': 'admission',
+        'tags.university': card.university,
+        type: card.type
+      };
+      if (card.year) match['tags.year'] = card.year;
+      if (card.shift) match['tags.shift'] = card.shift;
+
+      // Build a pseudo-source for the modal
+      setActiveSourceModal({
+        source: {
+          sourceType: 'admission',
+          university: card.university,
+          year: card.year,
+          shift: card.shift,
+          count: card.count,
+          questionType: card.type
+        }
+      });
+    } catch (err) {
+      console.error('Error preparing varsity source modal:', err);
+    } finally {
+      setSourcesLoading(false);
+    }
+  };
+
+  // Override handleStartExam to also support admission sources
+  const handleStartAdmissionExam = async () => {
+    if (!activeSourceModal || activeSourceModal.source.sourceType !== 'admission') return;
+    const { source } = activeSourceModal;
+
+    try {
+      setSourcesLoading(true);
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+      // Fetch ALL questions matching this admission source
+      const matchQuery = {
+        'tags.category': 'admission',
+        'tags.university': source.university
+      };
+      if (source.year) matchQuery['tags.year'] = source.year;
+      if (source.shift) matchQuery['tags.shift'] = source.shift;
+      if (source.questionType) matchQuery.type = source.questionType;
+
+      // Use a POST to pass complex filters
+      const params = new URLSearchParams({
+        subject: 'Physics', // We need all subjects, use aggregation
+        paper: '1st',
+        sourceType: 'admission',
+        name: source.university
+      });
+      if (source.year) params.append('year', source.year);
+      if (source.questionType) params.append('type', source.questionType);
+
+      // Directly query using admission filter
+      const response = await fetch(`${backendBaseUrl}/questions/by-source?sourceType=admission&name=${source.university}&year=${source.year || ''}&type=${source.questionType || ''}&shift=${source.shift || ''}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const resData = await response.json();
+
+      if (resData.success && resData.data?.questions?.length > 0) {
+        const fetchedQuestions = resData.data.questions;
+        sessionStorage.setItem('mock_exam_questions', JSON.stringify(fetchedQuestions));
+        sessionStorage.setItem('mock_exam_config', JSON.stringify({
+          duration: 60,
+          negativeMarking: false,
+          questionType: source.questionType || 'mcq',
+          standard: 'admission',
+          totalQuestions: fetchedQuestions.length
+        }));
+        sessionStorage.setItem('mock_exam_from_qbank', 'true');
+
+        ['mock_test_step', 'mock_test_subject_ids', 'mock_test_chapters',
+         'mock_test_selected_topics', 'mock_exam_standard', 'mock_question_type',
+         'mock_total_questions', 'mock_exam_duration', 'mock_negative_marking'
+        ].forEach(key => sessionStorage.removeItem(key));
+
+        closeSourceModal();
+        navigate('/mock-test/exam');
+      } else {
+        alert(language === 'en' ? 'No questions found for this source to start exam.' : 'পরীক্ষা শুরু করার জন্য এই উৎসের কোনো প্রশ্ন পাওয়া যায়নি।');
+      }
+    } catch (err) {
+      console.error('Error starting admission exam:', err);
+      alert(language === 'en' ? 'Error starting exam.' : 'পরীক্ষা শুরু করতে সমস্যা হয়েছে।');
+    } finally {
+      setSourcesLoading(false);
+    }
+  };
+
+  const handleShowAdmissionQuestions = () => {
+    if (!activeSourceModal || activeSourceModal.source.sourceType !== 'admission') return;
+    const { source } = activeSourceModal;
+
+    closeSourceModal();
+    navigate('/qbank/source-questions', {
+      state: {
+        sourceType: 'admission',
+        name: source.university,
+        year: source.year,
+        shift: source.shift,
+        questionType: source.questionType
+      }
+    });
+  };
+
+  const clearVarsitySelection = () => {
+    setVarsityCards([]);
+    navigate('/qbank');
+  };
+
 
   // (Varsity/Engineering/Medical admission options were removed — the qbank
   // now exposes only the Academic Prep card per subject.)
@@ -604,13 +785,147 @@ export default function QuestionBank() {
 
       {/* Main Panel Content */}
       <main className="dashboard-main">
-        {selectedSourceContext ? (
+        {selectedVarsity ? (
+          <div key="varsity-options" className="qbank-options-page animate-fade-in">
+            <header className="dashboard-header qbank-header">
+              <button
+                type="button"
+                className="qbank-back-btn"
+                onClick={() => {
+                  if (varsityView === 'cards' && isMcqWritten) {
+                    setVarsityCards([]);
+                    setSearchParams({ university: selectedVarsity.id.toUpperCase(), view: 'chooser' });
+                  } else {
+                    clearVarsitySelection();
+                  }
+                }}
+              >
+                <HiArrowLeft size={16} />
+                <span>
+                  {varsityView === 'cards' && isMcqWritten
+                    ? (language === 'en' ? 'Back to Question Format' : 'প্রশ্নের ধরনে ফিরে যান')
+                    : (language === 'en' ? 'Back to Admission' : 'ভর্তি পরীক্ষায় ফিরে যান')}
+                </span>
+              </button>
+              <div className="qbank-options-header-info">
+                <h2>
+                  {language === 'en' ? selectedVarsity.name : selectedVarsity.bnName}
+                  {varsityView === 'cards' ? ` · ${varsityQuestionType.toUpperCase()} ${language === 'en' ? 'Questions' : 'প্রশ্ন'}` : ''}
+                </h2>
+                <p>{language === 'en' ? 'Admission Question Bank' : 'ভর্তি পরীক্ষার প্রশ্নব্যাংক'}</p>
+              </div>
+            </header>
+
+            <div className="qbank-workspace">
+              {/* DU: MCQ / Written Chooser */}
+              {varsityView === 'chooser' && (
+                <div className="qbank-options-grid">
+                  <div
+                    className="qbank-option-card qbank-option-card--mcq"
+                    style={{ '--option-color': '#10B981' }}
+                    onClick={() => handleVarsityTypeChoice('mcq')}
+                  >
+                    <div className="qbank-option-card__visual" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
+                      <HiCollection size={28} />
+                    </div>
+                    <div className="qbank-option-card__info">
+                      <h3>{language === 'en' ? 'MCQ (Multiple Choice)' : 'MCQ (বহুনির্বাচনী)'}</h3>
+                      <p>{language === 'en' ? 'Practice admission MCQ questions from past years with answers.' : 'বিগত বছরের ভর্তি পরীক্ষার MCQ প্রশ্ন উত্তরসহ অনুশীলন করুন।'}</p>
+                    </div>
+                    <div className="qbank-option-card__action">
+                      <span>{language === 'en' ? 'View MCQ Questions' : 'MCQ প্রশ্ন দেখুন'} &rarr;</span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="qbank-option-card qbank-option-card--cq"
+                    style={{ '--option-color': '#6366F1' }}
+                    onClick={() => handleVarsityTypeChoice('written')}
+                  >
+                    <div className="qbank-option-card__visual" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
+                      <HiPencil size={28} />
+                    </div>
+                    <div className="qbank-option-card__info">
+                      <h3>{language === 'en' ? 'Written Questions' : 'লিখিত প্রশ্ন'}</h3>
+                      <p>{language === 'en' ? 'Practice admission written questions from past years.' : 'বিগত বছরের ভর্তি পরীক্ষার লিখিত প্রশ্ন অনুশীলন করুন।'}</p>
+                    </div>
+                    <div className="qbank-option-card__action">
+                      <span>{language === 'en' ? 'View Written Questions' : 'লিখিত প্রশ্ন দেখুন'} &rarr;</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Admission Source Cards Grid */}
+              {varsityView === 'cards' && (
+                <>
+                  {varsityCardsLoading ? (
+                    <div className="qbank-empty">
+                      <p>{language === 'en' ? 'Loading questions...' : 'প্রশ্ন লোড হচ্ছে...'}</p>
+                    </div>
+                  ) : varsityCards.length > 0 ? (
+                    <section className="qbank-source-section">
+                      <h3 className="qbank-source-section-title">
+                        <HiOfficeBuilding size={20} />
+                        {language === 'en'
+                          ? `${selectedVarsity.name} — Past Year Questions`
+                          : `${selectedVarsity.bnName} — বিগত বছরের প্রশ্ন`}
+                      </h3>
+                      <div className="qbank-source-grid">
+                        {varsityCards.map((card, idx) => (
+                          <div
+                            key={`adm-${card.university}-${card.year}-${card.shift}-${card.type}-${idx}`}
+                            className="qbank-source-card qbank-source-card--admission"
+                            onClick={() => handleVarsitySourceCardClick(card)}
+                          >
+                            <div className="qbank-source-card__glow"></div>
+                            <h4 className="qbank-source-card__title">
+                              {card.university}{card.year ? ` ${card.year}` : ''}
+                            </h4>
+                            {card.shift && (
+                              <span className="qbank-source-card__shift-badge">
+                                {card.shift}
+                              </span>
+                            )}
+                            <div className="qbank-source-card__meta">
+                              <span className="qbank-source-card__meta-item">
+                                <HiClock size={14} />
+                                {language === 'en' ? '1 Hour' : '১ ঘন্টা'}
+                              </span>
+                              <span className="qbank-source-card__meta-item">
+                                <HiQuestionMarkCircle size={14} />
+                                {language === 'en' ? `${card.count} Questions` : `${card.count}টি প্রশ্ন`}
+                              </span>
+                              <span className="qbank-source-card__meta-item">
+                                <HiDocumentText size={14} />
+                                {card.type.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="qbank-source-card__action">
+                              <span>{language === 'en' ? 'Start Practice' : 'অনুশীলন শুরু করুন'}</span>
+                              <HiChevronRight size={16} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : (
+                    <div className="qbank-empty">
+                      <HiDocumentText size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                      <p>{language === 'en' ? 'No questions found for this university yet.' : 'এই বিশ্ববিদ্যালয়ের জন্য এখনও কোনো প্রশ্ন পাওয়া যায়নি।'}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        ) : selectedSourceContext ? (
           <div className="qbank-options-page animate-fade-in">
             <header className="dashboard-header qbank-header">
               <button
                 type="button"
                 className="qbank-back-btn"
-                onClick={() => setSearchParams({ subject: subjectParam, stream: streamParam })}
+                onClick={() => setSearchParams({ subject: subjectParam })}
               >
                 <HiArrowLeft size={16} />
                 <span>{language === 'en' ? 'Back to Question Format' : 'প্রশ্নের ধরনে ফিরে যান'}</span>
@@ -673,183 +988,87 @@ export default function QuestionBank() {
                       </div>
                     )}
                   </section>
-
-                  {/* College sources */}
-                  <section className="qbank-source-section">
-                    <h3 className="qbank-source-section-title">
-                      <HiAcademicCap size={20} />
-                      {t('qbank.sources.college_title')}
-                    </h3>
-                    {collegeSources.length > 0 ? (
-                      <div className="qbank-source-grid">
-                        {collegeSources.map((src) => (
-                          <div
-                            key={`college-${src.college}-${src.year}`}
-                            className="qbank-source-card qbank-source-card--college"
-                            onClick={() => handleSourceCardClick({ ...src, sourceType: 'college' })}
-                          >
-                            <div className="qbank-source-card__glow"></div>
-                            <h4 className="qbank-source-card__title">
-                              {src.college}{src.year ? ` ${src.year}` : ''}
-                            </h4>
-                            <div className="qbank-source-card__meta">
-                              <span className="qbank-source-card__meta-item">
-                                <HiClock size={14} />
-                                {t('qbank.sources.time')}
-                              </span>
-                              <span className="qbank-source-card__meta-item">
-                                <HiQuestionMarkCircle size={14} />
-                                {t('qbank.sources.questions_count', { count: src.count })}
-                              </span>
-                            </div>
-                            <div className="qbank-source-card__action">
-                              <span>{language === 'en' ? 'Start Practice' : 'অনুশীলন শুরু করুন'}</span>
-                              <HiChevronRight size={16} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="qbank-empty">
-                        <p>{t('qbank.sources.empty')}</p>
-                      </div>
-                    )}
-                  </section>
                 </>
               )}
             </div>
           </div>
         ) : selectedSubject ? (
-          selectedPrepStream === 'academic' ? (
-            <div className="qbank-options-page animate-fade-in">
-              <header className="dashboard-header qbank-header">
-                <button
-                  type="button"
-                  className="qbank-back-btn"
-                  onClick={() => setSearchParams({ subject: subjectParam })}
+          <div key="subject-options" className="qbank-options-page animate-fade-in">
+            <header className="dashboard-header qbank-header">
+              <button
+                type="button"
+                className="qbank-back-btn"
+                onClick={() => navigate('/qbank')}
+              >
+                <HiArrowLeft size={16} />
+                <span>{language === 'en' ? 'Back to Question Bank' : 'প্রশ্নব্যাংকে ফিরে যান'}</span>
+              </button>
+              <div className="qbank-options-header-info">
+                <h2>
+                  {language === 'en' ? selectedSubject.titleEn : selectedSubject.titleBn}
+                </h2>
+                <p>{language === 'en' ? 'Choose question format' : 'প্রশ্নের ধরন নির্বাচন করুন'}</p>
+              </div>
+            </header>
+
+            <div className="qbank-workspace">
+              <div className="qbank-options-grid">
+
+                {/* MCQ Card */}
+                <div
+                  className="qbank-option-card qbank-option-card--mcq"
+                  style={{ '--option-color': '#10B981' }}
+                  onClick={() => {
+                    setSearchParams({
+                      subject: subjectParam,
+                      format: 'mcq'
+                    });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                 >
-                  <HiArrowLeft size={16} />
-                  <span>{language === 'en' ? 'Back to Streams' : 'প্রস্তুতি বিভাগে ফিরে যান'}</span>
-                </button>
-                <div className="qbank-options-header-info">
-                  <h2>
-                    {language === 'en' ? `${selectedSubject.titleEn} - Academic Prep` : `${selectedSubject.titleBn} - একাডেমিক প্রস্তুতি`}
-                  </h2>
-                  <p>{language === 'en' ? 'Choose question format' : 'প্রশ্নের ধরন নির্বাচন করুন'}</p>
-                </div>
-              </header>
-
-              <div className="qbank-workspace">
-                <div className="qbank-options-grid">
-
-                  {/* MCQ Card */}
-                  <div
-                    className="qbank-option-card qbank-option-card--mcq"
-                    style={{ '--option-color': '#10B981' }}
-                    onClick={() => {
-                      setSearchParams({
-                        subject: subjectParam,
-                        stream: streamParam,
-                        format: 'mcq'
-                      });
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                  >
-                    <div className="qbank-option-card__visual" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
-                      <HiCollection size={28} />
-                    </div>
-                    <div className="qbank-option-card__info">
-                      <h3>{language === 'en' ? 'MCQ (Multiple Choice)' : 'MCQ (বহুনির্বাচনী)'}</h3>
-                      <p>
-                        {language === 'en'
-                          ? 'Practice chapter-wise multiple choice questions with answers and detailed explanations.'
-                          : 'উত্তর এবং বিস্তারিত ব্যাখ্যাসহ অধ্যায়ভিত্তিক বহুনির্বাচনী প্রশ্ন অনুশীলন করুন।'}
-                      </p>
-                    </div>
-                    <div className="qbank-option-card__action">
-                      <span>{language === 'en' ? 'Start MCQ Practice' : 'MCQ অনুশীলন শুরু করুন'} &rarr;</span>
-                    </div>
+                  <div className="qbank-option-card__visual" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
+                    <HiCollection size={28} />
                   </div>
-
-                  {/* CQ Card */}
-                  <div
-                    className="qbank-option-card qbank-option-card--cq"
-                    style={{ '--option-color': '#6366F1' }}
-                    onClick={() => setActiveFormatModal('cq')}
-                  >
-                    <div className="qbank-option-card__visual" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
-                      <HiPencil size={28} />
-                    </div>
-                    <div className="qbank-option-card__info">
-                      <h3>{language === 'en' ? 'CQ (Creative Questions)' : 'CQ (সৃজনশীল প্রশ্ন)'}</h3>
-                      <p>
-                        {language === 'en'
-                          ? 'Solve creative question stems, analyze parts A, B, C, D and view manual solutions.'
-                          : 'সৃজনশীল উদ্দীপক সমাধান করুন, ক, খ, গ, ঘ অংশ বিশ্লেষণ করুন এবং সমাধান দেখুন।'}
-                      </p>
-                    </div>
-                    <div className="qbank-option-card__action">
-                      <span>{language === 'en' ? 'Start CQ Practice' : 'CQ অনুশীলন শুরু করুন'} &rarr;</span>
-                    </div>
+                  <div className="qbank-option-card__info">
+                    <h3>{language === 'en' ? 'MCQ (Multiple Choice)' : 'MCQ (বহুনির্বাচনী)'}</h3>
+                    <p>
+                      {language === 'en'
+                        ? 'Practice chapter-wise multiple choice questions with answers and detailed explanations.'
+                        : 'উত্তর এবং বিস্তারিত ব্যাখ্যাসহ অধ্যায়ভিত্তিক বহুনির্বাচনী প্রশ্ন অনুশীলন করুন।'}
+                    </p>
                   </div>
-
+                  <div className="qbank-option-card__action">
+                    <span>{language === 'en' ? 'Start MCQ Practice' : 'MCQ অনুশীলন শুরু করুন'} &rarr;</span>
+                  </div>
                 </div>
+
+                {/* CQ Card */}
+                <div
+                  className="qbank-option-card qbank-option-card--cq"
+                  style={{ '--option-color': '#6366F1' }}
+                  onClick={() => setActiveFormatModal('cq')}
+                >
+                  <div className="qbank-option-card__visual" style={{ background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' }}>
+                    <HiPencil size={28} />
+                  </div>
+                  <div className="qbank-option-card__info">
+                    <h3>{language === 'en' ? 'CQ (Creative Questions)' : 'CQ (সৃজনশীল প্রশ্ন)'}</h3>
+                    <p>
+                      {language === 'en'
+                        ? 'Solve creative question stems, analyze parts A, B, C, D and view manual solutions.'
+                        : 'সৃজনশীল উদ্দীপক সমাধান করুন, ক, খ, গ, ঘ অংশ বিশ্লেষণ করুন এবং সমাধান দেখুন।'}
+                    </p>
+                  </div>
+                  <div className="qbank-option-card__action">
+                    <span>{language === 'en' ? 'Start CQ Practice' : 'CQ অনুশীলন শুরু করুন'} &rarr;</span>
+                  </div>
+                </div>
+
               </div>
             </div>
-          ) : (
-            <div className="qbank-options-page animate-fade-in">
-              <header className="dashboard-header qbank-header">
-                <button
-                  type="button"
-                  className="qbank-back-btn"
-                  onClick={() => setSearchParams({})}
-                >
-                  <HiArrowLeft size={16} />
-                  <span>{language === 'en' ? 'Back to Question Bank' : 'প্রশ্নব্যাংকে ফিরে যান'}</span>
-                </button>
-                <div className="qbank-options-header-info">
-                  <h2>{language === 'en' ? selectedSubject.titleEn : selectedSubject.titleBn}</h2>
-                  <p>{language === 'en' ? 'Select your preparation stream' : 'আপনার প্রস্তুতি বিভাগ নির্বাচন করুন'}</p>
-                </div>
-              </header>
-
-              <div className="qbank-workspace">
-                <div className="qbank-options-grid">
-                  {getAvailableOptions(selectedSubject.id).map((opt) => (
-                    <div
-                      key={opt.id}
-                      className={`qbank-option-card qbank-option-card--${opt.id}`}
-                      style={{ '--option-color': opt.color }}
-                      onClick={() => {
-                        if (opt.id === 'academic') {
-                          setSearchParams({
-                            subject: subjectParam,
-                            stream: 'academic'
-                          });
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        } else {
-                          setActiveOptionModal(opt);
-                        }
-                      }}
-                    >
-                      <div className="qbank-option-card__visual" style={{ background: opt.gradient }}>
-                        {opt.icon}
-                      </div>
-                      <div className="qbank-option-card__info">
-                        <h3>{language === 'en' ? opt.titleEn : opt.titleBn}</h3>
-                        <p>{language === 'en' ? opt.descEn : opt.descBn}</p>
-                      </div>
-                      <div className="qbank-option-card__action">
-                        <span>{language === 'en' ? 'Start Practice' : 'অনুশীলন শুরু করুন'} &rarr;</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )
+          </div>
         ) : (
-          <>
+          <Fragment key="main-qbank">
             <header className="dashboard-header qbank-header">
               <div className="dashboard-header__welcome">
                 <h2>{t('qbank.title')}</h2>
@@ -1008,7 +1227,7 @@ export default function QuestionBank() {
                           {filteredAdmissionVarsities.filter(v => v.category === 'engineering').length > 0 ? (
                             <div className="qbank-grid qbank-grid--admission">
                               {filteredAdmissionVarsities.filter(v => v.category === 'engineering').map((v) => (
-                                <div key={v.id} className={`qbank-card qbank-card--admission qbank-card--${v.id}`} style={{ '--card-brand': v.color }}>
+                                <div key={v.id} className={`qbank-card qbank-card--admission qbank-card--${v.id}`} style={{ '--card-brand': v.color }} onClick={() => handleVarsityCardClick(v)}>
                                   <div className="qbank-card__glow"></div>
                                   <div className="qbank-card__visual">
                                     <span className="qbank-card__letter">{v.name.slice(0, 2)}</span>
@@ -1043,7 +1262,7 @@ export default function QuestionBank() {
                           {filteredAdmissionVarsities.filter(v => v.category === 'medical').length > 0 ? (
                             <div className="qbank-grid qbank-grid--admission">
                               {filteredAdmissionVarsities.filter(v => v.category === 'medical').map((v) => (
-                                <div key={v.id} className={`qbank-card qbank-card--admission qbank-card--${v.id}`} style={{ '--card-brand': v.color }}>
+                                <div key={v.id} className={`qbank-card qbank-card--admission qbank-card--${v.id}`} style={{ '--card-brand': v.color }} onClick={() => handleVarsityCardClick(v)}>
                                   <div className="qbank-card__glow"></div>
                                   <div className="qbank-card__visual">
                                     <span className="qbank-card__letter">{v.name.slice(0, 2)}</span>
@@ -1078,7 +1297,7 @@ export default function QuestionBank() {
                           {filteredAdmissionVarsities.filter(v => v.category === 'university').length > 0 ? (
                             <div className="qbank-grid qbank-grid--admission">
                               {filteredAdmissionVarsities.filter(v => v.category === 'university').map((v) => (
-                                <div key={v.id} className={`qbank-card qbank-card--admission qbank-card--${v.id}`} style={{ '--card-brand': v.color }}>
+                                <div key={v.id} className={`qbank-card qbank-card--admission qbank-card--${v.id}`} style={{ '--card-brand': v.color }} onClick={() => handleVarsityCardClick(v)}>
                                   <div className="qbank-card__glow"></div>
                                   <div className="qbank-card__visual">
                                     <span className="qbank-card__letter">{v.name.slice(0, 2)}</span>
@@ -1147,7 +1366,7 @@ export default function QuestionBank() {
                 )}
               </div>
             </div>
-          </>
+          </Fragment>
         )}
       </main>
 
@@ -1274,32 +1493,45 @@ export default function QuestionBank() {
                 className={`qbank-source-modal__badge ${
                   activeSourceModal.source.sourceType === 'college'
                     ? 'qbank-source-modal__badge--college'
-                    : ''
+                    : activeSourceModal.source.sourceType === 'admission'
+                      ? 'qbank-source-modal__badge--admission'
+                      : ''
                 }`}
               >
                 {activeSourceModal.source.sourceType === 'board' ? (
                   <HiOfficeBuilding size={20} />
+                ) : activeSourceModal.source.sourceType === 'admission' ? (
+                  <HiAcademicCap size={20} />
                 ) : (
                   <HiAcademicCap size={20} />
                 )}
                 <span>
                   {activeSourceModal.source.sourceType === 'board'
                     ? (language === 'en' ? 'Board Question' : 'বোর্ড প্রশ্ন')
-                    : (language === 'en' ? 'College Question' : 'কলেজ প্রশ্ন')}
+                    : activeSourceModal.source.sourceType === 'admission'
+                      ? (language === 'en' ? 'Admission Question' : 'ভর্তি পরীক্ষা')
+                      : (language === 'en' ? 'College Question' : 'কলেজ প্রশ্ন')}
                 </span>
               </div>
               <h2 className="qbank-source-modal__title">
-                {activeSourceModal.source.board || activeSourceModal.source.college}
+                {activeSourceModal.source.sourceType === 'admission'
+                  ? activeSourceModal.source.university
+                  : (activeSourceModal.source.board || activeSourceModal.source.college)}
                 {activeSourceModal.source.year ? ` ${activeSourceModal.source.year}` : ''}
+                {activeSourceModal.source.shift ? ` — ${activeSourceModal.source.shift}` : ''}
               </h2>
               <div className="qbank-source-modal__chips">
                 <span className="qbank-source-modal__chip">
                   <HiClock size={14} />
-                  {t('qbank.sources.time')}
+                  {activeSourceModal.source.sourceType === 'admission'
+                    ? (language === 'en' ? '1 Hour' : '১ ঘন্টা')
+                    : t('qbank.sources.time')}
                 </span>
                 <span className="qbank-source-modal__chip">
                   <HiQuestionMarkCircle size={14} />
-                  {t('qbank.sources.questions_count', { count: activeSourceModal.source.count })}
+                  {activeSourceModal.source.sourceType === 'admission'
+                    ? (language === 'en' ? `${activeSourceModal.source.count} Questions` : `${activeSourceModal.source.count}টি প্রশ্ন`)
+                    : t('qbank.sources.questions_count', { count: activeSourceModal.source.count })}
                 </span>
               </div>
             </div>
@@ -1308,7 +1540,7 @@ export default function QuestionBank() {
               <button
                 type="button"
                 className="qbank-source-modal__btn qbank-source-modal__btn--primary"
-                onClick={handleStartExam}
+                onClick={activeSourceModal.source.sourceType === 'admission' ? handleStartAdmissionExam : handleStartExam}
               >
                 <HiPlay size={16} />
                 <span>{t('qbank.source_action.start_exam')}</span>
@@ -1316,7 +1548,7 @@ export default function QuestionBank() {
               <button
                 type="button"
                 className="qbank-source-modal__btn qbank-source-modal__btn--secondary"
-                onClick={handleShowQuestions}
+                onClick={activeSourceModal.source.sourceType === 'admission' ? handleShowAdmissionQuestions : handleShowQuestions}
               >
                 <HiEye size={16} />
                 <span>{t('qbank.source_action.show_questions')}</span>

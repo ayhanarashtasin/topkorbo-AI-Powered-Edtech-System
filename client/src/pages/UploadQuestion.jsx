@@ -513,7 +513,7 @@ export default function UploadQuestion() {
     } else if (category === 'college') {
       setTags(prev => [...prev, { category: 'college', college: '', year: '' }]);
     } else {
-      setTags(prev => [...prev, { category: 'admission', university: '', unit: '', year: '' }]);
+      setTags(prev => [...prev, { category: 'admission', university: '', unit: '', year: '', shift: '' }]);
     }
   };
 
@@ -1126,6 +1126,14 @@ export default function UploadQuestion() {
                           <option value="">{language === 'en' ? 'Session' : 'সেশন'}</option>
                           {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
+                        <input
+                          type="text"
+                          className="uq-select"
+                          value={tag.shift || ''}
+                          onChange={e => updateTag(idx, 'shift', e.target.value)}
+                          placeholder={language === 'en' ? 'Shift / Group (optional)' : 'শিফট / গ্রুপ (ঐচ্ছিক)'}
+                          style={{ minWidth: '140px' }}
+                        />
                       </>
                     )}
                   </div>
