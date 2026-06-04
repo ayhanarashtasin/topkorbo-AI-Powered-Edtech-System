@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
@@ -57,12 +57,17 @@ export default function Sidebar({ activeTab, user }) {
     });
   }
 
-  // Show Upload Question tab only for teachers
+  // Show Upload Question and Create Contest tabs only for teachers
   if (safeUser.role === 'teacher') {
     menuItems.push({
       id: 'upload-question',
       label: t('db.menu.upload_question'),
       icon: <HiUpload size={20} />
+    });
+    menuItems.push({
+      id: 'make-contest-question',
+      label: t('db.menu.make_contest'),
+      icon: <HiCalendar size={20} />
     });
   }
 
@@ -133,6 +138,7 @@ export default function Sidebar({ activeTab, user }) {
                     navigate('/qbank');
                   }
                   else if (item.id === 'upload-question') navigate('/upload-question');
+                  else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
                   else navigate('/dashboard');
                 }}

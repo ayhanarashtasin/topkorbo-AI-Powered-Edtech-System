@@ -271,6 +271,7 @@
   "bqv.topic_label": "Topic",
   "bqv.cq_label": "Sub-question",
   "db.menu.upload_question": "Upload Question",
+  "db.menu.make_contest": "Create Contest",
   "uq.title": "Upload Question",
   "uq.subtitle": "Create and upload new questions to the TopKorbo question bank with LaTeX formatting.",
   "uq.badge": "Teacher Studio",

@@ -270,6 +270,7 @@
   "bqv.topic_label": "টপিক",
   "bqv.cq_label": "উপ-প্রশ্ন",
   "db.menu.upload_question": "প্রশ্ন আপলোড",
+  "db.menu.make_contest": "কনটেস্ট তৈরি",
   "uq.title": "প্রশ্ন আপলোড করুন",
   "uq.subtitle": "LaTeX ফরম্যাটিং সহ টপকরবো প্রশ্নব্যাংকে নতুন প্রশ্ন তৈরি এবং আপলোড করুন।",
   "uq.badge": "টিচার স্টুডিও",
