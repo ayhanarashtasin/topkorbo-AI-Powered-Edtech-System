@@ -1,0 +1,645 @@
+/* ==========================================================================
+   Question Bank Stylesheet - Redesigned Premium Theme (Warm Palette)
+   ========================================================================== */
+
+:root {
+  /* University Brand colors for soft paste-glass backgrounds */
+  --univ-bup: #10B981;
+  --univ-gst: #EC4899;
+  --univ-agri: #84CC16;
+  --univ-medical: #EF4444;
+  --univ-dental: #F43F5E;
+  --univ-afmc: #06B6D4;
+  --univ-du: #3B82F6;
+  --univ-cu: #14B8A6;
+  --univ-ju: #F59E0B;
+  --univ-ru: #6366F1;
+  --univ-buet: #D946EF;
+  --univ-ckruet: #8B5CF6;
+  --univ-ruet: #F97316;
+  --univ-kuet: #0EA5E9;
+  --univ-mist: #64748B;
+  --univ-cuet: #10B981;
+  --univ-butex: #EF4444;
+  --univ-iba: #8B5CF6;
+  --univ-iut: #F59E0B;
+}
+
+.qbank-header {
+  border-bottom: 1px solid rgba(192, 133, 82, 0.12);
+  margin-bottom: 24px;
+}
+
+.qbank-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 40px 0 40px;
+  position: relative;
+  z-index: 1;
+  overflow-y: auto;
+}
+
+/* Float abstract decorative backgrounds matching site language */
+.qbank-workspace::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  right: 10%;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192, 133, 82, 0.05) 0%, rgba(192, 133, 82, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Control Row: Tabs on Left, Search Bar on Right */
+.qbank-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 32px;
+  border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
+  padding-bottom: 16px;
+}
+
+.qbank-tabs-wrapper {
+  display: flex;
+  gap: 12px;
+  background: rgba(192, 133, 82, 0.05);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(192, 133, 82, 0.15);
+}
+
+.qbank-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 24px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.qbank-tab-btn:hover {
+  color: #C08552;
+}
+
+.qbank-tab-btn--active {
+  background: var(--white);
+  color: #8C5A3C !important;
+  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.08);
+}
+
+/* Search Bar styling */
+.qbank-search-bar {
+  position: relative;
+  width: 320px;
+}
+
+.qbank-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.qbank-search-input {
+  width: 100%;
+  background-color: var(--white);
+  border: 1.5px solid rgba(192, 133, 82, 0.3);
+  border-radius: var(--radius-pill);
+  padding: 10px 16px 10px 42px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  transition: all var(--transition-base);
+}
+
+.qbank-search-input:focus {
+  outline: none;
+  border-color: #C08552;
+  box-shadow: 0 0 12px rgba(192, 133, 82, 0.2);
+}
+
+/* Page Section Descriptor */
+.qbank-section-info {
+  margin-bottom: 24px;
+}
+
+.qbank-section-info h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #8C5A3C;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 6px 0;
+}
+
+.qbank-section-info p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Grid Container */
+.qbank-grid-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.qbank-grid-container::after {
+  content: '';
+  display: block;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.qbank-grid {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+}
+
+.qbank-grid--academic {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.qbank-grid--admission {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+/* Base Card Styling with Glassmorphism and animations */
+.qbank-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1.5px solid rgba(192, 133, 82, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  box-shadow: 0 6px 20px rgba(140, 90, 60, 0.03);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.qbank-card__glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.qbank-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08);
+  border-color: rgba(192, 133, 82, 0.45);
+}
+
+.qbank-card:hover .qbank-card__glow {
+  opacity: 1;
+}
+
+/* Card Visual Graphic Container */
+.qbank-card__visual {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+  transition: all var(--transition-base);
+}
+
+.qbank-card:hover .qbank-card__visual {
+  transform: scale(1.1) rotate(2deg);
+}
+
+.qbank-card__letter {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.qbank-card__illustration-svg {
+  width: 32px;
+  height: 32px;
+}
+
+.qbank-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.qbank-card__subject {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.qbank-card__sub-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 650;
+}
+
+/* ==========================================================================
+   ACADEMIC CARD COLOR THEMES (Aligned with provided image structure)
+   ========================================================================== */
+
+/* English Cards - Vibrant Rose Gradient */
+.card-english-1,
+.card-english-2 {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+.card-english-1:hover,
+.card-english-2:hover {
+  border-color: rgba(244, 63, 94, 0.5);
+}
+
+.card-english-1 .qbank-card__visual,
+.card-english-2 .qbank-card__visual {
+  background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+}
+
+/* Bangla Cards - Golden Orange Gradient */
+.card-bangla-1,
+.card-bangla-2 {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.card-bangla-1:hover,
+.card-bangla-2:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.card-bangla-1 .qbank-card__visual,
+.card-bangla-2 .qbank-card__visual {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
+}
+
+/* ICT Card - Indigo Violet Gradient */
+.card-ict {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.card-ict:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.card-ict .qbank-card__visual {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+}
+
+/* Physics Cards - Deep Electric Blue Gradient */
+.card-physics-1,
+.card-physics-2 {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.card-physics-1:hover,
+.card-physics-2:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.card-physics-1 .qbank-card__visual,
+.card-physics-2 .qbank-card__visual {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+}
+
+/* Chemistry Cards - Royal Purple Gradient */
+.card-chemistry-1,
+.card-chemistry-2 {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.card-chemistry-1:hover,
+.card-chemistry-2:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+.card-chemistry-1 .qbank-card__visual,
+.card-chemistry-2 .qbank-card__visual {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
+}
+
+/* Higher Math Cards - Warm Amber Brown Gradient */
+.card-math-1,
+.card-math-2 {
+  background: linear-gradient(135deg, rgba(212, 163, 115, 0.08) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(212, 163, 115, 0.28);
+}
+
+.card-math-1:hover,
+.card-math-2:hover {
+  border-color: rgba(192, 133, 82, 0.55);
+}
+
+.card-math-1 .qbank-card__visual,
+.card-math-2 .qbank-card__visual {
+  background: linear-gradient(135deg, #D4A373 0%, #8C5A3C 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(140, 90, 60, 0.25);
+}
+
+/* Biology Cards - Emerald Green Gradient */
+.card-biology-1,
+.card-biology-2 {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.card-biology-1:hover,
+.card-biology-2:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.card-biology-1 .qbank-card__visual,
+.card-biology-2 .qbank-card__visual {
+  background: linear-gradient(135deg, #10B981 0%, #047857 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+}
+
+
+/* ==========================================================================
+   ADMISSION CARD STYLING (Soft colorful theme-based border and emblem shadows)
+   ========================================================================== */
+
+.qbank-card--admission {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--card-brand) 7%, transparent) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: color-mix(in srgb, var(--card-brand) 25%, transparent);
+  align-items: flex-start;
+  text-align: left;
+  padding: 24px;
+  gap: 20px;
+}
+
+.qbank-card--admission:hover {
+  border-color: color-mix(in srgb, var(--card-brand) 50%, transparent);
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08), 0 0 20px color-mix(in srgb, var(--card-brand) 15%, transparent);
+}
+
+.qbank-card--admission .qbank-card__visual {
+  background: linear-gradient(135deg, var(--card-brand) 0%, color-mix(in srgb, var(--card-brand) 70%, #000) 100%);
+  color: var(--white);
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--card-brand) 25%, transparent);
+}
+
+.qbank-card--admission .qbank-card__letter {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--white);
+  letter-spacing: -0.02em;
+}
+
+/* College card color themes */
+.qbank-card--college-0 { --college-color: #3B82F6; }
+.qbank-card--college-1 { --college-color: #8B5CF6; }
+.qbank-card--college-2 { --college-color: #EC4899; }
+.qbank-card--college-3 { --college-color: #F59E0B; }
+.qbank-card--college-4 { --college-color: #10B981; }
+.qbank-card--college-5 { --college-color: #EF4444; }
+.qbank-card--college-6 { --college-color: #06B6D4; }
+.qbank-card--college-7 { --college-color: #6366F1; }
+.qbank-card--college-8 { --college-color: #14B8A6; }
+.qbank-card--college-9 { --college-color: #F43F5E; }
+.qbank-card--college-10 { --college-color: #84CC16; }
+.qbank-card--college-11 { --college-color: #D946EF; }
+.qbank-card--college-12 { --college-color: #0EA5E9; }
+.qbank-card--college-13 { --college-color: #F97316; }
+.qbank-card--college-14 { --college-color: #64748B; }
+.qbank-card--college-15 { --college-color: #A855F7; }
+.qbank-card--college-16 { --college-color: #22C55E; }
+.qbank-card--college-17 { --college-color: #EAB308; }
+.qbank-card--college-18 { --college-color: #DC2626; }
+.qbank-card--college-19 { --college-color: #2563EB; }
+
+.qbank-card--college {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--college-color) 8%, transparent) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-color: color-mix(in srgb, var(--college-color) 25%, transparent);
+  align-items: flex-start;
+  text-align: left;
+  padding: 20px;
+  gap: 16px;
+}
+
+.qbank-card--college:hover {
+  border-color: color-mix(in srgb, var(--college-color) 50%, transparent);
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08), 0 0 20px color-mix(in srgb, var(--college-color) 15%, transparent);
+  transform: translateY(-6px);
+}
+
+.qbank-card--college .qbank-card__visual {
+  background: linear-gradient(135deg, var(--college-color) 0%, color-mix(in srgb, var(--college-color) 70%, #000) 100%);
+  color: var(--white);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--college-color) 30%, transparent);
+}
+
+.qbank-card--college .qbank-card__info {
+  flex: 1;
+}
+
+.qbank-card--college .qbank-card__subject {
+  font-size: 0.95rem;
+}
+
+.qbank-card--college .qbank-card__bn-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.qbank-card--college .qbank-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--college-color) 15%, transparent);
+  color: var(--college-color);
+}
+
+/* ==========================================================================
+   MODEL TEST LOCK STATE STYLING
+   ========================================================================== */
+
+.qbank-model-test-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 20px 0;
+}
+
+.qbank-college-section-title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qbank-college-section-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 20px 0;
+}
+
+.qbank-grid--college {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.qbank-locked-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px dashed rgba(192, 133, 82, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(140, 90, 60, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.qbank-locked-card__icon-wrapper {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(192, 133, 82, 0.1);
+  color: #C08552;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 15px rgba(192, 133, 82, 0.12);
+  border: 1.5px solid rgba(192, 133, 82, 0.22);
+}
+
+.qbank-locked-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.qbank-locked-card p {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+}
+
+/* Empty search result card */
+.qbank-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1.5px dashed rgba(192, 133, 82, 0.2);
+  border-radius: var(--radius-md);
+  padding: 48px 24px;
+}
+
+.qbank-empty p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .qbank-workspace {
+    padding: 0 24px 24px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .qbank-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .qbank-search-bar {
+    width: 100%;
+  }
+
+  .qbank-tabs-wrapper {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .qbank-tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .qbank-locked-card {
+    padding: 32px 20px;
+  }
+}

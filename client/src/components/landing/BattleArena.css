@@ -1,0 +1,550 @@
+.battle {
+  background: var(--bg-battle-fade);
+  position: relative;
+  overflow: hidden;
+}
+
+.battle__arena-card {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  border: 1px solid rgba(230, 204, 178, 0.35);
+}
+
+.battle__versus {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+  padding: 48px 32px;
+  background: linear-gradient(135deg, rgba(255, 248, 240, 0.5), rgba(230, 204, 178, 0.4));
+  min-height: 280px;
+}
+
+.battle__player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.battle__player-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  box-shadow: var(--shadow-md);
+}
+
+.battle__player-avatar--1 {
+  background: var(--gradient-warm);
+  border: 3px solid var(--peach);
+}
+
+.battle__player-avatar--2 {
+  background: var(--gradient-cool);
+  border: 3px solid var(--sky-blue);
+}
+
+.battle__player-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.battle__player-score {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--deep-blue);
+}
+
+.battle__vs-emblem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  justify-self: center;
+}
+
+/* === VS Text — Shield Emblem Design === */
+.battle__vs-text {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--white);
+  background: linear-gradient(135deg, var(--dark-blue) 0%, var(--deep-blue) 45%, var(--sky-blue) 100%);
+  width: 74px;
+  height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  position: relative;
+  box-shadow:
+    0 6px 15px rgba(37, 24, 23, 0.25),
+    0 0 25px rgba(192, 133, 82, 0.4),
+    inset 0 2.5px 4px rgba(255, 255, 255, 0.35),
+    inset 0 -3px 8px rgba(37, 24, 23, 0.45);
+  border: 2px solid rgba(230, 204, 178, 0.85);
+  text-shadow: 0 2px 6px rgba(37, 24, 23, 0.6);
+  animation: vsEmblemPulse 2.8s ease-in-out infinite;
+  z-index: 1;
+  -webkit-text-fill-color: var(--white);
+}
+
+.battle__vs-text::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px dashed rgba(192, 133, 82, 0.6);
+  animation: vsRingSpin 12s linear infinite;
+  z-index: -1;
+}
+
+.battle__vs-text::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 1px solid rgba(192, 133, 82, 0.25);
+  animation: vsRingSpin 18s linear infinite reverse;
+  z-index: -1;
+}
+
+@keyframes vsEmblemPulse {
+  0%, 100% {
+    box-shadow:
+      0 6px 15px rgba(37, 24, 23, 0.25),
+      0 0 25px rgba(192, 133, 82, 0.4),
+      inset 0 2.5px 4px rgba(255, 255, 255, 0.35),
+      inset 0 -3px 8px rgba(37, 24, 23, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 12px 25px rgba(37, 24, 23, 0.3),
+      0 0 40px rgba(192, 133, 82, 0.65),
+      inset 0 2.5px 4px rgba(255, 255, 255, 0.35),
+      inset 0 -3px 8px rgba(37, 24, 23, 0.45);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes vsRingSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* === RAID Text — Diamond Emblem Design (Light Red & Coral) === */
+.battle__vs-text.battle__raid-text {
+  font-size: 1.15rem;
+  letter-spacing: 0.2em;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: linear-gradient(
+    135deg,
+    #4b2e2b 0%,
+    #b91c1c 35%,
+    #e8444a 65%,
+    #fca5a5 100%
+  );
+  background-size: 200% 200%;
+  width: 78px;
+  height: 78px;
+  border-radius: 16px;
+  transform: rotate(45deg);
+  box-shadow:
+    0 6px 16px rgba(37, 24, 23, 0.3),
+    0 0 25px rgba(232, 68, 74, 0.45),
+    inset 0 2.5px 4px rgba(255, 255, 255, 0.45),
+    inset 0 -3px 8px rgba(185, 28, 28, 0.45);
+  animation: raidDiamondPulse 2.8s ease-in-out infinite, raidShimmer 5s ease infinite;
+  -webkit-text-fill-color: var(--white);
+  text-shadow: 0 2px 6px rgba(127, 29, 29, 0.6);
+  border: 2px solid rgba(252, 165, 165, 0.7);
+}
+
+.battle__vs-text.battle__raid-text > * {
+  transform: rotate(-45deg);
+  display: block;
+}
+
+.battle__vs-text.battle__raid-text::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 20px;
+  border: 2px dashed rgba(232, 68, 74, 0.5);
+  animation: vsRingSpin 10s linear infinite;
+}
+
+.battle__vs-text.battle__raid-text::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  border-radius: 16px;
+  border: none;
+  animation: raidSweep 3.2s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes raidDiamondPulse {
+  0%, 100% {
+    box-shadow:
+      0 6px 16px rgba(37, 24, 23, 0.3),
+      0 0 25px rgba(232, 68, 74, 0.45),
+      inset 0 2.5px 4px rgba(255, 255, 255, 0.45),
+      inset 0 -3px 8px rgba(185, 28, 28, 0.45);
+    transform: rotate(45deg) scale(1);
+  }
+  50% {
+    box-shadow:
+      0 12px 28px rgba(37, 24, 23, 0.35),
+      0 0 40px rgba(232, 68, 74, 0.65),
+      inset 0 2.5px 4px rgba(255, 255, 255, 0.45),
+      inset 0 -3px 8px rgba(185, 28, 28, 0.45);
+    transform: rotate(45deg) scale(1.06);
+  }
+}
+
+@keyframes raidShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes raidSweep {
+  0% { left: -100%; opacity: 0; }
+  30% { opacity: 1; }
+  100% { left: 200%; opacity: 0; }
+}
+
+.battle__timer {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: rgba(230, 204, 178, 0.35);
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+}
+
+/* Squad & Platoon Common Teams */
+.battle__team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.battle__team-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-accent-warm);
+  color: var(--text-accent);
+}
+
+.battle__team--left .battle__team-badge {
+  background: rgba(230, 204, 178, 0.3);
+  color: var(--deep-blue);
+}
+
+.battle__team--right .battle__team-badge {
+  background: rgba(192, 133, 82, 0.2);
+  color: var(--dark-blue);
+}
+
+.battle__team-score {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* 5v5 Squad Member Layout */
+.battle__team-members {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 260px;
+}
+
+.battle__member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  transition: transform var(--transition-fast);
+}
+
+.battle__member-avatar {
+  font-size: 1.4rem;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.battle__member-name {
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 2px;
+  color: var(--text-secondary);
+}
+
+.battle__member--active .battle__member-avatar {
+  transform: scale(1.15);
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 10px rgba(192, 133, 82, 0.6);
+  animation: pulseAvatar 1.5s infinite;
+}
+
+.battle__member-ping {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 0.8rem;
+  animation: bounce 1s infinite alternate;
+}
+
+@keyframes pulseAvatar {
+  0% { box-shadow: 0 0 0 0 rgba(192, 133, 82, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(192, 133, 82, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(192, 133, 82, 0); }
+}
+
+/* 10v10 Platoon Layout */
+.battle__platoon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  max-width: 220px;
+}
+
+.battle__platoon-slot {
+  width: 32px;
+  height: 32px;
+  background: var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  border: 1.5px solid rgba(230, 204, 178, 0.5);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+}
+
+.battle__platoon-slot--active {
+  background: var(--peach);
+  border-color: var(--sky-blue);
+  transform: scale(1.15);
+  box-shadow: 0 0 10px rgba(192, 133, 82, 0.45);
+}
+
+/* Grand Raid 20 Layout */
+.battle__raid-layout {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  width: 100%;
+  align-items: center;
+  gap: 24px;
+}
+
+.battle__raid-leaderboard,
+.battle__raid-feed {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.battle__raid-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(230, 204, 178, 0.3);
+  padding-bottom: 6px;
+}
+
+.battle__raid-ranks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle__raid-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.battle__raid-rank-num {
+  font-weight: 800;
+  color: var(--deep-blue);
+  width: 16px;
+}
+
+.battle__raid-rank-avatar {
+  font-size: 1.1rem;
+}
+
+.battle__raid-rank-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.battle__raid-rank-score {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--sky-blue);
+}
+
+.battle__feed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.battle__feed-item {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-accent-warm);
+  color: var(--text-secondary);
+  border-left: 3px solid var(--sky-blue);
+}
+
+/* Battle Footer Info Area */
+.battle__info {
+  padding: 24px 32px;
+  display: flex;
+  justify-content: center;
+  background: var(--bg-primary);
+  border-top: 1px solid rgba(230, 204, 178, 0.35);
+}
+
+.battle__info-label {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.battle__modes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.battle__mode-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.battle__mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(230, 204, 178, 0.2);
+  color: var(--text-secondary);
+  border: 1px solid rgba(230, 204, 178, 0.45);
+  transition: var(--transition-base);
+  cursor: pointer;
+}
+
+.battle__mode-badge:hover {
+  background: rgba(230, 204, 178, 0.4);
+  transform: translateY(-1px);
+}
+
+.battle__mode-badge--active {
+  background: var(--sky-blue);
+  color: var(--white);
+  border-color: var(--sky-blue);
+  box-shadow: var(--shadow-sm);
+}
+
+.battle__mode-badge--active:hover {
+  background: var(--deep-blue);
+}
+
+@media (max-width: 768px) {
+  .battle__versus {
+    grid-template-columns: 1fr;
+    padding: 32px 16px;
+    gap: 24px;
+    min-height: auto;
+  }
+  
+  .battle__raid-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .battle__vs-emblem {
+    order: -1;
+  }
+  
+  .battle__info {
+    padding: 20px 16px;
+  }
+}
