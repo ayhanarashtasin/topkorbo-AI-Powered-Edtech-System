@@ -45,6 +45,40 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteContest = async (contestId, contestName) => {
+    const confirmMessage = language === 'en'
+      ? `Delete "${contestName}"? This will also remove all its questions.`
+      : `"${contestName}" মুছে ফেলতে চান? এর সাথে সব প্রশ্নও মুছে যাবে।`;
+    if (!window.confirm(confirmMessage)) return;
+
+    const token = localStorage.getItem('topkorbo_token');
+    if (!token) return;
+
+    // Optimistic UI removal
+    const previous = upcomingContests;
+    setUpcomingContests((prev) => prev.filter((c) => c._id !== contestId));
+
+    try {
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${backendBaseUrl}/contests/${contestId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const resData = await response.json();
+      if (!resData.success) {
+        // Revert on failure
+        setUpcomingContests(previous);
+        window.alert(resData.message || 'Failed to delete contest');
+      }
+    } catch (err) {
+      console.error('Error deleting contest:', err);
+      setUpcomingContests(previous);
+      window.alert('Network error while deleting contest');
+    }
+  };
+
   // Fetch the latest user profile details from the backend to ensure absolute synchronization & verify session validity
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
@@ -226,6 +260,15 @@ export default function Dashboard() {
                       <div className="contest-card-upcoming__header">
                         <span className="contest-badge-icon">🏆</span>
                         <h4 className="contest-title" title={contest.name}>{contest.name}</h4>
+                        <button
+                          type="button"
+                          className="contest-card-upcoming__delete"
+                          title={language === 'en' ? 'Delete contest' : 'কনটেস্ট মুছুন'}
+                          aria-label="Delete contest"
+                          onClick={() => handleDeleteContest(contest._id, contest.name)}
+                        >
+                          🗑️
+                        </button>
                       </div>
                       <div className="contest-card-upcoming__details">
                         <div className="contest-detail-item">

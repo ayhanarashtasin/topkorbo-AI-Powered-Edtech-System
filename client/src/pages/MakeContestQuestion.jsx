@@ -1,7 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiCalendar, HiClock, HiAcademicCap, HiCheckCircle, HiTag } from 'react-icons/hi';
+import {
+  HiAcademicCap,
+  HiBeaker,
+  HiBookOpen,
+  HiBriefcase,
+  HiCalendar,
+  HiChartBar,
+  HiCheckCircle,
+  HiClock,
+  HiCog,
+  HiCollection,
+  HiDocumentText,
+  HiGlobeAlt,
+  HiLibrary,
+  HiPencilAlt,
+  HiSelector,
+  HiTag
+} from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import './MakeContestQuestion.css';
@@ -19,15 +36,15 @@ const HSC_SUBJECTS = [
 
 // ─── Admission Sub-options ───────────────────────────────────────────────────
 const ADMISSION_OPTIONS = [
-  { id: 'medical', labelEn: 'Medical', labelBn: 'মেডিকেল', emoji: '🏥' },
-  { id: 'varsity', labelEn: 'Varsity', labelBn: 'বিশ্ববিদ্যালয়', emoji: '🎓' },
-  { id: 'engineering', labelEn: 'Engineering', labelBn: 'ইঞ্জিনিয়ারিং', emoji: '⚙️' },
+  { id: 'medical', labelEn: 'Medical', labelBn: 'মেডিকেল', icon: HiBriefcase },
+  { id: 'varsity', labelEn: 'Varsity', labelBn: 'বিশ্ববিদ্যালয়', icon: HiLibrary },
+  { id: 'engineering', labelEn: 'Engineering', labelBn: 'ইঞ্জিনিয়ারিং', icon: HiCog },
 ];
 
 const VARSITY_OPTIONS = [
-  { id: 'science', labelEn: 'Science', labelBn: 'বিজ্ঞান', emoji: '🧪' },
-  { id: 'commerce', labelEn: 'Commerce', labelBn: 'ব্যবসায় শিক্ষা', emoji: '📊' },
-  { id: 'arts', labelEn: 'Arts', labelBn: 'মানবিক', emoji: '🎨' },
+  { id: 'science', labelEn: 'Science', labelBn: 'বিজ্ঞান', icon: HiBeaker },
+  { id: 'commerce', labelEn: 'Commerce', labelBn: 'ব্যবসায় শিক্ষা', icon: HiChartBar },
+  { id: 'arts', labelEn: 'Arts', labelBn: 'মানবিক', icon: HiPencilAlt },
 ];
 
 // ─── Timezone Data ───────────────────────────────────────────────────────────
@@ -43,7 +60,7 @@ const TIMEZONES = [
 ];
 
 export default function MakeContestQuestion() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const navigate = useNavigate();
 
   const [user, setUser] = useState({
@@ -85,6 +102,24 @@ export default function MakeContestQuestion() {
   useEffect(() => { sessionStorage.setItem('cc_selectedAdmission', selectedAdmission); }, [selectedAdmission]);
   useEffect(() => { sessionStorage.setItem('cc_varsitySubtype', varsitySubtype); }, [varsitySubtype]);
   useEffect(() => { sessionStorage.setItem('cc_questionType', questionType); }, [questionType]);
+
+  // Keep `questionType` valid when the level/admission context changes.
+  // e.g. switching from HSC to Admission+Medical should not keep 'cq' selected.
+  useEffect(() => {
+    let validIds;
+    if (level === 'hsc') {
+      validIds = ['mcq', 'cq', 'both'];
+    } else if (level === 'admission' && selectedAdmission === 'medical') {
+      validIds = ['mcq'];
+    } else if (level === 'admission' && (selectedAdmission === 'varsity' || selectedAdmission === 'engineering')) {
+      validIds = ['mcq', 'written', 'both'];
+    } else {
+      validIds = ['mcq'];
+    }
+    if (!validIds.includes(questionType)) {
+      setQuestionType(validIds[0]);
+    }
+  }, [level, selectedAdmission]); // intentionally exclude `questionType` to avoid loops
 
   const activeTab = 'make-contest-question';
 
@@ -215,6 +250,29 @@ export default function MakeContestQuestion() {
   // ── Minimum date is today ──
   const today = new Date().toISOString().split('T')[0];
 
+  let questionTypeOptions;
+  if (level === 'hsc') {
+    questionTypeOptions = [
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector },
+      { id: 'cq', labelEn: 'CQ (Creative Question)', labelBn: 'CQ (সৃজনশীল)', icon: HiDocumentText },
+      { id: 'both', labelEn: 'Both MCQ and CQ', labelBn: 'MCQ এবং CQ উভয়ই', icon: HiCollection }
+    ];
+  } else if (level === 'admission' && selectedAdmission === 'medical') {
+    questionTypeOptions = [
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector }
+    ];
+  } else if (level === 'admission' && (selectedAdmission === 'varsity' || selectedAdmission === 'engineering')) {
+    questionTypeOptions = [
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector },
+      { id: 'written', labelEn: 'Written', labelBn: 'লিখিত', icon: HiPencilAlt },
+      { id: 'both', labelEn: 'MCQ & Written', labelBn: 'MCQ এবং লিখিত', icon: HiCollection }
+    ];
+  } else {
+    questionTypeOptions = [
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector }
+    ];
+  }
+
   return (
     <div className="cc-page">
       <Sidebar activeTab={activeTab} user={user} />
@@ -239,8 +297,11 @@ export default function MakeContestQuestion() {
         {/* ── Form Sections ── */}
         <div className="cc-form">
 
+          {/* ──────── TOP GRID: small sections + Level ──────── */}
+          <div className="cc-form-grid">
+
           {/* ──────── 1. CONTEST NAME ──────── */}
-          <section className="cc-section">
+          <section className="cc-section cc-section--name">
             <div className="cc-section__header">
               <div className="cc-section__icon"><HiTag size={18} /></div>
               <div>
@@ -259,7 +320,6 @@ export default function MakeContestQuestion() {
                 type="text"
                 id="contest-name"
                 className="cc-input"
-                style={{ width: '100%', boxSizing: 'border-box' }}
                 placeholder={language === 'en' ? 'e.g. Science Olympiad 2026' : 'যেমন: বিজ্ঞান অলিম্পিয়াড ২০২৬'}
                 value={contestName}
                 onChange={(e) => setContestName(e.target.value)}
@@ -268,7 +328,7 @@ export default function MakeContestQuestion() {
           </section>
 
           {/* ──────── 2. CONTEST DATE ──────── */}
-          <section className="cc-section">
+          <section className="cc-section cc-section--date">
             <div className="cc-section__header">
               <div className="cc-section__icon"><HiCalendar size={18} /></div>
               <div>
@@ -303,7 +363,7 @@ export default function MakeContestQuestion() {
           </section>
 
           {/* ──────── 3. DURATION ──────── */}
-          <section className="cc-section">
+          <section className="cc-section cc-section--duration">
             <div className="cc-section__header">
               <div className="cc-section__icon"><HiClock size={18} /></div>
               <div>
@@ -350,15 +410,16 @@ export default function MakeContestQuestion() {
                 </select>
               </div>
               <div className="cc-duration-preview">
-                ⏱️ {durationHours}h {String(durationMinutes).padStart(2,'0')}m
+                <HiClock size={16} />
+                <span>{durationHours}h {String(durationMinutes).padStart(2,'0')}m</span>
               </div>
             </div>
           </section>
 
           {/* ──────── 4. STARTING TIME ──────── */}
-          <section className="cc-section">
+          <section className="cc-section cc-section--start">
             <div className="cc-section__header">
-              <div className="cc-section__icon">🌐</div>
+              <div className="cc-section__icon"><HiGlobeAlt size={18} /></div>
               <div>
                 <h2 className="cc-section__title">
                   {language === 'en' ? 'Starting Time' : 'শুরুর সময়'}
@@ -431,7 +492,7 @@ export default function MakeContestQuestion() {
                 >
                   {TIMEZONES.map(tz => (
                     <option key={tz.id} value={tz.id}>
-                      🕐 {tz.label} (UTC{tz.offset})
+                      {tz.label} (UTC{tz.offset})
                     </option>
                   ))}
                 </select>
@@ -440,7 +501,7 @@ export default function MakeContestQuestion() {
           </section>
 
           {/* ──────── 5. LEVEL ──────── */}
-          <section className="cc-section">
+          <section className="cc-section cc-section--level">
             <div className="cc-section__header">
               <div className="cc-section__icon"><HiAcademicCap size={18} /></div>
               <div>
@@ -462,7 +523,7 @@ export default function MakeContestQuestion() {
                 className={`cc-level-btn ${level === 'hsc' ? 'cc-level-btn--active' : ''}`}
                 onClick={() => handleLevelChange('hsc')}
               >
-                <span className="cc-level-btn__emoji">📚</span>
+                <span className="cc-level-btn__icon"><HiBookOpen size={22} /></span>
                 <span className="cc-level-btn__text">HSC</span>
               </button>
               <button
@@ -470,7 +531,7 @@ export default function MakeContestQuestion() {
                 className={`cc-level-btn ${level === 'admission' ? 'cc-level-btn--active' : ''}`}
                 onClick={() => handleLevelChange('admission')}
               >
-                <span className="cc-level-btn__emoji">🏛️</span>
+                <span className="cc-level-btn__icon"><HiAcademicCap size={22} /></span>
                 <span className="cc-level-btn__text">
                   {language === 'en' ? 'Admission' : 'এডমিশন'}
                 </span>
@@ -516,27 +577,30 @@ export default function MakeContestQuestion() {
                   {language === 'en' ? 'Select Admission Type' : 'এডমিশনের ধরন নির্বাচন করুন'}
                 </h3>
                 <div className="cc-admission-grid">
-                  {ADMISSION_OPTIONS.map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      className={`cc-admission-card ${selectedAdmission === opt.id ? 'cc-admission-card--active' : ''}`}
-                      onClick={() => {
-                        setSelectedAdmission(opt.id);
-                        if (opt.id !== 'varsity') {
-                          setVarsitySubtype('');
-                        }
-                      }}
-                    >
-                      <span className="cc-admission-card__emoji">{opt.emoji}</span>
-                      <span className="cc-admission-card__label">
-                        {language === 'en' ? opt.labelEn : opt.labelBn}
-                      </span>
-                      {selectedAdmission === opt.id && (
-                        <HiCheckCircle size={18} className="cc-admission-card__check" />
-                      )}
-                    </button>
-                  ))}
+                  {ADMISSION_OPTIONS.map(opt => {
+                    const OptionIcon = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={`cc-admission-card ${selectedAdmission === opt.id ? 'cc-admission-card--active' : ''}`}
+                        onClick={() => {
+                          setSelectedAdmission(opt.id);
+                          if (opt.id !== 'varsity') {
+                            setVarsitySubtype('');
+                          }
+                        }}
+                      >
+                        <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
+                        <span className="cc-admission-card__label">
+                          {language === 'en' ? opt.labelEn : opt.labelBn}
+                        </span>
+                        {selectedAdmission === opt.id && (
+                          <HiCheckCircle size={18} className="cc-admission-card__check" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -548,31 +612,37 @@ export default function MakeContestQuestion() {
                   {language === 'en' ? 'Select Varsity Unit' : 'ভার্সিটি ইউনিট নির্বাচন করুন'}
                 </h3>
                 <div className="cc-admission-grid" style={{ marginTop: '1rem' }}>
-                  {VARSITY_OPTIONS.map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      className={`cc-admission-card ${varsitySubtype === opt.id ? 'cc-admission-card--active' : ''}`}
-                      onClick={() => setVarsitySubtype(opt.id)}
-                    >
-                      <span className="cc-admission-card__emoji">{opt.emoji}</span>
-                      <span className="cc-admission-card__label">
-                        {language === 'en' ? opt.labelEn : opt.labelBn}
-                      </span>
-                      {varsitySubtype === opt.id && (
-                        <HiCheckCircle size={18} className="cc-admission-card__check" />
-                      )}
-                    </button>
-                  ))}
+                  {VARSITY_OPTIONS.map(opt => {
+                    const OptionIcon = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={`cc-admission-card ${varsitySubtype === opt.id ? 'cc-admission-card--active' : ''}`}
+                        onClick={() => setVarsitySubtype(opt.id)}
+                      >
+                        <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
+                        <span className="cc-admission-card__label">
+                          {language === 'en' ? opt.labelEn : opt.labelBn}
+                        </span>
+                        {varsitySubtype === opt.id && (
+                          <HiCheckCircle size={18} className="cc-admission-card__check" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
           </section>
 
+          </div>
+          {/* ── end cc-form-grid ── */}
+
           {/* ──────── 6. QUESTION TYPE ──────── */}
           <section className="cc-section">
             <div className="cc-section__header">
-              <div className="cc-section__icon">📝</div>
+              <div className="cc-section__icon"><HiDocumentText size={18} /></div>
               <div>
                 <h2 className="cc-section__title">
                   {language === 'en' ? 'Question Type' : 'প্রশ্নের ধরন'}
@@ -586,26 +656,25 @@ export default function MakeContestQuestion() {
             </div>
 
             <div className="cc-qtype-grid">
-              {[
-                { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: '🔘' },
-                { id: 'cq', labelEn: 'CQ (Creative Question)', labelBn: 'CQ (সৃজনশীল)', icon: '📝' },
-                { id: 'both', labelEn: 'Both MCQ and CQ', labelBn: 'MCQ এবং CQ উভয়ই', icon: '⚡' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  className={`cc-qtype-card ${questionType === opt.id ? 'cc-qtype-card--active' : ''}`}
-                  onClick={() => setQuestionType(opt.id)}
-                >
-                  <span className="cc-qtype-card__emoji">{opt.icon}</span>
-                  <span className="cc-qtype-card__label">
-                    {language === 'en' ? opt.labelEn : opt.labelBn}
-                  </span>
-                  {questionType === opt.id && (
-                    <HiCheckCircle size={18} className="cc-qtype-card__check" />
-                  )}
-                </button>
-              ))}
+              {questionTypeOptions.map(opt => {
+                const OptionIcon = opt.icon;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`cc-qtype-card ${questionType === opt.id ? 'cc-qtype-card--active' : ''}`}
+                    onClick={() => setQuestionType(opt.id)}
+                  >
+                    <span className="cc-qtype-card__icon"><OptionIcon size={22} /></span>
+                    <span className="cc-qtype-card__label">
+                      {language === 'en' ? opt.labelEn : opt.labelBn}
+                    </span>
+                    {questionType === opt.id && (
+                      <HiCheckCircle size={18} className="cc-qtype-card__check" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -616,7 +685,8 @@ export default function MakeContestQuestion() {
               className="cc-submit-btn"
               onClick={handleProceedToQuestions}
             >
-              📝 {language === 'en' ? 'Make Contest Question' : 'কনটেস্টের প্রশ্ন তৈরি করুন'}
+              <HiDocumentText size={18} />
+              {language === 'en' ? 'Make Contest Question' : 'কনটেস্টের প্রশ্ন তৈরি করুন'}
             </button>
           </div>
         </div>

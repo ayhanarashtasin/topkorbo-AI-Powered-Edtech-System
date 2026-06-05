@@ -16,7 +16,7 @@
   flex: 1;
   padding: 2.5rem 3rem 4rem;
   overflow-y: auto;
-  max-width: 820px;
+  max-width: 1180px;
   margin: 0 auto;
   animation: ccFadeIn 0.5s ease-out;
 }
@@ -80,6 +80,46 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* ── Form Grid (puts Contest Name / Date / Duration / Starting Time side-by-side) ── */
+.cc-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.cc-form-grid .cc-section {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-section--name {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+.cc-section--date {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+
+.cc-section--duration {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+}
+
+.cc-section--start {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+}
+
+.cc-section--level {
+  grid-column: 1 / -1;
+  grid-row: 3 / 4;
 }
 
 /* ── Section Card ── */
@@ -246,7 +286,7 @@
   font-weight: 600;
   color: #8C5A3C;
   margin-bottom: 0;
-  align-self: flex-end;
+  align-self: flex-start;
   white-space: nowrap;
 }
 
@@ -256,6 +296,8 @@
   align-items: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
+  flex: 1;
+  align-content: flex-start;
 }
 
 .cc-time-group {
@@ -265,8 +307,8 @@
 }
 
 .cc-time-group--tz {
-  min-width: 200px;
-  flex: 1;
+  min-width: 100%;
+  flex: 1 0 100%;
 }
 
 .cc-select--tz {
@@ -349,8 +391,12 @@
   transform: translateY(-2px);
 }
 
-.cc-level-btn__emoji {
+.cc-level-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.5rem;
+  color: #C08552;
 }
 
 .cc-level-btn__text {
@@ -491,8 +537,12 @@
   transform: translateY(-3px);
 }
 
-.cc-admission-card__emoji {
+.cc-admission-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 2rem;
+  color: #C08552;
 }
 
 .cc-admission-card__label {
@@ -601,8 +651,12 @@
   transform: translateY(-3px);
 }
 
-.cc-qtype-card__emoji {
+.cc-qtype-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 2rem;
+  color: #C08552;
 }
 
 .cc-qtype-card__label {
@@ -623,6 +677,21 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 1100px) {
+  .cc-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-section--name,
+  .cc-section--date,
+  .cc-section--duration,
+  .cc-section--start,
+  .cc-section--level {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .cc-page__content {
     padding: 1.5rem 1.25rem 3rem;

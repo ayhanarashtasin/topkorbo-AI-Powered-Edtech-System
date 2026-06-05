@@ -1327,7 +1327,7 @@ export default function QuestionBank() {
                     <div className="qbank-college-section">
                       <h3 className="qbank-college-section-title">
                         <HiAcademicCap size={20} />
-                        {language === 'en' ? 'College Model Tests' : 'কলেজ মডেল টেস্ট'}
+                        {language === 'en' ? 'College Questions' : 'কলেজ প্রশ্ন'}
                       </h3>
                       <p className="qbank-college-section-subtitle">
                         {language === 'en'

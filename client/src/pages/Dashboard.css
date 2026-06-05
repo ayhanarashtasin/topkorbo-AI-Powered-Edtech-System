@@ -217,6 +217,23 @@
   margin-bottom: 8px;
 }
 
+.contest-card-upcoming__delete {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.contest-card-upcoming__delete:hover {
+  opacity: 1;
+  background: rgba(192, 133, 82, 0.12);
+}
+
 .contest-badge-icon {
   font-size: 1rem;
 }

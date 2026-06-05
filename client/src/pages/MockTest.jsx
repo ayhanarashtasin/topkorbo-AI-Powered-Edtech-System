@@ -19,6 +19,28 @@ const MOCK_SUBJECTS = [
   { id: 'iba', labelEn: 'IBA', labelBn: 'IBA', icon: '🏢', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.08)', prefixType: 'icon' },
 ];
 
+// ─── University Tag Constants ──────────────────────────────────────────────
+const ENGINEERING_UNIVERSITIES = [
+  'BUET', 'CUET', 'KUET', 'RUET', 'MIST', 'IUT', 'BUTEX'
+];
+const GENERAL_UNIVERSITIES = [
+  'DU', 'CU', 'RU', 'JU', 'GST', 'BUP', 'IBA'
+];
+const BOARDS = [
+  'Dhaka', 'Comilla', 'Rajshahi', 'Jessore', 'Chittagong',
+  'Sylhet', 'Barishal', 'Dinajpur', 'Mymensingh', 'Madrasa', 'Technical'
+];
+const COLLEGES = [
+  'Notre Dame College', 'Dhaka College', 'Rajuk Uttara Model College',
+  'Viqarunnisa Noon College', 'Holy Cross College', 'Adamjee Cantonment College',
+  'Ideal College', 'Dhaka City College', 'Government Science College',
+  'Shaheed Bir Uttam Lt. Anwar Girls College', 'Milestone College',
+  'BIRDEM Nursing College', 'Begum Rokeya University, Rangpur',
+  'Chittagong College', 'Rajshahi College', 'Jahangirnagar University School & College',
+  'Comilla Victoria College', 'Barishal Cadet College', 'Mymensingh Girls Cadet College',
+  'Sylhet Cadet College', 'Faujdarhat Cadet College'
+];
+
 // ─── HSC & Admission Standard Chapters Database ─────────────────────────────
 const MOCK_CHAPTERS = {
   bangla: {
@@ -183,6 +205,27 @@ export default function MockTest() {
   }, [stepParam, setSearchParams]);
 
   // Step 3: Exam configuration states
+  const [selectedStandards, setSelectedStandards] = useState(() => {
+    const saved = sessionStorage.getItem('mock_selected_standards');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedEngineeringUnis, setSelectedEngineeringUnis] = useState(() => {
+    const saved = sessionStorage.getItem('mock_selected_engineering_unis');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedGeneralUnis, setSelectedGeneralUnis] = useState(() => {
+    const saved = sessionStorage.getItem('mock_selected_general_unis');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedAcademicTypes, setSelectedAcademicTypes] = useState(() => {
+    const saved = sessionStorage.getItem('mock_selected_academic_types');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedBoards, setSelectedBoards] = useState(() => {
+    const saved = sessionStorage.getItem('mock_selected_boards');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [examStandard, setExamStandard] = useState(() => sessionStorage.getItem('mock_exam_standard') || '');
   const [questionType, setQuestionType] = useState(() => sessionStorage.getItem('mock_question_type') || '');
   const [totalQuestions, setTotalQuestions] = useState(() => parseInt(sessionStorage.getItem('mock_total_questions')) || 0);
@@ -229,7 +272,30 @@ export default function MockTest() {
   }, [selectedTopics]);
 
   // Persist Step 3 states
-  useEffect(() => { sessionStorage.setItem('mock_exam_standard', examStandard); }, [examStandard]);
+  useEffect(() => {
+    sessionStorage.setItem('mock_selected_standards', JSON.stringify(selectedStandards));
+    // Synchronize legacy examStandard with the first selection to preserve validation & backwards-compatibility logic
+    const primaryStd = selectedStandards[0] || '';
+    sessionStorage.setItem('mock_exam_standard', primaryStd);
+    setExamStandard(primaryStd);
+  }, [selectedStandards]);
+
+  useEffect(() => {
+    sessionStorage.setItem('mock_selected_engineering_unis', JSON.stringify(selectedEngineeringUnis));
+  }, [selectedEngineeringUnis]);
+
+  useEffect(() => {
+    sessionStorage.setItem('mock_selected_general_unis', JSON.stringify(selectedGeneralUnis));
+  }, [selectedGeneralUnis]);
+
+  useEffect(() => {
+    sessionStorage.setItem('mock_selected_academic_types', JSON.stringify(selectedAcademicTypes));
+  }, [selectedAcademicTypes]);
+
+  useEffect(() => {
+    sessionStorage.setItem('mock_selected_boards', JSON.stringify(selectedBoards));
+  }, [selectedBoards]);
+
   useEffect(() => { sessionStorage.setItem('mock_question_type', questionType); }, [questionType]);
   useEffect(() => { sessionStorage.setItem('mock_total_questions', String(totalQuestions)); }, [totalQuestions]);
   useEffect(() => { sessionStorage.setItem('mock_exam_duration', String(examDuration)); }, [examDuration]);
@@ -244,6 +310,11 @@ export default function MockTest() {
         'mock_test_chapters',
         'mock_test_selected_topics',
         'mock_exam_standard',
+        'mock_selected_standards',
+        'mock_selected_engineering_unis',
+        'mock_selected_general_unis',
+        'mock_selected_academic_types',
+        'mock_selected_boards',
         'mock_question_type',
         'mock_total_questions',
         'mock_exam_duration',
@@ -257,6 +328,11 @@ export default function MockTest() {
       setSelectedSubjectIds([]);
       setSelectedChapters({});
       setSelectedTopics({});
+      setSelectedStandards([]);
+      setSelectedEngineeringUnis([]);
+      setSelectedGeneralUnis([]);
+      setSelectedAcademicTypes([]);
+      setSelectedBoards([]);
       setExamStandard('');
       setQuestionType('');
       setTotalQuestions(0);
@@ -503,9 +579,27 @@ export default function MockTest() {
   const handleStartExam = async () => {
     if (isStartingExam) return;
 
-    if (!examStandard) {
-      toast.error(language === 'en' ? 'Please select a Question Standard.' : 'দয়া করে একটি প্রশ্ন স্ট্যান্ডার্ড নির্বাচন করুন।');
+    if (selectedStandards.length === 0) {
+      toast.error(language === 'en' ? 'Please select at least one Question Standard.' : 'দয়া করে অন্তত একটি প্রশ্ন স্ট্যান্ডার্ড নির্বাচন করুন।');
       return;
+    }
+    if (selectedStandards.includes('engineering') && selectedEngineeringUnis.length === 0) {
+      toast.error(language === 'en' ? 'Please select at least one Engineering university.' : 'দয়া করে অন্তত একটি ইঞ্জিনিয়ারিং বিশ্ববিদ্যালয় নির্বাচন করুন।');
+      return;
+    }
+    if (selectedStandards.includes('university') && selectedGeneralUnis.length === 0) {
+      toast.error(language === 'en' ? 'Please select at least one Varsity university.' : 'দয়া করে অন্তত একটি সাধারণ বিশ্ববিদ্যালয় নির্বাচন করুন।');
+      return;
+    }
+    if (selectedStandards.includes('academic')) {
+      if (selectedAcademicTypes.length === 0) {
+        toast.error(language === 'en' ? 'Please select at least one Academic question type.' : 'দয়া করে অন্তত একটি একাডেমিক প্রশ্ন টাইপ নির্বাচন করুন।');
+        return;
+      }
+      if (selectedAcademicTypes.includes('board') && selectedBoards.length === 0) {
+        toast.error(language === 'en' ? 'Please select at least one Board.' : 'দয়া করে অন্তত একটি বোর্ড নির্বাচন করুন।');
+        return;
+      }
     }
     if (!questionType) {
       toast.error(language === 'en' ? 'Please select a Question Type.' : 'দয়া করে একটি প্রশ্নের ধরন নির্বাচন করুন।');
@@ -526,7 +620,12 @@ export default function MockTest() {
       const base = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const body = {
         selections: buildSelections(),
-        standard: examStandard,
+        standard: selectedStandards[0] || '', // keep first standard for legacy/logging
+        standards: selectedStandards,
+        selectedEngineeringUnis,
+        selectedGeneralUnis,
+        selectedAcademicTypes,
+        selectedBoards,
         questionType,
         totalQuestions
       };
@@ -541,7 +640,7 @@ export default function MockTest() {
           setErrorModal({
             show: true,
             message: language === 'en' 
-              ? 'No questions found matching your exact criteria. Please adjust your selected chapters, standard, or question type.'
+              ? 'No questions found matching your exact criteria. Please adjust your selected chapters, standards, or question type.'
               : 'আপনার নির্বাচিত মানদণ্ডের সাথে মিলে যাওয়া কোনো প্রশ্ন পাওয়া যায়নি। দয়া করে আপনার অধ্যায়, স্ট্যান্ডার্ড, বা প্রশ্নের ধরন পরিবর্তন করুন।'
           });
           setIsStartingExam(false);
@@ -560,13 +659,20 @@ export default function MockTest() {
         }
 
         console.log('Mock test questions:', data.data);
+        
+        // Derive standard string for config display
+        const displayStds = selectedStandards.map(id => {
+          const matched = QUESTION_STANDARDS.find(s => s.id === id);
+          return matched ? (language === 'en' ? matched.labelEn : matched.labelBn) : id;
+        }).join(', ');
+
         // Store exam config for future exam page
         sessionStorage.setItem('mock_exam_questions', JSON.stringify(data.data.questions));
         sessionStorage.setItem('mock_exam_config', JSON.stringify({
           duration: examDuration,
           negativeMarking,
           questionType,
-          standard: examStandard,
+          standard: displayStds,
           totalQuestions: data.data.total
         }));
         sessionStorage.removeItem('mock_exam_from_qbank');
@@ -1051,18 +1157,35 @@ export default function MockTest() {
                   <h4>{language === 'en' ? 'Question Standard' : 'প্রশ্নের মান'}</h4>
                 </div>
                 <p className="mock-config-section-desc">
-                  {language === 'en' ? 'Choose the exam category to filter questions.' : 'প্রশ্ন ফিল্টার করতে পরীক্ষার ক্যাটাগরি বেছে নিন।'}
+                  {language === 'en' ? 'Choose the exam categories to filter questions. You can select multiple standards.' : 'প্রশ্ন ফিল্টার করতে পরীক্ষার ক্যাটাগরি বেছে নিন। আপনি একাধিক অপশন নির্বাচন করতে পারেন।'}
                 </p>
                 <div className="mock-standard-grid">
                   {QUESTION_STANDARDS.map(std => {
-                    const isActive = examStandard === std.id;
+                    const isActive = selectedStandards.includes(std.id);
                     return (
                       <button
                         key={std.id}
                         type="button"
                         className={`mock-standard-card ${isActive ? 'mock-standard-card--selected' : ''}`}
                         style={{ '--std-color': std.color, '--std-bg': std.bg }}
-                        onClick={() => setExamStandard(isActive ? '' : std.id)}
+                        onClick={() => {
+                          setSelectedStandards(prev => {
+                            const isSelecting = !prev.includes(std.id);
+                            const next = isSelecting 
+                              ? [...prev, std.id] 
+                              : prev.filter(id => id !== std.id);
+
+                            if (std.id === 'engineering') {
+                              setSelectedEngineeringUnis(isSelecting ? [...ENGINEERING_UNIVERSITIES] : []);
+                            } else if (std.id === 'university') {
+                              setSelectedGeneralUnis(isSelecting ? [...GENERAL_UNIVERSITIES] : []);
+                            } else if (std.id === 'academic') {
+                              setSelectedAcademicTypes(isSelecting ? ['board', 'college'] : []);
+                              setSelectedBoards(isSelecting ? [...BOARDS] : []);
+                            }
+                            return next;
+                          });
+                        }}
                       >
                         <div className="mock-standard-card-glow" />
                         <div className="mock-standard-icon" style={{ color: std.color, background: std.bg }}>
@@ -1075,6 +1198,134 @@ export default function MockTest() {
                     );
                   })}
                 </div>
+
+                {/* Engineering Sub-selection */}
+                {selectedStandards.includes('engineering') && (
+                  <div className="mock-sub-selection-container animate-slide-down">
+                    <div className="mock-sub-selection-title">
+                      {language === 'en' ? 'Select Engineering Universities' : 'ইঞ্জিনিয়ারিং বিশ্ববিদ্যালয়সমূহ নির্বাচন করুন'}
+                    </div>
+                    <div className="mock-sub-selection-pills">
+                      {ENGINEERING_UNIVERSITIES.map(uni => {
+                        const isSelected = selectedEngineeringUnis.includes(uni);
+                        return (
+                          <button
+                            key={uni}
+                            type="button"
+                            className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
+                            style={{ '--theme-color': '#F59E0B', '--theme-bg': 'rgba(245, 158, 11, 0.08)' }}
+                            onClick={() => {
+                              setSelectedEngineeringUnis(prev => 
+                                prev.includes(uni) ? prev.filter(u => u !== uni) : [...prev, uni]
+                              );
+                            }}
+                          >
+                            {isSelected && <HiCheck size={14} style={{ marginRight: '4px' }} />}
+                            <span>{uni}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Varsity Sub-selection */}
+                {selectedStandards.includes('university') && (
+                  <div className="mock-sub-selection-container animate-slide-down">
+                    <div className="mock-sub-selection-title">
+                      {language === 'en' ? 'Select General Universities' : 'সাধারণ বিশ্ববিদ্যালয়সমূহ নির্বাচন করুন'}
+                    </div>
+                    <div className="mock-sub-selection-pills">
+                      {GENERAL_UNIVERSITIES.map(uni => {
+                        const isSelected = selectedGeneralUnis.includes(uni);
+                        return (
+                          <button
+                            key={uni}
+                            type="button"
+                            className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
+                            style={{ '--theme-color': '#3B82F6', '--theme-bg': 'rgba(59, 130, 246, 0.08)' }}
+                            onClick={() => {
+                              setSelectedGeneralUnis(prev => 
+                                prev.includes(uni) ? prev.filter(u => u !== uni) : [...prev, uni]
+                              );
+                            }}
+                          >
+                            {isSelected && <HiCheck size={14} style={{ marginRight: '4px' }} />}
+                            <span>{uni}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Academic Sub-selection */}
+                {selectedStandards.includes('academic') && (
+                  <div className="mock-sub-selection-container animate-slide-down">
+                    <div className="mock-sub-selection-title">
+                      {language === 'en' ? 'Select Academic Type' : 'একাডেমিক ধরন নির্বাচন করুন'}
+                    </div>
+                    <div className="mock-sub-selection-pills">
+                      {[
+                        { id: 'board', labelEn: 'Board Questions', labelBn: 'বোর্ড প্রশ্ন' },
+                        { id: 'college', labelEn: 'College Questions', labelBn: 'কলেজ প্রশ্ন' }
+                      ].map(type => {
+                        const isSelected = selectedAcademicTypes.includes(type.id);
+                        return (
+                          <button
+                            key={type.id}
+                            type="button"
+                            className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
+                            style={{ '--theme-color': '#10B981', '--theme-bg': 'rgba(16, 185, 129, 0.08)' }}
+                            onClick={() => {
+                              setSelectedAcademicTypes(prev => {
+                                const isSel = !prev.includes(type.id);
+                                const next = isSel ? [...prev, type.id] : prev.filter(t => t !== type.id);
+                                if (type.id === 'board') {
+                                  setSelectedBoards(isSel ? [...BOARDS] : []);
+                                }
+                                return next;
+                              });
+                            }}
+                          >
+                            {isSelected && <HiCheck size={14} style={{ marginRight: '4px' }} />}
+                            <span>{language === 'en' ? type.labelEn : type.labelBn}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Nested Board Selection */}
+                    {selectedAcademicTypes.includes('board') && (
+                      <div className="mock-sub-selection-container animate-slide-down" style={{ borderTop: '1px dashed rgba(75, 46, 43, 0.05)', marginTop: '12px', paddingTop: '12px' }}>
+                        <div className="mock-sub-selection-title" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                          {language === 'en' ? 'Select Boards' : 'বোর্ডসমূহ নির্বাচন করুন'}
+                        </div>
+                        <div className="mock-sub-selection-pills">
+                          {BOARDS.map(board => {
+                            const isSelected = selectedBoards.includes(board);
+                            return (
+                              <button
+                                key={board}
+                                type="button"
+                                className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
+                                style={{ '--theme-color': '#10B981', '--theme-bg': 'rgba(16, 185, 129, 0.08)' }}
+                                onClick={() => {
+                                  setSelectedBoards(prev => 
+                                    prev.includes(board) ? prev.filter(b => b !== board) : [...prev, board]
+                                  );
+                                }}
+                              >
+                                {isSelected && <HiCheck size={14} style={{ marginRight: '4px' }} />}
+                                <span>{board}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* ── Section 2: Question Type ── */}
@@ -1240,12 +1491,12 @@ export default function MockTest() {
               <div className="mock-selection-actions">
                 <button
                   type="button"
-                  className={`btn btn-primary mock-start-exam-btn animate-fade-in ${(!examStandard || !questionType || totalQuestions <= 0 || examDuration <= 0) ? 'mock-start-exam-btn--disabled' : ''}`}
-                  disabled={isStartingExam || !examStandard || !questionType || totalQuestions <= 0 || examDuration <= 0}
+                  className={`btn btn-primary mock-start-exam-btn animate-fade-in ${(selectedStandards.length === 0 || !questionType || totalQuestions <= 0 || examDuration <= 0) ? 'mock-start-exam-btn--disabled' : ''}`}
+                  disabled={isStartingExam || selectedStandards.length === 0 || !questionType || totalQuestions <= 0 || examDuration <= 0}
                   onClick={handleStartExam}
                   style={{
-                    opacity: (!examStandard || !questionType || totalQuestions <= 0 || examDuration <= 0) ? 0.6 : 1,
-                    cursor: (!examStandard || !questionType || totalQuestions <= 0 || examDuration <= 0) ? 'not-allowed' : 'pointer'
+                    opacity: (selectedStandards.length === 0 || !questionType || totalQuestions <= 0 || examDuration <= 0) ? 0.6 : 1,
+                    cursor: (selectedStandards.length === 0 || !questionType || totalQuestions <= 0 || examDuration <= 0) ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {isStartingExam ? (

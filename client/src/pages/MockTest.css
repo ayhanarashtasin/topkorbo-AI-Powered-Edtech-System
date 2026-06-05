@@ -1590,3 +1590,66 @@
   70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+/* ─── University & Academic Sub-selection Premium UI ─── */
+.mock-sub-selection-container {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1.5px dashed rgba(75, 46, 43, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mock-sub-selection-title {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.mock-sub-selection-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mock-uni-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1.5px solid rgba(75, 46, 43, 0.1);
+  border-radius: 12px;
+  background: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(75, 46, 43, 0.02);
+}
+
+.mock-uni-pill:hover {
+  border-color: var(--theme-color);
+  background: var(--theme-bg);
+  color: var(--theme-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.mock-uni-pill--selected {
+  background: var(--theme-color) !important;
+  border-color: var(--theme-color) !important;
+  color: var(--white) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+  transform: scale(1.03) !important;
+}
+
+.mock-uni-pill--selected:hover {
+  color: var(--white) !important;
+}

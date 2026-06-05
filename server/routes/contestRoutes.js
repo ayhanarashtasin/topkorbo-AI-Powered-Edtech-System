@@ -11,4 +11,8 @@ router.post('/create', auth, contestController.createContest);
 // @route   GET /api/contests/mine
 router.get('/mine', auth, contestController.getMyContests);
 
+// @desc    Delete a contest owned by current teacher
+// @route   DELETE /api/contests/:id
+router.delete('/:id', auth, contestController.deleteContest);
+
 module.exports = router;

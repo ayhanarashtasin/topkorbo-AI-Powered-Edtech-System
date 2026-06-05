@@ -488,14 +488,127 @@ exports.getAdmissionQuestionCards = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Update an existing question (only by the teacher who created it)
+ * @route   PUT /api/questions/:id
+ * @access  Private (teacher – owner only)
+ */
+exports.updateQuestion = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'teacher') {
+      return ApiResponse.error(res, 'Only teachers can update questions', 403);
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return ApiResponse.error(res, 'Question not found', 404);
+    }
+
+    // Ownership check
+    if (question.teacher.toString() !== user._id.toString()) {
+      return ApiResponse.error(res, 'You can only edit questions you uploaded', 403);
+    }
+
+    const {
+      questionText,
+      imageUrl,
+      type,
+      options,
+      subject,
+      paper,
+      chapter,
+      topic,
+      tags,
+      solution,
+      solutionImageUrl,
+      cq
+    } = req.body;
+
+    if (type && !['mcq', 'written', 'cq'].includes(type)) {
+      return ApiResponse.error(res, 'Valid question type (mcq/written/cq) is required', 400);
+    }
+    if (questionText !== undefined && (!questionText || !questionText.trim())) {
+      return ApiResponse.error(res, 'Question text cannot be empty', 400);
+    }
+
+    // Apply updates only when the field was sent
+    if (questionText !== undefined) question.questionText = questionText.trim();
+    if (imageUrl !== undefined) question.imageUrl = imageUrl || '';
+    if (solutionImageUrl !== undefined) question.solutionImageUrl = solutionImageUrl || '';
+    if (solution !== undefined) question.solution = solution || '';
+    if (subject !== undefined) question.subject = subject;
+    if (paper !== undefined) question.paper = paper;
+    if (chapter !== undefined) question.chapter = chapter;
+    if (topic !== undefined) question.topic = topic;
+    if (type !== undefined) question.type = type;
+    if (tags !== undefined) question.tags = tags || [];
+
+    if (type === 'mcq' || type === 'written') {
+      if (options !== undefined) question.options = options || [];
+    } else if (type === 'cq') {
+      if (cq !== undefined) question.cq = cq;
+    }
+
+    await question.save();
+
+    return ApiResponse.success(res, question, 'Question updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Delete a question (only by the teacher who created it)
+ * @route   DELETE /api/questions/:id
+ * @access  Private (teacher – owner only)
+ */
+exports.deleteQuestion = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'teacher') {
+      return ApiResponse.error(res, 'Only teachers can delete questions', 403);
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return ApiResponse.error(res, 'Question not found', 404);
+    }
+
+    if (question.teacher.toString() !== user._id.toString()) {
+      return ApiResponse.error(res, 'You can only delete questions you uploaded', 403);
+    }
+
+    await question.deleteOne();
+
+    return ApiResponse.success(res, { id: req.params.id }, 'Question deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Standard → Tag Mapping ──────────────────────────────────────────────────
 const ENGINEERING_UNIVERSITIES = [
-  'BUET', 'CUET', 'KUET', 'RUET', 'MIST', 'IUT', 'BUTEX', 'CKRUET'
+  'BUET', 'CUET', 'KUET', 'RUET', 'MIST', 'IUT', 'BUTEX'
 ];
 const GENERAL_UNIVERSITIES = [
   'DU', 'CU', 'RU', 'JU', 'GST', 'BUP', 'IBA'
 ];
 const MEDICAL_UNIVERSITIES = ['Medical', 'Dental'];
+const BOARDS = [
+  'Dhaka', 'Comilla', 'Rajshahi', 'Jessore', 'Chittagong',
+  'Sylhet', 'Barishal', 'Dinajpur', 'Mymensingh', 'Madrasa', 'Technical'
+];
+const COLLEGES = [
+  'Notre Dame College', 'Dhaka College', 'Rajuk Uttara Model College',
+  'Viqarunnisa Noon College', 'Holy Cross College', 'Adamjee Cantonment College',
+  'Ideal College', 'Dhaka City College', 'Government Science College',
+  'Shaheed Bir Uttam Lt. Anwar Girls College', 'Milestone College',
+  'BIRDEM Nursing College', 'Begum Rokeya University, Rangpur',
+  'Chittagong College', 'Rajshahi College', 'Jahangirnagar University School & College',
+  'Comilla Victoria College', 'Barishal Cadet College', 'Mymensingh Girls Cadet College',
+  'Sylhet Cadet College', 'Faujdarhat Cadet College'
+];
 
 /**
  * @desc    Fetch questions for mock test with filters
@@ -506,7 +619,13 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
   try {
     const {
       selections,     // [{ subject, paper, chapters: [{ name, topics: [string] }] }]
-      standard,       // 'engineering' | 'university' | 'academic' | 'medical' | ''
+      standard,       // 'engineering' | 'university' | 'academic' | 'medical' | '' (legacy)
+      standards,      // ['engineering', 'university', 'academic', 'medical']
+      selectedEngineeringUnis, // ['BUET', 'CKRUET']
+      selectedGeneralUnis,     // ['DU', 'GST']
+      selectedAcademicTypes,   // ['board', 'college']
+      selectedBoards,          // ['Dhaka', 'Rajshahi']
+      selectedColleges,        // ['Notre Dame College']
       questionType,   // 'mcq' | 'cq' | 'written' | ''
       totalQuestions, // number
       source          // { type: 'board' | 'college', name: 'Dhaka', year: '2025' } | null
@@ -540,44 +659,120 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
       return ApiResponse.error(res, 'At least one subject/chapter selection is required', 400);
     }
 
-    // Build tag filter based on standard
-    let tagFilter = null;
+    // Build tag filters based on standards/sub-selections using $elemMatch
+    const tagConditions = [];
     const hasSource = source && source.type && source.name;
-    if (standard === 'engineering') {
-      tagFilter = { 'tags.category': 'admission', 'tags.university': { $in: ENGINEERING_UNIVERSITIES } };
-    } else if (standard === 'university') {
-      tagFilter = { 'tags.category': 'admission', 'tags.university': { $in: GENERAL_UNIVERSITIES } };
-    } else if (standard === 'academic' && !hasSource) {
-      tagFilter = { 'tags.category': 'board' };
-    } else if (standard === 'medical') {
-      tagFilter = { 'tags.category': 'admission', 'tags.university': { $in: MEDICAL_UNIVERSITIES } };
+    const activeStandards = Array.isArray(standards) ? standards : (standard ? [standard] : []);
+
+    // 1. Engineering
+    if (activeStandards.includes('engineering')) {
+      const engUnis = Array.isArray(selectedEngineeringUnis) && selectedEngineeringUnis.length > 0
+        ? selectedEngineeringUnis
+        : ENGINEERING_UNIVERSITIES;
+      tagConditions.push({
+        tags: {
+          $elemMatch: {
+            category: 'admission',
+            university: { $in: engUnis }
+          }
+        }
+      });
     }
 
-    // Compose final match
-    const matchStage = { $or: subjectConditions };
-    if (questionType && ['mcq', 'cq', 'written'].includes(questionType)) {
-      matchStage.type = questionType;
+    // 2. University
+    if (activeStandards.includes('university')) {
+      const genUnis = Array.isArray(selectedGeneralUnis) && selectedGeneralUnis.length > 0
+        ? selectedGeneralUnis
+        : GENERAL_UNIVERSITIES;
+      tagConditions.push({
+        tags: {
+          $elemMatch: {
+            category: 'admission',
+            university: { $in: genUnis }
+          }
+        }
+      });
     }
-    if (tagFilter) {
-      Object.assign(matchStage, tagFilter);
+
+    // 3. Medical
+    if (activeStandards.includes('medical')) {
+      tagConditions.push({
+        tags: {
+          $elemMatch: {
+            category: 'admission',
+            university: { $in: MEDICAL_UNIVERSITIES }
+          }
+        }
+      });
+    }
+
+    // 4. Academic
+    if (activeStandards.includes('academic') && !hasSource) {
+      const acadTypes = Array.isArray(selectedAcademicTypes) && selectedAcademicTypes.length > 0
+        ? selectedAcademicTypes
+        : ['board']; // legacy fallback to board questions
+      
+      if (acadTypes.includes('board')) {
+        const boards = Array.isArray(selectedBoards) && selectedBoards.length > 0
+          ? selectedBoards
+          : BOARDS;
+        tagConditions.push({
+          tags: {
+            $elemMatch: {
+              category: 'board',
+              board: { $in: boards }
+            }
+          }
+        });
+      }
+
+      if (acadTypes.includes('college')) {
+        tagConditions.push({
+          tags: {
+            $elemMatch: {
+              category: 'college'
+            }
+          }
+        });
+      }
+    }
+
+    // Compose final match conditions using $and array to avoid overlapping $or operators
+    const andConditions = [];
+    
+    // Add subject conditions
+    andConditions.push({ $or: subjectConditions });
+
+    // Add question type filter
+    if (questionType && ['mcq', 'cq', 'written'].includes(questionType)) {
+      andConditions.push({ type: questionType });
+    }
+
+    // Add standards filter if configured
+    if (tagConditions.length > 0) {
+      andConditions.push({ $or: tagConditions });
     }
 
     // Source filter (board+year or college+year)
     if (source && source.type && source.name) {
+      const sourceMatch = {};
       if (source.type === 'board') {
-        matchStage['tags.category'] = 'board';
-        matchStage['tags.board'] = source.name;
+        sourceMatch['tags.category'] = 'board';
+        sourceMatch['tags.board'] = source.name;
         if (source.year) {
-          matchStage['tags.year'] = source.year;
+          sourceMatch['tags.year'] = source.year;
         }
       } else if (source.type === 'college') {
-        matchStage['tags.category'] = 'college';
-        matchStage['tags.college'] = source.name;
+        sourceMatch['tags.category'] = 'college';
+        sourceMatch['tags.college'] = source.name;
         if (source.year) {
-          matchStage['tags.year'] = source.year;
+          sourceMatch['tags.year'] = source.year;
         }
       }
+      andConditions.push(sourceMatch);
     }
+
+    const matchStage = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
 
     // Aggregation: match → sample → project
     const pipeline = [

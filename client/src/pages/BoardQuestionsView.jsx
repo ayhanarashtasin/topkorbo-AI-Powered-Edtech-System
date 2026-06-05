@@ -62,8 +62,12 @@ const getSourceAbbreviation = (type, name, year) => {
   }
 };
 
-function SolutionPanel({ solution, solutionImageUrl, language, renderMath }) {
+function SolutionPanel({ solution, solutionImageUrl, language, renderMath, forceOpen }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setIsOpen(forceOpen);
+  }, [forceOpen]);
 
   let isCqSolution = false;
   let parsedSolutions = [];
@@ -458,12 +462,15 @@ export default function BoardQuestionsView() {
                   </div>
                 )}
 
-                <SolutionPanel
-                  solution={q.solution}
-                  solutionImageUrl={q.solutionImageUrl}
-                  language={language}
-                  renderMath={renderMath}
-                />
+                {user?.role !== 'student' && (
+                  <SolutionPanel
+                    solution={q.solution}
+                    solutionImageUrl={q.solutionImageUrl}
+                    language={language}
+                    renderMath={renderMath}
+                    forceOpen={showAllAnswers}
+                  />
+                )}
 
               </div>
             );

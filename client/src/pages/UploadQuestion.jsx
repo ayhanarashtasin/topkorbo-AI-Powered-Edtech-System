@@ -1,6 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiUpload, HiPencilAlt, HiCheckCircle, HiX, HiPlus, HiTrash, HiDocumentText, HiClipboardList, HiLightBulb } from 'react-icons/hi';
+import {
+  HiUpload,
+  HiPencilAlt,
+  HiEye,
+  HiCheckCircle,
+  HiX,
+  HiTrash,
+  HiDocumentText,
+  HiClock,
+  HiAcademicCap,
+  HiCalculator,
+  HiExclamationCircle,
+  HiLightBulb,
+  HiBookOpen,
+  HiQuestionMarkCircle,
+  HiPlus,
+  HiClipboardList,
+  HiOutlineEye,
+  HiOutlinePencilAlt,
+  HiOutlineTrash,
+  HiOutlineLightBulb,
+} from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -291,6 +312,7 @@ function renderLatex(text) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UploadQuestion() {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const { t, language } = useLanguage();
 
   const [user, setUser] = useState({
@@ -337,6 +359,178 @@ export default function UploadQuestion() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [recentQuestions, setRecentQuestions] = useState([]);
+
+  // Edit / Delete / Solution modal state for Recently Uploaded cards
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [viewingSolutionFor, setViewingSolutionFor] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const openEditModal = (q) => {
+    setEditingQuestion(q);
+    setEditForm({
+      questionText: q.questionText || '',
+      subject: q.subject || '',
+      paper: q.paper ?? '',
+      chapter: q.chapter || '',
+      topic: q.topic || '',
+      type: q.type || 'mcq',
+      options: Array.isArray(q.options) && q.options.length
+        ? q.options.map((o) => ({ ...o }))
+        : [
+            { id: 'A', text: '', isCorrect: false },
+            { id: 'B', text: '', isCorrect: false },
+            { id: 'C', text: '', isCorrect: false },
+            { id: 'D', text: '', isCorrect: false },
+          ],
+      cq: q.cq
+        ? {
+            description: q.cq.description || '',
+            parts: (q.cq.parts || []).map((p) => ({ ...p })),
+          }
+        : { description: '', parts: [{ label: 'a', text: '' }] },
+      solution: q.solution || '',
+      imageUrl: q.imageUrl || '',
+      solutionImageUrl: q.solutionImageUrl || '',
+      tags: Array.isArray(q.tags) ? q.tags.map((t) => ({ ...t })) : [],
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingQuestion(null);
+    setEditForm(null);
+    setSavingEdit(false);
+  };
+
+  const updateEditOption = (idx, field, value) => {
+    setEditForm((prev) => {
+      const next = { ...prev, options: [...prev.options] };
+      next.options[idx] = { ...next.options[idx], [field]: value };
+      return next;
+    });
+  };
+
+  const updateEditCqPart = (idx, value) => {
+    setEditForm((prev) => {
+      const next = { ...prev, cq: { ...prev.cq, parts: [...prev.cq.parts] } };
+      next.cq.parts[idx] = { ...next.cq.parts[idx], text: value };
+      return next;
+    });
+  };
+
+  const addEditTag = (category) => {
+    setEditForm((prev) => {
+      const tags = [...(prev.tags || [])];
+      if (category === 'board') tags.push({ category: 'board', board: '', year: '' });
+      else if (category === 'college') tags.push({ category: 'college', college: '', year: '' });
+      else tags.push({ category: 'admission', university: '', unit: '', year: '', shift: '' });
+      return { ...prev, tags };
+    });
+  };
+
+  const updateEditTag = (idx, field, value) => {
+    setEditForm((prev) => {
+      const tags = (prev.tags || []).map((t, i) => (i === idx ? { ...t, [field]: value } : t));
+      return { ...prev, tags };
+    });
+  };
+
+  const removeEditTag = (idx) => {
+    setEditForm((prev) => ({
+      ...prev,
+      tags: (prev.tags || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingQuestion || !editForm) return;
+    setSavingEdit(true);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const payload = {
+        questionText: editForm.questionText,
+        subject: editForm.subject,
+        paper: editForm.paper === '' ? undefined : editForm.paper,
+        chapter: editForm.chapter,
+        topic: editForm.topic,
+        type: editForm.type,
+        imageUrl: editForm.imageUrl,
+        solutionImageUrl: editForm.solutionImageUrl,
+        solution: editForm.solution,
+      };
+      if (editForm.type === 'mcq' || editForm.type === 'written') {
+        payload.options = editForm.options;
+      } else if (editForm.type === 'cq') {
+        payload.cq = editForm.cq;
+      }
+      payload.tags = editForm.tags || [];
+      const res = await fetch(`${API_URL}/questions/${editingQuestion._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || 'Update failed');
+      }
+      showToast('success', t('uq.recent.update_success'));
+      closeEditModal();
+      await fetchRecentQuestions();
+    } catch (err) {
+      showToast('error', err.message || t('uq.recent.update_error'));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteQuestion = async (id) => {
+    if (!id) {
+      console.warn('[handleDeleteQuestion] called without id');
+      return;
+    }
+    setDeletingId(id);
+    // Snapshot for rollback in case the server call fails
+    const snapshot = recentQuestions;
+    // Optimistically remove from UI so the action feels instant
+    setRecentQuestions((prev) => prev.filter((q) => q._id !== id));
+    setConfirmDeleteId(null);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      if (!token) {
+        throw new Error('You are not signed in. Please sign in again.');
+      }
+      const url = `${API_URL}/questions/${id}`;
+      console.log('[handleDeleteQuestion] DELETE', url);
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      let data = {};
+      try { data = await res.json(); } catch { /* empty body is OK for DELETE */ }
+      console.log('[handleDeleteQuestion] response', res.status, data);
+      if (!res.ok || data.success === false) {
+        throw new Error(data.message || `Delete failed (status ${res.status})`);
+      }
+      showToast('success', t('uq.recent.delete_success'));
+      // Re-fetch to make sure the list is fully in sync with the server
+      try { await fetchRecentQuestions(); } catch (e) { console.error('[handleDeleteQuestion] refetch failed', e); }
+    } catch (err) {
+      // Restore the question we just removed so the UI matches reality
+      setRecentQuestions(snapshot);
+      console.error('[handleDeleteQuestion]', err);
+      showToast('error', err.message || t('uq.recent.delete_error'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Math Keyboard state
   const [focusedInput, setFocusedInput] = useState({ type: 'question', index: null });
@@ -1363,11 +1557,523 @@ export default function UploadQuestion() {
                         </div>
                       )}
                     </div>
+                    <div className="uq-recent-card__actions">
+                      <button
+                        type="button"
+                        className="uq-recent-card__action uq-recent-card__action--solution"
+                        onClick={() => setViewingSolutionFor(q)}
+                        title={t('uq.recent.view_solution')}
+                      >
+                        <HiOutlineLightBulb size={15} />
+                        <span>{t('uq.recent.view_solution')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="uq-recent-card__action uq-recent-card__action--edit"
+                        onClick={() => openEditModal(q)}
+                        title={t('uq.recent.edit')}
+                      >
+                        <HiOutlinePencilAlt size={15} />
+                        <span>{t('uq.recent.edit')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="uq-recent-card__action uq-recent-card__action--delete"
+                        onClick={() => setConfirmDeleteId(q._id)}
+                        title={t('uq.recent.delete')}
+                      >
+                        <HiOutlineTrash size={15} />
+                        <span>{t('uq.recent.delete')}</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
+          {/* ── Delete Confirmation Dialog ── */}
+          {confirmDeleteId && (
+            <div className="uq-modal-backdrop" onClick={() => setConfirmDeleteId(null)}>
+              <div className="uq-modal uq-modal--confirm" onClick={(e) => e.stopPropagation()}>
+                <div className="uq-modal__icon uq-modal__icon--danger">
+                  <HiOutlineTrash size={28} />
+                </div>
+                <h3 className="uq-modal__title">{t('uq.recent.delete_confirm_title')}</h3>
+                <p className="uq-modal__desc">{t('uq.recent.delete_confirm')}</p>
+                <div className="uq-modal__actions">
+                  <button
+                    type="button"
+                    className="uq-modal__btn uq-modal__btn--ghost"
+                    onClick={() => setConfirmDeleteId(null)}
+                    disabled={deletingId === confirmDeleteId}
+                  >
+                    {t('uq.recent.confirm_no')}
+                  </button>
+                  <button
+                    type="button"
+                    className="uq-modal__btn uq-modal__btn--danger"
+                    onClick={() => handleDeleteQuestion(confirmDeleteId)}
+                    disabled={deletingId === confirmDeleteId}
+                  >
+                    {deletingId === confirmDeleteId ? t('uq.recent.saving') : t('uq.recent.confirm_yes')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Solution Viewer Modal ── */}
+          {viewingSolutionFor && (
+            <div className="uq-modal-backdrop" onClick={() => setViewingSolutionFor(null)}>
+              <div className="uq-modal uq-modal--solution" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="uq-modal__close"
+                  onClick={() => setViewingSolutionFor(null)}
+                  aria-label="Close"
+                >
+                  <HiX size={18} />
+                </button>
+                <div className="uq-modal__icon uq-modal__icon--solution">
+                  <HiOutlineLightBulb size={28} />
+                </div>
+                <h3 className="uq-modal__title">{t('uq.recent.solution_title')}</h3>
+                <div className="uq-modal__meta">
+                  {viewingSolutionFor.subject} · Paper {viewingSolutionFor.paper} · {viewingSolutionFor.chapter}
+                </div>
+                <div
+                  className="uq-modal__question"
+                  dangerouslySetInnerHTML={{ __html: renderLatex(viewingSolutionFor.questionText) }}
+                />
+                {viewingSolutionFor.solutionImageUrl && (
+                  <div className="uq-modal__solution-image">
+                    <img src={viewingSolutionFor.solutionImageUrl} alt="Solution diagram" />
+                  </div>
+                )}
+                {viewingSolutionFor.solution ? (
+                  <div
+                    className="uq-modal__solution"
+                    dangerouslySetInnerHTML={{ __html: renderLatex(viewingSolutionFor.solution) }}
+                  />
+                ) : (
+                  <div className="uq-modal__solution uq-modal__solution--empty">
+                    {t('uq.recent.empty_solution')}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Edit Question Modal ── */}
+          {editingQuestion && editForm && (() => {
+            // Inline derivations for the edit modal's classification dropdowns
+            const editSubjectData = HSC_SUBJECTS.find(s => s.id === editForm.subject);
+            const editPapers = editSubjectData?.papers || [];
+            const editChapters = CHAPTERS_MAP[`${editForm.subject}__${editForm.paper}`] || [];
+            return (
+              <div className="uq-modal-backdrop" onClick={closeEditModal}>
+                <div className="uq-modal uq-modal--edit" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="uq-modal__close"
+                    onClick={closeEditModal}
+                    aria-label="Close"
+                  >
+                    <HiX size={18} />
+                  </button>
+                  <div className="uq-modal__icon uq-modal__icon--edit">
+                    <HiOutlinePencilAlt size={28} />
+                  </div>
+                  <h3 className="uq-modal__title">{t('uq.recent.edit_modal_title')}</h3>
+
+                  <div className="uq-modal__form">
+                    {/* Question Type */}
+                    <div className="uq-modal__section">
+                      <div className="uq-modal__section-title">{t('uq.recent.field.type')}</div>
+                      <div className="uq-modal__type-grid">
+                        {[
+                          { id: 'mcq', label: t('uq.type.mcq') },
+                          { id: 'written', label: t('uq.type.written') },
+                          { id: 'cq', label: t('uq.type.cq') },
+                        ].map(tp => (
+                          <button
+                            key={tp.id}
+                            type="button"
+                            className={`uq-modal__type-btn ${editForm.type === tp.id ? 'uq-modal__type-btn--active' : ''}`}
+                            onClick={() => setEditForm((p) => ({ ...p, type: tp.id }))}
+                          >
+                            {tp.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Question Body + Live Preview */}
+                    <div className="uq-modal__section">
+                      <div className="uq-modal__section-title">{t('uq.recent.field.question')}</div>
+                      <textarea
+                        className="uq-modal__input uq-modal__input--textarea"
+                        value={editForm.questionText}
+                        onChange={(e) => setEditForm((p) => ({ ...p, questionText: e.target.value }))}
+                        rows={3}
+                        placeholder={t('uq.question.placeholder')}
+                      />
+                      <div className="uq-modal__preview-label">{t('uq.recent.preview.question')}</div>
+                      <div
+                        className={`uq-modal__preview ${!editForm.questionText.trim() ? 'uq-modal__preview--empty' : ''}`}
+                        dangerouslySetInnerHTML={{
+                          __html: editForm.questionText.trim()
+                            ? renderLatex(editForm.questionText)
+                            : t('uq.recent.preview.empty')
+                        }}
+                      />
+                    </div>
+
+                    {/* MCQ Options + Preview */}
+                    {editForm.type === 'mcq' && (
+                      <div className="uq-modal__section">
+                        <div className="uq-modal__section-title">{t('uq.recent.field.options')}</div>
+                        <div className="uq-modal__options">
+                          {editForm.options.map((opt, idx) => (
+                            <div key={opt.id || idx} className="uq-modal__option">
+                              <label className="uq-modal__option-correct">
+                                <input
+                                  type="radio"
+                                  name="uq-edit-correct"
+                                  checked={!!opt.isCorrect}
+                                  onChange={() => {
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      options: prev.options.map((o, i) => ({
+                                        ...o,
+                                        isCorrect: i === idx,
+                                      })),
+                                    }));
+                                  }}
+                                />
+                                <span>{opt.id}</span>
+                              </label>
+                              <input
+                                className="uq-modal__input"
+                                value={opt.text || ''}
+                                placeholder={t('uq.option.placeholder')}
+                                onChange={(e) => updateEditOption(idx, 'text', e.target.value)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="uq-modal__preview-label">{t('uq.recent.preview.options')}</div>
+                        <div className="uq-modal__preview">
+                          {editForm.options.map((opt, idx) => (
+                            <div key={idx} className={`uq-modal__preview-option ${opt.isCorrect ? 'uq-modal__preview-option--correct' : ''}`}>
+                              <span className="uq-modal__preview-option-id">{opt.id}.</span>
+                              <span
+                                className="uq-modal__preview-option-text"
+                                dangerouslySetInnerHTML={{
+                                  __html: (opt.text || '').trim()
+                                    ? renderLatex(opt.text)
+                                    : `<em>${t('uq.recent.preview.empty')}</em>`
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Written: simple options editor (kept from previous behavior) */}
+                    {editForm.type === 'written' && (
+                      <div className="uq-modal__section">
+                        <div className="uq-modal__section-title">{t('uq.recent.field.options')}</div>
+                        <div className="uq-modal__options">
+                          {editForm.options.map((opt, idx) => (
+                            <div key={idx} className="uq-modal__option">
+                              <input
+                                className="uq-modal__input"
+                                value={opt.text || ''}
+                                placeholder={t('uq.option.placeholder')}
+                                onChange={(e) => updateEditOption(idx, 'text', e.target.value)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CQ Sub-questions */}
+                    {editForm.type === 'cq' && (
+                      <div className="uq-modal__section">
+                        <div className="uq-modal__section-title">{t('uq.cq.description')}</div>
+                        <textarea
+                          className="uq-modal__input uq-modal__input--textarea"
+                          value={editForm.cq.description}
+                          onChange={(e) => setEditForm((p) => ({ ...p, cq: { ...p.cq, description: e.target.value } }))}
+                          rows={2}
+                          placeholder={t('uq.cq.description.placeholder')}
+                        />
+                        <div className="uq-modal__cq-parts">
+                          {editForm.cq.parts.map((part, idx) => (
+                            <div key={idx} className="uq-modal__cq-part">
+                              <label className="uq-modal__label">
+                                {t('uq.recent.cq_subquestion')} {String.fromCharCode(97 + idx)}
+                                <input
+                                  className="uq-modal__input"
+                                  value={part.text || ''}
+                                  placeholder={t('uq.cq.part.placeholder')}
+                                  onChange={(e) => updateEditCqPart(idx, e.target.value)}
+                                />
+                              </label>
+                              <div
+                                className={`uq-modal__preview uq-modal__preview--mini ${!part.text ? 'uq-modal__preview--empty' : ''}`}
+                                dangerouslySetInnerHTML={{
+                                  __html: (part.text || '').trim()
+                                    ? renderLatex(part.text)
+                                    : t('uq.recent.preview.empty')
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Solution + Preview */}
+                    <div className="uq-modal__section">
+                      <div className="uq-modal__section-title">{t('uq.recent.field.solution')}</div>
+                      <textarea
+                        className="uq-modal__input uq-modal__input--textarea"
+                        value={editForm.solution}
+                        onChange={(e) => setEditForm((p) => ({ ...p, solution: e.target.value }))}
+                        rows={3}
+                        placeholder={t('uq.section.solution')}
+                      />
+                      <div className="uq-modal__preview-label">{t('uq.recent.preview.solution')}</div>
+                      <div
+                        className={`uq-modal__preview ${!editForm.solution.trim() ? 'uq-modal__preview--empty' : ''}`}
+                        dangerouslySetInnerHTML={{
+                          __html: editForm.solution.trim()
+                            ? renderLatex(editForm.solution)
+                            : t('uq.recent.preview.empty')
+                        }}
+                      />
+                    </div>
+
+                    {/* Subject / Paper / Chapter / Topic */}
+                    <div className="uq-modal__section">
+                      <div className="uq-modal__section-title">{t('uq.recent.field.classification')}</div>
+                      <div className="uq-modal__row">
+                        <label className="uq-modal__label">
+                          {t('uq.field.subject')}
+                          <select
+                            className="uq-modal__input"
+                            value={editForm.subject}
+                            onChange={(e) => setEditForm((p) => ({
+                              ...p,
+                              subject: e.target.value,
+                              paper: '',
+                              chapter: '',
+                            }))}
+                          >
+                            <option value="">{t('uq.field.subject.placeholder')}</option>
+                            {HSC_SUBJECTS.map(s => (
+                              <option key={s.id} value={s.id}>
+                                {language === 'en' ? s.labelEn : s.labelBn}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="uq-modal__label">
+                          {t('uq.field.paper')}
+                          <select
+                            className="uq-modal__input"
+                            value={editForm.paper}
+                            disabled={!editForm.subject}
+                            onChange={(e) => setEditForm((p) => ({
+                              ...p,
+                              paper: e.target.value,
+                              chapter: '',
+                            }))}
+                          >
+                            <option value="">{t('uq.field.paper.placeholder')}</option>
+                            {editPapers.map(p => (
+                              <option key={p} value={p}>
+                                {p === '1st' ? (language === 'en' ? '1st Paper' : '১ম পত্র') : (language === 'en' ? '2nd Paper' : '২য় পত্র')}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                      <div className="uq-modal__row">
+                        <label className="uq-modal__label">
+                          {t('uq.field.chapter')}
+                          <select
+                            className="uq-modal__input"
+                            value={editForm.chapter}
+                            disabled={!editForm.paper || editChapters.length === 0}
+                            onChange={(e) => setEditForm((p) => ({ ...p, chapter: e.target.value }))}
+                          >
+                            <option value="">{t('uq.field.chapter.placeholder')}</option>
+                            {editChapters.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="uq-modal__label">
+                          {t('uq.field.topic')}
+                          <input
+                            className="uq-modal__input"
+                            value={editForm.topic}
+                            onChange={(e) => setEditForm((p) => ({ ...p, topic: e.target.value }))}
+                            placeholder={t('uq.field.topic.placeholder')}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="uq-modal__section">
+                      <div className="uq-modal__section-title">{t('uq.recent.field.tags')}</div>
+                      <p className="uq-modal__section-desc">{t('uq.recent.field.tags.desc')}</p>
+                      {(editForm.tags || []).length === 0 && (
+                        <div className="uq-modal__tags-empty">{t('uq.recent.tag.empty')}</div>
+                      )}
+                      <div className="uq-modal__tags-list">
+                        {(editForm.tags || []).map((tag, idx) => (
+                          <div key={idx} className="uq-tag-card">
+                            <span className={`uq-tag-badge uq-tag-badge--${tag.category}`}>
+                              {tag.category === 'board' ? t('uq.recent.tag.board_label')
+                                : tag.category === 'college' ? t('uq.recent.tag.college_label')
+                                : t('uq.recent.tag.admission_label')}
+                            </span>
+                            <div className="uq-tag-fields">
+                              {tag.category === 'board' && (
+                                <>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.board || ''}
+                                    onChange={e => updateEditTag(idx, 'board', e.target.value)}
+                                  >
+                                    <option value="">Board</option>
+                                    {BOARDS.map(b => <option key={b} value={b}>{b}</option>)}
+                                  </select>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.year || ''}
+                                    onChange={e => updateEditTag(idx, 'year', e.target.value)}
+                                  >
+                                    <option value="">{t('uq.recent.tag.year_placeholder')}</option>
+                                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                  </select>
+                                </>
+                              )}
+                              {tag.category === 'college' && (
+                                <>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.college || ''}
+                                    onChange={e => updateEditTag(idx, 'college', e.target.value)}
+                                  >
+                                    <option value="">{t('uq.recent.tag.select_college')}</option>
+                                    {COLLEGES.map(c => <option key={c} value={c}>{c}</option>)}
+                                  </select>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.year || ''}
+                                    onChange={e => updateEditTag(idx, 'year', e.target.value)}
+                                  >
+                                    <option value="">{t('uq.recent.tag.year_placeholder')}</option>
+                                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                  </select>
+                                </>
+                              )}
+                              {tag.category === 'admission' && (
+                                <>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.university || ''}
+                                    onChange={e => updateEditTag(idx, 'university', e.target.value)}
+                                  >
+                                    <option value="">{t('uq.recent.tag.select_university')}</option>
+                                    {UNIVERSITIES.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                  </select>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.unit || ''}
+                                    onChange={e => updateEditTag(idx, 'unit', e.target.value)}
+                                    disabled={!tag.university}
+                                  >
+                                    <option value="">{t('uq.recent.tag.unit_placeholder')}</option>
+                                    {(UNIVERSITIES.find(u => u.id === tag.university)?.units || []).map(u => (
+                                      <option key={u} value={u}>{u}</option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    className="uq-select"
+                                    value={tag.year || ''}
+                                    onChange={e => updateEditTag(idx, 'year', e.target.value)}
+                                  >
+                                    <option value="">{t('uq.recent.tag.session_placeholder')}</option>
+                                    {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                                  </select>
+                                  <input
+                                    type="text"
+                                    className="uq-select"
+                                    value={tag.shift || ''}
+                                    onChange={e => updateEditTag(idx, 'shift', e.target.value)}
+                                    placeholder={t('uq.recent.tag.shift_placeholder')}
+                                    style={{ minWidth: '140px' }}
+                                  />
+                                </>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              className="uq-tag-remove-btn"
+                              onClick={() => removeEditTag(idx)}
+                              title={t('uq.recent.tag.remove')}
+                            >
+                              <HiX size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="uq-add-tag-row">
+                        <button type="button" className="uq-add-tag-btn uq-add-tag-btn--board" onClick={() => addEditTag('board')}>
+                          <HiPlus size={14} /> {t('uq.tag.add_board')}
+                        </button>
+                        <button type="button" className="uq-add-tag-btn uq-add-tag-btn--college" onClick={() => addEditTag('college')}>
+                          <HiPlus size={14} /> {t('uq.tag.add_college')}
+                        </button>
+                        <button type="button" className="uq-add-tag-btn uq-add-tag-btn--admission" onClick={() => addEditTag('admission')}>
+                          <HiPlus size={14} /> {t('uq.tag.add_admission')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="uq-modal__actions">
+                    <button
+                      type="button"
+                      className="uq-modal__btn uq-modal__btn--ghost"
+                      onClick={closeEditModal}
+                      disabled={savingEdit}
+                    >
+                      {t('uq.recent.cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="uq-modal__btn uq-modal__btn--primary"
+                      onClick={handleSaveEdit}
+                      disabled={savingEdit}
+                    >
+                      {savingEdit ? t('uq.recent.saving') : t('uq.recent.save')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </main>
 

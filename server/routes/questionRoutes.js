@@ -41,4 +41,12 @@ router.get('/varsity-written', auth, questionController.getVarsityWrittenQuestio
 // @route   POST /api/questions/mock-test
 router.post('/mock-test', auth, questionController.fetchMockTestQuestions);
 
+// @desc    Update a question (teacher owner only)
+// @route   PUT /api/questions/:id
+router.put('/:id', auth, questionController.updateQuestion);
+
+// @desc    Delete a question (teacher owner only)
+// @route   DELETE /api/questions/:id
+router.delete('/:id', auth, questionController.deleteQuestion);
+
 module.exports = router;

@@ -1,7 +1,6 @@
 const Contest = require('../models/Contest');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
-const { getContestQuestionModel } = require('../models/ContestQuestion');
 
 /**
  * @desc    Create a new contest (teacher only)
@@ -75,16 +74,13 @@ exports.createContest = async (req, res, next) => {
       return ApiResponse.error(res, 'Valid question type (mcq/cq/both) is required', 400);
     }
 
-    // Create dynamically named collection for contest-specific questions
-    const safeName = name.trim().replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-    const collectionName = `${safeName}_questions`;
-    const ContestQuestionModel = getContestQuestionModel(name.trim());
+    const embeddedQuestions = [];
 
-    // Temporarily holding documents to save
-    const savedQuestions = [];
+    // 1) Add teacher-uploaded questions
     if (confirmedQuestions && Array.isArray(confirmedQuestions)) {
       for (const q of confirmedQuestions) {
-        const newQData = {
+        embeddedQuestions.push({
+          source: 'uploaded',
           teacher: user._id,
           questionText: q.questionText || q.text || '',
           imageUrl: q.imageUrl || (q.images?.[0] || ''),
@@ -98,13 +94,41 @@ exports.createContest = async (req, res, next) => {
           solution: q.solution || '',
           solutionImageUrl: q.solutionImageUrl || '',
           tags: q.tags || []
-        };
-        const savedQ = await ContestQuestionModel.create(newQData);
-        savedQuestions.push(savedQ);
+        });
       }
     }
 
-    // Create the contest
+    // 2) Add each question picked from the question bank
+    if (qbankSelections && Array.isArray(qbankSelections)) {
+      for (const selection of qbankSelections) {
+        const picked = Array.isArray(selection.questionIds) ? selection.questionIds : [];
+        for (const qid of picked) {
+          embeddedQuestions.push({
+            source: 'qbank',
+            originalQuestionId: qid,
+            selectionMeta: {
+              subject: selection.subject,
+              paper: selection.paper,
+              chapter: selection.chapter,
+              topic: selection.topic,
+              numberOfQuestions: selection.numberOfQuestions
+            },
+            teacher: user._id,
+            // Placeholder fields required by the schema; real content stays in Question collection
+            questionText: `(qbank ref: ${qid})`,
+            type: 'mcq',
+            subject: selection.subject || 'Physics',
+            paper: selection.paper || '1st',
+            chapter: selection.chapter || 'General',
+            topic: selection.topic || 'General',
+            options: [],
+            tags: []
+          });
+        }
+      }
+    }
+
+    // Create and save the Contest document with all questions embedded
     const contest = new Contest({
       creator: user._id,
       name: name.trim(),
@@ -117,8 +141,9 @@ exports.createContest = async (req, res, next) => {
       admissionSubtype: (level === 'admission' && admissionType === 'varsity') ? admissionSubtype : '',
       questionType,
       qbankSelections: qbankSelections || null,
-      confirmedQuestions: savedQuestions,
-      contestQuestionsCollection: collectionName
+      confirmedQuestions: [], // Legacy field, kept empty for schema compatibility
+      questions: embeddedQuestions,
+      contestQuestionsCollection: 'contest_questions'
     });
 
     await contest.save();
@@ -199,6 +224,37 @@ exports.getMyContests = async (req, res, next) => {
     return ApiResponse.success(res, upcomingContests, 'Upcoming contests fetched successfully');
   } catch (err) {
     console.error('Get my contests controller error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Delete a contest created by the current teacher
+ * @route   DELETE /api/contests/:id
+ * @access  Private (teacher)
+ */
+exports.deleteContest = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'teacher') {
+      return ApiResponse.error(res, 'Only teachers can delete contests', 403);
+    }
+
+    const contest = await Contest.findOne({ _id: req.params.id, creator: user._id });
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found or not owned by you', 404);
+    }
+
+    // Embedding questions inside Contest means deleting the contest automatically deletes its questions.
+    await Contest.deleteOne({ _id: contest._id });
+
+    return ApiResponse.success(
+      res,
+      { contestId: contest._id },
+      'Contest deleted successfully'
+    );
+  } catch (err) {
+    console.error('Delete contest controller error:', err);
     return next(err);
   }
 };
