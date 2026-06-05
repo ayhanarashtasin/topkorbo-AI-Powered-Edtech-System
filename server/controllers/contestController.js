@@ -1,6 +1,7 @@
 const Contest = require('../models/Contest');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
+const { getContestQuestionModel } = require('../models/ContestQuestion');
 
 /**
  * @desc    Create a new contest (teacher only)
@@ -74,6 +75,35 @@ exports.createContest = async (req, res, next) => {
       return ApiResponse.error(res, 'Valid question type (mcq/cq/both) is required', 400);
     }
 
+    // Create dynamically named collection for contest-specific questions
+    const safeName = name.trim().replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+    const collectionName = `${safeName}_questions`;
+    const ContestQuestionModel = getContestQuestionModel(name.trim());
+
+    // Temporarily holding documents to save
+    const savedQuestions = [];
+    if (confirmedQuestions && Array.isArray(confirmedQuestions)) {
+      for (const q of confirmedQuestions) {
+        const newQData = {
+          teacher: user._id,
+          questionText: q.questionText || q.text || '',
+          imageUrl: q.imageUrl || (q.images?.[0] || ''),
+          type: q.type || 'mcq',
+          options: q.options || [],
+          cq: q.cq,
+          subject: q.subject || 'Physics',
+          paper: q.paper || '1st',
+          chapter: q.chapter || 'General',
+          topic: q.topic || 'General',
+          solution: q.solution || '',
+          solutionImageUrl: q.solutionImageUrl || '',
+          tags: q.tags || []
+        };
+        const savedQ = await ContestQuestionModel.create(newQData);
+        savedQuestions.push(savedQ);
+      }
+    }
+
     // Create the contest
     const contest = new Contest({
       creator: user._id,
@@ -87,7 +117,8 @@ exports.createContest = async (req, res, next) => {
       admissionSubtype: (level === 'admission' && admissionType === 'varsity') ? admissionSubtype : '',
       questionType,
       qbankSelections: qbankSelections || null,
-      confirmedQuestions: confirmedQuestions || []
+      confirmedQuestions: savedQuestions,
+      contestQuestionsCollection: collectionName
     });
 
     await contest.save();

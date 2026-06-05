@@ -326,6 +326,12 @@ export default function UploadQuestion() {
   const [topic, setTopic] = useState('');
   const [tags, setTags] = useState([]);
   const [solution, setSolution] = useState('');
+  const [cqSolutions, setCqSolutions] = useState([
+    { label: 'a', text: '', imageUrl: '' },
+    { label: 'b', text: '', imageUrl: '' },
+    { label: 'c', text: '', imageUrl: '' },
+    { label: 'd', text: '', imageUrl: '' }
+  ]);
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -431,6 +437,26 @@ export default function UploadQuestion() {
     setSolutionImageUrl('');
   };
 
+  const handleCqSolutionImageUpload = (idx, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('error', language === 'en' ? 'Image must be under 2MB' : 'ছবি ২ মেগাবাইটের কম হতে হবে');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCqSolutions(prev => prev.map((item, i) => i === idx ? { ...item, imageUrl: reader.result } : item));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeCqSolutionImage = (idx) => {
+    setCqSolutions(prev => prev.map((item, i) => i === idx ? { ...item, imageUrl: '' } : item));
+  };
+
   // ── LaTeX helper ──
   const insertLatexSymbol = (symbol) => {
     let textarea;
@@ -444,6 +470,8 @@ export default function UploadQuestion() {
       textarea = document.getElementById('uq-cq-description-textarea');
     } else if (focusedInput.type === 'cq-part' && focusedInput.index !== null) {
       textarea = document.getElementById(`uq-cq-part-input-${focusedInput.index}`);
+    } else if (focusedInput.type === 'cq-solution' && focusedInput.index !== null) {
+      textarea = document.getElementById(`uq-cq-solution-textarea-${focusedInput.index}`);
     }
 
     if (!textarea) return;
@@ -464,6 +492,8 @@ export default function UploadQuestion() {
       setCqDescription(newText);
     } else if (focusedInput.type === 'cq-part') {
       setCqParts(prev => prev.map((p, i) => i === focusedInput.index ? { ...p, text: newText } : p));
+    } else if (focusedInput.type === 'cq-solution') {
+      setCqSolutions(prev => prev.map((item, i) => i === focusedInput.index ? { ...item, text: newText } : item));
     }
 
     // Refocus and place cursor appropriately
@@ -567,8 +597,8 @@ export default function UploadQuestion() {
         paper,
         chapter,
         topic: topic.trim(),
-        solution: solution.trim(),
-        solutionImageUrl: solutionImageUrl,
+        solution: questionType === 'cq' ? JSON.stringify(cqSolutions) : solution.trim(),
+        solutionImageUrl: questionType === 'cq' ? '' : solutionImageUrl,
         tags: tags.filter(t => {
           if (t.category === 'board') return t.board && t.year;
           if (t.category === 'college') return t.college && t.year;
@@ -610,6 +640,12 @@ export default function UploadQuestion() {
           { label: 'b', text: '' },
           { label: 'c', text: '' },
           { label: 'd', text: '' },
+        ]);
+        setCqSolutions([
+          { label: 'a', text: '', imageUrl: '' },
+          { label: 'b', text: '', imageUrl: '' },
+          { label: 'c', text: '', imageUrl: '' },
+          { label: 'd', text: '', imageUrl: '' }
         ]);
         setSubject('');
         setPaper('');
@@ -748,7 +784,9 @@ export default function UploadQuestion() {
                           ? 'Active Input: CQ Description'
                           : focusedInput.type === 'cq-part'
                             ? 'Active Input: CQ Sub-question'
-                            : 'Active Input: MCQ Option')
+                            : focusedInput.type === 'cq-solution'
+                              ? 'Active Input: CQ Solution'
+                              : 'Active Input: MCQ Option')
                   : (focusedInput.type === 'question'
                       ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
                       : focusedInput.type === 'solution'
@@ -757,7 +795,9 @@ export default function UploadQuestion() {
                           ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
                           : focusedInput.type === 'cq-part'
                             ? 'সক্রিয় ইনপুট: CQ উপ-প্রশ্ন'
-                            : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
+                            : focusedInput.type === 'cq-solution'
+                              ? 'সক্রিয় ইনপুট: CQ সমাধান ব্যাখ্যা'
+                              : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
                       <span className="uq-diagram-upload-subtext">
                         {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
                       </span>
@@ -923,74 +963,167 @@ export default function UploadQuestion() {
                 ? 'Provide a step-by-step solution to help students. LaTeX formulas ($x$ and $$x$$) are fully supported. You may also attach an image of the worked solution.'
                 : 'শিক্ষার্থীদের বোঝার জন্য ধাপে ধাপে সমাধান ব্যাখ্যা প্রদান করুন। LaTeX ফর্মুলা ($x$ এবং $$x$$) সমর্থন করে। আপনি চাইলে সমাধানের একটি ছবিও সংযুক্ত করতে পারেন।'}
             </p>
-            <div className="uq-latex-editor">
-              <div className="uq-editor-row">
-                <div className="uq-editor-row__textarea-col">
-                  <textarea
-                    id="uq-solution-textarea"
-                    className="uq-textarea"
-                    value={solution}
-                    onChange={e => setSolution(e.target.value)}
-                    onFocus={() => setFocusedInput({ type: 'solution', index: null })}
-                    placeholder={language === 'en' ? 'Type step-by-step solution explanation here...' : 'এখানে সমাধান ব্যাখ্যা টাইপ করুন...'}
-                    rows={6}
+            {questionType === 'cq' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {cqSolutions.map((item, idx) => (
+                  <div key={item.label} className="uq-latex-editor" style={{ border: '1.5px dashed rgba(192, 133, 82, 0.25)', borderRadius: '12px', padding: '1.5rem', background: 'rgba(255, 251, 247, 0.5)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <span style={{
+                        background: '#8C5A3C',
+                        color: '#fff',
+                        fontWeight: '800',
+                        fontSize: '0.9rem',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textTransform: 'uppercase'
+                      }}>{item.label}</span>
+                      <span style={{ fontWeight: '700', color: '#8C5A3C' }}>
+                        {language === 'en' ? `Solution for Sub-question ${item.label.toUpperCase()}` : `উপ-প্রশ্ন ${item.label.toUpperCase()} এর সমাধান`}
+                      </span>
+                    </div>
+                    <div className="uq-editor-row">
+                      <div className="uq-editor-row__textarea-col">
+                        <textarea
+                          id={`uq-cq-solution-textarea-${idx}`}
+                          className="uq-textarea"
+                          value={item.text}
+                          onChange={e => setCqSolutions(prev => prev.map((sol, i) => i === idx ? { ...sol, text: e.target.value } : sol))}
+                          onFocus={() => setFocusedInput({ type: 'cq-solution', index: idx })}
+                          placeholder={language === 'en' ? `Type solution for part ${item.label.toUpperCase()}...` : `উপ-প্রশ্ন ${item.label.toUpperCase()} এর সমাধান এখানে টাইপ করুন...`}
+                          rows={4}
+                        />
+                      </div>
+                      <div className="uq-editor-row__upload-col">
+                        {item.imageUrl ? (
+                          <div className="uq-diagram-preview-card animate-bounce-in">
+                            <img src={item.imageUrl} alt={`Solution Part ${item.label.toUpperCase()}`} className="uq-diagram-preview-img" />
+                            <button
+                              type="button"
+                              className="uq-diagram-remove-btn"
+                              onClick={() => removeCqSolutionImage(idx)}
+                              title={language === 'en' ? 'Remove Image' : 'ছবি মুছুন'}
+                            >
+                              <HiTrash size={16} />
+                              <span>{language === 'en' ? 'Remove' : 'মুছুন'}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <label htmlFor={`uq-cq-solution-image-upload-${idx}`} className="uq-diagram-upload-dropzone">
+                            <input
+                              type="file"
+                              id={`uq-cq-solution-image-upload-${idx}`}
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              onChange={e => handleCqSolutionImageUpload(idx, e)}
+                            />
+                            <span className="uq-diagram-upload-icon"><HiUpload size={24} /></span>
+                            <span className="uq-diagram-upload-text">
+                              {language === 'en'
+                                ? `Upload Solution Image (${item.label.toUpperCase()})`
+                                : `সমাধানের ছবি আপলোড করুন (${item.label.toUpperCase()})`}
+                            </span>
+                            <span className="uq-diagram-upload-subtext">
+                              {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
+                            </span>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <span className="uq-preview-label">{t('uq.preview')}</span>
+                    <div
+                      className={`uq-preview-box ${!item.text.trim() && !item.imageUrl ? 'uq-preview-box--empty' : ''}`}
+                    >
+                      {item.imageUrl && (
+                        <div className="uq-preview-diagram-wrapper">
+                          <img src={item.imageUrl} alt={`Solution ${item.label.toUpperCase()}`} className="uq-preview-diagram" />
+                        </div>
+                      )}
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: item.text.trim()
+                            ? renderLatex(item.text)
+                            : (language === 'en' ? `LaTeX preview of solution ${item.label.toUpperCase()} will appear here…` : `সমাধান ${item.label.toUpperCase()} এর LaTeX প্রিভিউ এখানে দেখা যাবে…`)
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="uq-latex-editor">
+                <div className="uq-editor-row">
+                  <div className="uq-editor-row__textarea-col">
+                    <textarea
+                      id="uq-solution-textarea"
+                      className="uq-textarea"
+                      value={solution}
+                      onChange={e => setSolution(e.target.value)}
+                      onFocus={() => setFocusedInput({ type: 'solution', index: null })}
+                      placeholder={language === 'en' ? 'Type step-by-step solution explanation here...' : 'এখানে সমাধান ব্যাখ্যা টাইপ করুন...'}
+                      rows={6}
+                    />
+                  </div>
+                  <div className="uq-editor-row__upload-col">
+                    {solutionImageUrl ? (
+                      <div className="uq-diagram-preview-card animate-bounce-in">
+                        <img src={solutionImageUrl} alt="Solution Image" className="uq-diagram-preview-img" />
+                        <button
+                          type="button"
+                          className="uq-diagram-remove-btn"
+                          onClick={removeSolutionImage}
+                          title={language === 'en' ? 'Remove Solution Image' : 'সমাধানের ছবি মুছুন'}
+                        >
+                          <HiTrash size={16} />
+                          <span>{language === 'en' ? 'Remove' : 'মুছুন'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <label htmlFor="uq-solution-image-upload" className="uq-diagram-upload-dropzone">
+                        <input
+                          type="file"
+                          id="uq-solution-image-upload"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={handleSolutionImageUpload}
+                        />
+                        <span className="uq-diagram-upload-icon"><HiUpload size={24} /></span>
+                        <span className="uq-diagram-upload-text">
+                          {language === 'en'
+                            ? 'Upload solution image (optional)'
+                            : 'সমাধানের ছবি আপলোড করুন (ঐচ্ছিক)'}
+                        </span>
+                        <span className="uq-diagram-upload-subtext">
+                          {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                <span className="uq-preview-label">{t('uq.preview')}</span>
+                <div
+                  className={`uq-preview-box ${!solution.trim() && !solutionImageUrl ? 'uq-preview-box--empty' : ''}`}
+                >
+                  {solutionImageUrl && (
+                    <div className="uq-preview-diagram-wrapper">
+                      <img src={solutionImageUrl} alt="Solution" className="uq-preview-diagram" />
+                    </div>
+                  )}
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: solution.trim()
+                        ? renderLatex(solution)
+                        : (language === 'en' ? 'LaTeX preview of the solution explanation will appear here…' : 'সমাধান ব্যাখ্যার LaTeX প্রিভিউ এখানে দেখা যাবে…')
+                    }}
                   />
                 </div>
-                <div className="uq-editor-row__upload-col">
-                  {solutionImageUrl ? (
-                    <div className="uq-diagram-preview-card animate-bounce-in">
-                      <img src={solutionImageUrl} alt="Solution Image" className="uq-diagram-preview-img" />
-                      <button
-                        type="button"
-                        className="uq-diagram-remove-btn"
-                        onClick={removeSolutionImage}
-                        title={language === 'en' ? 'Remove Solution Image' : 'সমাধানের ছবি মুছুন'}
-                      >
-                        <HiTrash size={16} />
-                        <span>{language === 'en' ? 'Remove' : 'মুছুন'}</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <label htmlFor="uq-solution-image-upload" className="uq-diagram-upload-dropzone">
-                      <input
-                        type="file"
-                        id="uq-solution-image-upload"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={handleSolutionImageUpload}
-                      />
-                      <span className="uq-diagram-upload-icon"><HiUpload size={24} /></span>
-                      <span className="uq-diagram-upload-text">
-                        {language === 'en'
-                          ? 'Upload solution image (optional)'
-                          : 'সমাধানের ছবি আপলোড করুন (ঐচ্ছিক)'}
-                      </span>
-                      <span className="uq-diagram-upload-subtext">
-                        {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
-                      </span>
-                    </label>
-                  )}
-                </div>
               </div>
-
-              <span className="uq-preview-label">{t('uq.preview')}</span>
-              <div
-                className={`uq-preview-box ${!solution.trim() && !solutionImageUrl ? 'uq-preview-box--empty' : ''}`}
-              >
-                {solutionImageUrl && (
-                  <div className="uq-preview-diagram-wrapper">
-                    <img src={solutionImageUrl} alt="Solution" className="uq-preview-diagram" />
-                  </div>
-                )}
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: solution.trim()
-                      ? renderLatex(solution)
-                      : (language === 'en' ? 'LaTeX preview of the solution explanation will appear here…' : 'সমাধান ব্যাখ্যার LaTeX প্রিভিউ এখানে দেখা যাবে…')
-                  }}
-                />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ── Section 4: Subject / Paper / Chapter / Topic ── */}
@@ -1252,14 +1385,18 @@ export default function UploadQuestion() {
                         ? 'Active Input: CQ Description'
                         : focusedInput.type === 'cq-part'
                           ? `Active Input: CQ Sub-question ${focusedInput.index + 1}`
-                          : `Active Input: MCQ Option ${String.fromCharCode(65 + focusedInput.index)}`)
+                          : focusedInput.type === 'cq-solution'
+                            ? `Active Input: CQ Solution Explanation ${String.fromCharCode(65 + focusedInput.index)}`
+                            : `Active Input: MCQ Option ${String.fromCharCode(65 + focusedInput.index)}`)
                   : (focusedInput.type === 'question'
                       ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
                       : focusedInput.type === 'cq-desc'
                         ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
                         : focusedInput.type === 'cq-part'
                           ? `সক্রিয় ইনপুট: CQ উপ-প্রশ্ন ${focusedInput.index + 1}`
-                          : `সক্রিয় ইনপুট: MCQ অপশন ${String.fromCharCode(65 + focusedInput.index)}`)}
+                          : focusedInput.type === 'cq-solution'
+                            ? `সক্রিয় ইনপুট: CQ সমাধান ব্যাখ্যা ${String.fromCharCode(65 + focusedInput.index)}`
+                            : `সক্রিয় ইনপুট: MCQ অপশন ${String.fromCharCode(65 + focusedInput.index)}`)}
               </span>
             </div>
             <div className="uq-keyboard-dock__tabs">

@@ -62,8 +62,22 @@ const getSourceAbbreviation = (type, name, year) => {
   }
 };
 
-function SolutionPanel({ solution, language, renderMath }) {
+function SolutionPanel({ solution, solutionImageUrl, language, renderMath }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  let isCqSolution = false;
+  let parsedSolutions = [];
+  try {
+    if (solution && (solution.trim().startsWith('[') || solution.trim().startsWith('{'))) {
+      const parsed = JSON.parse(solution);
+      if (Array.isArray(parsed)) {
+        isCqSolution = true;
+        parsedSolutions = parsed;
+      }
+    }
+  } catch (e) {
+    // Not a JSON solution
+  }
 
   return (
     <div className="exam-solution-panel" style={{ marginTop: '16px' }}>
@@ -80,10 +94,37 @@ function SolutionPanel({ solution, language, renderMath }) {
         />
       </button>
       {isOpen && (
-        <div
-          className="exam-solution-body"
-          dangerouslySetInnerHTML={renderMath(solution)}
-        />
+        <div className="exam-solution-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+          {isCqSolution ? (
+            parsedSolutions.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: idx < parsedSolutions.length - 1 ? '1px solid #E2E8F0' : 'none', paddingBottom: idx < parsedSolutions.length - 1 ? '12px' : '0' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <span style={{ fontWeight: '700', color: '#4F46E5', minWidth: '24px' }}>({item.label.toLowerCase()})</span>
+                  <span dangerouslySetInnerHTML={renderMath(item.text)} />
+                </div>
+                {item.imageUrl && (
+                  <div style={{ marginTop: '8px', maxWidth: '100%', overflow: 'hidden' }}>
+                    <img src={item.imageUrl} alt={`Solution Part ${item.label.toUpperCase()}`} style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              {solution && <div dangerouslySetInnerHTML={renderMath(solution)} />}
+              {solutionImageUrl && (
+                <div style={{ marginTop: '8px', maxWidth: '100%', overflow: 'hidden' }}>
+                  <img src={solutionImageUrl} alt="Solution Figure" style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
+                </div>
+              )}
+              {!solution && !solutionImageUrl && (
+                <div style={{ color: '#94A3B8', fontStyle: 'italic' }}>
+                  {language === 'en' ? 'No explanation added yet.' : 'এখনও ব্যাখ্যা যোগ করা হয়নি।'}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       )}
     </div>
   );
@@ -417,6 +458,12 @@ export default function BoardQuestionsView() {
                   </div>
                 )}
 
+                <SolutionPanel
+                  solution={q.solution}
+                  solutionImageUrl={q.solutionImageUrl}
+                  language={language}
+                  renderMath={renderMath}
+                />
 
               </div>
             );

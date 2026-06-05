@@ -536,15 +536,59 @@ export default function MockTestExam() {
             </div>
 
             <div className="exam-explanation-content">
-              {explanationTab === 'manual' && (
-                <div
-                  className="exam-explanation-body-text"
-                  dangerouslySetInnerHTML={renderMath(
-                    explanationModalQuestion.solution || 
-                    (language === 'en' ? 'No explanation added yet.' : 'এখনও ব্যাখ্যা যোগ করা হয়নি।')
-                  )}
-                />
-              )}
+              {explanationTab === 'manual' && (() => {
+                let isCqSolution = false;
+                let parsedSolutions = [];
+                const solutionStr = explanationModalQuestion.solution;
+                try {
+                  if (solutionStr && (solutionStr.trim().startsWith('[') || solutionStr.trim().startsWith('{'))) {
+                    const parsed = JSON.parse(solutionStr);
+                    if (Array.isArray(parsed)) {
+                      isCqSolution = true;
+                      parsedSolutions = parsed;
+                    }
+                  }
+                } catch (e) {
+                  // Not JSON
+                }
+
+                if (isCqSolution) {
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {parsedSolutions.map((item, idx) => (
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: idx < parsedSolutions.length - 1 ? '1px solid #E2E8F0' : 'none', paddingBottom: idx < parsedSolutions.length - 1 ? '12px' : '0' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                            <span style={{ fontWeight: '700', color: '#4F46E5', minWidth: '24px' }}>({item.label.toLowerCase()})</span>
+                            <span dangerouslySetInnerHTML={renderMath(item.text)} />
+                          </div>
+                          {item.imageUrl && (
+                            <div style={{ marginTop: '8px', maxWidth: '100%', overflow: 'hidden' }}>
+                              <img src={item.imageUrl} alt={`Solution Part ${item.label.toUpperCase()}`} style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div
+                      className="exam-explanation-body-text"
+                      dangerouslySetInnerHTML={renderMath(
+                        solutionStr || 
+                        (language === 'en' ? 'No explanation added yet.' : 'এখনও ব্যাখ্যা যোগ করা হয়নি।')
+                      )}
+                    />
+                    {explanationModalQuestion.solutionImageUrl && (
+                      <div style={{ marginTop: '8px', maxWidth: '100%', overflow: 'hidden' }}>
+                        <img src={explanationModalQuestion.solutionImageUrl} alt="Solution Figure" style={{ maxWidth: '300px', maxHeight: '200px', objectFit: 'contain', borderRadius: '6px' }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {explanationTab === 'ai' && (
                 <div className="exam-explanation-placeholder">
                   <div className="exam-explanation-placeholder-badge">

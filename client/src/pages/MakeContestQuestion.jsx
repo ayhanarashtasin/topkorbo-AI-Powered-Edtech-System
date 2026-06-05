@@ -209,7 +209,7 @@ export default function MakeContestQuestion() {
     sessionStorage.setItem('cc_contestData', JSON.stringify(contestData));
 
     // Navigate to the next page, passing contest data via router state
-    navigate('/make-contest-question/next', { state: { contestData } });
+    navigate('/make-contest-question/next-two', { state: { contestData } });
   };
 
   // ── Minimum date is today ──
