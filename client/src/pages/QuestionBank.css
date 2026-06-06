@@ -3,273 +3,281 @@
    ========================================================================== */
 
 :root {
-  /* University Brand colors for soft paste-glass backgrounds */
-  --univ-bup: #10B981;
-  --univ-gst: #EC4899;
-  --univ-agri: #84CC16;
-  --univ-medical: #EF4444;
-  --univ-dental: #F43F5E;
-  --univ-afmc: #06B6D4;
-  --univ-du: #3B82F6;
-  --univ-cu: #14B8A6;
-  --univ-ju: #F59E0B;
-  --univ-ru: #6366F1;
-  --univ-buet: #D946EF;
-  --univ-ckruet: #8B5CF6;
-  --univ-ruet: #F97316;
-  --univ-kuet: #0EA5E9;
-  --univ-mist: #64748B;
-  --univ-cuet: #10B981;
-  --univ-butex: #EF4444;
-  --univ-iba: #8B5CF6;
-  --univ-iut: #F59E0B;
+    /* University Brand colors for soft paste-glass backgrounds */
+    --univ-bup: #10b981;
+    --univ-gst: #ec4899;
+    --univ-agri: #84cc16;
+    --univ-medical: #ef4444;
+    --univ-dental: #f43f5e;
+    --univ-afmc: #06b6d4;
+    --univ-du: #3b82f6;
+    --univ-cu: #14b8a6;
+    --univ-ju: #f59e0b;
+    --univ-ru: #6366f1;
+    --univ-buet: #d946ef;
+    --univ-ckruet: #8b5cf6;
+    --univ-ruet: #f97316;
+    --univ-kuet: #0ea5e9;
+    --univ-mist: #64748b;
+    --univ-cuet: #10b981;
+    --univ-butex: #ef4444;
+    --univ-iba: #8b5cf6;
+    --univ-iut: #f59e0b;
 }
 
 .qbank-header {
-  border-bottom: 1px solid rgba(192, 133, 82, 0.12);
-  margin-bottom: 24px;
+    border-bottom: 1px solid rgba(192, 133, 82, 0.12);
+    margin-bottom: 24px;
 }
 
 .qbank-workspace {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0 40px 0 40px;
-  position: relative;
-  z-index: 1;
-  overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0 40px 48px 40px;
+    position: relative;
+    z-index: 1;
+    overflow-y: auto;
 }
 
 /* Float abstract decorative backgrounds matching site language */
 .qbank-workspace::before {
-  content: '';
-  position: absolute;
-  top: 15%;
-  right: 10%;
-  width: 250px;
-  height: 250px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(192, 133, 82, 0.05) 0%, rgba(192, 133, 82, 0) 70%);
-  pointer-events: none;
-  z-index: 0;
+    content: "";
+    position: absolute;
+    top: 15%;
+    right: 10%;
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(192, 133, 82, 0.05) 0%,
+        rgba(192, 133, 82, 0) 70%
+    );
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* Control Row: Tabs on Left, Search Bar on Right */
 .qbank-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 32px;
-  border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
-  padding-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 32px;
+    border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
+    padding-bottom: 16px;
 }
 
 .qbank-tabs-wrapper {
-  display: flex;
-  gap: 12px;
-  background: rgba(192, 133, 82, 0.05);
-  padding: 6px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(192, 133, 82, 0.15);
+    display: flex;
+    gap: 12px;
+    background: rgba(192, 133, 82, 0.05);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(192, 133, 82, 0.15);
 }
 
 .qbank-tab-btn {
-  background: transparent;
-  border: none;
-  padding: 10px 24px;
-  font-family: var(--font-body);
-  font-size: 0.88rem;
-  font-weight: 750;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-base);
+    background: transparent;
+    border: none;
+    padding: 10px 24px;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 750;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
 }
 
 .qbank-tab-btn:hover {
-  color: #C08552;
+    color: #c08552;
 }
 
 .qbank-tab-btn--active {
-  background: var(--white);
-  color: #8C5A3C !important;
-  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.08);
+    background: var(--white);
+    color: #8c5a3c !important;
+    box-shadow: 0 4px 12px rgba(140, 90, 60, 0.08);
 }
 
 /* Search Bar styling */
 .qbank-search-bar {
-  position: relative;
-  width: 320px;
+    position: relative;
+    width: 320px;
 }
 
 .qbank-search-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  pointer-events: none;
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
 }
 
 .qbank-search-input {
-  width: 100%;
-  background-color: var(--white);
-  border: 1.5px solid rgba(192, 133, 82, 0.3);
-  border-radius: var(--radius-pill);
-  padding: 10px 16px 10px 42px;
-  font-family: var(--font-body);
-  font-size: 0.88rem;
-  color: var(--text-primary);
-  transition: all var(--transition-base);
+    width: 100%;
+    background-color: var(--white);
+    border: 1.5px solid rgba(192, 133, 82, 0.3);
+    border-radius: var(--radius-pill);
+    padding: 10px 16px 10px 42px;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    transition: all var(--transition-base);
 }
 
 .qbank-search-input:focus {
-  outline: none;
-  border-color: #C08552;
-  box-shadow: 0 0 12px rgba(192, 133, 82, 0.2);
+    outline: none;
+    border-color: #c08552;
+    box-shadow: 0 0 12px rgba(192, 133, 82, 0.2);
 }
 
 /* Page Section Descriptor */
 .qbank-section-info {
-  margin-bottom: 24px;
+    margin-bottom: 24px;
 }
 
 .qbank-section-info h3 {
-  font-family: var(--font-heading);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #8C5A3C;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin: 0 0 6px 0;
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #8c5a3c;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin: 0 0 6px 0;
 }
 
 .qbank-section-info p {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 /* Grid Container */
 .qbank-grid-container {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .qbank-grid-container::after {
-  content: '';
-  display: block;
-  height: 60px;
-  flex-shrink: 0;
+    content: "";
+    display: block;
+    height: 60px;
+    flex-shrink: 0;
 }
 
 .qbank-grid {
-  display: grid;
-  gap: 24px;
-  width: 100%;
+    display: grid;
+    gap: 24px;
+    width: 100%;
 }
 
 .qbank-grid--academic {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 .qbank-grid--admission {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 /* Base Card Styling with Glassmorphism and animations */
 .qbank-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border: 1.5px solid rgba(192, 133, 82, 0.2);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
-  box-shadow: 0 6px 20px rgba(140, 90, 60, 0.03);
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    position: relative;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(192, 133, 82, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    box-shadow: 0 6px 20px rgba(140, 90, 60, 0.03);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .qbank-card__glow {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 60%);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--transition-base);
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0) 60%
+    );
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
 }
 
 .qbank-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08);
-  border-color: rgba(192, 133, 82, 0.45);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08);
+    border-color: rgba(192, 133, 82, 0.45);
 }
 
 .qbank-card:hover .qbank-card__glow {
-  opacity: 1;
+    opacity: 1;
 }
 
 /* Card Visual Graphic Container */
 .qbank-card__visual {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
-  transition: all var(--transition-base);
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: all var(--transition-base);
 }
 
 .qbank-card:hover .qbank-card__visual {
-  transform: scale(1.1) rotate(2deg);
+    transform: scale(1.1) rotate(2deg);
 }
 
 .qbank-card__letter {
-  font-family: var(--font-heading);
-  font-size: 2.2rem;
-  font-weight: 800;
-  line-height: 1;
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
 }
 
 .qbank-card__illustration-svg {
-  width: 32px;
-  height: 32px;
+    width: 32px;
+    height: 32px;
 }
 
 .qbank-card__info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
 }
 
 .qbank-card__subject {
-  font-family: var(--font-heading);
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.3;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
 }
 
 .qbank-card__sub-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-weight: 650;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 650;
 }
 
 /* ==========================================================================
@@ -279,293 +287,342 @@
 /* English Cards - Vibrant Rose Gradient */
 .card-english-1,
 .card-english-2 {
-  background: linear-gradient(135deg, rgba(244, 63, 94, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(244, 63, 94, 0.25);
+    background: linear-gradient(
+        135deg,
+        rgba(244, 63, 94, 0.07) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(244, 63, 94, 0.25);
 }
 
 .card-english-1:hover,
 .card-english-2:hover {
-  border-color: rgba(244, 63, 94, 0.5);
+    border-color: rgba(244, 63, 94, 0.5);
 }
 
 .card-english-1 .qbank-card__visual,
 .card-english-2 .qbank-card__visual {
-  background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
 }
 
 /* Bangla Cards - Golden Orange Gradient */
 .card-bangla-1,
 .card-bangla-2 {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(245, 158, 11, 0.25);
+    background: linear-gradient(
+        135deg,
+        rgba(245, 158, 11, 0.07) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(245, 158, 11, 0.25);
 }
 
 .card-bangla-1:hover,
 .card-bangla-2:hover {
-  border-color: rgba(245, 158, 11, 0.5);
+    border-color: rgba(245, 158, 11, 0.5);
 }
 
 .card-bangla-1 .qbank-card__visual,
 .card-bangla-2 .qbank-card__visual {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25);
 }
 
 /* ICT Card - Indigo Violet Gradient */
 .card-ict {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(99, 102, 241, 0.25);
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.07) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(99, 102, 241, 0.25);
 }
 
 .card-ict:hover {
-  border-color: rgba(99, 102, 241, 0.5);
+    border-color: rgba(99, 102, 241, 0.5);
 }
 
 .card-ict .qbank-card__visual {
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
 }
 
 /* Physics Cards - Deep Electric Blue Gradient */
 .card-physics-1,
 .card-physics-2 {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(59, 130, 246, 0.25);
+    background: linear-gradient(
+        135deg,
+        rgba(59, 130, 246, 0.07) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(59, 130, 246, 0.25);
 }
 
 .card-physics-1:hover,
 .card-physics-2:hover {
-  border-color: rgba(59, 130, 246, 0.5);
+    border-color: rgba(59, 130, 246, 0.5);
 }
 
 .card-physics-1 .qbank-card__visual,
 .card-physics-2 .qbank-card__visual {
-  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
 }
 
 /* Chemistry Cards - Royal Purple Gradient */
 .card-chemistry-1,
 .card-chemistry-2 {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(139, 92, 246, 0.25);
+    background: linear-gradient(
+        135deg,
+        rgba(139, 92, 246, 0.07) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(139, 92, 246, 0.25);
 }
 
 .card-chemistry-1:hover,
 .card-chemistry-2:hover {
-  border-color: rgba(139, 92, 246, 0.5);
+    border-color: rgba(139, 92, 246, 0.5);
 }
 
 .card-chemistry-1 .qbank-card__visual,
 .card-chemistry-2 .qbank-card__visual {
-  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
 }
 
 /* Higher Math Cards - Warm Amber Brown Gradient */
 .card-math-1,
 .card-math-2 {
-  background: linear-gradient(135deg, rgba(212, 163, 115, 0.08) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(212, 163, 115, 0.28);
+    background: linear-gradient(
+        135deg,
+        rgba(212, 163, 115, 0.08) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(212, 163, 115, 0.28);
 }
 
 .card-math-1:hover,
 .card-math-2:hover {
-  border-color: rgba(192, 133, 82, 0.55);
+    border-color: rgba(192, 133, 82, 0.55);
 }
 
 .card-math-1 .qbank-card__visual,
 .card-math-2 .qbank-card__visual {
-  background: linear-gradient(135deg, #D4A373 0%, #8C5A3C 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(140, 90, 60, 0.25);
+    background: linear-gradient(135deg, #d4a373 0%, #8c5a3c 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(140, 90, 60, 0.25);
 }
 
 /* Biology Cards - Emerald Green Gradient */
 .card-biology-1,
 .card-biology-2 {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.07) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: rgba(16, 185, 129, 0.25);
+    background: linear-gradient(
+        135deg,
+        rgba(16, 185, 129, 0.07) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: rgba(16, 185, 129, 0.25);
 }
 
 .card-biology-1:hover,
 .card-biology-2:hover {
-  border-color: rgba(16, 185, 129, 0.5);
+    border-color: rgba(16, 185, 129, 0.5);
 }
 
 .card-biology-1 .qbank-card__visual,
 .card-biology-2 .qbank-card__visual {
-  background: linear-gradient(135deg, #10B981 0%, #047857 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
 }
-
 
 /* ==========================================================================
    ADMISSION CARD STYLING (Soft colorful theme-based border and emblem shadows)
    ========================================================================== */
 
 .qbank-card--admission {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--card-brand) 7%, transparent) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: color-mix(in srgb, var(--card-brand) 25%, transparent);
-  align-items: flex-start;
-  text-align: left;
-  padding: 24px;
-  gap: 20px;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--card-brand) 7%, transparent) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: color-mix(in srgb, var(--card-brand) 25%, transparent);
+    align-items: flex-start;
+    text-align: left;
+    padding: 24px;
+    gap: 20px;
 }
 
 .qbank-card--admission:hover {
-  border-color: color-mix(in srgb, var(--card-brand) 50%, transparent);
-  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08), 0 0 20px color-mix(in srgb, var(--card-brand) 15%, transparent);
+    border-color: color-mix(in srgb, var(--card-brand) 50%, transparent);
+    box-shadow:
+        0 12px 30px rgba(140, 90, 60, 0.08),
+        0 0 20px color-mix(in srgb, var(--card-brand) 15%, transparent);
 }
 
 .qbank-card--admission .qbank-card__visual {
-  background: linear-gradient(135deg, var(--card-brand) 0%, color-mix(in srgb, var(--card-brand) 70%, #000) 100%);
-  color: var(--white);
-  box-shadow: 0 4px 15px color-mix(in srgb, var(--card-brand) 25%, transparent);
+    background: linear-gradient(
+        135deg,
+        var(--card-brand) 0%,
+        color-mix(in srgb, var(--card-brand) 70%, #000) 100%
+    );
+    color: var(--white);
+    box-shadow: 0 4px 15px
+        color-mix(in srgb, var(--card-brand) 25%, transparent);
 }
 
 .qbank-card--admission .qbank-card__letter {
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--white);
-  letter-spacing: -0.02em;
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--white);
+    letter-spacing: -0.02em;
 }
 
 /* College card color themes */
 .qbank-card--college-0 {
-  --college-color: #3B82F6;
+    --college-color: #3b82f6;
 }
 
 .qbank-card--college-1 {
-  --college-color: #8B5CF6;
+    --college-color: #8b5cf6;
 }
 
 .qbank-card--college-2 {
-  --college-color: #EC4899;
+    --college-color: #ec4899;
 }
 
 .qbank-card--college-3 {
-  --college-color: #F59E0B;
+    --college-color: #f59e0b;
 }
 
 .qbank-card--college-4 {
-  --college-color: #10B981;
+    --college-color: #10b981;
 }
 
 .qbank-card--college-5 {
-  --college-color: #EF4444;
+    --college-color: #ef4444;
 }
 
 .qbank-card--college-6 {
-  --college-color: #06B6D4;
+    --college-color: #06b6d4;
 }
 
 .qbank-card--college-7 {
-  --college-color: #6366F1;
+    --college-color: #6366f1;
 }
 
 .qbank-card--college-8 {
-  --college-color: #14B8A6;
+    --college-color: #14b8a6;
 }
 
 .qbank-card--college-9 {
-  --college-color: #F43F5E;
+    --college-color: #f43f5e;
 }
 
 .qbank-card--college-10 {
-  --college-color: #84CC16;
+    --college-color: #84cc16;
 }
 
 .qbank-card--college-11 {
-  --college-color: #D946EF;
+    --college-color: #d946ef;
 }
 
 .qbank-card--college-12 {
-  --college-color: #0EA5E9;
+    --college-color: #0ea5e9;
 }
 
 .qbank-card--college-13 {
-  --college-color: #F97316;
+    --college-color: #f97316;
 }
 
 .qbank-card--college-14 {
-  --college-color: #64748B;
+    --college-color: #64748b;
 }
 
 .qbank-card--college-15 {
-  --college-color: #A855F7;
+    --college-color: #a855f7;
 }
 
 .qbank-card--college-16 {
-  --college-color: #22C55E;
+    --college-color: #22c55e;
 }
 
 .qbank-card--college-17 {
-  --college-color: #EAB308;
+    --college-color: #eab308;
 }
 
 .qbank-card--college-18 {
-  --college-color: #DC2626;
+    --college-color: #dc2626;
 }
 
 .qbank-card--college-19 {
-  --college-color: #2563EB;
+    --college-color: #2563eb;
 }
 
 .qbank-card--college {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--college-color) 8%, transparent) 0%, rgba(255, 255, 255, 0.6) 100%);
-  border-color: color-mix(in srgb, var(--college-color) 25%, transparent);
-  align-items: flex-start;
-  text-align: left;
-  padding: 20px;
-  gap: 16px;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--college-color) 8%, transparent) 0%,
+        rgba(255, 255, 255, 0.6) 100%
+    );
+    border-color: color-mix(in srgb, var(--college-color) 25%, transparent);
+    align-items: flex-start;
+    text-align: left;
+    padding: 20px;
+    gap: 16px;
 }
 
 .qbank-card--college:hover {
-  border-color: color-mix(in srgb, var(--college-color) 50%, transparent);
-  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08), 0 0 20px color-mix(in srgb, var(--college-color) 15%, transparent);
-  transform: translateY(-6px);
+    border-color: color-mix(in srgb, var(--college-color) 50%, transparent);
+    box-shadow:
+        0 12px 30px rgba(140, 90, 60, 0.08),
+        0 0 20px color-mix(in srgb, var(--college-color) 15%, transparent);
+    transform: translateY(-6px);
 }
 
 .qbank-card--college .qbank-card__visual {
-  background: linear-gradient(135deg, var(--college-color) 0%, color-mix(in srgb, var(--college-color) 70%, #000) 100%);
-  color: var(--white);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--college-color) 30%, transparent);
+    background: linear-gradient(
+        135deg,
+        var(--college-color) 0%,
+        color-mix(in srgb, var(--college-color) 70%, #000) 100%
+    );
+    color: var(--white);
+    box-shadow: 0 4px 12px
+        color-mix(in srgb, var(--college-color) 30%, transparent);
 }
 
 .qbank-card--college .qbank-card__info {
-  flex: 1;
+    flex: 1;
 }
 
 .qbank-card--college .qbank-card__subject {
-  font-size: 0.95rem;
+    font-size: 0.95rem;
 }
 
 .qbank-card--college .qbank-card__bn-name {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-top: 2px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
 }
 
 .qbank-card--college .qbank-card__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  font-size: 0.7rem;
-  font-weight: 700;
-  background: color-mix(in srgb, var(--college-color) 15%, transparent);
-  color: var(--college-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--college-color) 15%, transparent);
+    color: var(--college-color);
 }
 
 /* ==========================================================================
@@ -573,96 +630,96 @@
    ========================================================================== */
 
 .qbank-model-test-pane {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 20px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 20px 0;
 }
 
 .qbank-college-section-title {
-  font-family: var(--font-heading);
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .qbank-college-section-subtitle {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin: 0 0 20px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 20px 0;
 }
 
 .qbank-grid--college {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
 .qbank-locked-card {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1.5px dashed rgba(192, 133, 82, 0.35);
-  border-radius: var(--radius-lg);
-  padding: 48px;
-  max-width: 500px;
-  width: 100%;
-  text-align: center;
-  box-shadow: 0 10px 40px rgba(140, 90, 60, 0.04);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  animation: fadeIn 0.4s ease forwards;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1.5px dashed rgba(192, 133, 82, 0.35);
+    border-radius: var(--radius-lg);
+    padding: 48px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(140, 90, 60, 0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: fadeIn 0.4s ease forwards;
 }
 
 .qbank-locked-card__icon-wrapper {
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
-  background: rgba(192, 133, 82, 0.1);
-  color: #C08552;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  box-shadow: 0 4px 15px rgba(192, 133, 82, 0.12);
-  border: 1.5px solid rgba(192, 133, 82, 0.22);
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: rgba(192, 133, 82, 0.1);
+    color: #c08552;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 15px rgba(192, 133, 82, 0.12);
+    border: 1.5px solid rgba(192, 133, 82, 0.22);
 }
 
 .qbank-locked-card h3 {
-  font-family: var(--font-heading);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
 }
 
 .qbank-locked-card p {
-  font-size: 0.92rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0 0 12px 0;
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0 0 12px 0;
 }
 
 /* Empty search result card */
 .qbank-empty {
-  grid-column: 1 / -1;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.4);
-  border: 1.5px dashed rgba(192, 133, 82, 0.2);
-  border-radius: var(--radius-md);
-  padding: 48px 24px;
+    grid-column: 1 / -1;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.4);
+    border: 1.5px dashed rgba(192, 133, 82, 0.2);
+    border-radius: var(--radius-md);
+    padding: 48px 24px;
 }
 
 .qbank-empty p {
-  font-size: 0.95rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin: 0;
 }
 
 /* ==========================================================================
@@ -670,37 +727,37 @@
    ========================================================================== */
 
 @media (max-width: 1024px) {
-  .qbank-workspace {
-    padding: 0 24px 24px 24px;
-  }
+    .qbank-workspace {
+        padding: 0 24px 24px 24px;
+    }
 }
 
 @media (max-width: 768px) {
-  .qbank-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
+    .qbank-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
 
-  .qbank-search-bar {
-    width: 100%;
-  }
+    .qbank-search-bar {
+        width: 100%;
+    }
 
-  .qbank-tabs-wrapper {
-    width: 100%;
-    justify-content: space-between;
-  }
+    .qbank-tabs-wrapper {
+        width: 100%;
+        justify-content: space-between;
+    }
 
-  .qbank-tab-btn {
-    flex: 1;
-    padding: 8px 12px;
-    font-size: 0.8rem;
-    text-align: center;
-  }
+    .qbank-tab-btn {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        text-align: center;
+    }
 
-  .qbank-locked-card {
-    padding: 32px 20px;
-  }
+    .qbank-locked-card {
+        padding: 32px 20px;
+    }
 }
 
 /* ==========================================================================
@@ -708,283 +765,286 @@
    ========================================================================== */
 
 .qbank-options-page {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 0 40px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0 40px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .qbank-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(192, 133, 82, 0.05);
-  border: 1px solid rgba(192, 133, 82, 0.2);
-  padding: 8px 16px;
-  border-radius: var(--radius-pill);
-  color: #8C5A3C;
-  font-family: var(--font-body);
-  font-weight: 750;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  margin-bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(192, 133, 82, 0.05);
+    border: 1px solid rgba(192, 133, 82, 0.2);
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    color: #8c5a3c;
+    font-family: var(--font-body);
+    font-weight: 750;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    margin-bottom: 20px;
 }
 
 .qbank-back-btn:hover {
-  background: rgba(192, 133, 82, 0.1);
-  border-color: rgba(192, 133, 82, 0.4);
-  transform: translateX(-4px);
+    background: rgba(192, 133, 82, 0.1);
+    border-color: rgba(192, 133, 82, 0.4);
+    transform: translateX(-4px);
 }
 
 .qbank-options-header-info {
-  margin-top: 10px;
+    margin-top: 10px;
 }
 
 .qbank-options-header-info h2 {
-  font-family: var(--font-heading);
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #8C5A3C;
-  margin: 0 0 6px 0;
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #8c5a3c;
+    margin: 0 0 6px 0;
 }
 
 .qbank-options-header-info p {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 .qbank-options-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-  margin-top: 32px;
-  width: 100%;
-  box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .qbank-option-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border: 1.5px solid rgba(192, 133, 82, 0.2);
-  border-radius: var(--radius-lg);
-  padding: 30px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
-  box-shadow: 0 6px 20px rgba(140, 90, 60, 0.03);
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  box-sizing: border-box;
+    position: relative;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(192, 133, 82, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 30px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    box-shadow: 0 6px 20px rgba(140, 90, 60, 0.03);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-sizing: border-box;
 }
 
 .qbank-option-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08), 0 0 20px color-mix(in srgb, var(--option-color) 15%, transparent);
-  border-color: color-mix(in srgb, var(--option-color) 40%, transparent);
+    transform: translateY(-8px);
+    box-shadow:
+        0 12px 30px rgba(140, 90, 60, 0.08),
+        0 0 20px color-mix(in srgb, var(--option-color) 15%, transparent);
+    border-color: color-mix(in srgb, var(--option-color) 40%, transparent);
 }
 
 .qbank-option-card__visual {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--white);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: all var(--transition-base);
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all var(--transition-base);
 }
 
 .qbank-option-card:hover .qbank-option-card__visual {
-  transform: scale(1.1) rotate(2deg);
+    transform: scale(1.1) rotate(2deg);
 }
 
 .qbank-option-card__info {
-  flex: 1;
+    flex: 1;
 }
 
 .qbank-option-card__info h3 {
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
 }
 
 .qbank-option-card__info p {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
 }
 
 .qbank-option-card__action {
-  font-family: var(--font-heading);
-  font-size: 0.88rem;
-  font-weight: 750;
-  color: var(--option-color);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  transition: all var(--transition-base);
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 750;
+    color: var(--option-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    transition: all var(--transition-base);
 }
 
 .qbank-option-card:hover .qbank-option-card__action {
-  transform: translateX(4px);
+    transform: translateX(4px);
 }
 
 /* Modal Overlay & Card Styling */
 .qbank-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: qbFadeIn 0.2s ease-out;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: qbFadeIn 0.2s ease-out;
 }
 
 .qbank-modal-card {
-  position: relative;
-  width: min(500px, 100%);
-  background: #FFFFFF;
-  border: 4px solid #E2E8F0;
-  border-radius: 24px;
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
-  padding: 40px 32px 32px 32px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: qbModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    width: min(500px, 100%);
+    background: #ffffff;
+    border: 4px solid #e2e8f0;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
+    padding: 40px 32px 32px 32px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: qbModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .qbank-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #F1F5F9;
-  color: #64748B;
-  border: 2px solid #E2E8F0;
-  cursor: pointer;
-  transition: all 0.2s ease;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .qbank-modal-close:hover {
-  background: #E2E8F0;
-  color: #0F172A;
-  transform: scale(1.05);
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: scale(1.05);
 }
 
 .qbank-modal-icon-wrapper {
-  width: 68px;
-  height: 68px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    width: 68px;
+    height: 68px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .qbank-modal-card h2 {
-  margin: 0 0 4px 0;
-  font-size: 1.5rem;
-  font-family: var(--font-heading);
-  color: #0F172A;
-  font-weight: 800;
+    margin: 0 0 4px 0;
+    font-size: 1.5rem;
+    font-family: var(--font-heading);
+    color: #0f172a;
+    font-weight: 800;
 }
 
 .qbank-modal-subject {
-  margin: 0 0 16px 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #64748B;
-  background: #F1F5F9;
-  padding: 4px 12px;
-  border-radius: var(--radius-pill);
+    margin: 0 0 16px 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
 }
 
 .qbank-modal-desc {
-  margin: 0 0 28px 0;
-  color: #475569;
-  font-size: 0.95rem;
-  line-height: 1.6;
+    margin: 0 0 28px 0;
+    color: #475569;
+    font-size: 0.95rem;
+    line-height: 1.6;
 }
 
 .qbank-modal-cta {
-  width: 100%;
-  min-height: 48px;
-  border-radius: 12px;
-  background: #8C5A3C;
-  color: #FFFFFF;
-  font-weight: 800;
-  font-size: 1rem;
-  border: none;
-  box-shadow: 0 4px 0 #6d432b;
-  cursor: pointer;
-  transition: all 0.15s ease;
+    width: 100%;
+    min-height: 48px;
+    border-radius: 12px;
+    background: #8c5a3c;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1rem;
+    border: none;
+    box-shadow: 0 4px 0 #6d432b;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
 .qbank-modal-cta:hover {
-  background: #73482F;
+    background: #73482f;
 }
 
 .qbank-modal-cta:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #6d432b;
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #6d432b;
 }
 
 @keyframes qbFadeIn {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
 
-  to {
-    opacity: 1;
-    backdrop-filter: blur(8px);
-  }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+    }
 }
 
 @keyframes qbModalIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.98);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+    }
 
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @media (max-width: 768px) {
-  .qbank-options-page {
-    padding: 0 16px;
-  }
+    .qbank-options-page {
+        padding: 0 16px;
+    }
 }
 
 /* ==========================================================================
@@ -993,471 +1053,505 @@
    ========================================================================== */
 
 .qbank-source-section {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .qbank-source-section + .qbank-source-section {
-  margin-top: 40px;
+    margin-top: 40px;
 }
 
 .qbank-source-section-title {
-  font-family: var(--font-heading);
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #8C5A3C;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 4px 0;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #8c5a3c;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px 0;
 }
 
 .qbank-source-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
 }
 
 .qbank-source-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border: 1.5px solid rgba(192, 133, 82, 0.18);
-  border-radius: var(--radius-lg);
-  padding: 22px 22px 18px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow: 0 6px 18px rgba(140, 90, 60, 0.04);
-  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    position: relative;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1.5px solid rgba(192, 133, 82, 0.18);
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(140, 90, 60, 0.04);
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .qbank-source-card--board {
-  border-color: rgba(59, 130, 246, 0.22);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(255, 255, 255, 0.7) 100%);
+    border-color: rgba(59, 130, 246, 0.22);
+    background: linear-gradient(
+        135deg,
+        rgba(59, 130, 246, 0.06) 0%,
+        rgba(255, 255, 255, 0.7) 100%
+    );
 }
 
 .qbank-source-card--college {
-  border-color: rgba(236, 72, 153, 0.22);
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%);
+    border-color: rgba(236, 72, 153, 0.22);
+    background: linear-gradient(
+        135deg,
+        rgba(236, 72, 153, 0.05) 0%,
+        rgba(255, 255, 255, 0.7) 100%
+    );
 }
 
 .qbank-source-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(140, 90, 60, 0.08);
 }
 
 .qbank-source-card--board:hover {
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.12), 0 0 0 2px rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow:
+        0 12px 30px rgba(59, 130, 246, 0.12),
+        0 0 0 2px rgba(59, 130, 246, 0.08);
 }
 
 .qbank-source-card--college:hover {
-  border-color: rgba(236, 72, 153, 0.5);
-  box-shadow: 0 12px 30px rgba(236, 72, 153, 0.12), 0 0 0 2px rgba(236, 72, 153, 0.08);
+    border-color: rgba(236, 72, 153, 0.5);
+    box-shadow:
+        0 12px 30px rgba(236, 72, 153, 0.12),
+        0 0 0 2px rgba(236, 72, 153, 0.08);
 }
 
 .qbank-source-card__glow {
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(192, 133, 82, 0.12) 0%, transparent 70%);
-  pointer-events: none;
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(192, 133, 82, 0.12) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
 }
 
 .qbank-source-card--board .qbank-source-card__glow {
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+    background: radial-gradient(
+        circle,
+        rgba(59, 130, 246, 0.15) 0%,
+        transparent 70%
+    );
 }
 
 .qbank-source-card--college .qbank-source-card__glow {
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, transparent 70%);
+    background: radial-gradient(
+        circle,
+        rgba(236, 72, 153, 0.15) 0%,
+        transparent 70%
+    );
 }
 
 .qbank-source-card__title {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.01em;
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .qbank-source-card__meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
 }
 
 .qbank-source-card__meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
 }
 
 .qbank-source-card__action {
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(192, 133, 82, 0.2);
-  font-family: var(--font-heading);
-  font-size: 0.88rem;
-  font-weight: 750;
-  color: #8C5A3C;
-  transition: all var(--transition-base);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(192, 133, 82, 0.2);
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 750;
+    color: #8c5a3c;
+    transition: all var(--transition-base);
 }
 
 .qbank-source-card--board .qbank-source-card__action {
-  color: #1D4ED8;
+    color: #1d4ed8;
 }
 
 .qbank-source-card--college .qbank-source-card__action {
-  color: #BE185D;
+    color: #be185d;
 }
 
 .qbank-source-card:hover .qbank-source-card__action {
-  transform: translateX(4px);
+    transform: translateX(4px);
 }
 
 /* ─── Source Action Modal (Start Exam / Show Questions) ─────────────────── */
 
 .qbank-source-modal {
-  position: relative;
-  width: min(420px, 100%);
-  background: #FFFFFF;
-  border: 4px solid #E2E8F0;
-  border-radius: 24px;
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
-  padding: 32px 24px 24px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: qbModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    width: min(420px, 100%);
+    background: #ffffff;
+    border: 4px solid #e2e8f0;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.3);
+    padding: 32px 24px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: qbModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .qbank-source-modal--wide {
-  width: min(560px, 100%);
-  max-height: min(80vh, 720px);
+    width: min(560px, 100%);
+    max-height: min(80vh, 720px);
 }
 
 .qbank-source-modal__summary {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
 .qbank-source-modal__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
-  background: #EFF6FF;
-  color: #1D4ED8;
-  font-weight: 700;
-  font-size: 0.78rem;
-  border: 2px solid #DBEAFE;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 700;
+    font-size: 0.78rem;
+    border: 2px solid #dbeafe;
 }
 
 .qbank-source-modal__badge--college {
-  background: #FDF2F8;
-  color: #BE185D;
-  border-color: #FBCFE8;
+    background: #fdf2f8;
+    color: #be185d;
+    border-color: #fbcfe8;
 }
 
 .qbank-source-modal__title {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #0F172A;
-  text-align: center;
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    text-align: center;
 }
 
 .qbank-source-modal__chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .qbank-source-modal__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: var(--radius-pill);
-  background: #F8FAFC;
-  border: 1.5px solid #E2E8F0;
-  color: #475569;
-  font-size: 0.8rem;
-  font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-pill);
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
 .qbank-source-modal__actions {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 4px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
 }
 
 .qbank-source-modal__btn {
-  width: 100%;
-  min-height: 48px;
-  padding: 0 18px;
-  border-radius: 12px;
-  font-family: var(--font-heading);
-  font-size: 0.98rem;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 12px;
+    font-family: var(--font-heading);
+    font-size: 0.98rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
 .qbank-source-modal__btn--primary {
-  background: #15803D;
-  color: #FFFFFF;
-  border: 2px solid #15803D;
-  box-shadow: 0 4px 0 #14532D;
+    background: #15803d;
+    color: #ffffff;
+    border: 2px solid #15803d;
+    box-shadow: 0 4px 0 #14532d;
 }
 
 .qbank-source-modal__btn--primary:hover {
-  background: #166534;
+    background: #166534;
 }
 
 .qbank-source-modal__btn--primary:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #14532D;
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #14532d;
 }
 
 .qbank-source-modal__btn--secondary {
-  background: #FFFFFF;
-  color: #15803D;
-  border: 2px solid #15803D;
-  box-shadow: 0 4px 0 #DCFCE7;
+    background: #ffffff;
+    color: #15803d;
+    border: 2px solid #15803d;
+    box-shadow: 0 4px 0 #dcfce7;
 }
 
 .qbank-source-modal__btn--secondary:hover {
-  background: #F0FDF4;
+    background: #f0fdf4;
 }
 
 .qbank-source-modal__btn--secondary:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #DCFCE7;
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #dcfce7;
 }
 
 .qbank-source-modal__btn--ghost {
-  background: #FFFFFF;
-  color: #475569;
-  border: 2px solid #E2E8F0;
-  box-shadow: 0 4px 0 #E2E8F0;
+    background: #ffffff;
+    color: #475569;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 4px 0 #e2e8f0;
 }
 
 .qbank-source-modal__btn--ghost:hover {
-  background: #F8FAFC;
-  color: #0F172A;
+    background: #f8fafc;
+    color: #0f172a;
 }
 
 .qbank-source-modal__btn--ghost:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #E2E8F0;
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #e2e8f0;
 }
 
 /* Source preview list (inside the modal when "Show Questions" is picked) */
 .qbank-source-preview {
-  width: 100%;
-  max-height: 50vh;
-  overflow-y: auto;
-  border: 2px solid #E2E8F0;
-  border-radius: 14px;
-  padding: 8px 4px;
-  background: #F8FAFC;
-  margin-bottom: 4px;
+    width: 100%;
+    max-height: 50vh;
+    overflow-y: auto;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 8px 4px;
+    background: #f8fafc;
+    margin-bottom: 4px;
 }
 
 .qbank-source-preview__loading {
-  padding: 28px 16px;
-  text-align: center;
-  color: #64748B;
-  font-weight: 600;
-  font-size: 0.9rem;
+    padding: 28px 16px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
 .qbank-source-preview__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .qbank-source-preview__item {
-  display: flex;
-  gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px dashed #E2E8F0;
-  font-size: 0.88rem;
-  line-height: 1.5;
-  color: #0F172A;
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px dashed #e2e8f0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #0f172a;
 }
 
 .qbank-source-preview__item:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
 
 .qbank-source-preview__num {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  color: #1D4ED8;
-  flex-shrink: 0;
-  min-width: 24px;
+    font-family: var(--font-heading);
+    font-weight: 800;
+    color: #1d4ed8;
+    flex-shrink: 0;
+    min-width: 24px;
 }
 
 .qbank-source-preview__text {
-  flex: 1;
-  word-break: break-word;
+    flex: 1;
+    word-break: break-word;
 }
 
 /* Categorized sections for Admission Segment */
 .qbank-admission-container {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
 }
 
 .qbank-admission-group {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .qbank-admission-group-title {
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 850;
-  color: #8C5A3C;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
-  padding-bottom: 8px;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 850;
+    color: #8c5a3c;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1.5px solid rgba(192, 133, 82, 0.12);
+    padding-bottom: 8px;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .qbank-group-icon {
-  color: #C08552;
-  flex-shrink: 0;
+    color: #c08552;
+    flex-shrink: 0;
 }
 
 .qbank-group-badge {
-  background: rgba(192, 133, 82, 0.08);
-  color: #8C5A3C;
-  font-size: 0.78rem;
-  font-weight: 800;
-  padding: 1px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(192, 133, 82, 0.15);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 20px;
-  margin-left: 4px;
+    background: rgba(192, 133, 82, 0.08);
+    color: #8c5a3c;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 1px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(192, 133, 82, 0.15);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 20px;
+    margin-left: 4px;
 }
 
 /* Admission Segment Button Controls */
 .qbank-admission-segments {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
 }
 
 .qbank-segment-btn {
-  background: rgba(192, 133, 82, 0.05);
-  border: 1.5px solid rgba(192, 133, 82, 0.2);
-  padding: 8px 20px;
-  font-family: var(--font-body);
-  font-weight: 750;
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    background: rgba(192, 133, 82, 0.05);
+    border: 1.5px solid rgba(192, 133, 82, 0.2);
+    padding: 8px 20px;
+    font-family: var(--font-body);
+    font-weight: 750;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .qbank-segment-btn:hover {
-  background: rgba(192, 133, 82, 0.1);
-  color: #8C5A3C;
-  border-color: rgba(192, 133, 82, 0.45);
+    background: rgba(192, 133, 82, 0.1);
+    color: #8c5a3c;
+    border-color: rgba(192, 133, 82, 0.45);
 }
 
 .qbank-segment-btn--active {
-  background: #8C5A3C !important;
-  color: var(--white) !important;
-  border-color: #8C5A3C !important;
-  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.18);
+    background: #8c5a3c !important;
+    color: var(--white) !important;
+    border-color: #8c5a3c !important;
+    box-shadow: 0 4px 12px rgba(140, 90, 60, 0.18);
 }
 
 /* ─── Admission Source Cards Grid & Cards ──────────────────────────────── */
 
 .qbank-source-card--admission {
-  border-color: rgba(140, 90, 60, 0.22);
-  background: linear-gradient(135deg, rgba(192, 133, 82, 0.06) 0%, rgba(255, 255, 255, 0.7) 100%);
+    border-color: rgba(140, 90, 60, 0.22);
+    background: linear-gradient(
+        135deg,
+        rgba(192, 133, 82, 0.06) 0%,
+        rgba(255, 255, 255, 0.7) 100%
+    );
 }
 
 .qbank-source-card--admission:hover {
-  border-color: #8C5A3C;
-  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.12), 0 0 0 2px rgba(192, 133, 82, 0.08);
+    border-color: #8c5a3c;
+    box-shadow:
+        0 12px 30px rgba(140, 90, 60, 0.12),
+        0 0 0 2px rgba(192, 133, 82, 0.08);
 }
 
 .qbank-source-card--admission .qbank-source-card__glow {
-  background: radial-gradient(circle, rgba(192, 133, 82, 0.15) 0%, transparent 70%);
+    background: radial-gradient(
+        circle,
+        rgba(192, 133, 82, 0.15) 0%,
+        transparent 70%
+    );
 }
 
 .qbank-source-card__shift-badge {
-  align-self: flex-start;
-  font-size: 0.75rem;
-  font-weight: 750;
-  color: #8C5A3C;
-  background: rgba(192, 133, 82, 0.08);
-  border: 1px solid rgba(192, 133, 82, 0.2);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  margin-top: -4px;
+    align-self: flex-start;
+    font-size: 0.75rem;
+    font-weight: 750;
+    color: #8c5a3c;
+    background: rgba(192, 133, 82, 0.08);
+    border: 1px solid rgba(192, 133, 82, 0.2);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    margin-top: -4px;
 }
 
 .qbank-source-card--admission .qbank-source-card__action {
-  color: #8C5A3C;
+    color: #8c5a3c;
 }
 
 .qbank-source-modal__badge--admission {
-  background: #FEF3C7;
-  color: #D97706;
-  border-color: #FCD34D;
+    background: #fef3c7;
+    color: #d97706;
+    border-color: #fcd34d;
 }
