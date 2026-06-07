@@ -774,26 +774,48 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
 
     const matchStage = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
 
-    // Aggregation: match → sample → project
-    const pipeline = [
-      { $match: matchStage },
-      { $sample: { size: limit } },
-      {
-        $project: {
-          teacher: 0,
-          __v: 0
-        }
-      }
-    ];
+    // 1. Fetch ALL matching questions using find() — reliable and deterministic
+    const allMatching = await Question.find(matchStage)
+      .select('-teacher -__v')
+      .lean();
 
-    const questions = await Question.aggregate(pipeline);
+    const availableCount = allMatching.length;
+
+    // 2. If no matching questions at all, return early
+    if (availableCount === 0) {
+      return ApiResponse.success(res, {
+        questions: [],
+        total: 0,
+        requested: limit,
+        available: 0
+      }, 'No matching questions found');
+    }
+
+    // 3. If fewer matching questions than requested, return early with the available count
+    //    so the client can show a proper error modal
+    if (availableCount < limit) {
+      return ApiResponse.success(res, {
+        questions: [],
+        total: 0,
+        requested: limit,
+        available: availableCount
+      }, `Only ${availableCount} questions available, but ${limit} were requested`);
+    }
+
+    // 4. Fisher-Yates shuffle for true randomization, then take exactly `limit` questions
+    for (let i = allMatching.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allMatching[i], allMatching[j]] = [allMatching[j], allMatching[i]];
+    }
+    const questions = allMatching.slice(0, limit);
 
     // Removed backfill logic as per user request to only serve strictly matched questions
 
     return ApiResponse.success(res, {
       questions,
       total: questions.length,
-      requested: limit
+      requested: limit,
+      available: availableCount
     }, 'Mock test questions fetched successfully');
   } catch (err) {
     next(err);

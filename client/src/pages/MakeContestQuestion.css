@@ -6,7 +6,9 @@
 /* ── Page Layout ── */
 .cc-page {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
   background: linear-gradient(180deg, #FFFDFB 0%, #FAF6F0 100%);
   font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
   color: var(--text-primary);
@@ -17,6 +19,7 @@
   padding: 2.5rem 3rem 4rem;
   overflow-y: auto;
   max-width: 1180px;
+  width: 100%;
   margin: 0 auto;
   animation: ccFadeIn 0.5s ease-out;
 }
@@ -693,8 +696,15 @@
 }
 
 @media (max-width: 768px) {
+  .cc-page {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
   .cc-page__content {
     padding: 1.5rem 1.25rem 3rem;
+    overflow-y: visible;
   }
 
   .cc-page__title {

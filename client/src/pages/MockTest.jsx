@@ -69,11 +69,11 @@ const MOCK_CHAPTERS = {
   },
   gk: {
     '1st': [
-      'Chapter 1: বাংলাদেশ বিষয়াবলি', 'Chapter 2: মুক্তিযুদ্ধ ও স্বাধীনতা', 
+      'Chapter 1: বাংলাদেশ বিষয়াবলি', 'Chapter 2: মুক্তিযুদ্ধ ও স্বাধীনতা',
       'Chapter 3: ভৌগোলিক অবস্থান ও সীমানা', 'Chapter 4: জাতীয় অর্জন ও অর্থনীতি'
     ],
     '2nd': [
-      'Chapter 1: আন্তর্জাতিক বিষয়াবলি', 'Chapter 2: জাতিসংঘ ও বিশ্ব সংস্থা', 
+      'Chapter 1: আন্তর্জাতিক বিষয়াবলি', 'Chapter 2: জাতিসংঘ ও বিশ্ব সংস্থা',
       'Chapter 3: বিশ্ব রাজনীতি ও যুদ্ধবিগ্রহ', 'Chapter 4: সাম্প্রতিক সাধারণ জ্ঞান'
     ]
   },
@@ -323,7 +323,7 @@ export default function MockTest() {
         'mock_exam_config',
         'mock_exam_from_qbank'
       ].forEach((key) => sessionStorage.removeItem(key));
-      
+
       setStep(1);
       setSelectedSubjectIds([]);
       setSelectedChapters({});
@@ -364,7 +364,7 @@ export default function MockTest() {
       const token = localStorage.getItem('topkorbo_token');
       const dbSubject = SUBJECT_DB_MAP[subId] || subId;
       const base = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      
+
       const res = await fetch(`${base}/questions/topics?subject=${encodeURIComponent(dbSubject)}&paper=${paper}&chapter=${encodeURIComponent(chapter)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -390,7 +390,7 @@ export default function MockTest() {
 
   // Toggle selection handler for multiple subject selection
   const toggleSubjectSelection = (id) => {
-    setSelectedSubjectIds(prev => 
+    setSelectedSubjectIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
@@ -401,7 +401,7 @@ export default function MockTest() {
       const subMap = prev[subId] || { '1st': [], '2nd': [] };
       const list = subMap[paper] || [];
       const isSelecting = !list.includes(chapter);
-      
+
       const newList = isSelecting
         ? [...list, chapter]
         : list.filter(c => c !== chapter);
@@ -434,7 +434,7 @@ export default function MockTest() {
       const subMap = prev[subId] || { '1st': [], '2nd': [] };
       const list = subMap[paper] || [];
       const isAllChecked = list.length === allChapters.length;
-      
+
       const nextList = isAllChecked ? [] : allChapters;
 
       if (!isAllChecked) {
@@ -636,10 +636,14 @@ export default function MockTest() {
       });
       const data = await res.json();
       if (data.success && data.data) {
-        if (data.data.total === 0) {
+        const requestedCount = Number(totalQuestions);
+        const returnedCount = data.data.total;
+        const availableCount = data.data.available !== undefined ? data.data.available : returnedCount;
+
+        if (availableCount === 0) {
           setErrorModal({
             show: true,
-            message: language === 'en' 
+            message: language === 'en'
               ? 'No questions found matching your exact criteria. Please adjust your selected chapters, standards, or question type.'
               : 'আপনার নির্বাচিত মানদণ্ডের সাথে মিলে যাওয়া কোনো প্রশ্ন পাওয়া যায়নি। দয়া করে আপনার অধ্যায়, স্ট্যান্ডার্ড, বা প্রশ্নের ধরন পরিবর্তন করুন।'
           });
@@ -647,19 +651,19 @@ export default function MockTest() {
           return;
         }
 
-        if (data.data.total < totalQuestions) {
+        if (returnedCount < requestedCount) {
           setErrorModal({
             show: true,
             message: language === 'en'
-              ? `We don't have enough questions matching your criteria. You requested ${totalQuestions} but we only found ${data.data.total} questions. Please reduce the Total Questions or adjust your filters.`
-              : `আপনার মানদণ্ডের সাথে মিলে যাওয়া পর্যাপ্ত প্রশ্ন আমাদের কাছে নেই। আপনি ${totalQuestions}টি প্রশ্ন চেয়েছেন কিন্তু আমরা মাত্র ${data.data.total}টি প্রশ্ন পেয়েছি। দয়া করে মোট প্রশ্ন সংখ্যা কমান অথবা আপনার ফিল্টার পরিবর্তন করুন।`
+              ? `We don't have enough questions matching your criteria. You requested ${requestedCount} but we only found ${availableCount} questions. Please reduce the Total Questions or adjust your filters.`
+              : `আপনার মানদণ্ডের সাথে মিলে যাওয়া পর্যাপ্ত প্রশ্ন আমাদের কাছে নেই। আপনি ${requestedCount}টি প্রশ্ন চেয়েছেন কিন্তু আমরা মাত্র ${availableCount}টি প্রশ্ন পেয়েছি। দয়া করে মোট প্রশ্ন সংখ্যা কমান অথবা আপনার ফিল্টার পরিবর্তন করুন।`
           });
           setIsStartingExam(false);
           return;
         }
 
         console.log('Mock test questions:', data.data);
-        
+
         // Derive standard string for config display
         const displayStds = selectedStandards.map(id => {
           const matched = QUESTION_STANDARDS.find(s => s.id === id);
@@ -782,8 +786,8 @@ export default function MockTest() {
                         <HiCheckCircle size={22} />
                       </div>
                       <div className="mock-card-content">
-                        <div 
-                          className="mock-card-prefix" 
+                        <div
+                          className="mock-card-prefix"
                           style={{ backgroundColor: subject.bg, color: subject.color }}
                         >
                           {subject.prefixType === 'letter' ? (
@@ -818,8 +822,8 @@ export default function MockTest() {
             /* ──────────────── STEP 2: PAPER & CHAPTER SELECTION VIEW ──────────────── */
             <div className="mock-config-selection animate-fade-in">
               {/* Back Button */}
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setStep(1)}
                 className="mock-back-btn"
               >
@@ -850,16 +854,16 @@ export default function MockTest() {
                   const is2ndAllChecked = all2ndChapters.length > 0 && selected2nd.length === all2ndChapters.length;
 
                   return (
-                    <div 
-                      key={subId} 
+                    <div
+                      key={subId}
                       className="mock-config-card animate-scale-up"
                       style={{ '--hover-color': subject.color }}
                     >
                       {/* Card Subject Header */}
                       <div className="mock-config-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
                         <div className="mock-config-subject-info">
-                          <div 
-                            className="mock-card-prefix" 
+                          <div
+                            className="mock-card-prefix"
                             style={{ backgroundColor: subject.bg, color: subject.color }}
                           >
                             {subject.prefixType === 'letter' ? subject.letter : subject.icon}
@@ -872,7 +876,7 @@ export default function MockTest() {
 
                       {/* Side-by-Side Dual Column Grids */}
                       <div className="mock-papers-side-by-side-grid">
-                        
+
                         {/* 1st Paper Column */}
                         <div className="mock-paper-column">
                           <button
@@ -961,8 +965,8 @@ export default function MockTest() {
                             <div className="mock-empty-paper-notice animate-fade-in">
                               <span style={{ fontSize: '1.25rem', marginBottom: '8px' }}>ℹ️</span>
                               <span>
-                                {language === 'en' 
-                                  ? 'This subject does not have a 2nd paper syllabus.' 
+                                {language === 'en'
+                                  ? 'This subject does not have a 2nd paper syllabus.'
                                   : 'এই বিষয়টির জন্য ২য় পত্রের সিলেবাস নেই।'}
                               </span>
                             </div>
@@ -1028,13 +1032,13 @@ export default function MockTest() {
                                                   }}
                                                   style={{ '--theme-color': subject.color }}
                                                 >
-                                                   {isTopicSelected ? (
-                                                     <HiCheck size={12} className="mock-topic-tag-icon" />
-                                                   ) : (
-                                                     <span className="mock-topic-tag-checkbox"></span>
-                                                   )}
-                                                   <span className="mock-topic-tag-name">{topic.name}</span>
-                                                   <span className="mock-topic-tag-count">{topic.count}</span>
+                                                  {isTopicSelected ? (
+                                                    <HiCheck size={12} className="mock-topic-tag-icon" />
+                                                  ) : (
+                                                    <span className="mock-topic-tag-checkbox"></span>
+                                                  )}
+                                                  <span className="mock-topic-tag-name">{topic.name}</span>
+                                                  <span className="mock-topic-tag-count">{topic.count}</span>
                                                 </button>
                                               );
                                             })}
@@ -1060,7 +1064,7 @@ export default function MockTest() {
                 <button
                   type="button"
                   className="btn btn-primary mock-next-btn animate-fade-in"
-                  disabled={Object.values(selectedChapters).every(subObj => 
+                  disabled={Object.values(selectedChapters).every(subObj =>
                     Object.values(subObj).every(arr => arr.length === 0)
                   )}
                   onClick={() => setStep(3)}
@@ -1074,8 +1078,8 @@ export default function MockTest() {
             /* ──────────────── STEP 3: EXAM CONFIGURATION ──────────────── */
             <div className="mock-exam-config animate-fade-in">
               {/* Back Button */}
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setStep(2)}
                 className="mock-back-btn"
               >
@@ -1173,8 +1177,8 @@ export default function MockTest() {
                         onClick={() => {
                           setSelectedStandards(prev => {
                             const isSelecting = !prev.includes(std.id);
-                            const next = isSelecting 
-                              ? [...prev, std.id] 
+                            const next = isSelecting
+                              ? [...prev, std.id]
                               : prev.filter(id => id !== std.id);
 
                             if (std.id === 'engineering') {
@@ -1217,7 +1221,7 @@ export default function MockTest() {
                             className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
                             style={{ '--theme-color': '#F59E0B', '--theme-bg': 'rgba(245, 158, 11, 0.08)' }}
                             onClick={() => {
-                              setSelectedEngineeringUnis(prev => 
+                              setSelectedEngineeringUnis(prev =>
                                 prev.includes(uni) ? prev.filter(u => u !== uni) : [...prev, uni]
                               );
                             }}
@@ -1247,7 +1251,7 @@ export default function MockTest() {
                             className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
                             style={{ '--theme-color': '#3B82F6', '--theme-bg': 'rgba(59, 130, 246, 0.08)' }}
                             onClick={() => {
-                              setSelectedGeneralUnis(prev => 
+                              setSelectedGeneralUnis(prev =>
                                 prev.includes(uni) ? prev.filter(u => u !== uni) : [...prev, uni]
                               );
                             }}
@@ -1313,7 +1317,7 @@ export default function MockTest() {
                                 className={`mock-uni-pill ${isSelected ? 'mock-uni-pill--selected' : ''}`}
                                 style={{ '--theme-color': '#10B981', '--theme-bg': 'rgba(16, 185, 129, 0.08)' }}
                                 onClick={() => {
-                                  setSelectedBoards(prev => 
+                                  setSelectedBoards(prev =>
                                     prev.includes(board) ? prev.filter(b => b !== board) : [...prev, board]
                                   );
                                 }}
@@ -1536,9 +1540,9 @@ export default function MockTest() {
               <p>{errorModal.message}</p>
             </div>
             <div className="mock-error-modal-footer">
-              <button 
-                type="button" 
-                className="mock-error-modal-btn" 
+              <button
+                type="button"
+                className="mock-error-modal-btn"
                 onClick={() => setErrorModal({ show: false, message: '' })}
               >
                 {language === 'en' ? 'Adjust Settings' : 'সেটিংস পরিবর্তন করুন'}
