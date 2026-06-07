@@ -1779,12 +1779,8 @@ export default function QuestionBank() {
               </div>
               <div className="dashboard-header__actions">
                 <span className="dashboard-header__badge">
-<<<<<<< HEAD
-  { user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace') }
-=======
-                  {t("db.workspace")}
->>>>>>> 6aa5a4c3de341911aeab490f9970ef19cee0f8b8
-                </span >
+                  {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
+                </span>
               </div >
             </header >
 
