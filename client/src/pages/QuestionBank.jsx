@@ -1075,7 +1075,9 @@ export default function QuestionBank() {
                 <p>{t('qbank.subtitle')}</p>
               </div>
               <div className="dashboard-header__actions">
-                <span className="dashboard-header__badge">{t('db.workspace')}</span>
+                <span className="dashboard-header__badge">
+                  {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
+                </span>
               </div>
             </header>
 
