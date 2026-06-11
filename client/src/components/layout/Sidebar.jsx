@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
@@ -33,6 +33,13 @@ export default function Sidebar({ activeTab, user }) {
   const menuItems = [
     { id: 'dashboard', label: t('db.menu.dashboard'), icon: <HiHome size={20} /> }
   ];
+
+  // Reading Books: shown to ALL roles (students browse, teachers preview their own uploads)
+  menuItems.push({
+    id: 'reading-books',
+    label: t('db.menu.reading_books'),
+    icon: <HiLibrary size={20} />
+  });
 
   // Show Question Bank for students, tutors, and teachers
   if (safeUser.role === 'student' || safeUser.role === 'tutor' || safeUser.role === 'teacher') {
@@ -140,6 +147,7 @@ export default function Sidebar({ activeTab, user }) {
                   else if (item.id === 'upload-question') navigate('/upload-question');
                   else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
+                  else if (item.id === 'reading-books') navigate('/reading-books');
                   else navigate('/dashboard');
                 }}
                 className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''}`}

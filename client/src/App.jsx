@@ -18,6 +18,9 @@ import MakeContestQuestionNext from './pages/MakeContestQuestionNext';
 import MakeContestQuestionNextTwo from './pages/MakeContestQuestionNextTwo';
 import MakeContestQuestionChooseQBank from './pages/MakeContestQuestionChooseQBank';
 import MakeContestQuestionConfirm from './pages/MakeContestQuestionConfirm';
+import ReadingBooks from './pages/ReadingBooks';
+import UploadBook from './pages/UploadBook';
+import ReadingBookView from './pages/ReadingBookView';
 import './styles/index.css';
 import './styles/animations.css';
 
@@ -63,6 +66,9 @@ function AppContent() {
         <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />
         <Route path="/make-contest-question/choose-qbank" element={<MakeContestQuestionChooseQBank />} />
         <Route path="/make-contest-question/confirm" element={<MakeContestQuestionConfirm />} />
+        <Route path="/reading-books" element={<ReadingBooks />} />
+        <Route path="/reading-books/upload" element={<UploadBook />} />
+        <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
       </Routes>
     </>
   );

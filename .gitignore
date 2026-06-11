@@ -3,6 +3,9 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
+# Uploaded book PDFs
+server/uploads/
+
 # Production build outputs
 dist/
 client/dist/

@@ -1,0 +1,53 @@
+/* AnnotationCanvas.css
+ *
+ * Visual rules for the transparent pen overlay. Most of the heavy
+ * lifting is in JS (Catmull-Rom, tapered rendering, rAF), so the CSS
+ * stays minimal — just cursor + pointer-events toggles by tool.
+ *
+ * Three-canvas architecture:
+ *   - The active canvas receives pointer events and draws the in-progress stroke.
+ *   - The overlay canvas (eraser ring) sits on top with pointer-events: none.
+ *   - Committed strokes are on an offscreen canvas, blitted underneath via
+ *     globalCompositeOperation: destination-over.
+ */
+
+.rb-annotation-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Overlay canvas: eraser hover ring, always on top, never captures events. */
+.rb-annotation-canvas--overlay {
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* Committed canvas: completed strokes, layered underneath the active canvas. */
+.rb-annotation-canvas--committed {
+  z-index: 4;
+  pointer-events: none;
+}
+
+.rb-annotation-canvas--pen {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.rb-annotation-canvas--eraser {
+  /* In eraser mode the canvas is visually present (so committed
+   * strokes keep rendering) but pointer-events are forwarded to the
+   * wrapper for the hit-test. */
+  pointer-events: none;
+  cursor: none !important;
+}
+
+.rb-annotation-canvas--select {
+  pointer-events: none;
+  touch-action: auto;
+}

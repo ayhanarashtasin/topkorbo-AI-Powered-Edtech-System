@@ -1,0 +1,141 @@
+.rb-reader {
+  display: flex;
+  flex-direction: row;
+  padding: 0 !important;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary, #FFF8F0);
+}
+
+.rb-reader__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: #FAF4EE;
+}
+
+.rb-reader__topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--bg-accent-warm, #F7EBE1);
+  flex-shrink: 0;
+}
+
+.rb-reader__menu-btn,
+.rb-reader__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #FAF4EE;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  border-radius: 6px;
+  color: var(--text-primary, #251817);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rb-reader__menu-btn:hover,
+.rb-reader__back-btn:hover {
+  background: rgba(192, 133, 82, 0.12);
+  color: #8C5A3C;
+  border-color: rgba(192, 133, 82, 0.4);
+}
+
+/* The menu button is now always visible */
+.rb-reader__topbar-spacer {
+  flex: 1;
+}
+
+.rb-reader__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.rb-reader__progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #5c4d4c);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rb-reader__progress-bar {
+  width: 140px;
+  height: 4px;
+  background: var(--bg-accent-warm, #F7EBE1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rb-reader__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #C08552 0%, #D4A373 100%);
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+
+.rb-reader__viewport {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #FAF4EE;
+}
+
+.rb-reader__loading,
+.rb-reader__error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-secondary, #5c4d4c);
+}
+
+.rb-reader__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 1023px) {
+  .rb-reader__back-btn span {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .rb-reader__topbar {
+    padding: 8px 12px;
+  }
+  .rb-reader__progress {
+    min-width: 100px;
+  }
+  .rb-reader__progress-bar {
+    width: 100px;
+  }
+}

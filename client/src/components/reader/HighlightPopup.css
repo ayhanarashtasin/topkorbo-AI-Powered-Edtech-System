@@ -1,0 +1,100 @@
+.rb-highlight-popup {
+  position: fixed;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 150px;
+  transform: translate(-50%, -110%);
+  animation: popupIn 0.2s ease-out;
+}
+
+@keyframes popupIn {
+  from { opacity: 0; transform: translate(-50%, -100%) scale(0.95); }
+  to { opacity: 1; transform: translate(-50%, -110%) scale(1); }
+}
+
+.rb-highlight-popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rb-highlight-colors {
+  display: flex;
+  gap: 6px;
+}
+
+.rb-color-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.rb-color-btn:hover {
+  transform: scale(1.1);
+}
+
+.rb-action-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.rb-action-btn:hover {
+  background: #f5f5f5;
+  color: #000;
+}
+
+.rb-highlight-note-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rb-highlight-note-input textarea {
+  width: 200px;
+  height: 60px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: none;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.rb-note-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.rb-note-actions button {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+}
+
+.rb-note-actions button:first-child {
+  background: #3b82f6;
+  color: white;
+}
+
+.rb-note-actions button:last-child {
+  background: #e5e7eb;
+  color: #374151;
+}

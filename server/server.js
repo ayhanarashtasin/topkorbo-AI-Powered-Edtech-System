@@ -1,6 +1,7 @@
 const { execSync } = require('child_process');
 const dns = require('node:dns');
 const path = require('node:path');
+const fs = require('node:fs');
 
 try {
   if (process.platform === 'win32') {
@@ -9,10 +10,12 @@ try {
       .split(/[\r\n]+/)
       .map(s => s.trim())
       .filter(s => s && s !== '127.0.0.1' && s !== '::1');
-    
+
     if (dnsServers.length > 0) {
-      dns.setServers(dnsServers);
-      console.log('🔄 Set Node.js DNS Servers dynamically:', dnsServers);
+      // Prepend public DNS servers to resolve MongoDB Atlas SRV records successfully
+      const serversToSet = ['8.8.8.8', '1.1.1.1', ...dnsServers];
+      dns.setServers(serversToSet);
+      console.log('🔄 Set Node.js DNS Servers dynamically:', serversToSet);
     }
   }
 } catch (e) {
@@ -29,6 +32,8 @@ const landingRoutes = require('./routes/landingRoutes');
 const authRoutes = require('./routes/authRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const contestRoutes = require('./routes/contestRoutes');
+const bookRoutes = require('./routes/bookRoutes');
+const highlightRoutes = require('./routes/highlightRoutes');
 
 // Load Passport Configuration
 require('./config/passport');
@@ -40,16 +45,29 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['Accept-Ranges', 'Content-Encoding', 'Content-Length', 'Content-Range']
+}));
 app.use(express.json({ limit: '16mb' }));
 app.use(express.urlencoded({ limit: '16mb', extended: true }));
 app.use(passport.initialize());
+
+// Serve uploaded book PDFs
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true
+}));
 
 // Routes
 app.use('/api/landing', landingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/contests', contestRoutes);
+app.use('/api/books', bookRoutes);
+app.use('/api/highlights', highlightRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -58,6 +76,15 @@ app.get('/api/health', (req, res) => {
 
 // Global error handler
 app.use(errorHandler);
+
+// Prevent crashes from unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('❌ UNCAUGHT EXCEPTION:', err.message);
+  console.error(err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ UNHANDLED REJECTION:', reason);
+});
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 TopKorbo Server running on port ${PORT}`);

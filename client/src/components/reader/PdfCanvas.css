@@ -1,0 +1,77 @@
+.rb-pdf-page-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 16px 60px;
+  min-height: 100%;
+  background: #FAF4EE;
+}
+
+.rb-pdf-page-wrap--pen {
+  cursor: crosshair;
+  user-select: none;
+}
+
+/* Highlight: enable text selection on the text layer so the user can
+   drag across lines. Pointer events on .rb-pdf-canvas (the pen layer)
+   stay disabled by the default canvas pointer-events:none rule.
+
+   `touch-action: auto` is critical for stylus/pen input (XP-Pen,
+   Wacom, etc.): react-pdf's TextLayer sets `touch-action: none` by
+   default, which tells the browser to capture pen pointer events for
+   scroll/pan and BLOCKS the native drag-selection. Forcing `auto`
+   here restores the drag-to-select gesture for pen drivers. */
+.rb-pdf-page-wrap--highlighter,
+.rb-pdf-page-wrap--highlighter * {
+  touch-action: none !important;
+}
+
+
+.rb-pdf-page-wrap--eraser,
+.rb-pdf-page-wrap--eraser * {
+  cursor: none !important;
+  touch-action: none !important;
+}
+
+.rb-pdf-page-inner {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.rb-pdf-page-container {
+  position: relative;
+  background: #FFFFFF;
+  box-shadow: 0 4px 24px rgba(140, 90, 60, 0.18);
+  border-radius: 4px;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.rb-pdf-page-container .rb-pdf-page {
+  display: block;
+}
+
+.rb-pdf-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* Highlight mode canvas overlay */
+
+.rb-pdf-loading,
+.rb-pdf-error {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-secondary, #5c4d4c);
+  font-size: 14px;
+  min-width: 320px;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
