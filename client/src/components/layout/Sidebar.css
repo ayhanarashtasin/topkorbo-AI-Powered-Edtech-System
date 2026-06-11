@@ -7,7 +7,9 @@
   border-right: 1.5px solid rgba(75, 46, 43, 0.12);
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
+  position: sticky;
+  top: 0;
   flex-shrink: 0;
   z-index: 10;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -310,6 +312,8 @@
   .dashboard-sidebar {
     width: 100% !important;
     height: auto;
+    position: relative;
+    top: auto;
     border-right: none;
     border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
   }

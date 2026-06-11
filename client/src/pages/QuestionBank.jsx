@@ -1779,15 +1779,15 @@ export default function QuestionBank() {
               </div>
               <div className="dashboard-header__actions">
                 <span className="dashboard-header__badge">
-                  {t("db.workspace")}
+                  {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
                 </span>
-              </div>
-            </header>
+              </div >
+            </header >
 
-            {/* Question Bank Workspace Panel */}
-            <div className="qbank-workspace animate-fade-in">
-              {/* Navigation Control Bar: Tabs & Search */}
-              <div className="qbank-controls">
+    {/* Question Bank Workspace Panel */ }
+    < div className = "qbank-workspace animate-fade-in" >
+      {/* Navigation Control Bar: Tabs & Search */ }
+      < div className = "qbank-controls" >
                 <div className="qbank-tabs-wrapper">
                   <button
                     type="button"
@@ -1823,10 +1823,10 @@ export default function QuestionBank() {
                     className="qbank-search-input"
                   />
                 </div>
-              </div>
+              </div >
 
-              {/* Tab Description Title */}
-              <div className="qbank-section-info">
+    {/* Tab Description Title */ }
+    < div className = "qbank-section-info" >
                 <h3>
                   {activeSubTab === "academic" && t("qbank.tab.academic")}
                   {activeSubTab === "admission" && t("qbank.tab.admission")}
@@ -1835,462 +1835,467 @@ export default function QuestionBank() {
                   {activeSubTab === "academic" && t("qbank.academic.desc")}
                   {activeSubTab === "admission" && t("qbank.admission.desc")}
                 </p>
-              </div>
+              </div >
 
-              {/* Gird Content Pane */}
-              <div className="qbank-grid-container">
-                {activeSubTab === "academic" && (
-                  <div className="qbank-grid qbank-grid--academic">
-                    {filteredAcademicSubjects.length > 0 ? (
-                      filteredAcademicSubjects.map((sub) => (
-                        <div
-                          key={sub.id}
-                          className={`qbank-card qbank-card--academic ${sub.type}`}
-                          onClick={() => handleSubjectClick(sub)}
-                        >
-                          <div className="qbank-card__glow"></div>
-                          <div className="qbank-card__visual">
-                            {sub.isCustomSvg ? (
-                              sub.svg
-                            ) : (
-                              <span className="qbank-card__letter">
-                                {sub.letter}
-                              </span>
-                            )}
-                          </div>
-                          <div className="qbank-card__info">
-                            <h4 className="qbank-card__subject">
-                              {language === "en" ? sub.titleEn : sub.titleBn}
-                            </h4>
-                            <span className="qbank-card__sub-label">
-                              {sub.id.includes("1")
-                                ? language === "en"
-                                  ? "1st paper"
-                                  : "১ম পত্র"
-                                : ""}
-                              {sub.id.includes("2")
-                                ? language === "en"
-                                  ? "2nd paper"
-                                  : "২য় পত্র"
-                                : ""}
-                              {sub.id === "ict"
-                                ? language === "en"
-                                  ? "HSC Core"
-                                  : "এইচএসসি আবশ্যিক"
-                                : ""}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="qbank-empty">
-                        <p>
-                          {language === "en"
-                            ? "No subjects found matching your search."
-                            : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিষয় পাওয়া যায়নি।"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeSubTab === "admission" && (
-                  <div className="qbank-admission-wrapper">
-                    {/* Admission Segment Controls (Pills/Tabs) */}
-                    <div className="qbank-admission-segments">
-                      <button
-                        type="button"
-                        className={`qbank-segment-btn ${activeAdmissionSegment === "university" ? "qbank-segment-btn--active" : ""}`}
-                        onClick={() => setActiveAdmissionSegment("university")}
-                      >
-                        <HiOfficeBuilding size={16} />
-                        <span>
-                          {language === "en" ? "University" : "বিশ্ববিদ্যালয়"}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`qbank-segment-btn ${activeAdmissionSegment === "engineering" ? "qbank-segment-btn--active" : ""}`}
-                        onClick={() => setActiveAdmissionSegment("engineering")}
-                      >
-                        <HiAcademicCap size={16} />
-                        <span>
-                          {language === "en" ? "Engineering" : "ইঞ্জিনিয়ারিং"}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`qbank-segment-btn ${activeAdmissionSegment === "medical" ? "qbank-segment-btn--active" : ""}`}
-                        onClick={() => setActiveAdmissionSegment("medical")}
-                      >
-                        <HiHeart size={16} />
-                        <span>{language === "en" ? "Medical" : "মেডিকেল"}</span>
-                      </button>
-                    </div>
-
-                    <div className="qbank-admission-container">
-                      {/* Engineering Section */}
-                      {activeAdmissionSegment === "engineering" && (
-                        <div className="qbank-admission-group">
-                          <h3 className="qbank-admission-group-title">
-                            <HiAcademicCap
-                              size={22}
-                              className="qbank-group-icon"
-                            />
-                            <span>
-                              {language === "en"
-                                ? "Engineering Universities"
-                                : "ইঞ্জিনিয়ারিং বিশ্ববিদ্যালয়"}
-                            </span>
-                            <span className="qbank-group-badge">
-                              {
-                                filteredAdmissionVarsities.filter(
-                                  (v) => v.category === "engineering",
-                                ).length
-                              }
-                            </span>
-                          </h3>
-                          {filteredAdmissionVarsities.filter(
-                            (v) => v.category === "engineering",
-                          ).length > 0 ? (
-                            <div className="qbank-grid qbank-grid--admission">
-                              {filteredAdmissionVarsities
-                                .filter((v) => v.category === "engineering")
-                                .map((v) => (
-                                  <div
-                                    key={v.id}
-                                    className={`qbank-card qbank-card--admission qbank-card--${v.id}`}
-                                    style={{ "--card-brand": v.color }}
-                                    onClick={() => handleVarsityCardClick(v)}
-                                  >
-                                    <div className="qbank-card__glow"></div>
-                                    <div className="qbank-card__visual">
-                                      <span className="qbank-card__letter">
-                                        {v.name.slice(0, 2)}
-                                      </span>
-                                    </div>
-                                    <div className="qbank-card__info">
-                                      <h4 className="qbank-card__subject">
-                                        {v.name}
-                                      </h4>
-                                      <span className="qbank-card__sub-label">
-                                        {language === "en"
-                                          ? "Question Bank"
-                                          : "প্রশ্নব্যাংক"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          ) : (
-                            <div className="qbank-empty">
-                              <p>
-                                {language === "en"
-                                  ? "No universities found matching your search."
-                                  : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিশ্ববিদ্যালয় পাওয়া যায়নি।"}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Medical Section */}
-                      {activeAdmissionSegment === "medical" && (
-                        <div className="qbank-admission-group">
-                          <h3 className="qbank-admission-group-title">
-                            <HiHeart size={22} className="qbank-group-icon" />
-                            <span>
-                              {language === "en"
-                                ? "Medical & Dental"
-                                : "মেডিকেল ও ডেন্টাল"}
-                            </span>
-                            <span className="qbank-group-badge">
-                              {
-                                filteredAdmissionVarsities.filter(
-                                  (v) => v.category === "medical",
-                                ).length
-                              }
-                            </span>
-                          </h3>
-                          {filteredAdmissionVarsities.filter(
-                            (v) => v.category === "medical",
-                          ).length > 0 ? (
-                            <div className="qbank-grid qbank-grid--admission">
-                              {filteredAdmissionVarsities
-                                .filter((v) => v.category === "medical")
-                                .map((v) => (
-                                  <div
-                                    key={v.id}
-                                    className={`qbank-card qbank-card--admission qbank-card--${v.id}`}
-                                    style={{ "--card-brand": v.color }}
-                                    onClick={() => handleVarsityCardClick(v)}
-                                  >
-                                    <div className="qbank-card__glow"></div>
-                                    <div className="qbank-card__visual">
-                                      <span className="qbank-card__letter">
-                                        {v.name.slice(0, 2)}
-                                      </span>
-                                    </div>
-                                    <div className="qbank-card__info">
-                                      <h4 className="qbank-card__subject">
-                                        {v.name}
-                                      </h4>
-                                      <span className="qbank-card__sub-label">
-                                        {language === "en"
-                                          ? "Question Bank"
-                                          : "প্রশ্নব্যাংক"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          ) : (
-                            <div className="qbank-empty">
-                              <p>
-                                {language === "en"
-                                  ? "No universities found matching your search."
-                                  : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিশ্ববিদ্যালয় পাওয়া যায়নি।"}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* University Section */}
-                      {activeAdmissionSegment === "university" && (
-                        <div className="qbank-admission-group">
-                          <h3 className="qbank-admission-group-title">
-                            <HiOfficeBuilding
-                              size={22}
-                              className="qbank-group-icon"
-                            />
-                            <span>
-                              {language === "en"
-                                ? "General Universities"
-                                : "সাধারণ বিশ্ববিদ্যালয়"}
-                            </span>
-                            <span className="qbank-group-badge">
-                              {
-                                filteredAdmissionVarsities.filter(
-                                  (v) => v.category === "university",
-                                ).length
-                              }
-                            </span>
-                          </h3>
-                          {filteredAdmissionVarsities.filter(
-                            (v) => v.category === "university",
-                          ).length > 0 ? (
-                            <div className="qbank-grid qbank-grid--admission">
-                              {filteredAdmissionVarsities
-                                .filter((v) => v.category === "university")
-                                .map((v) => (
-                                  <div
-                                    key={v.id}
-                                    className={`qbank-card qbank-card--admission qbank-card--${v.id}`}
-                                    style={{ "--card-brand": v.color }}
-                                    onClick={() => handleVarsityCardClick(v)}
-                                  >
-                                    <div className="qbank-card__glow"></div>
-                                    <div className="qbank-card__visual">
-                                      <span className="qbank-card__letter">
-                                        {v.name.slice(0, 2)}
-                                      </span>
-                                    </div>
-                                    <div className="qbank-card__info">
-                                      <h4 className="qbank-card__subject">
-                                        {v.name}
-                                      </h4>
-                                      <span className="qbank-card__sub-label">
-                                        {language === "en"
-                                          ? "Question Bank"
-                                          : "প্রশ্নব্যাংক"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          ) : (
-                            <div className="qbank-empty">
-                              <p>
-                                {language === "en"
-                                  ? "No universities found matching your search."
-                                  : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিশ্ববিদ্যালয় পাওয়া যায়নি।"}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Fragment>
-        )}
-      </main>
-
-      {activeOptionModal && (
-        <div
-          className="qbank-modal-overlay"
-          onClick={() => setActiveOptionModal(null)}
-        >
-          <div
-            className="qbank-modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="qbank-modal-close"
-              onClick={() => setActiveOptionModal(null)}
-              aria-label="Close"
-            >
-              <HiX size={20} />
-            </button>
-            <div
-              className="qbank-modal-icon-wrapper"
-              style={{ background: activeOptionModal.gradient }}
-            >
-              {activeOptionModal.icon}
-            </div>
-            <h2>
-              {language === "en"
-                ? activeOptionModal.titleEn
-                : activeOptionModal.titleBn}
-            </h2>
-            <p className="qbank-modal-subject">
-              {language === "en"
-                ? selectedSubject.titleEn
-                : selectedSubject.titleBn}
-            </p>
-            <p className="qbank-modal-desc">
-              {language === "en"
-                ? "Practice questions and full-length board/admission question banks for this stream are currently being prepared. You will be able to solve them directly here very soon!"
-                : "এই বিষয়ের অধ্যায়ভিত্তিক অনুশীলনী এবং বিগত বছরের বোর্ড/ভর্তি পরীক্ষার প্রশ্নব্যাংক প্রস্তুত করা হচ্ছে। শীঘ্রই আপনি সরাসরি এখানে অনুশীলন করতে পারবেন!"}
-            </p>
-            <button
-              type="button"
-              className="qbank-modal-cta"
-              onClick={() => {
-                setActiveOptionModal(null);
-                navigate("/mock-test");
-              }}
-            >
-              {language === "en"
-                ? "Try Mock Tests in the Meantime"
-                : "ইতিমধ্যে মক টেস্ট দিন"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeSourceModal && (
-        <div className="qbank-modal-overlay" onClick={closeSourceModal}>
-          <div
-            className="qbank-source-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="qbank-modal-close"
-              onClick={closeSourceModal}
-              aria-label="Close"
-            >
-              <HiX size={20} />
-            </button>
-
-            <div className="qbank-source-modal__summary">
+    {/* Gird Content Pane */ }
+    < div className = "qbank-grid-container" >
+      { activeSubTab === "academic" && (
+        <div className="qbank-grid qbank-grid--academic">
+          {filteredAcademicSubjects.length > 0 ? (
+            filteredAcademicSubjects.map((sub) => (
               <div
-                className={`qbank-source-modal__badge ${activeSourceModal.source.sourceType === "college"
-                    ? "qbank-source-modal__badge--college"
-                    : activeSourceModal.source.sourceType === "admission"
-                      ? "qbank-source-modal__badge--admission"
-                      : ""
-                  }`}
+                key={sub.id}
+                className={`qbank-card qbank-card--academic ${sub.type}`}
+                onClick={() => handleSubjectClick(sub)}
               >
-                {activeSourceModal.source.sourceType === "board" ? (
-                  <HiOfficeBuilding size={20} />
-                ) : activeSourceModal.source.sourceType === "admission" ? (
-                  <HiAcademicCap size={20} />
-                ) : (
-                  <HiAcademicCap size={20} />
-                )}
-                <span>
-                  {activeSourceModal.source.sourceType === "board"
-                    ? language === "en"
-                      ? "Board Question"
-                      : "বোর্ড প্রশ্ন"
-                    : activeSourceModal.source.sourceType === "admission"
+                <div className="qbank-card__glow"></div>
+                <div className="qbank-card__visual">
+                  {sub.isCustomSvg ? (
+                    sub.svg
+                  ) : (
+                    <span className="qbank-card__letter">
+                      {sub.letter}
+                    </span>
+                  )}
+                </div>
+                <div className="qbank-card__info">
+                  <h4 className="qbank-card__subject">
+                    {language === "en" ? sub.titleEn : sub.titleBn}
+                  </h4>
+                  <span className="qbank-card__sub-label">
+                    {sub.id.includes("1")
                       ? language === "en"
-                        ? "Admission Question"
-                        : "ভর্তি পরীক্ষা"
-                      : language === "en"
-                        ? "College Question"
-                        : "কলেজ প্রশ্ন"}
-                </span>
+                        ? "1st paper"
+                        : "১ম পত্র"
+                      : ""}
+                    {sub.id.includes("2")
+                      ? language === "en"
+                        ? "2nd paper"
+                        : "২য় পত্র"
+                      : ""}
+                    {sub.id === "ict"
+                      ? language === "en"
+                        ? "HSC Core"
+                        : "এইচএসসি আবশ্যিক"
+                      : ""}
+                  </span>
+                </div>
               </div>
-              <h2 className="qbank-source-modal__title">
-                {activeSourceModal.source.sourceType === "admission"
-                  ? activeSourceModal.source.university
-                  : activeSourceModal.source.board ||
-                  activeSourceModal.source.college}
-                {activeSourceModal.source.year
-                  ? ` ${activeSourceModal.source.year}`
-                  : ""}
-                {activeSourceModal.source.shift
-                  ? ` — ${activeSourceModal.source.shift}`
-                  : ""}
-              </h2>
-              <div className="qbank-source-modal__chips">
-                <span className="qbank-source-modal__chip">
-                  <HiClock size={14} />
-                  {activeSourceModal.source.sourceType === "admission"
-                    ? language === "en"
-                      ? "1 Hour"
-                      : "১ ঘন্টা"
-                    : t("qbank.sources.time")}
-                </span>
-                <span className="qbank-source-modal__chip">
-                  <HiQuestionMarkCircle size={14} />
-                  {activeSourceModal.source.sourceType === "admission"
-                    ? language === "en"
-                      ? `${activeSourceModal.source.count} Questions`
-                      : `${activeSourceModal.source.count}টি প্রশ্ন`
-                    : t("qbank.sources.questions_count", {
-                      count: activeSourceModal.source.count,
-                    })}
-                </span>
-              </div>
+            ))
+          ) : (
+            <div className="qbank-empty">
+              <p>
+                {language === "en"
+                  ? "No subjects found matching your search."
+                  : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিষয় পাওয়া যায়নি।"}
+              </p>
             </div>
+          )}
+        </div>
+      )
+}
 
-            <div className="qbank-source-modal__actions">
-              <button
-                type="button"
-                className="qbank-source-modal__btn qbank-source-modal__btn--primary"
-                onClick={
-                  activeSourceModal.source.sourceType === "admission"
-                    ? handleStartAdmissionExam
-                    : handleStartExam
+{
+  activeSubTab === "admission" && (
+    <div className="qbank-admission-wrapper">
+      {/* Admission Segment Controls (Pills/Tabs) */}
+      <div className="qbank-admission-segments">
+        <button
+          type="button"
+          className={`qbank-segment-btn ${activeAdmissionSegment === "university" ? "qbank-segment-btn--active" : ""}`}
+          onClick={() => setActiveAdmissionSegment("university")}
+        >
+          <HiOfficeBuilding size={16} />
+          <span>
+            {language === "en" ? "University" : "বিশ্ববিদ্যালয়"}
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`qbank-segment-btn ${activeAdmissionSegment === "engineering" ? "qbank-segment-btn--active" : ""}`}
+          onClick={() => setActiveAdmissionSegment("engineering")}
+        >
+          <HiAcademicCap size={16} />
+          <span>
+            {language === "en" ? "Engineering" : "ইঞ্জিনিয়ারিং"}
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`qbank-segment-btn ${activeAdmissionSegment === "medical" ? "qbank-segment-btn--active" : ""}`}
+          onClick={() => setActiveAdmissionSegment("medical")}
+        >
+          <HiHeart size={16} />
+          <span>{language === "en" ? "Medical" : "মেডিকেল"}</span>
+        </button>
+      </div>
+
+      <div className="qbank-admission-container">
+        {/* Engineering Section */}
+        {activeAdmissionSegment === "engineering" && (
+          <div className="qbank-admission-group">
+            <h3 className="qbank-admission-group-title">
+              <HiAcademicCap
+                size={22}
+                className="qbank-group-icon"
+              />
+              <span>
+                {language === "en"
+                  ? "Engineering Universities"
+                  : "ইঞ্জিনিয়ারিং বিশ্ববিদ্যালয়"}
+              </span>
+              <span className="qbank-group-badge">
+                {
+                  filteredAdmissionVarsities.filter(
+                    (v) => v.category === "engineering",
+                  ).length
                 }
-              >
-                <HiPlay size={16} />
-                <span>{t("qbank.source_action.start_exam")}</span>
-              </button>
-              <button
-                type="button"
-                className="qbank-source-modal__btn qbank-source-modal__btn--secondary"
-                onClick={
-                  activeSourceModal.source.sourceType === "admission"
-                    ? handleShowAdmissionQuestions
-                    : handleShowQuestions
+              </span>
+            </h3>
+            {filteredAdmissionVarsities.filter(
+              (v) => v.category === "engineering",
+            ).length > 0 ? (
+              <div className="qbank-grid qbank-grid--admission">
+                {filteredAdmissionVarsities
+                  .filter((v) => v.category === "engineering")
+                  .map((v) => (
+                    <div
+                      key={v.id}
+                      className={`qbank-card qbank-card--admission qbank-card--${v.id}`}
+                      style={{ "--card-brand": v.color }}
+                      onClick={() => handleVarsityCardClick(v)}
+                    >
+                      <div className="qbank-card__glow"></div>
+                      <div className="qbank-card__visual">
+                        <span className="qbank-card__letter">
+                          {v.name.slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className="qbank-card__info">
+                        <h4 className="qbank-card__subject">
+                          {v.name}
+                        </h4>
+                        <span className="qbank-card__sub-label">
+                          {language === "en"
+                            ? "Question Bank"
+                            : "প্রশ্নব্যাংক"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="qbank-empty">
+                <p>
+                  {language === "en"
+                    ? "No universities found matching your search."
+                    : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিশ্ববিদ্যালয় পাওয়া যায়নি।"}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Medical Section */}
+        {activeAdmissionSegment === "medical" && (
+          <div className="qbank-admission-group">
+            <h3 className="qbank-admission-group-title">
+              <HiHeart size={22} className="qbank-group-icon" />
+              <span>
+                {language === "en"
+                  ? "Medical & Dental"
+                  : "মেডিকেল ও ডেন্টাল"}
+              </span>
+              <span className="qbank-group-badge">
+                {
+                  filteredAdmissionVarsities.filter(
+                    (v) => v.category === "medical",
+                  ).length
                 }
-              >
-                <HiEye size={16} />
-                <span>{t("qbank.source_action.show_questions")}</span>
-              </button>
-            </div>
+              </span>
+            </h3>
+            {filteredAdmissionVarsities.filter(
+              (v) => v.category === "medical",
+            ).length > 0 ? (
+              <div className="qbank-grid qbank-grid--admission">
+                {filteredAdmissionVarsities
+                  .filter((v) => v.category === "medical")
+                  .map((v) => (
+                    <div
+                      key={v.id}
+                      className={`qbank-card qbank-card--admission qbank-card--${v.id}`}
+                      style={{ "--card-brand": v.color }}
+                      onClick={() => handleVarsityCardClick(v)}
+                    >
+                      <div className="qbank-card__glow"></div>
+                      <div className="qbank-card__visual">
+                        <span className="qbank-card__letter">
+                          {v.name.slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className="qbank-card__info">
+                        <h4 className="qbank-card__subject">
+                          {v.name}
+                        </h4>
+                        <span className="qbank-card__sub-label">
+                          {language === "en"
+                            ? "Question Bank"
+                            : "প্রশ্নব্যাংক"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="qbank-empty">
+                <p>
+                  {language === "en"
+                    ? "No universities found matching your search."
+                    : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিশ্ববিদ্যালয় পাওয়া যায়নি।"}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* University Section */}
+        {activeAdmissionSegment === "university" && (
+          <div className="qbank-admission-group">
+            <h3 className="qbank-admission-group-title">
+              <HiOfficeBuilding
+                size={22}
+                className="qbank-group-icon"
+              />
+              <span>
+                {language === "en"
+                  ? "General Universities"
+                  : "সাধারণ বিশ্ববিদ্যালয়"}
+              </span>
+              <span className="qbank-group-badge">
+                {
+                  filteredAdmissionVarsities.filter(
+                    (v) => v.category === "university",
+                  ).length
+                }
+              </span>
+            </h3>
+            {filteredAdmissionVarsities.filter(
+              (v) => v.category === "university",
+            ).length > 0 ? (
+              <div className="qbank-grid qbank-grid--admission">
+                {filteredAdmissionVarsities
+                  .filter((v) => v.category === "university")
+                  .map((v) => (
+                    <div
+                      key={v.id}
+                      className={`qbank-card qbank-card--admission qbank-card--${v.id}`}
+                      style={{ "--card-brand": v.color }}
+                      onClick={() => handleVarsityCardClick(v)}
+                    >
+                      <div className="qbank-card__glow"></div>
+                      <div className="qbank-card__visual">
+                        <span className="qbank-card__letter">
+                          {v.name.slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className="qbank-card__info">
+                        <h4 className="qbank-card__subject">
+                          {v.name}
+                        </h4>
+                        <span className="qbank-card__sub-label">
+                          {language === "en"
+                            ? "Question Bank"
+                            : "প্রশ্নব্যাংক"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="qbank-empty">
+                <p>
+                  {language === "en"
+                    ? "No universities found matching your search."
+                    : "আপনার অনুসন্ধানের সাথে মেলে এমন কোনো বিশ্ববিদ্যালয় পাওয়া যায়নি।"}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+              </div >
+            </div >
+          </Fragment >
+        )}
+      </main >
+
+  { activeOptionModal && (
+    <div
+      className="qbank-modal-overlay"
+      onClick={() => setActiveOptionModal(null)}
+    >
+      <div
+        className="qbank-modal-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="qbank-modal-close"
+          onClick={() => setActiveOptionModal(null)}
+          aria-label="Close"
+        >
+          <HiX size={20} />
+        </button>
+        <div
+          className="qbank-modal-icon-wrapper"
+          style={{ background: activeOptionModal.gradient }}
+        >
+          {activeOptionModal.icon}
+        </div>
+        <h2>
+          {language === "en"
+            ? activeOptionModal.titleEn
+            : activeOptionModal.titleBn}
+        </h2>
+        <p className="qbank-modal-subject">
+          {language === "en"
+            ? selectedSubject.titleEn
+            : selectedSubject.titleBn}
+        </p>
+        <p className="qbank-modal-desc">
+          {language === "en"
+            ? "Practice questions and full-length board/admission question banks for this stream are currently being prepared. You will be able to solve them directly here very soon!"
+            : "এই বিষয়ের অধ্যায়ভিত্তিক অনুশীলনী এবং বিগত বছরের বোর্ড/ভর্তি পরীক্ষার প্রশ্নব্যাংক প্রস্তুত করা হচ্ছে। শীঘ্রই আপনি সরাসরি এখানে অনুশীলন করতে পারবেন!"}
+        </p>
+        <button
+          type="button"
+          className="qbank-modal-cta"
+          onClick={() => {
+            setActiveOptionModal(null);
+            navigate("/mock-test");
+          }}
+        >
+          {language === "en"
+            ? "Try Mock Tests in the Meantime"
+            : "ইতিমধ্যে মক টেস্ট দিন"}
+        </button>
+      </div>
+    </div>
+  )}
+
+{
+  activeSourceModal && (
+    <div className="qbank-modal-overlay" onClick={closeSourceModal}>
+      <div
+        className="qbank-source-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="qbank-modal-close"
+          onClick={closeSourceModal}
+          aria-label="Close"
+        >
+          <HiX size={20} />
+        </button>
+
+        <div className="qbank-source-modal__summary">
+          <div
+            className={`qbank-source-modal__badge ${activeSourceModal.source.sourceType === "college"
+              ? "qbank-source-modal__badge--college"
+              : activeSourceModal.source.sourceType === "admission"
+                ? "qbank-source-modal__badge--admission"
+                : ""
+              }`}
+          >
+            {activeSourceModal.source.sourceType === "board" ? (
+              <HiOfficeBuilding size={20} />
+            ) : activeSourceModal.source.sourceType === "admission" ? (
+              <HiAcademicCap size={20} />
+            ) : (
+              <HiAcademicCap size={20} />
+            )}
+            <span>
+              {activeSourceModal.source.sourceType === "board"
+                ? language === "en"
+                  ? "Board Question"
+                  : "বোর্ড প্রশ্ন"
+                : activeSourceModal.source.sourceType === "admission"
+                  ? language === "en"
+                    ? "Admission Question"
+                    : "ভর্তি পরীক্ষা"
+                  : language === "en"
+                    ? "College Question"
+                    : "কলেজ প্রশ্ন"}
+            </span>
+          </div>
+          <h2 className="qbank-source-modal__title">
+            {activeSourceModal.source.sourceType === "admission"
+              ? activeSourceModal.source.university
+              : activeSourceModal.source.board ||
+              activeSourceModal.source.college}
+            {activeSourceModal.source.year
+              ? ` ${activeSourceModal.source.year}`
+              : ""}
+            {activeSourceModal.source.shift
+              ? ` — ${activeSourceModal.source.shift}`
+              : ""}
+          </h2>
+          <div className="qbank-source-modal__chips">
+            <span className="qbank-source-modal__chip">
+              <HiClock size={14} />
+              {activeSourceModal.source.sourceType === "admission"
+                ? language === "en"
+                  ? "1 Hour"
+                  : "১ ঘন্টা"
+                : t("qbank.sources.time")}
+            </span>
+            <span className="qbank-source-modal__chip">
+              <HiQuestionMarkCircle size={14} />
+              {activeSourceModal.source.sourceType === "admission"
+                ? language === "en"
+                  ? `${activeSourceModal.source.count} Questions`
+                  : `${activeSourceModal.source.count}টি প্রশ্ন`
+                : t("qbank.sources.questions_count", {
+                  count: activeSourceModal.source.count,
+                })}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="qbank-source-modal__actions">
+          <button
+            type="button"
+            className="qbank-source-modal__btn qbank-source-modal__btn--primary"
+            onClick={
+              activeSourceModal.source.sourceType === "admission"
+                ? handleStartAdmissionExam
+                : handleStartExam
+            }
+          >
+            <HiPlay size={16} />
+            <span>{t("qbank.source_action.start_exam")}</span>
+          </button>
+          <button
+            type="button"
+            className="qbank-source-modal__btn qbank-source-modal__btn--secondary"
+            onClick={
+              activeSourceModal.source.sourceType === "admission"
+                ? handleShowAdmissionQuestions
+                : handleShowQuestions
+            }
+          >
+            <HiEye size={16} />
+            <span>{t("qbank.source_action.show_questions")}</span>
+          </button>
+        </div>
+      </div>
     </div>
+  )
+}
+    </div >
   );
 }

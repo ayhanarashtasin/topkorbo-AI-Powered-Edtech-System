@@ -735,7 +735,9 @@ export default function MockTest() {
               <HiFire size={20} className="mock-streak-icon" />
               <span className="mock-streak-count">{user.streak}</span>
             </div>
-            <span className="dashboard-header__badge">{t('db.workspace')}</span>
+            <span className="dashboard-header__badge">
+              {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
+            </span>
           </div>
         </header>
 

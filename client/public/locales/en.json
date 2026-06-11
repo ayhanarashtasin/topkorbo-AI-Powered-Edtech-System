@@ -141,6 +141,7 @@
   "db.welcome": "Welcome Back, {name}! 👋",
   "db.welcome.sub": "Here is what's happening in your academy arena today.",
   "db.workspace": "Student Workspace",
+  "db.workspace.teacher": "Teacher Workspace",
   "db.blank.title": "Blank Page",
   "db.blank.desc": "Welcome to your TopKorbo Workspace! Your student account is fully verified. We are preparing your personalized study plan, daily battle quizzes, and Elo progress tracking widgets.",
   "db.blank.cta": "Go to Practice Arena",
