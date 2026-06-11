@@ -1,36 +1,36 @@
-# TopKorbo 🚀
+# TopKorbo
 **The Elite Academic Testing & Contest Platform for Bangladeshi Students**
 
 TopKorbo is a comprehensive, interactive academic testing and learning management web application built for the **CUET SciBlitz AI Hackathon**. It features a robust multi-subject Question Bank, a full-featured Mock Test environment, and a dedicated Teacher Studio for uploading educational content and organizing Codeforces-style academic contests.
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-### 1. 📖 Interactive Question Bank (QBank)
+### 1. Interactive Question Bank (QBank)
 * **Smart Filtering:** Filter questions by Subject, Paper, Chapter, and Topic.
 * **Dual Track:** Supports both **Board Exam** questions and **Top College** questions.
 * **Multi-Format:** Fully supports Creative Questions (CQ), Multiple Choice Questions (MCQ), and Written Descriptive questions.
 * **LaTeX Support:** Beautiful math equations and formulas rendered using KaTeX.
 
-### 2. 📝 Real-Time Mock Tests
+### 2. Real-Time Mock Tests
 * **Exam Environment:** Interactive test interface equipped with active countdown timers.
 * **Instant Evaluation:** Grading results page complete with a performance mascot and celebratory confetti.
 * **Interactive Solutions:** Review detailed answers and explanations for every question after submission.
 
-### 3. 🎓 Teacher Studio (Teacher Portal)
+### 3. Teacher Studio (Teacher Portal)
 * **Become a Teacher:** Application system for user verification.
 * **Interactive Question Uploader:** Create new questions with custom options, LaTeX math support, board/college tags, and detailed solution explanations.
 * **Contest Creator:** Step-by-step creation flow for setting up customized student contests (Codeforces-style).
 
-### 4. 🌐 Localization & Customization
+### 4. Localization & Customization
 * **Bilingual UI:** Easily toggle between **Bengali (বাংলা)** and **English** with full translation files.
 * **User Accounts:** Secure registration, profile management, and customization settings.
 * **Responsiveness:** A fluid, modern UI powered by Framer Motion animations.
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### **Frontend (client)**
 * **Core:** React 19, Vite (Fast HMR)
@@ -48,7 +48,7 @@ TopKorbo is a comprehensive, interactive academic testing and learning managemen
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 CUET-SciBlitz-AI-Hackathon/
@@ -74,7 +74,7 @@ CUET-SciBlitz-AI-Hackathon/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 Follow these steps to run the application locally.
 
@@ -125,6 +125,6 @@ Follow these steps to run the application locally.
 
 ---
 
-## 👥 Contributors
+## Contributors
 * **Arpita Sarkar** ([@arpii26](https://github.com/arpii26))
 * **Ayhan Arashtasin** ([@ayhanarashtasin](https://github.com/ayhanarashtasin))
