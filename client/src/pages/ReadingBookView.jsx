@@ -554,6 +554,11 @@ export default function ReadingBookView() {
     setPageNumber((p) => Math.min(numPages || p, p + 1));
   }, [flushPenAutosave, numPages]);
 
+  const handlePageChange = useCallback((newPage) => {
+    flushPenAutosave();
+    setPageNumber(newPage);
+  }, [flushPenAutosave]);
+
   const handleZoomIn = () => setScale((s) => Math.min(MAX_SCALE, +(s + 0.15).toFixed(2)));
   const handleZoomOut = () => setScale((s) => Math.max(MIN_SCALE, +(s - 0.15).toFixed(2)));
 
@@ -786,6 +791,7 @@ export default function ReadingBookView() {
             pageCount={numPages}
             onPrevPage={handlePrevPage}
             onNextPage={handleNextPage}
+            onPageChange={handlePageChange}
           />
 
           <div className="rb-reader__viewport">

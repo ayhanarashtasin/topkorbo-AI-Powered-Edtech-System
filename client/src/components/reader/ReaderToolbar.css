@@ -78,7 +78,6 @@
   font-size: 12px;
 }
 
-.rb-toolbar__pages,
 .rb-toolbar__zoom-val {
   font-size: 12px;
   color: var(--text-primary, #251817);
@@ -87,6 +86,40 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+}
+
+.rb-toolbar__pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-primary, #251817);
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.rb-toolbar__page-input {
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #D2BCA6;
+  border-radius: 4px;
+  background: #FFFFFF;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #251817);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rb-toolbar__page-input:focus {
+  border-color: #8C5A3C;
+  box-shadow: 0 0 0 2px rgba(140, 90, 60, 0.15);
+}
+
+.rb-toolbar__page-count {
+  white-space: nowrap;
 }
 
 .rb-toolbar__divider {

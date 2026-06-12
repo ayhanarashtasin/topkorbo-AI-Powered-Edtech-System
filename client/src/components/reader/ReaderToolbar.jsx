@@ -65,12 +65,45 @@ export default function ReaderToolbar({
   onEraserTypeChange,
   eraserWidth = 16,
   onEraserWidthChange,
-  onClearPage
+  onClearPage,
+  onPageChange
 }) {
   const { t } = useLanguage();
   const [openPopover, setOpenPopover] = useState(null); // 'eraserType' | 'eraserSettings' | null
   const eraserTypeRef = useRef(null);
   const eraserSettingsRef = useRef(null);
+  const [pageInputVal, setPageInputVal] = useState(String(pageNumber));
+
+  useEffect(() => {
+    setPageInputVal(String(pageNumber));
+  }, [pageNumber]);
+
+  const triggerPageChange = (val) => {
+    const parsed = parseInt(val, 10);
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= (pageCount || 1)) {
+      onPageChange?.(parsed);
+    } else {
+      setPageInputVal(String(pageNumber));
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    setPageInputVal(e.target.value);
+  };
+
+  const handlePageInputBlur = () => {
+    triggerPageChange(pageInputVal);
+  };
+
+  const handlePageInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      triggerPageChange(pageInputVal);
+      e.target.blur();
+    } else if (e.key === 'Escape') {
+      setPageInputVal(String(pageNumber));
+      e.target.blur();
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -338,7 +371,16 @@ export default function ReaderToolbar({
           <HiOutlineChevronLeft size={16} />
         </button>
         <span className="rb-toolbar__pages">
-          {pageNumber} / {pageCount || 1}
+          <input
+            type="text"
+            className="rb-toolbar__page-input"
+            value={pageInputVal}
+            onChange={handlePageInputChange}
+            onBlur={handlePageInputBlur}
+            onKeyDown={handlePageInputKeyDown}
+            aria-label="Go to page"
+          />
+          <span className="rb-toolbar__page-count">/ {pageCount || 1}</span>
         </span>
         <button
           type="button"
