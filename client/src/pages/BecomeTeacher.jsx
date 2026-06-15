@@ -95,7 +95,7 @@ export default function BecomeTeacher() {
   const [teacherAppMsg, setTeacherAppMsg] = useState({ type: '', text: '' });
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // Sync profile details and verify session validity
+  // Sync profile details, verify session validity, and fetch teacher application in one call
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) {
@@ -134,57 +134,34 @@ export default function BecomeTeacher() {
           localStorage.setItem('topkorbo_avatar', resData.data.avatar || '');
           localStorage.setItem('topkorbo_email', resData.data.email);
           localStorage.setItem('topkorbo_role', resData.data.role);
+
+          // Teacher application data is now included in the /auth/me response
+          if (resData.teacherApplication) {
+            const app = resData.teacherApplication;
+            setTeacherApp({
+              checkScript: app.checkScript || false,
+              checkScriptDetails: app.checkScriptDetails || '',
+              createQuestionBank: app.createQuestionBank || false,
+              createQuestionBankSubjects: app.createQuestionBankSubjects || [],
+              manageContest: app.manageContest || false,
+              manageContestDetails: app.manageContestDetails || '',
+              aboutYou: app.aboutYou || ''
+            });
+            setTeacherAppStatus(app.status);
+          } else {
+            setTeacherAppStatus(null);
+          }
         }
       } catch (err) {
         console.error('Error fetching user data on teacher page:', err);
       } finally {
         setProfileLoading(false);
+        setTeacherAppFetchLoading(false);
       }
     };
 
     fetchUserData();
   }, []);
-
-  // Fetch the current teacher application details
-  useEffect(() => {
-    if (profileLoading) return;
-
-    const token = localStorage.getItem('topkorbo_token');
-    const fetchTeacherApplication = async () => {
-      setTeacherAppFetchLoading(true);
-      try {
-        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const response = await fetch(`${backendBaseUrl}/auth/teacher-application`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const resData = await response.json();
-        if (resData.success && resData.exists && resData.data) {
-          setTeacherApp({
-            checkScript: resData.data.checkScript || false,
-            checkScriptDetails: resData.data.checkScriptDetails || '',
-            createQuestionBank: resData.data.createQuestionBank || false,
-            createQuestionBankSubjects: resData.data.createQuestionBankSubjects || [],
-            manageContest: resData.data.manageContest || false,
-            manageContestDetails: resData.data.manageContestDetails || '',
-            aboutYou: resData.data.aboutYou || ''
-          });
-          setTeacherAppStatus(resData.data.status);
-        } else {
-          setTeacherAppStatus(null);
-        }
-      } catch (err) {
-        console.error('Error fetching teacher application:', err);
-      } finally {
-        setTeacherAppFetchLoading(false);
-      }
-    };
-
-    if (user.role === 'tutor' || user.role === 'teacher') {
-      fetchTeacherApplication();
-    } else {
-      setTeacherAppFetchLoading(false);
-    }
-  }, [profileLoading, user.role]);
 
   const handleSubjectCheckbox = (subj) => {
     setTeacherApp(prev => {

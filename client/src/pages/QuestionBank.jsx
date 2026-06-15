@@ -817,12 +817,7 @@ export default function QuestionBank() {
   // the MCQ/CQ chooser, then choose a format to drill into the source
   // list (board + college). No other streams are supported from this page.
   const selectedSourceContext = useMemo(() => {
-    if (
-      !formatParam ||
-      !["mcq", "cq"].includes(formatParam) ||
-      !selectedSubject
-    )
-      return null;
+    if (!selectedSubject) return null;
     const subjectKeyMap = {
       physics_1: "Physics",
       physics_2: "Physics",
@@ -838,9 +833,8 @@ export default function QuestionBank() {
     return {
       subject: subjectKeyMap[selectedSubject.id],
       paper: paperMap[paperSuffix],
-      questionType: formatParam,
     };
-  }, [formatParam, selectedSubject]);
+  }, [selectedSubject]);
 
   // When the user navigates to the source-list screen (subject + paper + questionType),
   // fetch the available boards/colleges for that combination.
@@ -858,7 +852,6 @@ export default function QuestionBank() {
         const params = new URLSearchParams({
           subject: selectedSourceContext.subject,
           paper: selectedSourceContext.paper,
-          type: selectedSourceContext.questionType,
         });
         const response = await fetch(
           `${backendBaseUrl}/questions/sources?${params.toString()}`,
@@ -896,15 +889,14 @@ export default function QuestionBank() {
     }
   }, [varsityIdFromUrl]);
 
-  // Fetch admission cards when selectedVarsity, view, or type changes
+  // Fetch admission cards when selectedVarsity or view changes
   useEffect(() => {
     if (selectedVarsity && varsityView === "cards") {
       fetchAdmissionCards(
         selectedVarsity.id.toUpperCase(),
-        varsityQuestionType,
       );
     }
-  }, [selectedVarsity, varsityView, varsityQuestionType]);
+  }, [selectedVarsity, varsityView]);
 
   const handleSubjectClick = (subject) => {
     const targetPapers = [
@@ -933,10 +925,11 @@ export default function QuestionBank() {
   const handleStartExam = async () => {
     if (!selectedSourceContext || !activeSourceModal) return;
     const { source } = activeSourceModal;
-    const { subject, paper, questionType } = selectedSourceContext;
+    const { subject, paper } = selectedSourceContext;
     const sourceType = source.sourceType; // 'board' | 'college'
     const name = sourceType === "board" ? source.board : source.college;
     const year = source.year;
+    const qType = source.type || source.questionType;
 
     try {
       setSourcesLoading(true);
@@ -948,7 +941,7 @@ export default function QuestionBank() {
         paper,
         sourceType,
         name,
-        type: questionType,
+        type: qType,
       });
       if (year) params.append("year", year);
 
@@ -980,9 +973,9 @@ export default function QuestionBank() {
         sessionStorage.setItem(
           "mock_exam_config",
           JSON.stringify({
-            duration: 25, // default board duration is 25 minutes
+            duration: qType === "mcq" ? 25 : 150, // default board MCQ is 25 minutes, CQ is 150 mins
             negativeMarking: false,
-            questionType,
+            questionType: qType,
             standard: "academic",
             totalQuestions: fetchedQuestions.length,
             sourceLabel,
@@ -1033,6 +1026,7 @@ export default function QuestionBank() {
 
     const sourceType = source.sourceType; // 'board' | 'college'
     const name = sourceType === "board" ? source.board : source.college;
+    const qType = source.type || source.questionType;
 
     closeSourceModal();
     navigate("/qbank/source-questions", {
@@ -1042,7 +1036,7 @@ export default function QuestionBank() {
         year: source.year,
         subject: selectedSourceContext.subject,
         paper: selectedSourceContext.paper,
-        questionType: selectedSourceContext.questionType,
+        questionType: qType,
       },
     });
   };
@@ -1053,11 +1047,7 @@ export default function QuestionBank() {
 
   const handleVarsityCardClick = (varsity) => {
     const uniId = varsity.id.toUpperCase();
-    if (MCQ_WRITTEN_UNIVERSITIES.includes(uniId)) {
-      setSearchParams({ university: uniId, view: "chooser" });
-    } else {
-      setSearchParams({ university: uniId, view: "cards", type: "mcq" });
-    }
+    setSearchParams({ university: uniId, view: "cards" });
   };
 
   const fetchAdmissionCards = async (university, type) => {
@@ -1198,7 +1188,7 @@ export default function QuestionBank() {
         sessionStorage.setItem(
           "mock_exam_config",
           JSON.stringify({
-            duration: 60,
+            duration: source.questionType === "written" ? 120 : 60,
             negativeMarking: true,
             questionType: source.questionType || "mcq",
             standard: "admission",
@@ -1301,27 +1291,13 @@ export default function QuestionBank() {
               <button
                 type="button"
                 className="qbank-back-btn"
-                onClick={() => {
-                  if (varsityView === "cards" && isMcqWritten) {
-                    setVarsityCards([]);
-                    setSearchParams({
-                      university: selectedVarsity.id.toUpperCase(),
-                      view: "chooser",
-                    });
-                  } else {
-                    clearVarsitySelection();
-                  }
-                }}
+                onClick={clearVarsitySelection}
               >
                 <HiArrowLeft size={16} />
                 <span>
-                  {varsityView === "cards" && isMcqWritten
-                    ? language === "en"
-                      ? "Back to Question Format"
-                      : "প্রশ্নের ধরনে ফিরে যান"
-                    : language === "en"
-                      ? "Back to Admission"
-                      : "ভর্তি পরীক্ষায় ফিরে যান"}
+                  {language === "en"
+                    ? "Back to Admission"
+                    : "ভর্তি পরীক্ষায় ফিরে যান"}
                 </span>
               </button>
               <div className="qbank-options-header-info">
@@ -1329,9 +1305,6 @@ export default function QuestionBank() {
                   {language === "en"
                     ? selectedVarsity.name
                     : selectedVarsity.bnName}
-                  {varsityView === "cards"
-                    ? ` · ${varsityQuestionType.toUpperCase()} ${language === "en" ? "Questions" : "প্রশ্ন"}`
-                    : ""}
                 </h2>
                 <p>
                   {language === "en"
@@ -1447,8 +1420,8 @@ export default function QuestionBank() {
                           >
                             <div className="qbank-source-card__glow"></div>
                             <h4 className="qbank-source-card__title">
-                              {card.university}
-                              {card.year ? ` ${card.year}` : ""}
+                              {card.year ? `${card.year} ` : ""}
+                              {card.type === "mcq" ? "MCQ" : card.type === "written" ? "Written" : card.type.toUpperCase()}
                             </h4>
                             {card.shift && (
                               <span className="qbank-source-card__shift-badge">
@@ -1458,7 +1431,9 @@ export default function QuestionBank() {
                             <div className="qbank-source-card__meta">
                               <span className="qbank-source-card__meta-item">
                                 <HiClock size={14} />
-                                {language === "en" ? "1 Hour" : "১ ঘন্টা"}
+                                {card.type === "written"
+                                  ? (language === "en" ? "2 Hours" : "২ ঘন্টা")
+                                  : (language === "en" ? "1 Hour" : "১ ঘন্টা")}
                               </span>
                               <span className="qbank-source-card__meta-item">
                                 <HiQuestionMarkCircle size={14} />
@@ -1506,20 +1481,20 @@ export default function QuestionBank() {
               <button
                 type="button"
                 className="qbank-back-btn"
-                onClick={() => setSearchParams({ subject: subjectParam })}
+                onClick={() => setSearchParams({})}
               >
                 <HiArrowLeft size={16} />
                 <span>
                   {language === "en"
-                    ? "Back to Question Format"
-                    : "প্রশ্নের ধরনে ফিরে যান"}
+                    ? "Back to Question Bank"
+                    : "প্রশ্নব্যাংকে ফিরে যান"}
                 </span>
               </button>
               <div className="qbank-options-header-info">
                 <h2>
                   {language === "en"
-                    ? `${selectedSubject?.titleEn || ""} · ${formatParam === "cq" ? "CQ Practice" : "MCQ Practice"}`
-                    : `${selectedSubject?.titleBn || ""} · ${formatParam === "cq" ? "CQ অনুশীলন" : "MCQ অনুশীলন"}`}
+                    ? selectedSubject?.titleEn
+                    : selectedSubject?.titleBn}
                 </h2>
                 <p>{t("qbank.sources.subtitle")}</p>
               </div>
@@ -1555,11 +1530,15 @@ export default function QuestionBank() {
                             <h4 className="qbank-source-card__title">
                               {src.board}
                               {src.year ? ` ${src.year}` : ""}
+                              {` `}
+                              {src.type === "mcq" ? "MCQ" : src.type === "cq" ? "CQ" : src.type?.toUpperCase()}
                             </h4>
                             <div className="qbank-source-card__meta">
                               <span className="qbank-source-card__meta-item">
                                 <HiClock size={14} />
-                                {t("qbank.sources.time")}
+                                {src.type === "mcq"
+                                  ? (language === "en" ? "25 Mins" : "২৫ মিনিট")
+                                  : (language === "en" ? "2.5 Hours" : "২.৫ ঘন্টা")}
                               </span>
                               <span className="qbank-source-card__meta-item">
                                 <HiQuestionMarkCircle size={14} />
@@ -1613,11 +1592,15 @@ export default function QuestionBank() {
                             <h4 className="qbank-source-card__title">
                               {src.college}
                               {src.year ? ` ${src.year}` : ""}
+                              {` `}
+                              {src.type === "mcq" ? "MCQ" : src.type === "cq" ? "CQ" : src.type?.toUpperCase()}
                             </h4>
                             <div className="qbank-source-card__meta">
                               <span className="qbank-source-card__meta-item">
                                 <HiClock size={14} />
-                                {t("qbank.sources.time")}
+                                {src.type === "mcq"
+                                  ? (language === "en" ? "25 Mins" : "২৫ মিনিট")
+                                  : (language === "en" ? "2.5 Hours" : "২.৫ ঘন্টা")}
                               </span>
                               <span className="qbank-source-card__meta-item">
                                 <HiQuestionMarkCircle size={14} />
@@ -2247,11 +2230,18 @@ export default function QuestionBank() {
           <div className="qbank-source-modal__chips">
             <span className="qbank-source-modal__chip">
               <HiClock size={14} />
-              {activeSourceModal.source.sourceType === "admission"
-                ? language === "en"
-                  ? "1 Hour"
-                  : "১ ঘন্টা"
-                : t("qbank.sources.time")}
+              {(() => {
+                const qType = activeSourceModal.source.type || activeSourceModal.source.questionType;
+                if (activeSourceModal.source.sourceType === "admission") {
+                  return qType === "written"
+                    ? (language === "en" ? "2 Hours" : "২ ঘন্টা")
+                    : (language === "en" ? "1 Hour" : "১ ঘন্টা");
+                } else {
+                  return qType === "mcq"
+                    ? (language === "en" ? "25 Mins" : "২৫ মিনিট")
+                    : (language === "en" ? "2.5 Hours" : "২.৫ ঘন্টা");
+                }
+              })()}
             </span>
             <span className="qbank-source-modal__chip">
               <HiQuestionMarkCircle size={14} />

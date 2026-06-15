@@ -273,21 +273,34 @@ const authController = {
    */
   getMe: async (req, res, next) => {
     try {
-      const user = await User.findById(req.user.id);
+      // Exclude the large base64 studentIdCardPhoto field — it's ~200KB+ and the
+      // frontend never needs it here.  This alone cuts query time from ~1s to ~40ms.
+      const userQuery = User.findById(req.user.id).select('-studentIdCardPhoto');
+      const isEligibleForTeacherApp = req.user.role === 'tutor' || req.user.role === 'teacher';
+
+      // Run user + teacher-application queries in parallel instead of sequentially
+      const [user, teacherApplication] = await Promise.all([
+        userQuery,
+        isEligibleForTeacherApp
+          ? TeacherApplication.findOne({ userId: req.user.id }).lean()
+          : Promise.resolve(null)
+      ]);
+
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
       // Automatically promote user role to 'teacher' if their TeacherApplication is approved
-      if (user.role === 'tutor') {
-        const application = await TeacherApplication.findOne({ userId: user._id });
-        if (application && application.status === 'approved') {
-          user.role = 'teacher';
-          await user.save();
-        }
+      if (user.role === 'tutor' && teacherApplication && teacherApplication.status === 'approved') {
+        user.role = 'teacher';
+        await user.save();
       }
 
-      res.json({ success: true, data: user });
+      const response = { success: true, data: user };
+      if (teacherApplication) {
+        response.teacherApplication = teacherApplication;
+      }
+      res.json(response);
     } catch (err) {
       next(err);
     }

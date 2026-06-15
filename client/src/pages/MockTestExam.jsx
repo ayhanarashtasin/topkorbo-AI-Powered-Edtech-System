@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../hooks/useLanguage";
 import {
@@ -74,6 +74,24 @@ const autoCollegeAbbr = (name) => {
     .join("");
 };
 
+const formatSessionYear = (year) => {
+  if (!year) return "";
+  const yearStr = String(year).trim();
+  if (yearStr.includes("-")) {
+    const parts = yearStr.split("-");
+    const y1 = parts[0].trim().slice(-2);
+    const y2 = parts[1].trim().slice(-2);
+    return `${y1}-${y2}`;
+  }
+  if (yearStr.includes("/")) {
+    const parts = yearStr.split("/");
+    const y1 = parts[0].trim().slice(-2);
+    const y2 = parts[1].trim().slice(-2);
+    return `${y1}-${y2}`;
+  }
+  return yearStr.slice(-2);
+};
+
 const getTagAbbreviation = (tag) => {
   if (!tag) return "";
   const yearStr = tag.year ? String(tag.year).slice(-2) : "";
@@ -91,7 +109,8 @@ const getTagAbbreviation = (tag) => {
     // admission / university
     const univ = tag.university || "";
     const univAbbr = UNIV_ABBRS[univ] || univ;
-    return yearStr ? `${univAbbr}-${yearStr}` : univAbbr;
+    const sessionYear = formatSessionYear(tag.year);
+    return sessionYear ? `${univAbbr} · ${sessionYear}` : univAbbr;
   }
 };
 
@@ -122,6 +141,10 @@ export default function MockTestExam() {
   const [explanationTab, setExplanationTab] = useState("manual"); // 'manual' | 'ai' | 'video'
   const [filterType, setFilterType] = useState("all"); // 'all' | 'correct' | 'skipped' | 'wrong'
   const [fromQbank, setFromQbank] = useState(false);
+  const [writtenAnswers, setWrittenAnswers] = useState({});
+  const [activeCameraQuestionKey, setActiveCameraQuestionKey] = useState(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
     const storedQuestions = sessionStorage.getItem("mock_exam_questions");
@@ -146,6 +169,14 @@ export default function MockTestExam() {
       if (savedAnswers) {
         try {
           setAnswers(JSON.parse(savedAnswers));
+        } catch (_) { }
+      }
+
+      // ── Restore saved written answers ────────────────────────────────────
+      const savedWrittenAnswers = sessionStorage.getItem("mock_exam_written_answers");
+      if (savedWrittenAnswers) {
+        try {
+          setWrittenAnswers(JSON.parse(savedWrittenAnswers));
         } catch (_) { }
       }
 
@@ -193,6 +224,14 @@ export default function MockTestExam() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
   // ── Persist answers on every change ─────────────────────────────────────
   useEffect(() => {
     if (Object.keys(answers).length > 0) {
@@ -233,6 +272,8 @@ export default function MockTestExam() {
       }
     });
 
+    const writtenUploadedCount = Object.keys(writtenAnswers).length;
+
     return {
       correct,
       wrong,
@@ -240,8 +281,9 @@ export default function MockTestExam() {
       score: Math.max(0, score),
       total: questions.length,
       timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+      writtenUploadedCount,
     };
-  }, [answers, config, questions, timeLeft]);
+  }, [answers, config, questions, timeLeft, writtenAnswers]);
 
   useEffect(() => {
     if (isSubmitted || timeLeft <= 0) return;
@@ -295,6 +337,7 @@ export default function MockTestExam() {
       "mock_exam_submitted",
       "mock_exam_review_mode",
       "mock_exam_time_left",
+      "mock_exam_written_answers",
     ].forEach((key) => sessionStorage.removeItem(key));
     navigate(fromQbank ? "/qbank" : "/mock-test");
   };
@@ -302,6 +345,140 @@ export default function MockTestExam() {
   const handleOptionSelect = (questionId, optionIndex) => {
     if (isSubmitted) return;
     setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
+  };
+
+  const handleWrittenFileChange = (e, questionKey) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+
+        setWrittenAnswers((prev) => {
+          const updated = { ...prev, [questionKey]: dataUrl };
+          sessionStorage.setItem("mock_exam_written_answers", JSON.stringify(updated));
+          return updated;
+        });
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveWrittenFile = (questionKey) => {
+    setWrittenAnswers((prev) => {
+      const updated = { ...prev };
+      delete updated[questionKey];
+      sessionStorage.setItem("mock_exam_written_answers", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const startCamera = async (questionKey) => {
+    setActiveCameraQuestionKey(questionKey);
+    try {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+      } catch (envErr) {
+        console.warn("Could not access environment camera, trying fallback...", envErr);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      }
+      streamRef.current = stream;
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 50);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert(
+        language === "en"
+          ? "Unable to access device camera. Please check permissions."
+          : "ক্যামেরা অ্যাক্সেস করা যাচ্ছে না। দয়া করে পারমিশন চেক করুন।"
+      );
+      setActiveCameraQuestionKey(null);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setActiveCameraQuestionKey(null);
+  };
+
+  const capturePhoto = (questionKey) => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement("canvas");
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 800;
+      let finalWidth = width;
+      let finalHeight = height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          finalHeight *= MAX_WIDTH / width;
+          finalWidth = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          finalWidth *= MAX_HEIGHT / height;
+          finalHeight = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = finalWidth;
+      canvas.height = finalHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, finalWidth, finalHeight);
+      
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+
+      setWrittenAnswers((prev) => {
+        const updated = { ...prev, [questionKey]: dataUrl };
+        sessionStorage.setItem("mock_exam_written_answers", JSON.stringify(updated));
+        return updated;
+      });
+
+      stopCamera();
+    }
   };
 
   const formatTime = (seconds) => {
@@ -419,11 +596,22 @@ export default function MockTestExam() {
                 <strong>★ {formatDisplayNumber(resultStats.score)}</strong>
               </div>
               <div className="exam-report-card exam-report-card--marks">
-                <span>{language === "en" ? "Marks" : "মার্কস"}</span>
-                <strong>
-                  ● {formatDisplayNumber(resultStats.correct)} /{" "}
-                  {formatDisplayNumber(resultStats.total)}
-                </strong>
+                {questions.some(q => q.type === "written") ? (
+                  <>
+                    <span>
+                      {language === "en" ? "Written Uploaded" : "আপলোড করা উত্তর"}
+                    </span>
+                    <strong>📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}</strong>
+                  </>
+                ) : (
+                  <>
+                    <span>{language === "en" ? "Marks" : "মার্কস"}</span>
+                    <strong>
+                      ● {formatDisplayNumber(resultStats.correct)} /{" "}
+                      {formatDisplayNumber(resultStats.total)}
+                    </strong>
+                  </>
+                )}
               </div>
               <div className="exam-report-card exam-report-card--time">
                 <span>{language === "en" ? "Time taken" : "সময় নিয়েছো"}</span>
@@ -631,6 +819,140 @@ export default function MockTestExam() {
                     })}
                   </div>
                 )}
+
+                {q.type === "written" && q.options && q.options.length > 0 && (
+                  <div className="exam-options-grid">
+                    {q.options.map((opt, optIdx) => {
+                      const isSelected = answers[questionKey] === optIdx;
+                      const optionState = getOptionState(
+                        q,
+                        actualIndex,
+                        optIdx,
+                      );
+                      return (
+                        <button
+                          key={optIdx}
+                          className={`exam-option-btn ${isSelected ? "exam-option-btn--selected" : ""} ${optionState ? `exam-option-btn--${optionState}` : ""}`}
+                          onClick={() =>
+                            handleOptionSelect(questionKey, optIdx)
+                          }
+                          type="button"
+                          disabled={isSubmitted}
+                        >
+                          <div
+                            className={`exam-option-prefix ${isSelected ? "exam-option-prefix--selected" : ""} ${optionState ? `exam-option-prefix--${optionState}` : ""}`}
+                          >
+                            {getOptionPrefix(optIdx)}
+                          </div>
+                          <div
+                            className="exam-option-text"
+                            dangerouslySetInnerHTML={renderMath(opt.text)}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {q.type === "written" && (
+                  <div className="exam-written-upload-section">
+                    <p className="exam-written-upload-title">
+                      {language === "en" ? "Upload Written Response:" : "লিখিত উত্তর আপলোড করুন:"}
+                    </p>
+                    
+                    {!isSubmitted && (
+                      <div className="exam-written-upload-controls">
+                        <label className="exam-written-upload-label">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleWrittenFileChange(e, questionKey)}
+                            style={{ display: "none" }}
+                          />
+                          <div className="exam-written-upload-btn">
+                            <svg className="exam-upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px', marginRight: '8px' }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            <span>
+                              {writtenAnswers[questionKey] 
+                                ? (language === "en" ? "Change Image" : "ছবি পরিবর্তন করুন")
+                                : (language === "en" ? "Choose Image" : "ছবি নির্বাচন করুন")}
+                            </span>
+                          </div>
+                        </label>
+
+                        <button
+                          type="button"
+                          className="exam-written-camera-btn"
+                          onClick={() => startCamera(questionKey)}
+                        >
+                          <svg className="exam-camera-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px', marginRight: '8px' }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                          </svg>
+                          <span>
+                            {language === "en" ? "Use Camera" : "ক্যামেরা ব্যবহার করুন"}
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
+                    {writtenAnswers[questionKey] && (
+                      <div className="exam-written-preview-container">
+                        <img
+                          src={writtenAnswers[questionKey]}
+                          alt="Written Answer Preview"
+                          className="exam-written-preview-img"
+                        />
+                        {!isSubmitted && (
+                          <button
+                            type="button"
+                            className="exam-written-remove-btn"
+                            onClick={() => handleRemoveWrittenFile(questionKey)}
+                            title={language === "en" ? "Remove Image" : "ছবি মুছে ফেলুন"}
+                          >
+                            <HiX size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {activeCameraQuestionKey === questionKey && (
+                      <div className="exam-camera-overlay">
+                        <div className="exam-camera-modal">
+                          <h3 className="exam-camera-modal-title">
+                            {language === "en" ? "Take Answer Photo" : "উত্তর ছবি তুলুন"}
+                          </h3>
+                          <div className="exam-camera-video-container">
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="exam-camera-video"
+                            />
+                          </div>
+                          <div className="exam-camera-actions">
+                            <button
+                              type="button"
+                              className="exam-camera-btn exam-camera-btn--capture"
+                              onClick={() => capturePhoto(questionKey)}
+                            >
+                              {language === "en" ? "Capture Photo" : "ছবি তুলুন"}
+                            </button>
+                            <button
+                              type="button"
+                              className="exam-camera-btn exam-camera-btn--cancel"
+                              onClick={stopCamera}
+                            >
+                              {language === "en" ? "Cancel" : "বাতিল"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -704,11 +1026,20 @@ export default function MockTestExam() {
                 <strong>★ {formatDisplayNumber(resultStats.score)}</strong>
               </div>
               <div className="exam-report-card exam-report-card--marks">
-                <span>{language === "en" ? "Marks" : "মার্কস"}</span>
-                <strong>
-                  ● {formatDisplayNumber(resultStats.correct)} /{" "}
-                  {formatDisplayNumber(resultStats.total)}
-                </strong>
+                {questions.some(q => q.type === "written") ? (
+                  <>
+                    <span>{language === "en" ? "Written Answers" : "লিখিত উত্তর"}</span>
+                    <strong>📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}</strong>
+                  </>
+                ) : (
+                  <>
+                    <span>{language === "en" ? "Marks" : "মার্কস"}</span>
+                    <strong>
+                      ● {formatDisplayNumber(resultStats.correct)} /{" "}
+                      {formatDisplayNumber(resultStats.total)}
+                    </strong>
+                  </>
+                )}
               </div>
               <div className="exam-report-card exam-report-card--time">
                 <span>{language === "en" ? "Time" : "সময়"}</span>

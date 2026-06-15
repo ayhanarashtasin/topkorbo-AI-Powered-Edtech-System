@@ -182,14 +182,14 @@ exports.getQuestionSources = async (req, res, next) => {
       baseMatch.type = type;
     }
 
-    // Board sources: group by (board, year)
+    // Board sources: group by (board, year, type)
     const boardSources = await Question.aggregate([
       { $match: { ...baseMatch, 'tags.category': 'board' } },
       { $unwind: '$tags' },
       { $match: { 'tags.category': 'board', 'tags.board': { $exists: true, $ne: '' } } },
       {
         $group: {
-          _id: { board: '$tags.board', year: '$tags.year' },
+          _id: { board: '$tags.board', year: '$tags.year', type: '$type' },
           count: { $sum: 1 }
         }
       },
@@ -199,6 +199,7 @@ exports.getQuestionSources = async (req, res, next) => {
           sourceType: { $literal: 'board' },
           board: '$_id.board',
           year: { $ifNull: ['$_id.year', ''] },
+          type: '$_id.type',
           count: 1,
           label: {
             $concat: [
@@ -211,14 +212,14 @@ exports.getQuestionSources = async (req, res, next) => {
       { $sort: { year: -1, board: 1 } }
     ]);
 
-    // College sources: group by (college, year)
+    // College sources: group by (college, year, type)
     const collegeSources = await Question.aggregate([
       { $match: { ...baseMatch, 'tags.category': 'college' } },
       { $unwind: '$tags' },
       { $match: { 'tags.category': 'college', 'tags.college': { $exists: true, $ne: '' } } },
       {
         $group: {
-          _id: { college: '$tags.college', year: '$tags.year' },
+          _id: { college: '$tags.college', year: '$tags.year', type: '$type' },
           count: { $sum: 1 }
         }
       },
@@ -228,6 +229,7 @@ exports.getQuestionSources = async (req, res, next) => {
           sourceType: { $literal: 'college' },
           college: '$_id.college',
           year: { $ifNull: ['$_id.year', ''] },
+          type: '$_id.type',
           count: 1,
           label: {
             $concat: [

@@ -807,13 +807,12 @@
 /* Explanation Modal and Eye Button Styles */
 
 .exam-question-actions-top {
-    position: absolute;
-    top: 18px;
-    right: 18px;
     display: flex;
     align-items: center;
     gap: 8px;
-    z-index: 10;
+    margin-bottom: 16px;
+    border-bottom: 1px dashed rgba(180, 130, 60, 0.15);
+    padding-bottom: 12px;
 }
 
 .exam-question-tags-wrapper {
@@ -862,6 +861,7 @@
 }
 
 .exam-explanation-btn {
+    margin-left: auto;
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -1127,5 +1127,283 @@
     .exam-explanation-question-preview {
         margin-bottom: 16px;
         padding: 12px;
+    }
+}
+
+/* Written Question Answer Upload Styles */
+.exam-written-upload-section {
+    margin-top: 24px;
+    padding: 20px;
+    background-color: #fffdf9;
+    border: 2px dashed rgba(198, 139, 47, 0.35);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.2s ease;
+}
+
+.exam-written-upload-section:hover {
+    border-color: rgba(198, 139, 47, 0.6);
+}
+
+.exam-written-upload-title {
+    font-family: var(--font-heading), sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #5c3a1e;
+    margin: 0;
+}
+
+.exam-written-upload-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.exam-written-upload-label {
+    cursor: pointer;
+}
+
+.exam-written-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    background: #c68b2f;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-family: var(--font-heading), sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 3px 0 #92611a;
+    transition: all 0.1s ease;
+}
+
+.exam-written-upload-btn:hover {
+    background: #b27b25;
+}
+
+.exam-written-upload-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #92611a;
+}
+
+.exam-written-preview-container {
+    position: relative;
+    margin-top: 12px;
+    display: inline-block;
+    max-width: 100%;
+    align-self: flex-start;
+}
+
+.exam-written-preview-img {
+    max-width: 100%;
+    max-height: 250px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(198, 139, 47, 0.25);
+    box-shadow: 0 4px 16px rgba(120, 80, 20, 0.08);
+}
+
+.exam-written-remove-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fee2e2;
+    border: 1.5px solid #fca5a5;
+    color: #991b1b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.exam-written-remove-btn:hover {
+    background: #fca5a5;
+    color: #7f1d1d;
+    transform: scale(1.1);
+}
+
+/* Camera Capture Option Styles */
+.exam-written-camera-btn {
+    display: inline-flex;
+    align-items: center;
+    background: #007a4b;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-family: var(--font-heading), sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 3px 0 #005a37;
+    transition: all 0.1s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.exam-written-camera-btn:hover {
+    background: #006d44;
+}
+
+.exam-written-camera-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #005a37;
+}
+
+.exam-camera-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: examFadeIn 0.2s ease-out;
+}
+
+.exam-camera-modal {
+    width: min(500px, 92%);
+    background: #fffdf7;
+    border: 3px solid rgba(180, 130, 60, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    animation: examModalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.exam-camera-modal-title {
+    font-family: var(--font-heading), sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1c1208;
+    margin: 0;
+    text-align: center;
+}
+
+.exam-camera-video-container {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid rgba(198, 139, 47, 0.25);
+}
+
+.exam-camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.exam-camera-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.exam-camera-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: var(--font-heading), sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: none;
+}
+
+.exam-camera-btn--capture {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 3px 0 #059669;
+}
+
+.exam-camera-btn--capture:hover {
+    background: #059669;
+}
+
+.exam-camera-btn--capture:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #059669;
+}
+
+.exam-camera-btn--cancel {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1.5px solid #cbd5e1;
+    box-shadow: 0 3px 0 #cbd5e1;
+}
+
+.exam-camera-btn--cancel:hover {
+    background: #e2e8f0;
+}
+
+.exam-camera-btn--cancel:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #cbd5e1;
+}
+
+/* Mobile Responsiveness for Written Answers and Camera Capture */
+@media (max-width: 600px) {
+    .exam-camera-modal {
+        width: min(500px, 96%);
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .exam-camera-video-container {
+        aspect-ratio: 4/3;
+        max-height: 40vh;
+    }
+    
+    .exam-camera-actions {
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .exam-written-upload-section {
+        padding: 14px 12px;
+        gap: 10px;
+    }
+    
+    .exam-written-upload-controls {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .exam-written-upload-label,
+    .exam-written-upload-btn,
+    .exam-written-camera-btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .exam-written-upload-btn,
+    .exam-written-camera-btn {
+        justify-content: center;
+        padding: 12px 18px;
+    }
+    
+    .exam-written-preview-container {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .exam-written-preview-img {
+        max-height: 200px;
     }
 }

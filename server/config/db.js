@@ -18,33 +18,31 @@ const connectDB = async () => {
 
   // Handle post-connection errors (like replica set timeouts) to prevent uncaughtException crashes
   mongoose.connection.on('error', (error) => {
-    console.error(`❌ Mongoose Connection Error: ${error.message}`);
+    console.error(` Mongoose Connection Error: ${error.message}`);
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️ MongoDB disconnected. Will auto-reconnect on next query.');
+    console.warn(' MongoDB disconnected. Will auto-reconnect on next query.');
   });
 
   mongoose.connection.on('reconnected', () => {
-    console.log('✅ MongoDB reconnected');
+    console.log(' MongoDB reconnected');
   });
 
   try {
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
-      maxIdleTimeMS: 60000,
-      // Keep the legacy global buffering behaviour, but with a tight cap
-      // so a transient outage doesn't queue queries for 10s.
       maxPoolSize: 10,
+      minPoolSize: 2,
       heartbeatFrequencyMS: 10000
     });
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`);
+    console.log(` MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`);
   } catch (error) {
-    console.error(`❌ MongoDB Error: ${error.message}`);
+    console.error(`MongoDB Error: ${error.message}`);
     console.error(`   URI: ${redactUri(uri)}`);
     // Don't exit — allow server to run without DB for landing page
-    console.log('⚠️  Server running without database connection');
+    console.log('Server running without database connection');
   }
 };
 
