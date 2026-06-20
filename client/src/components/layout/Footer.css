@@ -1,0 +1,113 @@
+.footer {
+  background: var(--navy);
+  color: var(--text-light);
+  padding: 80px 0 32px;
+}
+
+.footer__grid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, 1fr);
+  gap: 48px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.footer__logo {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.6rem;
+  background: var(--gradient-full);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+
+.footer__tagline {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.footer__heart {
+  color: #f43f5e;
+  font-size: 14px;
+}
+
+.footer__socials {
+  display: flex;
+  gap: 12px;
+}
+
+.footer__social-link {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.5);
+  transition: var(--transition-fast);
+  font-size: 16px;
+}
+
+.footer__social-link:hover {
+  background: var(--sky-blue);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.footer__column-title {
+  color: var(--text-light);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  letter-spacing: 0.02em;
+}
+
+.footer__column-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer__column-link {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.9rem;
+  transition: var(--transition-fast);
+}
+
+.footer__column-link:hover {
+  color: var(--sky-blue);
+  transform: translateX(4px);
+}
+
+.footer__bottom {
+  padding-top: 24px;
+  text-align: center;
+}
+
+.footer__copyright {
+  color: rgba(255,255,255,0.3);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer__grid {
+    grid-template-columns: 1fr;
+  }
+}

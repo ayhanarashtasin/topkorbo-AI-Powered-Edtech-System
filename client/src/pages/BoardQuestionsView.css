@@ -1,0 +1,77 @@
+/* ==========================================================================
+   Board Questions View — custom styled overrides for review/study mode
+   ========================================================================== */
+
+.bqv-subject-title {
+  text-align: center;
+  margin: 0 auto 24px auto;
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.exam-question-meta-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: -6px;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+.exam-meta-action-btn {
+  background: transparent;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: color 0.2s, transform 0.15s ease;
+}
+
+.exam-meta-action-btn:hover {
+  color: #374151;
+  transform: scale(1.1);
+}
+
+.exam-meta-action-btn:active {
+  transform: scale(0.95);
+}
+
+.exam-show-answers-toggle-btn {
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background-color: #10B981;
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 0 #059669;
+  transition: all 0.15s ease;
+}
+
+.exam-show-answers-toggle-btn:hover {
+  background-color: #059669;
+}
+
+.exam-show-answers-toggle-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #059669;
+}
+
+@media (max-width: 700px) {
+  .exam-show-answers-toggle-btn {
+    position: static;
+    margin-top: 12px;
+    display: inline-block;
+  }
+}

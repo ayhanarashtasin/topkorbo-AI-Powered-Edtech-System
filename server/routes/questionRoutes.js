@@ -1,0 +1,52 @@
+const express = require('express');
+const router = express.Router();
+const auth = require('../middleware/auth');
+const questionController = require('../controllers/questionController');
+
+// @desc    Create a new question
+// @route   POST /api/questions
+router.post('/', auth, questionController.createQuestion);
+
+// @desc    Get current teacher's uploaded questions
+// @route   GET /api/questions/mine
+router.get('/mine', auth, questionController.getMyQuestions);
+
+// @desc    Get topics by subject, paper, and chapter
+// @route   GET /api/questions/topics
+router.get('/topics', auth, questionController.getTopicsForMockTest);
+
+// @desc    Get distinct board/college question sources for a subject/paper/type
+// @route   GET /api/questions/sources
+router.get('/sources', auth, questionController.getQuestionSources);
+
+// @desc    Get all questions belonging to a specific board/college source
+// @route   GET /api/questions/by-source
+router.get('/by-source', auth, questionController.getQuestionsBySource);
+
+// @desc    Get admission question cards for a specific university (grouped by year/shift)
+// @route   GET /api/questions/admission-cards
+router.get('/admission-cards', auth, questionController.getAdmissionQuestionCards);
+
+// @desc    Get distinct university (varsity admission) sources for a given
+//          subject/paper/type (Question Bank Varsity Admission flow)
+// @route   GET /api/questions/varsity-sources
+router.get('/varsity-sources', auth, questionController.getVarsityAdmissionSources);
+
+// @desc    Get every written question for a subject/paper inside the Varsity
+//          Admission stream (dedicated review page for written questions)
+// @route   GET /api/questions/varsity-written
+router.get('/varsity-written', auth, questionController.getVarsityWrittenQuestions);
+
+// @desc    Fetch questions for mock test with filters
+// @route   POST /api/questions/mock-test
+router.post('/mock-test', auth, questionController.fetchMockTestQuestions);
+
+// @desc    Update a question (teacher owner only)
+// @route   PUT /api/questions/:id
+router.put('/:id', auth, questionController.updateQuestion);
+
+// @desc    Delete a question (teacher owner only)
+// @route   DELETE /api/questions/:id
+router.delete('/:id', auth, questionController.deleteQuestion);
+
+module.exports = router;

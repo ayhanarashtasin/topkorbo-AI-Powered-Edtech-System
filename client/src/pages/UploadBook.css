@@ -1,0 +1,368 @@
+.rb-upload-workspace {
+  padding: 28px;
+  max-width: 980px;
+  margin: 0 auto;
+  width: 100%;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.rb-stepper {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.rb-stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted, #8c7b79);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rb-stepper-item--active {
+  color: #8C5A3C;
+}
+.rb-stepper-item--done {
+  color: #047857;
+}
+
+.rb-stepper-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-secondary, #5c4d4c);
+}
+.rb-stepper-item--active .rb-stepper-num {
+  background: rgba(192, 133, 82, 0.18);
+  border-color: #C08552;
+  color: #8C5A3C;
+}
+.rb-stepper-item--done .rb-stepper-num {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #10B981;
+  color: #047857;
+}
+
+.rb-stepper-item:not(:last-child)::after {
+  content: '';
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: var(--bg-accent-warm, #F7EBE1);
+  margin-left: 4px;
+}
+
+.rb-upload-step {
+  background: #FFFFFF;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(140, 90, 60, 0.06);
+}
+
+.rb-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.rb-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rb-form-field--full {
+  grid-column: 1 / -1;
+}
+
+.rb-form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #251817);
+}
+
+.rb-form-input,
+.rb-form-textarea,
+.rb-form-select {
+  padding: 10px 14px;
+  background: #FAF4EE;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  border-radius: 8px;
+  color: var(--text-primary, #251817);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.rb-form-input::placeholder,
+.rb-form-textarea::placeholder {
+  color: var(--text-muted, #8c7b79);
+}
+.rb-form-input:focus,
+.rb-form-textarea:focus,
+.rb-form-select:focus {
+  border-color: #C08552;
+  background: #FFFFFF;
+}
+.rb-form-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+.rb-form-select option {
+  background: #FFFFFF;
+  color: #251817;
+}
+
+.rb-file-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rb-file-input__native {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.rb-file-input__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(192, 133, 82, 0.15);
+  border: 1px dashed rgba(192, 133, 82, 0.5);
+  color: #8C5A3C;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rb-file-input__label:hover {
+  background: rgba(192, 133, 82, 0.25);
+}
+.rb-file-input__filename {
+  font-size: 12px;
+  color: var(--text-secondary, #5c4d4c);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-extra-chapter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  background: var(--bg-accent-warm, #F7EBE1);
+  border-radius: 10px;
+  border: 1px solid rgba(192, 133, 82, 0.2);
+  grid-column: 1 / -1;
+}
+
+.rb-remove-chapter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rb-remove-chapter-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #7f1d1d;
+}
+
+.rb-add-chapter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #FFFFFF;
+  color: var(--text-primary, #251817);
+  border: 1px dashed rgba(192, 133, 82, 0.5);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.rb-add-chapter-btn:hover {
+  background: rgba(192, 133, 82, 0.1);
+  border-color: #C08552;
+}
+
+.rb-info-banner {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e3a8a;
+}
+
+.rb-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--bg-accent-warm, #F7EBE1);
+  background: #FFFFFF;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-left: -28px;
+  margin-right: -28px;
+  margin-bottom: -28px;
+  border-radius: 0 0 14px 14px;
+}
+
+.rb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rb-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.rb-btn--primary {
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(192, 133, 82, 0.3);
+}
+.rb-btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(192, 133, 82, 0.4);
+}
+.rb-btn--secondary {
+  background: #FAF4EE;
+  color: var(--text-primary, #251817);
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+}
+.rb-btn--secondary:hover:not(:disabled) {
+  background: var(--bg-accent-warm, #F7EBE1);
+}
+
+.rb-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rb-confirm-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary, #251817);
+}
+.rb-confirm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rb-confirm-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #FAF4EE;
+  border-radius: 8px;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  font-size: 14px;
+  color: var(--text-primary, #251817);
+}
+.rb-confirm-label {
+  font-weight: 600;
+  color: var(--text-secondary, #5c4d4c);
+}
+.rb-confirm-value {
+  word-break: break-word;
+}
+
+.rb-upload-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  max-width: 500px;
+  margin: 0 auto;
+}
+.rb-upload-locked h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  color: var(--text-primary, #251817);
+}
+.rb-upload-locked p {
+  margin: 0 0 20px;
+  color: var(--text-secondary, #5c4d4c);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.rb-upload-locked__cta {
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .rb-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .rb-extra-chapter-row {
+    grid-template-columns: 1fr;
+  }
+  .rb-stepper {
+    flex-wrap: wrap;
+  }
+  .rb-upload-step {
+    padding: 18px;
+  }
+  .rb-confirm-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

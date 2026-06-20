@@ -1,0 +1,506 @@
+.rb-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #FFFFFF;
+  border-bottom: 1px solid var(--bg-accent-warm, #F7EBE1);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.rb-toolbar__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #FAF4EE;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.rb-toolbar__colors {
+  background: #FFFFFF;
+}
+
+.rb-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary, #251817);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.rb-toolbar__btn:hover:not(:disabled) {
+  background: rgba(192, 133, 82, 0.1);
+  color: #8C5A3C;
+}
+
+.rb-toolbar__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rb-toolbar__btn--active {
+  background: rgba(192, 133, 82, 0.2);
+  color: #8C5A3C;
+}
+
+.rb-toolbar__btn--active:hover {
+  background: rgba(192, 133, 82, 0.3);
+  color: #5a3a25;
+}
+
+.rb-toolbar__btn--icon {
+  padding: 6px 8px;
+}
+
+.rb-toolbar__btn--bookmarked {
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
+}
+
+.rb-toolbar__btn--bookmarked:hover {
+  background: rgba(245, 158, 11, 0.3);
+}
+
+.rb-toolbar__btn-label {
+  font-size: 12px;
+}
+
+.rb-toolbar__zoom-val {
+  font-size: 12px;
+  color: var(--text-primary, #251817);
+  padding: 0 6px;
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.rb-toolbar__pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-primary, #251817);
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.rb-toolbar__page-input {
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #D2BCA6;
+  border-radius: 4px;
+  background: #FFFFFF;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #251817);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rb-toolbar__page-input:focus {
+  border-color: #8C5A3C;
+  box-shadow: 0 0 0 2px rgba(140, 90, 60, 0.15);
+}
+
+.rb-toolbar__page-count {
+  white-space: nowrap;
+}
+
+.rb-toolbar__divider {
+  width: 1px;
+  height: 22px;
+  background: var(--bg-accent-warm, #F7EBE1);
+}
+
+.rb-toolbar__swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.rb-toolbar__swatch:hover {
+  transform: scale(1.1);
+}
+
+.rb-toolbar__swatch--active {
+  border-color: #C08552;
+  box-shadow: 0 0 0 2px rgba(192, 133, 82, 0.3);
+}
+
+.rb-toolbar__pen-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.rb-toolbar__pen-swatch:hover {
+  transform: scale(1.1);
+}
+
+.rb-toolbar__pen-swatch--active {
+  border-color: #C08552;
+  box-shadow: 0 0 0 2px rgba(192, 133, 82, 0.3);
+}
+
+.rb-toolbar__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: #1e40af;
+  padding: 4px 8px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 6px;
+}
+
+/* ---- Pen size selector ---- */
+.rb-toolbar__sizes {
+  background: #FFFFFF;
+}
+
+.rb-toolbar__size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  color: var(--text-primary, #251817);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rb-toolbar__size:hover {
+  background: rgba(192, 133, 82, 0.08);
+}
+
+.rb-toolbar__size--active {
+  border-color: #C08552;
+  background: rgba(192, 133, 82, 0.12);
+}
+
+.rb-toolbar__size-dot {
+  display: inline-block;
+  border-radius: 50%;
+  /* `background` is set inline to the current pen color, so the
+     selected size "lights up" in the active color. */
+  flex: 0 0 auto;
+}
+
+@media (max-width: 768px) {
+  .rb-toolbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .rb-toolbar__btn-label {
+    display: none;
+  }
+  .rb-toolbar__pages,
+  .rb-toolbar__zoom-val {
+    min-width: 36px;
+    font-size: 11px;
+  }
+  .rb-toolbar__hint {
+    display: none;
+  }
+  .rb-toolbar__divider {
+    display: none;
+  }
+}
+
+/* ---- Eraser Dropdowns and Popovers ---- */
+
+.rb-eraser-group {
+  position: relative;
+}
+
+.rb-eraser-inner-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--bg-accent-warm, #F7EBE1);
+  margin: 0 4px;
+}
+
+.rb-eraser-sizes {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.rb-eraser-size-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.rb-eraser-size-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+}
+
+.rb-eraser-size-btn--active {
+  border-color: #8C5A3C;
+  background: rgba(192, 133, 82, 0.12);
+}
+
+.rb-eraser-size-dot {
+  display: inline-block;
+  border-radius: 50%;
+  transition: background-color 0.15s;
+  background: conic-gradient(#e5e7eb 25%, #ffffff 0 50%, #e5e7eb 0 75%, #ffffff 0);
+  background-size: 4px 4px;
+  border: 1px solid #9CA3AF;
+}
+
+/* Light theme popover container */
+.rb-eraser-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: #FFFFFF;
+  color: var(--text-primary, #251817);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  box-shadow: 0 10px 25px -5px rgba(140, 90, 60, 0.15), 0 8px 10px -6px rgba(140, 90, 60, 0.15);
+  width: 260px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rb-eraser-popover::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 24px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #FFFFFF transparent;
+}
+
+.rb-eraser-popover__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8C5A3C;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.rb-eraser-popover__cards {
+  display: flex;
+  gap: 12px;
+}
+
+.rb-eraser-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  background: #FAF4EE;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: var(--text-primary, #251817);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.rb-eraser-card:hover {
+  background: rgba(192, 133, 82, 0.08);
+  color: #8C5A3C;
+}
+
+.rb-eraser-card--active {
+  background: rgba(192, 133, 82, 0.15);
+  border-color: #8C5A3C;
+  color: #8C5A3C;
+}
+
+.rb-eraser-card:active {
+  transform: scale(0.97);
+}
+
+.rb-eraser-card__icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+}
+
+.rb-eraser-card__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.rb-eraser-popover__caption {
+  font-size: 11px;
+  color: #8C5A3C;
+  opacity: 0.8;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Settings Popover */
+.rb-eraser-settings-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: #FFFFFF;
+  color: var(--text-primary, #251817);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  box-shadow: 0 10px 25px -5px rgba(140, 90, 60, 0.15), 0 8px 10px -6px rgba(140, 90, 60, 0.15);
+  width: 240px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rb-eraser-settings-popover::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 14px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #FFFFFF transparent;
+}
+
+.rb-eraser-settings-popover__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8C5A3C;
+  margin-bottom: 2px;
+  text-align: left;
+}
+
+.rb-eraser-settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.rb-eraser-settings-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #251817);
+}
+
+.rb-eraser-settings-divider {
+  height: 1px;
+  background: var(--bg-accent-warm, #F7EBE1);
+  margin: 4px 0;
+}
+
+.rb-eraser-clear-btn {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.15s;
+  text-align: left;
+}
+
+.rb-eraser-clear-btn:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* Custom Toggle Switch */
+.rb-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+}
+
+.rb-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rb-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #E5E7EB;
+  transition: background-color 0.2s;
+  border-radius: 22px;
+}
+
+.rb-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: transform 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+input:checked + .rb-slider {
+  background-color: #8C5A3C;
+}
+
+input:checked + .rb-slider:before {
+  transform: translateX(16px);
+}

@@ -1,0 +1,307 @@
+.rb-chapnav {
+  width: 280px;
+  flex-shrink: 0;
+  background: #FFFFFF;
+  border-right: 1px solid var(--bg-accent-warm, #F7EBE1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 5;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s;
+}
+
+@media (min-width: 1024px) {
+  .rb-chapnav:not(.rb-chapnav--open) {
+    margin-left: -280px;
+    border-right-color: transparent;
+  }
+}
+
+.rb-chapnav__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--bg-accent-warm, #F7EBE1);
+}
+
+.rb-chapnav__book {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  color: #8C5A3C;
+}
+
+.rb-chapnav__book-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rb-chapnav__book-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #251817);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.rb-chapnav__book-sub {
+  font-size: 11px;
+  color: var(--text-secondary, #5c4d4c);
+  margin-top: 2px;
+}
+
+.rb-chapnav__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: #FAF4EE;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  border-radius: 6px;
+  color: var(--text-primary, #251817);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.rb-chapnav__close:hover {
+  background: var(--bg-accent-warm, #F7EBE1);
+}
+
+.rb-chapnav__chapters,
+.rb-chapnav__bookmarks {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--bg-accent-warm, #F7EBE1);
+  overflow-y: auto;
+}
+
+.rb-chapnav__bookmarks {
+  border-bottom: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.rb-chapnav__section-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary, #5c4d4c);
+  padding: 0 6px;
+}
+
+.rb-chapnav__empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, #8c7b79);
+  padding: 4px 6px;
+}
+
+.rb-chapnav__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rb-chapnav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary, #251817);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rb-chapnav__item:hover {
+  background: var(--bg-accent-warm, #F7EBE1);
+  color: #8C5A3C;
+}
+
+.rb-chapnav__item--active {
+  background: rgba(192, 133, 82, 0.18);
+  color: #8C5A3C;
+  font-weight: 600;
+}
+
+.rb-chapnav__item--active .rb-chapnav__num {
+  background: #C08552;
+  color: #FFFFFF;
+}
+
+.rb-chapnav__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--bg-accent-warm, #F7EBE1);
+  color: var(--text-secondary, #5c4d4c);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rb-chapnav__title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-chapnav__nav-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bg-accent-warm, #F7EBE1);
+}
+
+.rb-chapnav__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+  padding: 7px 8px;
+  background: #FAF4EE;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  color: var(--text-primary, #251817);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rb-chapnav__nav-btn:hover:not(:disabled) {
+  background: rgba(192, 133, 82, 0.12);
+  color: #8C5A3C;
+  border-color: rgba(192, 133, 82, 0.4);
+}
+
+.rb-chapnav__nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rb-chapnav__bookmark-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-chapnav__bookmark {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #FAF4EE;
+  border: 1px solid var(--bg-accent-warm, #F7EBE1);
+  border-radius: 6px;
+  padding: 2px 4px 2px 2px;
+}
+
+.rb-chapnav__bookmark-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #251817);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rb-chapnav__bookmark-btn:hover {
+  background: rgba(192, 133, 82, 0.12);
+  color: #8C5A3C;
+}
+
+.rb-chapnav__bookmark-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #8c7b79);
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.rb-chapnav__bookmark-remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+.rb-chapnav__backdrop {
+  display: none;
+}
+
+/* Tablet / mobile */
+@media (max-width: 1023px) {
+  .rb-chapnav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 86%;
+    max-width: 320px;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 60;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+  }
+  .rb-chapnav--open {
+    transform: translateX(0);
+  }
+  .rb-chapnav__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 55;
+  }
+  .rb-chapnav__backdrop--visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

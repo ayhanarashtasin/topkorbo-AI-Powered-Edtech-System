@@ -1,0 +1,136 @@
+.cta {
+  background: var(--bg-cta-fade);
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.cta__bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cta__shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.2;
+}
+
+.cta__shape--1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--sky-blue), transparent 70%);
+  top: -200px;
+  right: -100px;
+  animation: float 8s ease-in-out infinite;
+}
+
+.cta__shape--2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--peach), transparent 70%);
+  bottom: -150px;
+  left: -100px;
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+.cta__content {
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.cta__title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.cta__subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  line-height: 1.7;
+}
+
+.cta__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.cta__input-group {
+  position: relative;
+}
+
+.cta__input-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.cta__input {
+  width: 100%;
+  padding: 16px 18px 16px 48px;
+  border-radius: var(--radius-lg);
+  border: 2px solid rgba(230, 204, 178, 0.55);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  font-size: 1rem;
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.cta__input:focus {
+  outline: none;
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 0 4px rgba(140, 90, 60, 0.12);
+}
+
+.cta__input::placeholder {
+  color: var(--text-muted);
+}
+
+.cta__btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.cta__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+}
+
+.cta__success-icon {
+  font-size: 56px;
+  color: #059669;
+}
+
+.cta__success p {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cta__privacy {
+  margin-top: 16px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .cta__form {
+    padding: 0 16px;
+  }
+}

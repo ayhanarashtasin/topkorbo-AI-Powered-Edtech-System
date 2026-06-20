@@ -1,0 +1,121 @@
+.mentors {
+  background: var(--bg-mentors-fade);
+}
+
+.mentors__scroll-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
+  margin: 0 -24px;
+  padding-left: 24px;
+  padding-right: 24px;
+  scrollbar-width: none;
+}
+
+.mentors__scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.mentors__track {
+  display: flex;
+  gap: 24px;
+  min-width: max-content;
+}
+
+.mentors__card {
+  min-width: 280px;
+  max-width: 300px;
+  padding: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.mentors__card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mentors__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--gradient-warm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  box-shadow: var(--shadow-sm);
+}
+
+.mentors__verified {
+  font-size: 0.75rem;
+}
+
+.mentors__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.mentors__uni {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.mentors__rank {
+  font-size: 0.82rem;
+  color: var(--deep-blue);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.mentors__rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+
+.mentors__star {
+  color: #F59E0B;
+}
+
+.mentors__separator {
+  color: var(--text-muted);
+}
+
+.mentors__specialties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.mentors__specialty-tag {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: rgba(230, 204, 178, 0.35);
+  color: var(--deep-blue);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.mentors__btn {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .mentors__card {
+    min-width: 260px;
+  }
+}

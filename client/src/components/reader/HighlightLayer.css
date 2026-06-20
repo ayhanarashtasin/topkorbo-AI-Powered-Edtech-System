@@ -1,0 +1,52 @@
+.rb-highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let clicks pass through to text layer by default */
+  z-index: 2; /* Above text layer (1), below AnnotationCanvas (3) */
+}
+
+/* When erasing or selecting, we might want to capture clicks on highlights */
+.rb-highlight-layer--eraser .rb-highlight-rect {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.rb-highlight-rect {
+  position: absolute;
+  mix-blend-mode: multiply; /* Gives that authentic highlighter look */
+  opacity: 0.5;
+  border-radius: 2px;
+  pointer-events: auto; /* Allow clicking on highlights to show popup/delete */
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.rb-highlight-rect:hover {
+  opacity: 0.8;
+}
+
+/* Ensure multiply blend mode works well on dark mode if needed, though PDFs are usually white */
+
+.rb-highlight-note-icon {
+  position: absolute;
+  pointer-events: auto;
+  cursor: help;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  padding: 2px;
+  transform: translate(2px, -50%);
+  z-index: 10;
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+.rb-highlight-note-icon:hover {
+  transform: scale(1.15) translate(2px, -45%);
+}
