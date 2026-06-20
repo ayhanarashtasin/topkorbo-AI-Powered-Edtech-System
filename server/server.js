@@ -37,6 +37,8 @@ const questionRoutes = require("./routes/questionRoutes");
 const contestRoutes = require("./routes/contestRoutes");
 const bookRoutes = require("./routes/bookRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
+const evaluationRoutes = require("./routes/evaluationRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 // Load Passport Configuration
 require("./config/passport");
@@ -81,6 +83,8 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/contests", contestRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/highlights", highlightRoutes);
+app.use("/api/evaluate", evaluationRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

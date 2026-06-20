@@ -1,0 +1,14 @@
+const express = require('express');
+const router = express.Router();
+const auth = require('../middleware/auth');
+const aiController = require('../controllers/aiController');
+
+// All AI chat routes require authentication
+router.use(auth);
+
+router.post('/chat', aiController.chat);
+router.post('/extract-question', aiController.extractQuestion);
+router.get('/history', aiController.getHistory);
+router.delete('/history', aiController.clearHistory);
+
+module.exports = router;
