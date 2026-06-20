@@ -30,15 +30,12 @@ exports.evaluateWrittenAnswers = async (req, res) => {
       const { questionId, studentImageBase64 } = answer;
       const question = await Question.findById(questionId);
       
-      console.log(`Evaluating question: ${questionId}`);
       logToFile(`Evaluating question: ${questionId}`);
       
       if (!question) {
-        console.log(`Question not found: ${questionId}`);
         logToFile(`Question not found: ${questionId}`);
         continue;
       }
-      console.log(`Found question, sending to Groq...`);
       logToFile(`Found question, sending to Groq...`);
 
       const manualSolution = question.solution || 'No manual solution provided.';
@@ -88,46 +85,32 @@ CRITICAL FORMATTING INSTRUCTIONS FOR FEEDBACK:
         max_completion_tokens: 1024,
         top_p: 1,
         stream: false,
-        stop: null
+        stop: null,
+        response_format: { type: "json_object" }
       });
 
       const responseText = completion.choices[0].message.content;
-      console.log(`Raw Groq Response for ${questionId}:`, responseText);
       logToFile(`Raw Groq Response for ${questionId}: ${responseText.replace(/\n/g, ' ')}`);
       
       let evalData = { score: 0, feedback: "Failed to evaluate." };
-      let rawJsonText = responseText;
       try {
-        // First try to extract JSON from markdown block if it exists
-        const markdownMatch = responseText.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-        if (markdownMatch) {
-          rawJsonText = markdownMatch[1];
-        } else {
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) rawJsonText = jsonMatch[0];
-        }
-        
-        // Fix unescaped backslashes in LaTeX (replace \ not followed by valid JSON escape char)
-        const fixedJsonText = rawJsonText.replace(/\\([^"\\/bfnrt])/g, '\\\\$1');
-        evalData = JSON.parse(fixedJsonText);
+        evalData = JSON.parse(responseText);
       } catch (e) {
-        console.error("Failed to parse Groq response:", rawJsonText);
         logToFile(`JSON Parse error for ${questionId}. Falling back to regex.`);
         
         // Fallback regex extraction if JSON is completely broken
-        const scoreMatch = rawJsonText.match(/"score"\s*:\s*([\d.]+)/);
-        const feedbackMatch = rawJsonText.match(/"feedback"\s*:\s*"([\s\S]*?)"\s*\}/);
+        const scoreMatch = responseText.match(/"score"\s*:\s*([\d.]+)/);
+        const feedbackMatch = responseText.match(/"feedback"\s*:\s*"([\s\S]*?)"\s*\}/);
         
         if (scoreMatch) evalData.score = parseFloat(scoreMatch[1]);
         if (feedbackMatch) evalData.feedback = feedbackMatch[1].replace(/\\"/g, '"');
-        else evalData.feedback = rawJsonText;
+        else evalData.feedback = responseText;
       }
 
       evaluations[questionId] = {
         score: evalData.score || 0,
         feedback: evalData.feedback || ""
       };
-      console.log(`Evaluation successful for ${questionId}:`, evaluations[questionId]);
       logToFile(`Evaluation successful for ${questionId}: ${JSON.stringify(evaluations[questionId])}`);
     }
 
