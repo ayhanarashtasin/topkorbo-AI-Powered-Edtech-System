@@ -64,8 +64,8 @@ exports.createContest = async (req, res, next) => {
     }
 
     if (level === 'admission' && admissionType === 'varsity') {
-      if (!admissionSubtype || !['science', 'commerce', 'arts'].includes(admissionSubtype)) {
-        return ApiResponse.error(res, 'Valid admission subtype (science, commerce, arts) is required for Varsity level', 400);
+      if (!admissionSubtype || !['science', 'commerce', 'arts', 'iba'].includes(admissionSubtype)) {
+        return ApiResponse.error(res, 'Valid admission subtype (science, commerce, arts, iba) is required for Varsity level', 400);
       }
     }
 

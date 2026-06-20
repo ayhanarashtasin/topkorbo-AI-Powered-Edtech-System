@@ -204,7 +204,7 @@ export default function MakeContestQuestionConfirm() {
                         {language === 'en' ? 'Standard Level' : 'স্ট্যান্ডার্ড লেভেল'}
                       </strong>
                       <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-                        {contestData.level} {contestData.admissionType ? `(${contestData.admissionType}${contestData.admissionSubtype ? ` - ${contestData.admissionSubtype}` : ''})` : ''}
+                        {contestData.level} {contestData.admissionType ? `(${contestData.admissionType}${contestData.admissionSubtype ? ` - ${contestData.admissionSubtype === 'arts' ? 'humanities' : contestData.admissionSubtype}` : ''})` : ''}
                       </span>
                     </div>
                   </div>

@@ -58,7 +58,7 @@ const contestSchema = new mongoose.Schema({
   },
   admissionSubtype: {
     type: String,
-    enum: ['science', 'commerce', 'arts', ''],
+    enum: ['science', 'commerce', 'arts', 'iba', ''],
     default: ''
   },
   questionType: {
