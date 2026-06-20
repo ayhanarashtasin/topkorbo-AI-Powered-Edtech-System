@@ -9,6 +9,10 @@ import {
   HiX,
   HiClock,
   HiEye,
+  HiSparkles,
+  HiCamera,
+  HiPaperAirplane,
+  HiPaperClip,
 } from "react-icons/hi";
 import katex from "katex";
 import "katex/dist/katex.min.css";
@@ -142,9 +146,20 @@ export default function MockTestExam() {
   const [filterType, setFilterType] = useState("all"); // 'all' | 'correct' | 'skipped' | 'wrong'
   const [fromQbank, setFromQbank] = useState(false);
   const [writtenAnswers, setWrittenAnswers] = useState({});
+  const [aiEvaluations, setAiEvaluations] = useState({});
+  const [isEvaluating, setIsEvaluating] = useState(false);
   const [activeCameraQuestionKey, setActiveCameraQuestionKey] = useState(null);
+  const [aiExplanations, setAiExplanations] = useState({});
+  const [aiExplainLoading, setAiExplainLoading] = useState(false);
+  const [aiExplainImage, setAiExplainImage] = useState(null);
+  const [aiChatThreads, setAiChatThreads] = useState({});
+  const [followUpText, setFollowUpText] = useState("");
+  const [followUpImage, setFollowUpImage] = useState(null);
+  const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const aiExplainFileRef = useRef(null);
+  const followUpFileRef = useRef(null);
 
   useEffect(() => {
     const storedQuestions = sessionStorage.getItem("mock_exam_questions");
@@ -169,15 +184,25 @@ export default function MockTestExam() {
       if (savedAnswers) {
         try {
           setAnswers(JSON.parse(savedAnswers));
-        } catch (_) { }
+        } catch (_) {}
       }
 
       // ── Restore saved written answers ────────────────────────────────────
-      const savedWrittenAnswers = sessionStorage.getItem("mock_exam_written_answers");
+      const savedWrittenAnswers = sessionStorage.getItem(
+        "mock_exam_written_answers",
+      );
       if (savedWrittenAnswers) {
         try {
           setWrittenAnswers(JSON.parse(savedWrittenAnswers));
-        } catch (_) { }
+        } catch (_) {}
+      }
+
+      // ── Restore saved ai evals ──────────────────────────────────────────
+      const savedAiEvals = sessionStorage.getItem("mock_exam_ai_evals");
+      if (savedAiEvals) {
+        try {
+          setAiEvaluations(JSON.parse(savedAiEvals));
+        } catch (_) {}
       }
 
       // ── Restore submitted / review state ────────────────────────────────
@@ -258,17 +283,33 @@ export default function MockTestExam() {
       const selectedIndex = answers[key];
       const correctIndex = getCorrectOptionIndex(question);
 
-      if (selectedIndex === undefined || selectedIndex === null) {
-        skipped += 1;
-        return;
-      }
+      if (question.type === "mcq") {
+        if (selectedIndex === undefined || selectedIndex === null) {
+          skipped += 1;
+          return;
+        }
 
-      if (selectedIndex === correctIndex) {
-        correct += 1;
-        score += 1;
-      } else {
-        wrong += 1;
-        if (config?.negativeMarking) score -= 0.25;
+        if (selectedIndex === correctIndex) {
+          correct += 1;
+          score += 1;
+        } else {
+          wrong += 1;
+          if (config?.negativeMarking) score -= 0.25;
+        }
+      } else if (question.type === "written" || question.type === "cq") {
+        const isUploaded = !!writtenAnswers[key];
+        const scoreVal = aiEvaluations[key] ? parseFloat(aiEvaluations[key].score) || 0 : 0;
+        
+        if (isUploaded) {
+          score += scoreVal;
+          if (scoreVal > 0) {
+            correct += 1;
+          } else {
+            wrong += 1;
+          }
+        } else {
+          skipped += 1;
+        }
       }
     });
 
@@ -283,7 +324,7 @@ export default function MockTestExam() {
       timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
       writtenUploadedCount,
     };
-  }, [answers, config, questions, timeLeft, writtenAnswers]);
+  }, [answers, config, questions, timeLeft, writtenAnswers, aiEvaluations]);
 
   useEffect(() => {
     if (isSubmitted || timeLeft <= 0) return;
@@ -302,8 +343,37 @@ export default function MockTestExam() {
     return () => clearInterval(timer);
   }, [isSubmitted, timeLeft]);
 
-  const handleSubmit = () => {
-    if (isSubmitted) return;
+  const handleSubmit = async () => {
+    if (isSubmitted || isEvaluating) return;
+
+    const writtenKeys = Object.keys(writtenAnswers);
+    if (writtenKeys.length > 0) {
+      setIsEvaluating(true);
+      try {
+        const payload = writtenKeys.map((key) => ({
+          questionId: key,
+          studentImageBase64: writtenAnswers[key],
+        }));
+        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const res = await fetch(`${backendBaseUrl}/api/evaluate/written`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("topkorbo_token") || localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ answers: payload }),
+        });
+        if (res.ok) {
+          const evalData = await res.json();
+          setAiEvaluations(evalData);
+          sessionStorage.setItem("mock_exam_ai_evals", JSON.stringify(evalData));
+        }
+      } catch (err) {
+        console.error("AI Evaluation error", err);
+      }
+      setIsEvaluating(false);
+    }
+
     setIsSubmitted(true);
     setShowResultModal(true);
     // Persist submitted state so a refresh lands in review mode
@@ -338,6 +408,7 @@ export default function MockTestExam() {
       "mock_exam_review_mode",
       "mock_exam_time_left",
       "mock_exam_written_answers",
+      "mock_exam_ai_evals",
     ].forEach((key) => sessionStorage.removeItem(key));
     navigate(fromQbank ? "/qbank" : "/mock-test");
   };
@@ -347,10 +418,7 @@ export default function MockTestExam() {
     setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
-  const handleWrittenFileChange = (e, questionKey) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
+  const processImageFile = (file, callback) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -379,23 +447,37 @@ export default function MockTestExam() {
         ctx.drawImage(img, 0, 0, width, height);
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-
-        setWrittenAnswers((prev) => {
-          const updated = { ...prev, [questionKey]: dataUrl };
-          sessionStorage.setItem("mock_exam_written_answers", JSON.stringify(updated));
-          return updated;
-        });
+        callback(dataUrl);
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   };
 
+  const handleWrittenFileChange = (e, questionKey) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    processImageFile(file, (dataUrl) => {
+      setWrittenAnswers((prev) => {
+        const updated = { ...prev, [questionKey]: dataUrl };
+        sessionStorage.setItem(
+          "mock_exam_written_answers",
+          JSON.stringify(updated),
+        );
+        return updated;
+      });
+    });
+  };
+
   const handleRemoveWrittenFile = (questionKey) => {
     setWrittenAnswers((prev) => {
       const updated = { ...prev };
       delete updated[questionKey];
-      sessionStorage.setItem("mock_exam_written_answers", JSON.stringify(updated));
+      sessionStorage.setItem(
+        "mock_exam_written_answers",
+        JSON.stringify(updated),
+      );
       return updated;
     });
   };
@@ -407,13 +489,16 @@ export default function MockTestExam() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
-          audio: false
+          audio: false,
         });
       } catch (envErr) {
-        console.warn("Could not access environment camera, trying fallback...", envErr);
+        console.warn(
+          "Could not access environment camera, trying fallback...",
+          envErr,
+        );
         stream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: false
+          audio: false,
         });
       }
       streamRef.current = stream;
@@ -427,7 +512,7 @@ export default function MockTestExam() {
       alert(
         language === "en"
           ? "Unable to access device camera. Please check permissions."
-          : "ক্যামেরা অ্যাক্সেস করা যাচ্ছে না। দয়া করে পারমিশন চেক করুন।"
+          : "ক্যামেরা অ্যাক্সেস করা যাচ্ছে না। দয়া করে পারমিশন চেক করুন।",
       );
       setActiveCameraQuestionKey(null);
     }
@@ -468,12 +553,15 @@ export default function MockTestExam() {
       canvas.height = finalHeight;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, finalWidth, finalHeight);
-      
+
       const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
 
       setWrittenAnswers((prev) => {
         const updated = { ...prev, [questionKey]: dataUrl };
-        sessionStorage.setItem("mock_exam_written_answers", JSON.stringify(updated));
+        sessionStorage.setItem(
+          "mock_exam_written_answers",
+          JSON.stringify(updated),
+        );
         return updated;
       });
 
@@ -525,6 +613,143 @@ export default function MockTestExam() {
       });
 
     return { __html: renderedText };
+  };
+
+  const renderMarkdownWithMath = (text) => {
+    if (!text) return { __html: "" };
+
+    // Normalize double backslashes to single backslashes for LaTeX commands/symbols
+    const normalizedText = text.replace(/\\\\([a-zA-Z\d_{}%])/g, '\\$1');
+
+    const mathBlocks = [];
+
+    // 1. Extract and render display math: $$...$$
+    let processed = normalizedText.replace(/\$\$([\s\S]+?)\$\$/g, (match, p1) => {
+      try {
+        const rendered = katex.renderToString(p1.trim(), {
+          displayMode: true,
+          throwOnError: false,
+        });
+        const index = mathBlocks.length;
+        mathBlocks.push(rendered);
+        return `%%MATH_BLOCK_${index}%%`;
+      } catch (e) {
+        return match;
+      }
+    });
+
+    // 2. Extract and render inline math: $...$
+    processed = processed.replace(/\$([^\$]+)\$/g, (match, p1) => {
+      try {
+        const rendered = katex.renderToString(p1.trim(), {
+          displayMode: false,
+          throwOnError: false,
+        });
+        const index = mathBlocks.length;
+        mathBlocks.push(rendered);
+        return `%%MATH_BLOCK_${index}%%`;
+      } catch (e) {
+        return match;
+      }
+    });
+
+    // 3. Apply markdown formatting to the remaining text (with placeholders)
+    processed = processed
+      // Headings: ### Heading, ## Heading, # Heading
+      .replace(/^### (.+)$/gm, '<div style="font-size:15px;font-weight:700;color:#4F46E5;margin:16px 0 6px;border-bottom:1px solid #E2E8F0;padding-bottom:4px;">$1</div>')
+      .replace(/^## (.+)$/gm, '<div style="font-size:17px;font-weight:700;color:#1E293B;margin:20px 0 8px;border-bottom:2px solid #6366F1;padding-bottom:6px;">$1</div>')
+      .replace(/^# (.+)$/gm, '<div style="font-size:19px;font-weight:800;color:#1E293B;margin:20px 0 10px;border-bottom:2px solid #6366F1;padding-bottom:6px;">$1</div>')
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#1E293B;">$1</strong>')
+      // Numbered steps
+      .replace(/^(\d+)\.\s/gm, '<span style="display:inline-block;background:#6366F1;color:#FFF;font-weight:700;font-size:13px;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;margin-right:8px;">$1</span>')
+      // Bullet points
+      .replace(/^[-•]\s(.+)$/gm, '<div style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;"><span style="color:#6366F1;font-weight:bold;margin-top:2px;">•</span><span>$1</span></div>')
+      // Line breaks
+      .replace(/\n\n/g, '<div style="margin:12px 0;"></div>')
+      .replace(/\n/g, '<br/>');
+
+    // 4. Restore the math blocks
+    mathBlocks.forEach((renderedMath, index) => {
+      processed = processed.replace(`%%MATH_BLOCK_${index}%%`, () => renderedMath);
+    });
+
+    return { __html: processed };
+  };
+
+  const handleSendFollowUp = async () => {
+    if (!explanationModalQuestion || isSendingFollowUp) return;
+    const text = followUpText.trim();
+    if (!text && !followUpImage) return;
+
+    const qId = explanationModalQuestion._id;
+    const currentThread = aiChatThreads[qId] || [];
+
+    // 1. Construct the new user message
+    const userMessage = {
+      role: "user",
+      content: text,
+      image: followUpImage || undefined
+    };
+
+    // 2. Optimistically append user message to local state
+    setAiChatThreads(prev => ({
+      ...prev,
+      [qId]: [...currentThread, userMessage]
+    }));
+
+    // Clear follow-up input states
+    setFollowUpText("");
+    setFollowUpImage(null);
+    setIsSendingFollowUp(true);
+
+    try {
+      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const res = await fetch(`${backendBaseUrl}/api/evaluate/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("topkorbo_token") || localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          questionId: qId,
+          history: currentThread,
+          message: text,
+          studentImageBase64: userMessage.image
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Append AI response
+        setAiChatThreads(prev => ({
+          ...prev,
+          [qId]: [
+            ...(prev[qId] || []),
+            { role: "assistant", content: data.response }
+          ]
+        }));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setAiChatThreads(prev => ({
+          ...prev,
+          [qId]: [
+            ...(prev[qId] || []),
+            { role: "assistant", content: `Error: ${errData.msg || "Failed to send message."}` }
+          ]
+        }));
+      }
+    } catch (err) {
+      setAiChatThreads(prev => ({
+        ...prev,
+        [qId]: [
+          ...(prev[qId] || []),
+          { role: "assistant", content: `Network Error: ${err.message}` }
+        ]
+      }));
+    } finally {
+      setIsSendingFollowUp(false);
+    }
   };
 
   const getOptionPrefix = (index) => {
@@ -596,12 +821,16 @@ export default function MockTestExam() {
                 <strong>★ {formatDisplayNumber(resultStats.score)}</strong>
               </div>
               <div className="exam-report-card exam-report-card--marks">
-                {questions.some(q => q.type === "written") ? (
+                {questions.some((q) => q.type === "written") ? (
                   <>
                     <span>
-                      {language === "en" ? "Written Uploaded" : "আপলোড করা উত্তর"}
+                      {language === "en"
+                        ? "Written Uploaded"
+                        : "আপলোড করা উত্তর"}
                     </span>
-                    <strong>📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}</strong>
+                    <strong>
+                      📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}
+                    </strong>
                   </>
                 ) : (
                   <>
@@ -618,42 +847,44 @@ export default function MockTestExam() {
                 <strong>◉ {timeLabel}</strong>
               </div>
             </div>
-            <div className="exam-result-chips">
-              <button
-                type="button"
-                className={`exam-result-chip exam-result-chip--correct ${filterType === "correct" ? "exam-result-chip--active" : ""}`}
-                onClick={() =>
-                  setFilterType((prev) =>
-                    prev === "correct" ? "all" : "correct",
-                  )
-                }
-              >
-                <i /> {formatDisplayNumber(resultStats.correct)}{" "}
-                {language === "en" ? "Correct" : "সঠিক"}
-              </button>
-              <button
-                type="button"
-                className={`exam-result-chip exam-result-chip--skipped ${filterType === "skipped" ? "exam-result-chip--active" : ""}`}
-                onClick={() =>
-                  setFilterType((prev) =>
-                    prev === "skipped" ? "all" : "skipped",
-                  )
-                }
-              >
-                <i /> {formatDisplayNumber(resultStats.skipped)}{" "}
-                {language === "en" ? "Skipped" : "স্কিপ"}
-              </button>
-              <button
-                type="button"
-                className={`exam-result-chip exam-result-chip--wrong ${filterType === "wrong" ? "exam-result-chip--active" : ""}`}
-                onClick={() =>
-                  setFilterType((prev) => (prev === "wrong" ? "all" : "wrong"))
-                }
-              >
-                <i /> {formatDisplayNumber(resultStats.wrong)}{" "}
-                {language === "en" ? "Wrong" : "ভুল"}
-              </button>
-            </div>
+              <div className="exam-result-chips">
+                <button
+                  type="button"
+                  className={`exam-result-chip exam-result-chip--correct ${filterType === "correct" ? "exam-result-chip--active" : ""}`}
+                  onClick={() =>
+                    setFilterType((prev) =>
+                      prev === "correct" ? "all" : "correct",
+                    )
+                  }
+                >
+                  <i /> {formatDisplayNumber(resultStats.correct)}{" "}
+                  {language === "en" ? "Correct" : "সঠিক"}
+                </button>
+                <button
+                  type="button"
+                  className={`exam-result-chip exam-result-chip--skipped ${filterType === "skipped" ? "exam-result-chip--active" : ""}`}
+                  onClick={() =>
+                    setFilterType((prev) =>
+                      prev === "skipped" ? "all" : "skipped",
+                    )
+                  }
+                >
+                  <i /> {formatDisplayNumber(resultStats.skipped)}{" "}
+                  {language === "en" ? "Skipped" : "স্কিপ"}
+                </button>
+                <button
+                  type="button"
+                  className={`exam-result-chip exam-result-chip--wrong ${filterType === "wrong" ? "exam-result-chip--active" : ""}`}
+                  onClick={() =>
+                    setFilterType((prev) =>
+                      prev === "wrong" ? "all" : "wrong",
+                    )
+                  }
+                >
+                  <i /> {formatDisplayNumber(resultStats.wrong)}{" "}
+                  {language === "en" ? "Wrong" : "ভুল"}
+                </button>
+              </div>
             <button
               type="button"
               className="exam-start-again-btn"
@@ -702,21 +933,37 @@ export default function MockTestExam() {
           .filter((q, qIndex) => {
             if (!isReviewMode || filterType === "all") return true;
             const questionKey = getQuestionKey(q, qIndex);
-            const selectedIndex = answers[questionKey];
-            const correctIndex = getCorrectOptionIndex(q);
 
-            if (filterType === "correct") {
-              return (
-                selectedIndex === correctIndex && selectedIndex !== undefined
-              );
-            }
-            if (filterType === "wrong") {
-              return (
-                selectedIndex !== undefined && selectedIndex !== correctIndex
-              );
-            }
-            if (filterType === "skipped") {
-              return selectedIndex === undefined;
+            if (q.type === "mcq") {
+              const selectedIndex = answers[questionKey];
+              const correctIndex = getCorrectOptionIndex(q);
+
+              if (filterType === "correct") {
+                return (
+                  selectedIndex === correctIndex && selectedIndex !== undefined
+                );
+              }
+              if (filterType === "wrong") {
+                return (
+                  selectedIndex !== undefined && selectedIndex !== correctIndex
+                );
+              }
+              if (filterType === "skipped") {
+                return selectedIndex === undefined;
+              }
+            } else if (q.type === "written" || q.type === "cq") {
+              const isUploaded = !!writtenAnswers[questionKey];
+              const scoreVal = aiEvaluations[questionKey] ? parseFloat(aiEvaluations[questionKey].score) || 0 : 0;
+
+              if (filterType === "correct") {
+                return isUploaded && scoreVal > 0;
+              }
+              if (filterType === "wrong") {
+                return isUploaded && scoreVal === 0;
+              }
+              if (filterType === "skipped") {
+                return !isUploaded;
+              }
             }
             return true;
           })
@@ -857,26 +1104,50 @@ export default function MockTestExam() {
                 {q.type === "written" && (
                   <div className="exam-written-upload-section">
                     <p className="exam-written-upload-title">
-                      {language === "en" ? "Upload Written Response:" : "লিখিত উত্তর আপলোড করুন:"}
+                      {language === "en"
+                        ? "Upload Written Response:"
+                        : "লিখিত উত্তর আপলোড করুন:"}
                     </p>
-                    
+
                     {!isSubmitted && (
                       <div className="exam-written-upload-controls">
                         <label className="exam-written-upload-label">
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleWrittenFileChange(e, questionKey)}
+                            onChange={(e) =>
+                              handleWrittenFileChange(e, questionKey)
+                            }
                             style={{ display: "none" }}
                           />
                           <div className="exam-written-upload-btn">
-                            <svg className="exam-upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px', marginRight: '8px' }}>
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            <svg
+                              className="exam-upload-icon"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                              style={{
+                                width: "20px",
+                                height: "20px",
+                                marginRight: "8px",
+                              }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                              ></path>
                             </svg>
                             <span>
-                              {writtenAnswers[questionKey] 
-                                ? (language === "en" ? "Change Image" : "ছবি পরিবর্তন করুন")
-                                : (language === "en" ? "Choose Image" : "ছবি নির্বাচন করুন")}
+                              {writtenAnswers[questionKey]
+                                ? language === "en"
+                                  ? "Change Image"
+                                  : "ছবি পরিবর্তন করুন"
+                                : language === "en"
+                                  ? "Choose Image"
+                                  : "ছবি নির্বাচন করুন"}
                             </span>
                           </div>
                         </label>
@@ -886,12 +1157,35 @@ export default function MockTestExam() {
                           className="exam-written-camera-btn"
                           onClick={() => startCamera(questionKey)}
                         >
-                          <svg className="exam-camera-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px', marginRight: '8px' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                          <svg
+                            className="exam-camera-icon"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              marginRight: "8px",
+                            }}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                            ></path>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                            ></path>
                           </svg>
                           <span>
-                            {language === "en" ? "Use Camera" : "ক্যামেরা ব্যবহার করুন"}
+                            {language === "en"
+                              ? "Use Camera"
+                              : "ক্যামেরা ব্যবহার করুন"}
                           </span>
                         </button>
                       </div>
@@ -909,7 +1203,11 @@ export default function MockTestExam() {
                             type="button"
                             className="exam-written-remove-btn"
                             onClick={() => handleRemoveWrittenFile(questionKey)}
-                            title={language === "en" ? "Remove Image" : "ছবি মুছে ফেলুন"}
+                            title={
+                              language === "en"
+                                ? "Remove Image"
+                                : "ছবি মুছে ফেলুন"
+                            }
                           >
                             <HiX size={16} />
                           </button>
@@ -917,11 +1215,33 @@ export default function MockTestExam() {
                       </div>
                     )}
 
+                    {isReviewMode && aiEvaluations[questionKey] && (
+                      <div className="exam-ai-eval-box" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0FDF4', borderLeft: '4px solid #22C55E', borderRadius: '4px' }}>
+                        <h4 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <HiSparkles size={18} style={{ color: '#15803D' }} />
+                          {language === "en" ? "AI Evaluation" : "এআই মূল্যায়ন"}
+                        </h4>
+                        <div style={{ marginBottom: '4px', fontWeight: 'bold', color: '#15803D' }}>
+                          {language === "en" ? "Partial Mark: " : "প্রাপ্ত নম্বর: "}
+                          {aiEvaluations[questionKey].score}
+                        </div>
+                        <div style={{ color: '#166534', fontSize: '14px' }}>
+                          <strong>{language === "en" ? "Feedback: " : "মতামত: "}</strong>
+                          <div 
+                            style={{ display: 'inline', marginLeft: '4px', lineHeight: '1.6' }}
+                            dangerouslySetInnerHTML={renderMarkdownWithMath(aiEvaluations[questionKey].feedback)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {activeCameraQuestionKey === questionKey && (
                       <div className="exam-camera-overlay">
                         <div className="exam-camera-modal">
                           <h3 className="exam-camera-modal-title">
-                            {language === "en" ? "Take Answer Photo" : "উত্তর ছবি তুলুন"}
+                            {language === "en"
+                              ? "Take Answer Photo"
+                              : "উত্তর ছবি তুলুন"}
                           </h3>
                           <div className="exam-camera-video-container">
                             <video
@@ -938,7 +1258,9 @@ export default function MockTestExam() {
                               className="exam-camera-btn exam-camera-btn--capture"
                               onClick={() => capturePhoto(questionKey)}
                             >
-                              {language === "en" ? "Capture Photo" : "ছবি তুলুন"}
+                              {language === "en"
+                                ? "Capture Photo"
+                                : "ছবি তুলুন"}
                             </button>
                             <button
                               type="button"
@@ -981,8 +1303,12 @@ export default function MockTestExam() {
             className="exam-submit-btn-floating"
             onClick={handleSubmit}
             type="button"
+            disabled={isEvaluating}
+            style={{ opacity: isEvaluating ? 0.7 : 1, cursor: isEvaluating ? "not-allowed" : "pointer" }}
           >
-            {language === "en" ? "Submit" : "সাবমিট"}
+            {isEvaluating
+              ? (language === "en" ? "Evaluating..." : "মূল্যায়ন হচ্ছে...")
+              : (language === "en" ? "Submit" : "সাবমিট")}
           </button>
         </div>
       )}
@@ -1026,10 +1352,14 @@ export default function MockTestExam() {
                 <strong>★ {formatDisplayNumber(resultStats.score)}</strong>
               </div>
               <div className="exam-report-card exam-report-card--marks">
-                {questions.some(q => q.type === "written") ? (
+                {questions.some((q) => q.type === "written") ? (
                   <>
-                    <span>{language === "en" ? "Written Answers" : "লিখিত উত্তর"}</span>
-                    <strong>📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}</strong>
+                    <span>
+                      {language === "en" ? "Written Answers" : "লিখিত উত্তর"}
+                    </span>
+                    <strong>
+                      📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}
+                    </strong>
                   </>
                 ) : (
                   <>
@@ -1221,9 +1551,9 @@ export default function MockTestExam() {
                         className="exam-explanation-body-text"
                         dangerouslySetInnerHTML={renderMath(
                           solutionStr ||
-                          (language === "en"
-                            ? "No explanation added yet."
-                            : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
+                            (language === "en"
+                              ? "No explanation added yet."
+                              : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
                         )}
                       />
                       {explanationModalQuestion.solutionImageUrl && (
@@ -1250,15 +1580,401 @@ export default function MockTestExam() {
                   );
                 })()}
               {explanationTab === "ai" && (
-                <div className="exam-explanation-placeholder">
-                  <div className="exam-explanation-placeholder-badge">
-                    {language === "en" ? "Coming Soon" : "শীঘ্রই আসছে"}
-                  </div>
-                  <p>
-                    {language === "en"
-                      ? "AI Explanation feature is under development and will be available soon!"
-                      : "এআই ব্যাখ্যা সুবিধাটি তৈরি করা হচ্ছে এবং শীঘ্রই চালু হবে!"}
-                  </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Action buttons */}
+                  {!aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', padding: '32px 16px' }}>
+                      <p style={{ margin: '0 0 8px', color: '#64748B', fontSize: '15px', textAlign: 'center', lineHeight: '1.6' }}>
+                        {language === "en" 
+                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat." 
+                          : "এআই টিউটরের কাছ থেকে এই প্রশ্নটির একটি বিস্তারিত সমাধান তৈরি করো। তুমি চ্যাটের মাধ্যমে পরবর্তী প্রশ্ন জিজ্ঞাসা করতে এবং ছবি আপলোড করতে পারবে।"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!explanationModalQuestion) return;
+                          setAiExplainLoading(true);
+                          try {
+                            const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+                            const res = await fetch(`${backendBaseUrl}/api/evaluate/explain`, {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${localStorage.getItem("topkorbo_token") || localStorage.getItem("token")}`,
+                              },
+                              body: JSON.stringify({
+                                questionId: explanationModalQuestion._id,
+                              }),
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              setAiExplanations(prev => ({ ...prev, [explanationModalQuestion._id]: data.explanation }));
+                              
+                              const initialThread = [
+                                {
+                                  role: "user",
+                                  content: language === "en" ? "Generate a detailed solution for this question." : "এই প্রশ্নের একটি বিস্তারিত সমাধান তৈরি করো।"
+                                },
+                                {
+                                  role: "assistant",
+                                  content: data.explanation
+                                }
+                              ];
+                              
+                              setAiChatThreads(prev => ({
+                                ...prev,
+                                [explanationModalQuestion._id]: initialThread
+                              }));
+                            } else {
+                              const errData = await res.json().catch(() => ({}));
+                              setAiExplanations(prev => ({ ...prev, [explanationModalQuestion._id]: `Error: ${errData.msg || 'Failed to generate explanation.'}` }));
+                            }
+                          } catch (err) {
+                            setAiExplanations(prev => ({ ...prev, [explanationModalQuestion._id]: `Network Error: ${err.message}` }));
+                          } finally {
+                            setAiExplainLoading(false);
+                          }
+                        }}
+                        style={{
+                          padding: '12px 24px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                          color: '#FFF',
+                          fontSize: '15px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.45)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.35)'; }}
+                      >
+                        <HiSparkles size={18} />
+                        {language === "en" ? "Generate Detailed Solution" : "বিস্তারিত সমাধান তৈরি করো"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Loading state */}
+                  {aiExplainLoading && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '32px 16px' }}>
+                      <div style={{
+                        width: '40px', height: '40px',
+                        border: '3px solid #E2E8F0',
+                        borderTopColor: '#6366F1',
+                        borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite'
+                      }} />
+                      <p style={{ color: '#6366F1', fontWeight: '500', fontSize: '15px', margin: 0 }}>
+                        {language === "en" ? "AI is thinking..." : "AI চিন্তা করছে..."}
+                      </p>
+                      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                    </div>
+                  )}
+
+                  {/* Explanation output & Tutoring Chat */}
+                  {aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {/* Messages Thread */}
+                      <div 
+                        className="ai-chat-thread-container"
+                        style={{ 
+                          maxHeight: '400px', 
+                          overflowY: 'auto', 
+                          padding: '12px',
+                          border: '1px solid #F1F5F9',
+                          borderRadius: '12px',
+                          backgroundColor: '#FAF9F6',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px'
+                        }}
+                      >
+                        {(aiChatThreads[explanationModalQuestion._id] || [
+                          { role: "assistant", content: aiExplanations[explanationModalQuestion._id] }
+                        ]).map((msg, index) => {
+                          const isUser = msg.role === 'user';
+                          return (
+                            <div 
+                              key={index}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: isUser ? 'flex-end' : 'flex-start',
+                                alignSelf: isUser ? 'flex-end' : 'flex-start',
+                                maxWidth: '85%',
+                                gap: '4px'
+                              }}
+                            >
+                              {/* Avatar / Name label */}
+                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px' }}>
+                                {isUser 
+                                  ? (language === "en" ? "You" : "তুমি") 
+                                  : (language === "en" ? "AI Tutor" : "এআই টিউটর")}
+                              </span>
+
+                              {/* Message bubble */}
+                              <div
+                                style={{
+                                  background: isUser 
+                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)' 
+                                    : '#FFFFFF',
+                                  color: isUser ? '#FFFFFF' : '#1E293B',
+                                  border: isUser ? 'none' : '1px solid #E2E8F0',
+                                  borderRadius: isUser ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
+                                  padding: '12px 16px',
+                                  boxShadow: isUser ? '0 3px 10px rgba(99, 102, 241, 0.15)' : '0 2px 6px rgba(0, 0, 0, 0.03)',
+                                  fontSize: '14px',
+                                  lineHeight: '1.6',
+                                }}
+                              >
+                                {/* Thumbnail attachment if present */}
+                                {msg.image && (
+                                  <div style={{ marginBottom: '8px' }}>
+                                    <img 
+                                      src={msg.image} 
+                                      alt="Attachment" 
+                                      style={{ 
+                                        maxWidth: '180px', 
+                                        maxHeight: '130px', 
+                                        objectFit: 'contain', 
+                                        borderRadius: '8px', 
+                                        border: '1px solid rgba(255, 255, 255, 0.2)' 
+                                      }} 
+                                    />
+                                  </div>
+                                )}
+                                <div 
+                                  className="chat-bubble-text"
+                                  dangerouslySetInnerHTML={
+                                    isUser 
+                                      ? { __html: msg.content.replace(/\n/g, '<br/>') } 
+                                      : renderMarkdownWithMath(msg.content)
+                                  }
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Typing / Sending indicator */}
+                        {isSendingFollowUp && (
+                          <div 
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              alignSelf: 'flex-start',
+                              background: '#F1F5F9',
+                              borderRadius: '12px 12px 12px 2px',
+                              padding: '10px 14px',
+                              color: '#64748B',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <div style={{
+                              width: '6px', height: '6px',
+                              backgroundColor: '#94A3B8',
+                              borderRadius: '50%',
+                              animation: 'bounce 1.4s infinite ease-in-out both'
+                            }} />
+                            <div style={{
+                              width: '6px', height: '6px',
+                              backgroundColor: '#94A3B8',
+                              borderRadius: '50%',
+                              animation: 'bounce 1.4s infinite ease-in-out both 0.2s'
+                            }} />
+                            <div style={{
+                              width: '6px', height: '6px',
+                              backgroundColor: '#94A3B8',
+                              borderRadius: '50%',
+                              animation: 'bounce 1.4s infinite ease-in-out both 0.4s'
+                            }} />
+                            <span style={{ marginLeft: '4px' }}>
+                              {language === "en" ? "AI is replying..." : "AI উত্তর দিচ্ছে..."}
+                            </span>
+                            <style>{`
+                              @keyframes bounce {
+                                0%, 80%, 100% { transform: scale(0); }
+                                40% { transform: scale(1.0); }
+                              }
+                            `}</style>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Chat Input & File upload Section */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Hidden follow-up image file input */}
+                        <input
+                          ref={followUpFileRef}
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            processImageFile(file, (dataUrl) => {
+                              setFollowUpImage(dataUrl);
+                            });
+                          }}
+                        />
+
+                        {/* Image Preview attachment */}
+                        {followUpImage && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                              <img 
+                                src={followUpImage} 
+                                alt="Attachment preview" 
+                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }} 
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setFollowUpImage(null)}
+                                style={{
+                                  position: 'absolute',
+                                  top: '-6px',
+                                  right: '-6px',
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#EF4444',
+                                  color: '#FFF',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '10px'
+                                }}
+                              >
+                                <HiX size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Input bar */}
+                        <div 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            border: '1.5px solid #CBD5E1', 
+                            borderRadius: '10px', 
+                            padding: '4px 8px', 
+                            backgroundColor: '#FFF' 
+                          }}
+                        >
+                          {/* Image Attach Button */}
+                          <button
+                            type="button"
+                            onClick={() => followUpFileRef.current?.click()}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#64748B',
+                              cursor: 'pointer',
+                              padding: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '6px',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F1F5F9'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            title={language === "en" ? "Attach image" : "ছবি যুক্ত করুন"}
+                          >
+                            <HiPaperClip size={20} />
+                          </button>
+
+                          {/* Chat Input Textarea */}
+                          <textarea
+                            value={followUpText}
+                            onChange={(e) => setFollowUpText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendFollowUp();
+                              }
+                            }}
+                            placeholder={language === "en" ? "Ask a follow-up question..." : "এই প্রশ্নটি সম্পর্কে কোনো কনফিউশন থাকলে জিজ্ঞাসা করো..."}
+                            style={{
+                              flex: 1,
+                              border: 'none',
+                              outline: 'none',
+                              resize: 'none',
+                              height: '40px',
+                              maxHeight: '100px',
+                              fontFamily: 'inherit',
+                              fontSize: '14px',
+                              color: '#1E293B',
+                              padding: '8px 4px',
+                            }}
+                          />
+
+                          {/* Send Button */}
+                          <button
+                            type="button"
+                            onClick={handleSendFollowUp}
+                            disabled={isSendingFollowUp || (!followUpText.trim() && !followUpImage)}
+                            style={{
+                              backgroundColor: (followUpText.trim() || followUpImage) && !isSendingFollowUp ? '#6366F1' : '#E2E8F0',
+                              color: (followUpText.trim() || followUpImage) && !isSendingFollowUp ? '#FFF' : '#94A3B8',
+                              border: 'none',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              cursor: (followUpText.trim() || followUpImage) && !isSendingFollowUp ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <HiPaperAirplane size={16} style={{ transform: 'rotate(90deg)' }} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Reset / Regenerate solution */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAiExplanations(prev => {
+                            const copy = { ...prev };
+                            delete copy[explanationModalQuestion._id];
+                            return copy;
+                          });
+                          setAiChatThreads(prev => {
+                            const copy = { ...prev };
+                            delete copy[explanationModalQuestion._id];
+                            return copy;
+                          });
+                        }}
+                        style={{
+                          alignSelf: 'flex-start',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #CBD5E1',
+                          backgroundColor: '#FFF',
+                          color: '#64748B',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          marginTop: '4px'
+                        }}
+                      >
+                        {language === "en" ? "↻ Reset Conversation" : "↻ নতুন করে শুরু করো"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {explanationTab === "video" && (

@@ -1,411 +1,427 @@
 .varsity-written-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem 0 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem 0 3rem;
 }
 
 .varsity-written-header {
-  align-items: flex-start;
+    align-items: flex-start;
 }
 
 .varsity-written-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
 }
 
 .varsity-written-stat {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08));
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 14px;
-  padding: 1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+    background: linear-gradient(
+        135deg,
+        rgba(245, 158, 11, 0.12),
+        rgba(217, 119, 6, 0.08)
+    );
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .varsity-written-stat__label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.65);
-  font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 600;
 }
 
 .varsity-written-stat__value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #FBBF24;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fbbf24;
 }
 
 .varsity-written-loading,
 .varsity-written-empty {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  padding: 3rem 1.5rem;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .varsity-written-empty h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.15rem;
-  color: #fff;
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+    color: #fff;
 }
 
 .varsity-written-empty p {
-  margin: 0;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .varsity-written-spinner {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 3px solid rgba(245, 158, 11, 0.2);
-  border-top-color: #F59E0B;
-  margin: 0 auto 0.75rem;
-  animation: varsity-written-spin 0.9s linear infinite;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid rgba(245, 158, 11, 0.2);
+    border-top-color: #f59e0b;
+    margin: 0 auto 0.75rem;
+    animation: varsity-written-spin 0.9s linear infinite;
 }
 
 @keyframes varsity-written-spin {
-  to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .varsity-written-body {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 1.5rem;
-  align-items: start;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 1.5rem;
+    align-items: start;
 }
 
 @media (max-width: 900px) {
-  .varsity-written-body {
-    grid-template-columns: 1fr;
-  }
+    .varsity-written-body {
+        grid-template-columns: 1fr;
+    }
 }
 
 .varsity-written-sidebar {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1.25rem 1rem;
-  position: sticky;
-  top: 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem 1rem;
+    position: sticky;
+    top: 1rem;
 }
 
 .varsity-written-sidebar h4 {
-  margin: 0 0 0.75rem;
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .varsity-written-sidebar ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .varsity-written-chap-btn {
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  color: rgba(255, 255, 255, 0.78);
-  padding: 0.55rem 0.75rem;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border 0.15s;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid transparent;
+    color: rgba(255, 255, 255, 0.78);
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border 0.15s;
 }
 
 .varsity-written-chap-btn:hover {
-  background: rgba(245, 158, 11, 0.1);
-  color: #fff;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fff;
 }
 
 .varsity-written-chap-btn.is-active {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15));
-  border-color: rgba(245, 158, 11, 0.45);
-  color: #FBBF24;
-  font-weight: 600;
+    background: linear-gradient(
+        135deg,
+        rgba(245, 158, 11, 0.2),
+        rgba(217, 119, 6, 0.15)
+    );
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+    font-weight: 600;
 }
 
 .varsity-written-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
 }
 
 .varsity-written-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1.1rem 1.25rem;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.1rem 1.25rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition:
+        transform 0.15s,
+        border-color 0.15s,
+        background 0.15s;
 }
 
 .varsity-written-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(245, 158, 11, 0.45);
-  background: rgba(245, 158, 11, 0.08);
+    transform: translateY(-2px);
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.08);
 }
 
 .varsity-written-card__head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .varsity-written-card__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  background: rgba(99, 102, 241, 0.18);
-  color: #C7D2FE;
-  border: 1px solid rgba(99, 102, 241, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: rgba(99, 102, 241, 0.18);
+    color: #c7d2fe;
+    border: 1px solid rgba(99, 102, 241, 0.35);
 }
 
 .varsity-written-card__chip--year {
-  background: rgba(245, 158, 11, 0.18);
-  color: #FBBF24;
-  border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.4);
 }
 
 .varsity-written-card__body {
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.5;
-  max-height: 9rem;
-  overflow: hidden;
-  position: relative;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.5;
+    max-height: 9rem;
+    overflow: hidden;
+    position: relative;
 }
 
 .varsity-written-card__body::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 2.5rem;
-  background: linear-gradient(to bottom, transparent, rgba(20, 20, 30, 0.85));
-  pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 2.5rem;
+    background: linear-gradient(to bottom, transparent, rgba(20, 20, 30, 0.85));
+    pointer-events: none;
 }
 
 .varsity-written-card__stem img,
 .varsity-written-card__stem svg {
-  max-width: 100%;
-  height: auto;
+    max-width: 100%;
+    height: auto;
 }
 
 .varsity-written-card__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .varsity-written-card__src {
-  font-weight: 500;
+    font-weight: 500;
 }
 
 .varsity-written-card__cta {
-  color: #FBBF24;
-  font-weight: 600;
+    color: #fbbf24;
+    font-weight: 600;
 }
 
 .varsity-written-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1.5rem;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1.5rem;
 }
 
 .varsity-written-modal__panel {
-  width: min(720px, 100%);
-  max-height: 88vh;
-  overflow-y: auto;
-  background: linear-gradient(160deg, #1f1b35, #0f0c1d);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 22px;
-  padding: 1.75rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  color: #fff;
+    width: min(720px, 100%);
+    max-height: 88vh;
+    overflow-y: auto;
+    background: linear-gradient(160deg, #1f1b35, #0f0c1d);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 22px;
+    padding: 1.75rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    color: #fff;
 }
 
 .varsity-written-modal__panel header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
 }
 
 .varsity-written-modal__panel header h3 {
-  margin: 0;
-  font-size: 1.2rem;
+    margin: 0;
+    font-size: 1.2rem;
 }
 
 .varsity-written-modal__close {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 1.8rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 0.5rem;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.5rem;
 }
 
 .varsity-written-modal__close:hover {
-  color: #FBBF24;
+    color: #fbbf24;
 }
 
 .varsity-written-modal__body section {
-  margin-top: 1.25rem;
+    margin-top: 1.25rem;
 }
 
 .varsity-written-modal__body section h4 {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 0.5rem;
 }
 
 .varsity-written-modal__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .varsity-written-modal__meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .varsity-written-modal__html {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  line-height: 1.6;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    line-height: 1.6;
 }
 
 .varsity-written-modal__html img,
 .varsity-written-modal__html svg {
-  max-width: 100%;
-  height: auto;
+    max-width: 100%;
+    height: auto;
 }
 
 .varsity-written-modal__parts {
-  margin: 0;
-  padding-left: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+    margin: 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .varsity-written-modal__parts li {
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0.5rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  line-height: 1.55;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    line-height: 1.55;
 }
 
 /* ─── Premium Selectors Styles ──────────────────────────────────────────── */
 
 .varsity-written-selectors {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .varsity-written-selector-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
 .varsity-written-selector-group label {
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
-  font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 600;
 }
 
 .varsity-written-btn-row {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
 }
 
 .varsity-written-select-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.75);
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.75);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
 .varsity-written-select-btn:hover {
-  background: rgba(245, 158, 11, 0.08);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fff;
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fff;
 }
 
 .varsity-written-select-btn.is-active {
-  background: #F59E0B !important;
-  color: #000 !important;
-  border-color: #F59E0B !important;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
-  font-weight: 700;
+    background: #f59e0b !important;
+    color: #000 !important;
+    border-color: #f59e0b !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    font-weight: 700;
 }
 
 @media (max-width: 600px) {
-  .varsity-written-selectors {
-    flex-direction: column;
-    gap: 1.2rem;
-    padding: 1rem;
-  }
-  .varsity-written-select-btn {
-    padding: 6px 12px;
-    font-size: 0.82rem;
-  }
+    .varsity-written-selectors {
+        flex-direction: column;
+        gap: 1.2rem;
+        padding: 1rem;
+    }
+    .varsity-written-select-btn {
+        padding: 6px 12px;
+        font-size: 0.82rem;
+    }
 }

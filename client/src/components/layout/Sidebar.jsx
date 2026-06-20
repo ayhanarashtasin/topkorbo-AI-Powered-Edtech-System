@@ -71,6 +71,7 @@ export default function Sidebar({ activeTab, user }) {
       label: t('db.menu.upload_question'),
       icon: <HiUpload size={20} />
     });
+
     menuItems.push({
       id: 'make-contest-question',
       label: t('db.menu.make_contest'),
@@ -145,6 +146,7 @@ export default function Sidebar({ activeTab, user }) {
                     navigate('/qbank');
                   }
                   else if (item.id === 'upload-question') navigate('/upload-question');
+
                   else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
                   else if (item.id === 'reading-books') navigate('/reading-books');

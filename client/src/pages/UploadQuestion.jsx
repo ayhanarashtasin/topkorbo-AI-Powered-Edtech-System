@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import {
   HiUpload,
@@ -21,11 +21,22 @@ import {
   HiOutlinePencilAlt,
   HiOutlineTrash,
   HiOutlineLightBulb,
+  HiOutlineSparkles,
+  HiOutlineDocumentText,
+  HiOutlinePhotograph,
+  HiOutlineClipboardCopy,
+  HiOutlineRefresh,
+  HiOutlineCheck,
+  HiOutlineExclamationCircle,
+  HiOutlineUpload,
 } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 import Sidebar from '../components/layout/Sidebar';
+import { aiApi } from '../services/aiApi';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import './UploadQuestion.css';
+import './AiQuestionHelper.css';
 
 // ─── Static Data: Subjects, Papers, Chapters ──────────────────────────────────
 
@@ -309,6 +320,91 @@ function renderLatex(text) {
   }
 }
 
+// ─── AI Question Helper Utilities ─────────────────────────────────────────────
+
+const AIH_MAX_IMAGE_BYTES_RAW = 5 * 1024 * 1024;
+
+const AIH_PLACEHOLDER_LATEX =
+  'e.g. Find the value of $\\displaystyle\\int_0^1 \\frac{x^2+1}{x^4+1}\\,dx$.';
+
+function aihReadFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function aihSplitDataUrl(dataUrl) {
+  const match = typeof dataUrl === 'string'
+    ? dataUrl.match(/^data:([^;]+);base64,(.*)$/)
+    : null;
+  return {
+    mimeType: match ? match[1] : 'image/png',
+    base64: match ? match[2] : ''
+  };
+}
+
+function aihSafeKatexHtml(latex) {
+  if (!latex || typeof latex !== 'string') return '';
+  try {
+    return katex.renderToString(latex, {
+      throwOnError: false,
+      displayMode: true,
+      output: 'html'
+    });
+  } catch (_) {
+    return '';
+  }
+}
+
+function aihBuildFullLatex(data) {
+  if (!data) return '';
+  const parts = [data.questionText || ''];
+  if (Array.isArray(data.options) && data.options.length > 0) {
+    parts.push('');
+    data.options.forEach((opt) => {
+      parts.push(`${opt.label}) ${opt.text}`);
+    });
+  }
+  if (data.solution && data.solution.trim().length > 0) {
+    parts.push('');
+    parts.push('Solution:');
+    parts.push(data.solution);
+  }
+  return parts.join('\n');
+}
+
+function AihResultBlock({ label, latex, previewHtml, fieldKey, copiedField, onCopy }) {
+  return (
+    <div className="aih-result-block">
+      <div className="aih-result-block__header">
+        <span className="aih-result-block__label">{label}</span>
+        <button
+          type="button"
+          className="aih-copy-mini"
+          onClick={() => onCopy(latex, fieldKey)}
+          title={`Copy ${label} LaTeX`}
+        >
+          {copiedField === fieldKey ? <HiOutlineCheck /> : <HiOutlineClipboardCopy />}
+          <span>{copiedField === fieldKey ? 'Copied' : 'Copy'}</span>
+        </button>
+      </div>
+      <div
+        className="aih-katex aih-katex--block"
+        dangerouslySetInnerHTML={{ __html: previewHtml }}
+      />
+      <details className="aih-source">
+        <summary>Show LaTeX source</summary>
+        <pre>
+          <code>{latex}</code>
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UploadQuestion() {
@@ -357,7 +453,7 @@ export default function UploadQuestion() {
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [uqToast, setUqToast] = useState(null);
   const [recentQuestions, setRecentQuestions] = useState([]);
 
   // Edit / Delete / Solution modal state for Recently Uploaded cards
@@ -367,6 +463,248 @@ export default function UploadQuestion() {
   const [viewingSolutionFor, setViewingSolutionFor] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  // ── AI Question Helper state ──
+  const [showAiHelper, setShowAiHelper] = useState(false);
+  const [aiInputText, setAiInputText] = useState('');
+  const [aiImage, setAiImage] = useState(null);
+  const [aiIsDragging, setAiIsDragging] = useState(false);
+  const [aiIsLoading, setAiIsLoading] = useState(false);
+  const [aiExtracted, setAiExtracted] = useState(null);
+  const [aiErrorMsg, setAiErrorMsg] = useState('');
+  const [aiCopiedField, setAiCopiedField] = useState('');
+  const aiFileInputRef = useRef(null);
+  const aiCopyResetTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (aiCopyResetTimerRef.current) clearTimeout(aiCopyResetTimerRef.current);
+    };
+  }, []);
+
+  const aiImagePreviewSrc = useMemo(
+    () => (aiImage ? `data:${aiImage.mimeType};base64,${aiImage.base64}` : ''),
+    [aiImage]
+  );
+
+  const aiHasInput = aiInputText.trim().length > 0 || !!aiImage;
+  const aiCanSubmit = aiHasInput && !aiIsLoading;
+
+  const handleAiImageFile = useCallback(async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (PNG, JPG, etc.)');
+      return;
+    }
+    if (file.size > AIH_MAX_IMAGE_BYTES_RAW) {
+      toast.error('Image is too large. Please use a file under ~5 MB.');
+      return;
+    }
+    try {
+      const dataUrl = await aihReadFileAsDataUrl(file);
+      const { mimeType, base64 } = aihSplitDataUrl(dataUrl);
+      setAiImage({ mimeType, base64, name: file.name });
+      setAiErrorMsg('');
+    } catch (err) {
+      console.error('[AiHelper] failed to read file', err);
+      toast.error('Could not read the selected image.');
+    }
+  }, []);
+
+  const onAiFileInputChange = (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (file) handleAiImageFile(file);
+    event.target.value = '';
+  };
+
+  const onAiDrop = (event) => {
+    event.preventDefault();
+    setAiIsDragging(false);
+    const file = event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) handleAiImageFile(file);
+  };
+
+  const onAiDragOver = (event) => { event.preventDefault(); setAiIsDragging(true); };
+  const onAiDragLeave = (event) => { event.preventDefault(); setAiIsDragging(false); };
+  const clearAiImage = () => { setAiImage(null); if (aiFileInputRef.current) aiFileInputRef.current.value = ''; };
+
+  const handleAiExtract = async () => {
+    if (!aiCanSubmit) return;
+    setAiIsLoading(true);
+    setAiErrorMsg('');
+    setAiExtracted(null);
+    const payload = {};
+    const trimmed = aiInputText.trim();
+    if (trimmed) payload.text = trimmed;
+    if (aiImage) {
+      payload.imageBase64 = aiImage.base64;
+      payload.mimeType = aiImage.mimeType;
+    }
+    try {
+      const result = await aiApi.extract(payload);
+      if (!result || !result.extracted) throw new Error('AI returned an empty result.');
+      setAiExtracted(result.extracted);
+      toast.success('Question extracted. Review the LaTeX below and copy.');
+    } catch (err) {
+      const message = err?.message || 'Could not extract the question.';
+      setAiErrorMsg(message);
+      toast.error(message);
+    } finally {
+      setAiIsLoading(false);
+    }
+  };
+
+  const handleAiReset = () => {
+    setAiInputText('');
+    setAiImage(null);
+    setAiExtracted(null);
+    setAiErrorMsg('');
+    if (aiFileInputRef.current) aiFileInputRef.current.value = '';
+    setQuestionText('');
+    setOptions([
+      { text: '', isCorrect: true },
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+    ]);
+  };
+
+  const aiCopyToClipboard = async (value, fieldKey) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setAiCopiedField(fieldKey);
+      toast.success('Copied to clipboard');
+      if (aiCopyResetTimerRef.current) clearTimeout(aiCopyResetTimerRef.current);
+      aiCopyResetTimerRef.current = setTimeout(() => setAiCopiedField(''), 1500);
+    } catch (err) {
+      console.error('[AiHelper] clipboard copy failed', err);
+      toast.error('Copy failed — please select and copy manually.');
+    }
+  };
+
+  const handleApplyToForm = () => {
+    if (!aiExtracted) return;
+    if (aiExtracted.questionText) setQuestionText(aiExtracted.questionText);
+    if (aiExtracted.solution) setSolution(aiExtracted.solution);
+    if (Array.isArray(aiExtracted.options) && aiExtracted.options.length > 0) {
+      const mappedOpts = aiExtracted.options.map((opt) => {
+        const isCorrect = aiExtracted.correctOption
+          ? opt.label.toUpperCase() === aiExtracted.correctOption.toUpperCase()
+          : false;
+        return { text: opt.text, isCorrect };
+      });
+      while (mappedOpts.length < 2) mappedOpts.push({ text: '', isCorrect: false });
+      setOptions(mappedOpts.slice(0, 4));
+      setQuestionType('mcq');
+    }
+    toast.success('Applied to form — review and fill in the remaining fields.');
+  };
+
+  const aiRendered = useMemo(() => {
+    if (!aiExtracted) return null;
+    const fullSource = aihBuildFullLatex(aiExtracted);
+    return {
+      question: aihSafeKatexHtml(aiExtracted.questionText),
+      solution: aihSafeKatexHtml(aiExtracted.solution || ''),
+      fullSource,
+      fullHtml: aihSafeKatexHtml(fullSource),
+      options: (aiExtracted.options || []).map((opt) => ({
+        ...opt,
+        html: aihSafeKatexHtml(opt.text)
+      }))
+    };
+  }, [aiExtracted]);
+
+  // ── AI Solution Helper state ──
+  const [showAiSolHelper, setShowAiSolHelper] = useState(false);
+  const [aiSolInputText, setAiSolInputText] = useState('');
+  const [aiSolImage, setAiSolImage] = useState(null);
+  const [aiSolIsDragging, setAiSolIsDragging] = useState(false);
+  const [aiSolIsLoading, setAiSolIsLoading] = useState(false);
+  const [aiSolExtracted, setAiSolExtracted] = useState(null);
+  const [aiSolErrorMsg, setAiSolErrorMsg] = useState('');
+  const aiSolFileInputRef = useRef(null);
+
+  const aiSolImagePreviewSrc = useMemo(
+    () => (aiSolImage ? `data:${aiSolImage.mimeType};base64,${aiSolImage.base64}` : ''),
+    [aiSolImage]
+  );
+  const aiSolHasInput = aiSolInputText.trim().length > 0 || !!aiSolImage;
+  const aiSolCanSubmit = aiSolHasInput && !aiSolIsLoading;
+
+  const handleAiSolImageFile = useCallback(async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file (PNG, JPG, etc.)'); return; }
+    if (file.size > AIH_MAX_IMAGE_BYTES_RAW) { toast.error('Image is too large. Please use a file under ~5 MB.'); return; }
+    try {
+      const dataUrl = await aihReadFileAsDataUrl(file);
+      const { mimeType, base64 } = aihSplitDataUrl(dataUrl);
+      setAiSolImage({ mimeType, base64, name: file.name });
+      setAiSolErrorMsg('');
+    } catch (err) {
+      console.error('[AiSolHelper] failed to read file', err);
+      toast.error('Could not read the selected image.');
+    }
+  }, []);
+
+  const onAiSolFileInputChange = (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (file) handleAiSolImageFile(file);
+    event.target.value = '';
+  };
+  const onAiSolDrop = (event) => { event.preventDefault(); setAiSolIsDragging(false); const file = event.dataTransfer.files && event.dataTransfer.files[0]; if (file) handleAiSolImageFile(file); };
+  const onAiSolDragOver = (event) => { event.preventDefault(); setAiSolIsDragging(true); };
+  const onAiSolDragLeave = (event) => { event.preventDefault(); setAiSolIsDragging(false); };
+  const clearAiSolImage = () => { setAiSolImage(null); if (aiSolFileInputRef.current) aiSolFileInputRef.current.value = ''; };
+
+  const handleAiSolExtract = async () => {
+    if (!aiSolCanSubmit) return;
+    setAiSolIsLoading(true);
+    setAiSolErrorMsg('');
+    setAiSolExtracted(null);
+    const payload = {};
+    const trimmed = aiSolInputText.trim();
+    if (trimmed) payload.text = trimmed;
+    if (aiSolImage) { payload.imageBase64 = aiSolImage.base64; payload.mimeType = aiSolImage.mimeType; }
+    try {
+      const result = await aiApi.extract(payload);
+      if (!result || !result.extracted) throw new Error('AI returned an empty result.');
+      setAiSolExtracted(result.extracted);
+      toast.success('Solution extracted! Review below and apply.');
+    } catch (err) {
+      const message = err?.message || 'Could not extract the solution.';
+      setAiSolErrorMsg(message);
+      toast.error(message);
+    } finally {
+      setAiSolIsLoading(false);
+    }
+  };
+
+  const handleAiSolReset = () => {
+    setAiSolInputText(''); setAiSolImage(null); setAiSolExtracted(null); setAiSolErrorMsg('');
+    if (aiSolFileInputRef.current) aiSolFileInputRef.current.value = '';
+    setSolution('');
+  };
+
+  const handleApplySolToForm = () => {
+    if (!aiSolExtracted) return;
+    // Combine questionText + solution from the extraction into the solution field
+    const parts = [];
+    if (aiSolExtracted.questionText) parts.push(aiSolExtracted.questionText);
+    if (aiSolExtracted.solution) parts.push(aiSolExtracted.solution);
+    const combined = parts.join('\n\n');
+    if (combined) setSolution(combined);
+    toast.success('Solution applied to form!');
+  };
+
+  const aiSolRenderedPreview = useMemo(() => {
+    if (!aiSolExtracted) return '';
+    const parts = [];
+    if (aiSolExtracted.questionText) parts.push(aiSolExtracted.questionText);
+    if (aiSolExtracted.solution) parts.push(aiSolExtracted.solution);
+    return aihSafeKatexHtml(parts.join('\n\n'));
+  }, [aiSolExtracted]);
 
   const openEditModal = (q) => {
     setEditingQuestion(q);
@@ -859,8 +1197,8 @@ export default function UploadQuestion() {
   };
 
   const showToast = (type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
+    setUqToast({ type, msg });
+    setTimeout(() => setUqToast(null), 4000);
   };
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -882,12 +1220,194 @@ export default function UploadQuestion() {
 
         <div className="uq-workspace">
           {/* ── Toast ── */}
-          {toast && (
-            <div className={`uq-toast uq-toast--${toast.type}`}>
-              {toast.type === 'success' ? <HiCheckCircle size={18} /> : <HiX size={18} />}
-              {toast.msg}
+          {uqToast && (
+            <div className={`uq-toast uq-toast--${uqToast.type}`}>
+              {uqToast.type === 'success' ? <HiCheckCircle size={18} /> : <HiX size={18} />}
+              {uqToast.msg}
             </div>
           )}
+
+          {/* ── AI Question Helper ── */}
+          <div className="uq-section" style={{ borderLeft: '4px solid var(--sky-blue)' }}>
+            <div
+              className="uq-section__title"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => setShowAiHelper(prev => !prev)}
+            >
+              <span className="uq-section__title-icon" style={{ background: 'linear-gradient(135deg, rgba(192,133,82,0.15), rgba(140,90,60,0.15))' }}>
+                <HiOutlineSparkles size={18} />
+              </span>
+              {language === 'en' ? 'AI Question Helper' : 'এআই প্রশ্ন সহকারী'}
+              <span style={{ marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                {showAiHelper ? (language === 'en' ? '▲ Collapse' : '▲ সংকুচিত করুন') : (language === 'en' ? '▼ Expand' : '▼ বিস্তারিত')}
+              </span>
+            </div>
+            <p className="uq-section__desc">
+              {language === 'en'
+                ? 'Paste a question or upload an image — get a clean LaTeX version you can apply to the form below.'
+                : 'একটি প্রশ্ন পেস্ট করুন বা একটি ছবি আপলোড করুন — নিচের ফর্মে প্রয়োগ করার জন্য একটি পরিষ্কার LaTeX সংস্করণ পান।'}
+            </p>
+
+            {showAiHelper && (
+              <div className="aih-page" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.05fr)', maxWidth: '100%', padding: '8px 0 0' }}>
+                {/* ── Input Card ── */}
+                <section className="aih-card aih-card--input">
+                  <div className="aih-card__header">
+                    <div className="aih-card__title">
+                      <HiOutlineDocumentText />
+                      <h3>{language === 'en' ? 'Source Question' : 'উৎস প্রশ্ন'}</h3>
+                    </div>
+                    <p className="aih-card__desc">
+                      {language === 'en'
+                        ? 'Provide either a typed question, an image of a question, or both. The AI will return a structured LaTeX representation.'
+                        : 'একটি টাইপ করা প্রশ্ন, প্রশ্নের ছবি, বা উভয়ই দিন। AI একটি কাঠামোগত LaTeX উপস্থাপনা প্রদান করবে।'}
+                    </p>
+                  </div>
+                  <div className="aih-card__body">
+                    <label className="aih-field-label" htmlFor="aih-text-input-uq">
+                      {language === 'en' ? 'Type or paste the question' : 'প্রশ্নটি টাইপ করুন বা পেস্ট করুন'}
+                    </label>
+                    <textarea
+                      id="aih-text-input-uq"
+                      className="aih-textarea"
+                      rows={5}
+                      value={aiInputText}
+                      onChange={(e) => setAiInputText(e.target.value)}
+                      placeholder={AIH_PLACEHOLDER_LATEX}
+                      disabled={aiIsLoading}
+                    />
+                    <div className="aih-divider"><span>{language === 'en' ? 'or' : 'অথবা'}</span></div>
+                    <div
+                      className={`aih-dropzone ${aiIsDragging ? 'aih-dropzone--active' : ''}`}
+                      onDrop={onAiDrop}
+                      onDragOver={onAiDragOver}
+                      onDragLeave={onAiDragLeave}
+                      onClick={() => aiFileInputRef.current && aiFileInputRef.current.click()}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aiFileInputRef.current && aiFileInputRef.current.click(); } }}
+                    >
+                      <input
+                        ref={aiFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={onAiFileInputChange}
+                        style={{ display: 'none' }}
+                      />
+                      {aiImagePreviewSrc ? (
+                        <div className="aih-dropzone__preview">
+                          <img src={aiImagePreviewSrc} alt="Uploaded question" />
+                          <div className="aih-dropzone__meta">
+                            <span className="aih-dropzone__name">
+                              <HiOutlinePhotograph />
+                              {aiImage?.name || 'image'}
+                            </span>
+                            <button type="button" className="aih-dropzone__remove" onClick={(e) => { e.stopPropagation(); clearAiImage(); }} aria-label="Remove image">
+                              <HiX />
+                              {language === 'en' ? 'Remove' : 'মুছুন'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="aih-dropzone__empty">
+                          <HiOutlineUpload size={28} />
+                          <p><strong>{language === 'en' ? 'Click to upload' : 'আপলোড করতে ক্লিক করুন'}</strong> {language === 'en' ? 'or drag & drop an image of the question' : 'অথবা প্রশ্নের একটি ছবি টেনে আনুন'}</p>
+                          <span className="aih-dropzone__hint">{language === 'en' ? 'PNG, JPG, or handwritten photo — up to ~5 MB' : 'PNG, JPG, বা হাতে লেখা ছবি — সর্বোচ্চ ~৫ MB'}</span>
+                        </div>
+                      )}
+                    </div>
+                    {aiErrorMsg && (
+                      <div className="aih-error">
+                        <HiOutlineExclamationCircle />
+                        <span>{aiErrorMsg}</span>
+                      </div>
+                    )}
+                    <div className="aih-actions">
+                      <button type="button" className="aih-btn aih-btn--ghost" onClick={handleAiReset} disabled={aiIsLoading || (!aiInputText && !aiImage)}>
+                        <HiOutlineRefresh />
+                        {language === 'en' ? 'Clear' : 'মুছুন'}
+                      </button>
+                      <button type="button" className="aih-btn aih-btn--primary" onClick={handleAiExtract} disabled={!aiCanSubmit}>
+                        {aiIsLoading ? (<><span className="aih-spinner" />{language === 'en' ? 'Extracting…' : 'এক্সট্র্যাক্ট হচ্ছে…'}</>) : (<><HiOutlineSparkles />{language === 'en' ? 'Extract Question' : 'প্রশ্ন এক্সট্র্যাক্ট করুন'}</>)}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* ── Output Card ── */}
+                <section className="aih-card aih-card--output">
+                  <div className="aih-card__header">
+                    <div className="aih-card__title">
+                      <HiOutlineSparkles />
+                      <h3>{language === 'en' ? 'Extracted LaTeX' : 'এক্সট্র্যাক্ট করা LaTeX'}</h3>
+                    </div>
+                    <p className="aih-card__desc">
+                      {language === 'en'
+                        ? 'Copy the LaTeX below and paste it into the form, or use "Apply to Form" to auto-fill.'
+                        : 'নিচের LaTeX কপি করুন এবং ফর্মে পেস্ট করুন, অথবা স্বয়ংক্রিয়ভাবে পূরণ করতে "ফর্মে প্রয়োগ করুন" ব্যবহার করুন।'}
+                    </p>
+                  </div>
+                  <div className="aih-card__body">
+                    {!aiExtracted && !aiIsLoading && (
+                      <div className="aih-empty">
+                        <HiOutlineSparkles size={32} />
+                        <p>{language === 'en' ? 'Submit a question to see its LaTeX version here. Each part (stem, options, solution) can be copied individually, or copy the whole thing at once.' : 'এখানে LaTeX সংস্করণ দেখতে একটি প্রশ্ন জমা দিন।'}</p>
+                      </div>
+                    )}
+                    {aiIsLoading && (
+                      <div className="aih-loading">
+                        <span className="aih-spinner aih-spinner--lg" />
+                        <p>{language === 'en' ? 'Reading the question and converting it to LaTeX…' : 'প্রশ্ন পড়া হচ্ছে এবং LaTeX-এ রূপান্তর করা হচ্ছে…'}</p>
+                      </div>
+                    )}
+                    {aiExtracted && !aiIsLoading && aiRendered && (
+                      <div className="aih-result">
+                        <AihResultBlock label={language === 'en' ? 'Question' : 'প্রশ্ন'} latex={aiExtracted.questionText} previewHtml={aiRendered.question} fieldKey="questionText" copiedField={aiCopiedField} onCopy={aiCopyToClipboard} />
+                        {Array.isArray(aiExtracted.options) && aiExtracted.options.length > 0 && (
+                          <div className="aih-options">
+                            <div className="aih-options__title">
+                              {language === 'en' ? 'Options' : 'অপশন'} ({aiExtracted.options.length})
+                              {aiExtracted.correctOption && (
+                                <span className="aih-options__correct">{language === 'en' ? 'Correct' : 'সঠিক'}: {aiExtracted.correctOption}</span>
+                              )}
+                            </div>
+                            <ul className="aih-options__list">
+                              {aiRendered.options.map((opt) => {
+                                const isCorrect = aiExtracted.correctOption && opt.label.toUpperCase() === aiExtracted.correctOption.toUpperCase();
+                                return (
+                                  <li key={opt.label} className={`aih-option ${isCorrect ? 'aih-option--correct' : ''}`}>
+                                    <div className="aih-option__label">{opt.label}</div>
+                                    <div className="aih-option__body">
+                                      <div className="aih-katex" dangerouslySetInnerHTML={{ __html: opt.html }} />
+                                      <button type="button" className="aih-copy-mini" onClick={() => aiCopyToClipboard(`${opt.label}) ${opt.text}`, `opt-${opt.label}`)} title={`Copy option ${opt.label}`}>
+                                        {aiCopiedField === `opt-${opt.label}` ? <HiOutlineCheck /> : <HiOutlineClipboardCopy />}
+                                      </button>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        )}
+                        {aiExtracted.solution && aiExtracted.solution.trim().length > 0 && (
+                          <AihResultBlock label={language === 'en' ? 'Solution' : 'সমাধান'} latex={aiExtracted.solution} previewHtml={aiRendered.solution} fieldKey="solution" copiedField={aiCopiedField} onCopy={aiCopyToClipboard} />
+                        )}
+                        <div className="aih-copy-all">
+                          <button type="button" className="aih-btn aih-btn--secondary" onClick={() => aiCopyToClipboard(aiRendered.fullSource, 'all')}>
+                            {aiCopiedField === 'all' ? (<><HiOutlineCheck /> {language === 'en' ? 'Copied' : 'কপি হয়েছে'}</>) : (<><HiOutlineClipboardCopy /> {language === 'en' ? 'Copy full LaTeX' : 'সম্পূর্ণ LaTeX কপি করুন'}</>)}
+                          </button>
+                          <button type="button" className="aih-btn aih-btn--primary" onClick={handleApplyToForm} style={{ marginLeft: 8 }}>
+                            <HiOutlineSparkles />
+                            {language === 'en' ? 'Apply to Form' : 'ফর্মে প্রয়োগ করুন'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
 
           {/* ── Section 1: Question Type ── */}
           <div className="uq-section">
@@ -1157,6 +1677,104 @@ export default function UploadQuestion() {
                 ? 'Provide a step-by-step solution to help students. LaTeX formulas ($x$ and $$x$$) are fully supported. You may also attach an image of the worked solution.'
                 : 'শিক্ষার্থীদের বোঝার জন্য ধাপে ধাপে সমাধান ব্যাখ্যা প্রদান করুন। LaTeX ফর্মুলা ($x$ এবং $$x$$) সমর্থন করে। আপনি চাইলে সমাধানের একটি ছবিও সংযুক্ত করতে পারেন।'}
             </p>
+
+            {/* ── Mini AI Solution Helper ── */}
+            {questionType !== 'cq' && (
+              <div style={{ marginBottom: '18px', border: '1.5px dashed rgba(192,133,82,0.3)', borderRadius: 'var(--radius-md)', padding: '14px 18px', background: 'rgba(192,133,82,0.03)' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => setShowAiSolHelper(prev => !prev)}
+                >
+                  <HiOutlineSparkles size={16} style={{ color: 'var(--sky-blue)' }} />
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                    {language === 'en' ? 'AI Solution Extractor' : 'এআই সমাধান এক্সট্র্যাক্টর'}
+                  </span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    {showAiSolHelper ? (language === 'en' ? '▲ Collapse' : '▲ সংকুচিত') : (language === 'en' ? '▼ Expand' : '▼ বিস্তারিত')}
+                  </span>
+                </div>
+                {showAiSolHelper && (
+                  <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                      {language === 'en'
+                        ? 'Upload an image of the worked solution or paste it as text — AI will extract the LaTeX.'
+                        : 'সমাধানের ছবি আপলোড করুন বা টেক্সট হিসেবে পেস্ট করুন — AI LaTeX এক্সট্র্যাক্ট করবে।'}
+                    </p>
+                    <textarea
+                      className="aih-textarea"
+                      rows={3}
+                      value={aiSolInputText}
+                      onChange={(e) => setAiSolInputText(e.target.value)}
+                      placeholder={language === 'en' ? 'Paste worked solution text here…' : 'সমাধানের টেক্সট এখানে পেস্ট করুন…'}
+                      disabled={aiSolIsLoading}
+                      style={{ minHeight: '80px' }}
+                    />
+                    <div className="aih-divider"><span>{language === 'en' ? 'or' : 'অথবা'}</span></div>
+                    <div
+                      className={`aih-dropzone ${aiSolIsDragging ? 'aih-dropzone--active' : ''}`}
+                      onDrop={onAiSolDrop}
+                      onDragOver={onAiSolDragOver}
+                      onDragLeave={onAiSolDragLeave}
+                      onClick={() => aiSolFileInputRef.current && aiSolFileInputRef.current.click()}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aiSolFileInputRef.current && aiSolFileInputRef.current.click(); } }}
+                      style={{ padding: '16px 14px' }}
+                    >
+                      <input ref={aiSolFileInputRef} type="file" accept="image/*" onChange={onAiSolFileInputChange} style={{ display: 'none' }} />
+                      {aiSolImagePreviewSrc ? (
+                        <div className="aih-dropzone__preview">
+                          <img src={aiSolImagePreviewSrc} alt="Solution upload" style={{ maxHeight: '180px' }} />
+                          <div className="aih-dropzone__meta">
+                            <span className="aih-dropzone__name"><HiOutlinePhotograph /> {aiSolImage?.name || 'image'}</span>
+                            <button type="button" className="aih-dropzone__remove" onClick={(e) => { e.stopPropagation(); clearAiSolImage(); }}><HiX /> {language === 'en' ? 'Remove' : 'মুছুন'}</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="aih-dropzone__empty">
+                          <HiOutlineUpload size={24} />
+                          <p style={{ fontSize: '0.85rem' }}><strong>{language === 'en' ? 'Click to upload' : 'আপলোড করুন'}</strong> {language === 'en' ? 'solution image' : 'সমাধানের ছবি'}</p>
+                          <span className="aih-dropzone__hint">{language === 'en' ? 'PNG, JPG — up to ~5 MB' : 'PNG, JPG — সর্বোচ্চ ~৫ MB'}</span>
+                        </div>
+                      )}
+                    </div>
+                    {aiSolErrorMsg && (
+                      <div className="aih-error"><HiOutlineExclamationCircle /><span>{aiSolErrorMsg}</span></div>
+                    )}
+                    <div className="aih-actions">
+                      <button type="button" className="aih-btn aih-btn--ghost" onClick={handleAiSolReset} disabled={aiSolIsLoading || (!aiSolInputText && !aiSolImage)}>
+                        <HiOutlineRefresh /> {language === 'en' ? 'Clear' : 'মুছুন'}
+                      </button>
+                      <button type="button" className="aih-btn aih-btn--primary" onClick={handleAiSolExtract} disabled={!aiSolCanSubmit}>
+                        {aiSolIsLoading ? (<><span className="aih-spinner" /> {language === 'en' ? 'Extracting…' : 'এক্সট্র্যাক্ট হচ্ছে…'}</>) : (<><HiOutlineSparkles /> {language === 'en' ? 'Extract Solution' : 'সমাধান এক্সট্র্যাক্ট করুন'}</>)}
+                      </button>
+                    </div>
+                    {aiSolIsLoading && (
+                      <div className="aih-loading" style={{ padding: '18px 10px' }}>
+                        <span className="aih-spinner aih-spinner--lg" />
+                        <p>{language === 'en' ? 'Extracting solution…' : 'সমাধান এক্সট্র্যাক্ট হচ্ছে…'}</p>
+                      </div>
+                    )}
+                    {aiSolExtracted && !aiSolIsLoading && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <span className="aih-result-block__label">{language === 'en' ? 'EXTRACTED SOLUTION' : 'এক্সট্র্যাক্ট করা সমাধান'}</span>
+                        <div
+                          className="aih-katex aih-katex--block"
+                          style={{ border: '1px solid rgba(75,46,43,0.1)', borderRadius: 'var(--radius-md)', padding: '12px 14px', background: 'var(--bg-primary)' }}
+                          dangerouslySetInnerHTML={{ __html: aiSolRenderedPreview }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button type="button" className="aih-btn aih-btn--primary" onClick={handleApplySolToForm}>
+                            <HiOutlineSparkles /> {language === 'en' ? 'Apply to Solution' : 'সমাধানে প্রয়োগ করুন'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {questionType === 'cq' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {cqSolutions.map((item, idx) => (

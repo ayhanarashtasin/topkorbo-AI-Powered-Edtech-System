@@ -10,12 +10,15 @@ import ChapterNav from '../components/reader/ChapterNav';
 import ReaderToolbar from '../components/reader/ReaderToolbar';
 import PdfCanvas from '../components/reader/PdfCanvas';
 import HighlightSidebar from '../components/reader/HighlightSidebar';
+import ChatSidebar from '../components/reader/ChatSidebar';
 import { useHighlights } from '../hooks/useHighlights';
+import { useChat } from '../hooks/useChat';
 import ErrorBoundary from '../components/layout/ErrorBoundary';
 import {
   HiMenu,
   HiArrowLeft,
-  HiOutlineLightBulb
+  HiOutlineLightBulb,
+  HiOutlineChatAlt2
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import './ReadingBookView.css';
@@ -55,6 +58,12 @@ export default function ReadingBookView() {
   const [readingState, setReadingState] = useState(null);
   const [isNavOpen, setIsNavOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [isHighlightSidebarOpen, setIsHighlightSidebarOpen] = useState(false);
+  const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
+  // Page text is held in a ref because it's only read at send-time (via
+  // ChatSidebar → aiApi.send), never rendered by ReadingBookView itself.
+  // A small derived state flag drives the textarea's disabled state.
+  const pageTextRef = useRef('');
+  const [pageTextReady, setPageTextReady] = useState(false);
   const [eraserType, setEraserType] = useState('stroke'); // 'stroke' | 'standard'
   const [eraserWidth, setEraserWidth] = useState(16); // 8 | 16 | 32
 
@@ -62,6 +71,19 @@ export default function ReadingBookView() {
   const saveInProgressRef = useRef(false);
 
   const { highlights, addHighlight, deleteHighlight, updateHighlight } = useHighlights({ bookId, chapterId, apiBase });
+  const chat = useChat({ bookId, chapterId, pageNumber });
+
+  const handlePageTextReady = useCallback((text) => {
+    pageTextRef.current = text || '';
+    setPageTextReady(Boolean(text));
+  }, []);
+
+  // Clear the "ready" flag while a new page is loading so the composer
+  // disables itself instead of sending the previous page's text.
+  useEffect(() => {
+    pageTextRef.current = '';
+    setPageTextReady(false);
+  }, [pageNumber, chapterId]);
 
   /* ---------- Undo/Redo history (per-page, in-memory) ----------
    * We use a command stack keyed by page: `present` is the list of
@@ -744,6 +766,15 @@ export default function ReadingBookView() {
             </button>
             <button
               type="button"
+              className="rb-reader__menu-btn"
+              onClick={() => setIsChatSidebarOpen(true)}
+              title="Ask AI Tutor"
+              style={{ marginLeft: 8 }}
+            >
+              <HiOutlineChatAlt2 size={20} />
+            </button>
+            <button
+              type="button"
               className="rb-reader__back-btn"
               onClick={() => navigate('/reading-books')}
             >
@@ -821,16 +852,17 @@ export default function ReadingBookView() {
                   onDeleteHighlight={deleteHighlight}
                   onDocumentLoad={onDocumentLoadSuccess}
                   onDocumentError={onDocumentLoadError}
+                  onPageTextReady={handlePageTextReady}
                 />
               </ErrorBoundary>
             )}
           </div>
         </div>
 
-        <HighlightSidebar 
-          isOpen={isHighlightSidebarOpen} 
-          onClose={() => setIsHighlightSidebarOpen(false)} 
-          highlights={highlights} 
+        <HighlightSidebar
+          isOpen={isHighlightSidebarOpen}
+          onClose={() => setIsHighlightSidebarOpen(false)}
+          highlights={highlights}
           onHighlightClick={(h) => {
             // Jump to page if it's on a different page
             if (h.pageNumber !== pageNumber) {
@@ -838,6 +870,18 @@ export default function ReadingBookView() {
             }
           }}
           onDeleteHighlight={deleteHighlight}
+        />
+        <ChatSidebar
+          isOpen={isChatSidebarOpen}
+          onClose={() => setIsChatSidebarOpen(false)}
+          messages={chat.messages}
+          loading={chat.loading}
+          sending={chat.sending}
+          pageNumber={pageNumber}
+          pageTextReady={pageTextReady}
+          getPageText={() => pageTextRef.current}
+          onSend={chat.send}
+          onClear={chat.clear}
         />
       </main>
     </div>

@@ -21,6 +21,7 @@ import MakeContestQuestionConfirm from './pages/MakeContestQuestionConfirm';
 import ReadingBooks from './pages/ReadingBooks';
 import UploadBook from './pages/UploadBook';
 import ReadingBookView from './pages/ReadingBookView';
+
 import './styles/index.css';
 import './styles/animations.css';
 
@@ -69,6 +70,7 @@ function AppContent() {
         <Route path="/reading-books" element={<ReadingBooks />} />
         <Route path="/reading-books/upload" element={<UploadBook />} />
         <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
+
       </Routes>
     </>
   );

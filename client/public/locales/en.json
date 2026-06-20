@@ -274,6 +274,7 @@
   "db.menu.upload_question": "Upload Question",
   "db.menu.make_contest": "Create Contest",
   "db.menu.reading_books": "Reading Books",
+  "db.menu.ai_helper": "AI Question Helper",
   "uq.title": "Upload Question",
   "uq.subtitle": "Create and upload new questions to the TopKorbo question bank with LaTeX formatting.",
   "uq.badge": "Teacher Studio",

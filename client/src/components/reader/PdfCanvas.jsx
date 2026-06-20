@@ -69,7 +69,8 @@ export default function PdfCanvas({
   onAddHighlight,
   onDeleteHighlight,
   onDocumentLoad,
-  onDocumentError
+  onDocumentError,
+  onPageTextReady
 }) {
   const { t } = useLanguage();
   const pageRef = useRef(null);
@@ -556,10 +557,51 @@ export default function PdfCanvas({
     [activeTool, penAnnotations, onAnnotationClick]
   );
 
-  const onPageLoadSuccess = useCallback((page) => {
-    const viewport = page.getViewport({ scale });
-    setPageSize({ width: viewport.width, height: viewport.height });
-  }, [scale]);
+  // Track the (fileUrl, pageNumber) we've already extracted text for so
+  // that re-fires of `onLoadSuccess` (e.g. on zoom) don't re-extract.
+  const extractedForKeyRef = useRef(null);
+
+  const onPageLoadSuccess = useCallback(
+    (page) => {
+      const viewport = page.getViewport({ scale });
+      setPageSize({ width: viewport.width, height: viewport.height });
+
+      // Hand the page's text content up to the parent so the AI tutor
+      // sidebar can use it as context. Skipped if we already extracted
+      // text for this exact (fileUrl, pageNumber) — `onLoadSuccess` re-fires
+      // on every zoom step, but text doesn't change with zoom.
+      if (typeof onPageTextReady !== 'function') return;
+      if (!page || typeof page.getTextContent !== 'function') return;
+
+      const key = `${fileUrl}::${pageNumber}`;
+      if (extractedForKeyRef.current === key) return;
+      extractedForKeyRef.current = key;
+
+      let cancelled = false;
+      page
+        .getTextContent()
+        .then((tc) => {
+          if (cancelled) return;
+          const text = (tc?.items || [])
+            .map((it) => (it && typeof it.str === 'string' ? it.str : ''))
+            .filter(Boolean)
+            .join(' ');
+          onPageTextReady(text);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          // eslint-disable-next-line no-console
+          console.warn('[PdfCanvas] getTextContent failed:', err?.message);
+          onPageTextReady('');
+        });
+    },
+    [scale, fileUrl, pageNumber, onPageTextReady]
+  );
+
+  // When the user navigates to a different page, allow re-extraction.
+  useEffect(() => {
+    extractedForKeyRef.current = null;
+  }, [fileUrl, pageNumber]);
 
   const handleDocumentError = useCallback((err) => {
     // eslint-disable-next-line no-console

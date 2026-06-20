@@ -1,83 +1,15 @@
 /**
  * annotationApi.js
  *
- * Centralised client for every annotation REST endpoint.
- *
- * Every method resolves to the inner `data` field of the standard server
- * envelope `{ success, message, data }` and throws an `ApiError` (with the
- * server's `message` attached) when `success === false` or the HTTP
- * response is not OK.
- *
- * Auth: reads the bearer token from `localStorage.topkorbo_token` to match
- * the rest of the reader code (no shared HTTP client / interceptor in this
- * codebase).
+ * Centralised client for every annotation REST endpoint. Resolves to the
+ * inner `data` field of the standard server envelope `{ success, message,
+ * data }` and throws `ApiError` on failure. Built on the shared
+ * `httpClient` so auth + envelope handling stay in one place.
  */
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { httpClient } from './httpClient';
 
-/**
- * Thrown by every method in this module when the response is not OK or
- * `success === false`. Carries the server's message (if any) and the HTTP
- * status so callers can choose to surface a toast or silently roll back.
- */
-export class ApiError extends Error {
-  constructor(message, status, payload) {
-    super(message || 'Request failed');
-    this.name = 'ApiError';
-    this.status = status;
-    this.payload = payload;
-  }
-}
-
-function getToken() {
-  try {
-    return localStorage.getItem('topkorbo_token');
-  } catch (_) {
-    return null;
-  }
-}
-
-function buildHeaders(extra) {
-  const headers = { ...(extra || {}) };
-  if (!headers['Content-Type'] && headers.body) {
-    headers['Content-Type'] = 'application/json';
-  }
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
-async function request(path, init = {}) {
-  const url = `${API_BASE}${path}`;
-  let res;
-  try {
-    res = await fetch(url, init);
-  } catch (err) {
-    // Network / CORS / offline — surface as an ApiError so callers can
-    // distinguish it from server errors.
-    throw new ApiError(err?.message || 'Network error', 0, null);
-  }
-
-  let payload = null;
-  try {
-    payload = await res.json();
-  } catch (_) {
-    // Non-JSON response (shouldn't happen for these endpoints, but be
-    // defensive). Use the HTTP status to fabricate an envelope.
-    if (!res.ok) throw new ApiError(res.statusText || 'Request failed', res.status, null);
-    return null;
-  }
-
-  if (!res.ok || (payload && payload.success === false)) {
-    throw new ApiError(
-      (payload && payload.message) || res.statusText || 'Request failed',
-      res.status,
-      payload
-    );
-  }
-  return (payload && payload.data) ?? null;
-}
+const { request, buildHeaders } = httpClient;
 
 /**
  * Get all annotations for a chapter (optionally filtered to a single page).
@@ -151,9 +83,8 @@ export function deleteAnnotation(id) {
 }
 
 /**
- * The default `annotationApi` object — re-export everything as a namespace
- * for callers that prefer `annotationApi.bulkCreate(payload)`. The named
- * exports above are also exported for tree-shaking.
+ * Default `annotationApi` namespace — re-export everything for callers
+ * that prefer `annotationApi.bulkCreate(payload)`.
  */
 export const annotationApi = {
   list: listAnnotations,
@@ -162,5 +93,9 @@ export const annotationApi = {
   bulkDelete: bulkDeleteAnnotations,
   remove: deleteAnnotation
 };
+
+// Re-export `ApiError` from the shared client for backward compatibility
+// with callers that already imported it from this module.
+export { ApiError } from './httpClient';
 
 export default annotationApi;

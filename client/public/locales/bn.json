@@ -273,6 +273,7 @@
   "db.menu.upload_question": "প্রশ্ন আপলোড",
   "db.menu.make_contest": "কনটেস্ট তৈরি",
   "db.menu.reading_books": "রিডিং বুকস",
+  "db.menu.ai_helper": "AI প্রশ্ন সহকারী",
   "uq.title": "প্রশ্ন আপলোড করুন",
   "uq.subtitle": "LaTeX ফরম্যাটিং সহ টপকরবো প্রশ্নব্যাংকে নতুন প্রশ্ন তৈরি এবং আপলোড করুন।",
   "uq.badge": "টিচার স্টুডিও",
