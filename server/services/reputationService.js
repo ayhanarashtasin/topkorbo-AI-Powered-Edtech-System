@@ -6,10 +6,11 @@ const User = require('../models/User');
  */
 async function addReputation(userId, delta) {
   if (!userId || !delta) return;
-  await User.findByIdAndUpdate(userId, {
-    $inc: { reputation: delta },
-    $max: { reputation: 0 }
-  });
+  const user = await User.findById(userId);
+  if (!user) return;
+  
+  user.reputation = Math.max(0, (user.reputation || 0) + delta);
+  await user.save();
 }
 
 module.exports = { addReputation };

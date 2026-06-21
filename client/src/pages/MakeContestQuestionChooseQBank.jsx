@@ -4,7 +4,25 @@ import { useLanguage } from '../hooks/useLanguage';
 import { HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiAcademicCap, HiBeaker, HiBookOpen, HiCollection, HiPencil, HiDocumentText, HiPhotograph, HiChevronDown, HiChevronUp, HiX, HiTag } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import { getTagAbbreviation, getTagTitle, buildSelectionsFromQuestions } from '../utils/questionTags';
 import './MockTest.css';
+import './MakeContestQuestionChooseQBank.css';
+
+function renderLatex(text) {
+  if (!text || !text.trim()) return '';
+  try {
+    const rendered = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+      return katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
+    }).replace(/\$(.*?)\$/g, (_, math) => {
+      return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
+    });
+    return rendered;
+  } catch {
+    return text;
+  }
+}
 
 // ─── Thematic Mock Test Subjects Data (Matches MockTest.jsx) ────────────────
 const MOCK_SUBJECTS = [
@@ -218,12 +236,56 @@ export default function MakeContestQuestionChooseQBank() {
     return saved ? JSON.parse(saved) : {};
   });
 
+  const [fetchedQuestions, setFetchedQuestions] = useState([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState(() => {
+    const saved = sessionStorage.getItem('cc_qbank_selectedQuestionIds');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Persist qbank selections to sessionStorage
   useEffect(() => { sessionStorage.setItem('cc_qbank_step', String(step)); }, [step]);
   useEffect(() => { sessionStorage.setItem('cc_qbank_selectedSubjectIds', JSON.stringify(selectedSubjectIds)); }, [selectedSubjectIds]);
   useEffect(() => { sessionStorage.setItem('cc_qbank_selectedChapters', JSON.stringify(selectedChapters)); }, [selectedChapters]);
   useEffect(() => { sessionStorage.setItem('cc_qbank_topicsMap', JSON.stringify(topicsMap)); }, [topicsMap]);
   useEffect(() => { sessionStorage.setItem('cc_qbank_selectedTopics', JSON.stringify(selectedTopics)); }, [selectedTopics]);
+  useEffect(() => { sessionStorage.setItem('cc_qbank_selectedQuestionIds', JSON.stringify(selectedQuestionIds)); }, [selectedQuestionIds]);
+
+  const fetchQBankQuestions = async (selections) => {
+    setIsLoadingQuestions(true);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const base = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${base}/questions/qbank-browse`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ selections })
+      });
+      const data = await res.json();
+      if (data.success && data.data?.questions) {
+        setFetchedQuestions(data.data.questions);
+      } else {
+        toast.error(data.message || 'Failed to fetch questions');
+      }
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+      toast.error('Error fetching questions');
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (step === 3) {
+      const selections = buildSelections();
+      if (selections.length > 0) {
+        fetchQBankQuestions(selections);
+      }
+    }
+  }, [step]);
 
   // Filter subjects based on what was selected on the Create Contest page
   const filteredSubjects = (() => {
@@ -242,6 +304,23 @@ export default function MakeContestQuestionChooseQBank() {
       if (contestData.admissionType === 'engineering') {
         const engineeringIds = ['highermath', 'physics', 'chemistry', 'english'];
         return MOCK_SUBJECTS.filter(s => engineeringIds.includes(s.id));
+      }
+      if (contestData.admissionType === 'varsity') {
+        if (contestData.admissionSubtype === 'science') {
+          const scienceIds = ['physics', 'chemistry', 'highermath', 'biology', 'english'];
+          return MOCK_SUBJECTS.filter(s => scienceIds.includes(s.id));
+        }
+        if (contestData.admissionSubtype === 'commerce') {
+          const commerceIds = ['bangla', 'english', 'gk', 'ict'];
+          return MOCK_SUBJECTS.filter(s => commerceIds.includes(s.id));
+        }
+        if (contestData.admissionSubtype === 'arts') {
+          const artsIds = ['bangla', 'english', 'gk', 'ict'];
+          return MOCK_SUBJECTS.filter(s => artsIds.includes(s.id));
+        }
+        if (contestData.admissionSubtype === 'iba') {
+          return MOCK_SUBJECTS.filter(s => s.id === 'iba');
+        }
       }
     }
 
@@ -422,20 +501,53 @@ export default function MakeContestQuestionChooseQBank() {
     return selections;
   };
 
+  // Select all currently-loaded questions (or deselect them if all are already selected)
+  const allVisibleSelected = fetchedQuestions.length > 0 &&
+    fetchedQuestions.every(q => selectedQuestionIds.includes(q._id));
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      const visibleIds = new Set(fetchedQuestions.map(q => q._id));
+      setSelectedQuestionIds(prev => prev.filter(id => !visibleIds.has(id)));
+    } else {
+      setSelectedQuestionIds(prev => Array.from(new Set([...prev, ...fetchedQuestions.map(q => q._id)])));
+    }
+  };
+
+  const clearSelection = () => setSelectedQuestionIds([]);
+
   const handleSaveAndReturn = () => {
-    const qbankSelections = buildSelections();
-    if (qbankSelections.length === 0) {
-      toast.error(language === 'en' ? 'Please select at least one chapter.' : 'দয়া করে কমপক্ষে একটি অধ্যায় নির্বাচন করুন।');
+    if (selectedQuestionIds.length === 0) {
+      toast.error(language === 'en' ? 'Please select at least one question.' : 'দয়া করে কমপক্ষে একটি প্রশ্ন নির্বাচন করুন।');
       return;
     }
 
-    // Save qbank selections to sessionStorage
+    // Keep the full question objects for the selected ids so the next page can
+    // display & individually remove them. Order follows the on-screen list.
+    const selectedSet = new Set(selectedQuestionIds);
+    const qbankQuestions = fetchedQuestions.filter(q => selectedSet.has(q._id));
+
+    // Selections carry questionIds (consumed by the backend) + subject/paper/
+    // chapters (for the summary), grouped by subject + paper.
+    const qbankSelections = buildSelectionsFromQuestions(qbankQuestions);
+
+    // Preserve any selected ids that weren't in the current fetch (e.g. picked
+    // before re-navigating chapters) so the backend still receives them.
+    const accountedFor = new Set(qbankQuestions.map(q => q._id));
+    const leftover = selectedQuestionIds.filter(id => !accountedFor.has(id));
+    if (leftover.length > 0) {
+      qbankSelections.push({ questionIds: leftover, numberOfQuestions: leftover.length, chapters: [] });
+    }
+
+    // Save to sessionStorage so subsequent pages survive reloads
     sessionStorage.setItem('cc_qbankSelections', JSON.stringify(qbankSelections));
+    sessionStorage.setItem('cc_qbankQuestions', JSON.stringify(qbankQuestions));
 
     navigate('/make-contest-question/next-two', {
       state: {
         contestData,
-        qbankSelections
+        qbankSelections,
+        qbankQuestions
       }
     });
   };
@@ -800,38 +912,163 @@ export default function MakeContestQuestionChooseQBank() {
               </div>
             </div>
           ) : step === 3 ? (
-            /* ──────────────── STEP 3: SETTINGS VIEW PLACEHOLDER ──────────────── */
-            <div className="mock-exam-config animate-fade-in" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-              <button 
-                type="button" 
-                onClick={() => setStep(2)}
-                className="mock-back-btn"
-                style={{ alignSelf: 'flex-start', marginBottom: '1.5rem' }}
-              >
-                <HiArrowLeft size={16} />
-                <span>{language === 'en' ? 'Back to chapters' : 'অধ্যায়ে ফিরে যাও'}</span>
-              </button>
+            /* ──────────────── STEP 3: SELECT QUESTIONS ──────────────── */
+            <div className="qsel animate-fade-in">
+              <div className="qsel-toolbar">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="mock-back-btn"
+                  style={{ marginBottom: 0 }}
+                >
+                  <HiArrowLeft size={16} />
+                  <span>{language === 'en' ? 'Back to chapters' : 'অধ্যায়ে ফিরে যাও'}</span>
+                </button>
+                <div className="qsel-actions">
+                  {fetchedQuestions.length > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        className="qsel-btn qsel-btn--primary"
+                        onClick={toggleSelectAllVisible}
+                      >
+                        {allVisibleSelected ? <HiX size={16} /> : <HiCheck size={16} />}
+                        {allVisibleSelected
+                          ? (language === 'en' ? 'Deselect all' : 'সব বাতিল করুন')
+                          : (language === 'en' ? `Select all (${fetchedQuestions.length})` : `সব নির্বাচন করুন (${fetchedQuestions.length})`)}
+                      </button>
+                      <button
+                        type="button"
+                        className="qsel-btn qsel-btn--ghost"
+                        onClick={clearSelection}
+                        disabled={selectedQuestionIds.length === 0}
+                      >
+                        <HiX size={16} />
+                        {language === 'en' ? 'Clear' : 'মুছুন'}
+                      </button>
+                    </>
+                  )}
+                  <span className="qsel-count">
+                    <HiCheckCircle size={15} />
+                    {language === 'en' ? `Selected: ${selectedQuestionIds.length}` : `নির্বাচিত: ${selectedQuestionIds.length}`}
+                  </span>
+                </div>
+              </div>
 
-              <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>⚙️</div>
-              
-              <h2 className="cc-section__title" style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>
-                {language === 'en' ? 'Question Bank Settings' : 'প্রশ্ন ব্যাংক সেটিংস'}
+              <h2 className="qsel-title">
+                {language === 'en' ? 'Select Questions' : 'প্রশ্ন নির্বাচন করুন'}
               </h2>
-              
-              <p className="cc-section__desc" style={{ maxWidth: '500px', margin: '0 auto 2rem', fontSize: '0.95rem', lineHeight: '1.6' }}>
+              <p className="qsel-subtitle">
                 {language === 'en'
-                  ? 'Settings configuration will be implemented here.'
-                  : 'সেটিংসের কনফিগারেশন এখানে যুক্ত করা হবে।'}
+                  ? 'Tap a question to add it to your contest. Each card shows its subject, paper, chapter, topic and source tags.'
+                  : 'কনটেস্টে যোগ করতে প্রশ্নে ট্যাপ করুন। প্রতিটি কার্ডে বিষয়, পত্র, অধ্যায়, টপিক ও সোর্স ট্যাগ দেখানো হয়েছে।'}
               </p>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {isLoadingQuestions ? (
+                <div className="qsel-state">
+                  <div className="qsel-spinner"></div>
+                  <p>{language === 'en' ? 'Loading questions...' : 'প্রশ্ন লোড হচ্ছে...'}</p>
+                </div>
+              ) : fetchedQuestions.length === 0 ? (
+                <div className="qsel-state">
+                  <span className="qsel-state__icon">🔍</span>
+                  <p>{language === 'en' ? 'No questions found for the selected chapters.' : 'নির্বাচিত অধ্যায়গুলির জন্য কোনো প্রশ্ন পাওয়া যায়নি।'}</p>
+                </div>
+              ) : (
+                <div className="qsel-list">
+                  {fetchedQuestions.map((q, idx) => {
+                    const isSelected = selectedQuestionIds.includes(q._id);
+                    const paperLabel = q.paper === '1st'
+                      ? (language === 'en' ? '1st Paper' : '১ম পত্র')
+                      : (language === 'en' ? '2nd Paper' : '২য় পত্র');
+                    return (
+                      <div
+                        key={q._id}
+                        className={`qsel-card ${isSelected ? 'qsel-card--selected' : ''}`}
+                        onClick={() => {
+                          setSelectedQuestionIds(prev =>
+                            prev.includes(q._id) ? prev.filter(id => id !== q._id) : [...prev, q._id]
+                          );
+                        }}
+                      >
+                        <div className="qsel-card__check">
+                          {isSelected ? <HiCheckCircle size={24} /> : <div className="qsel-card__check-empty"></div>}
+                        </div>
+                        <div className="qsel-card__body">
+                          {/* Subject / Paper / Chapter / Topic meta-tags */}
+                          <div className="qsel-meta">
+                            <span className="qsel-meta-tag qsel-meta-tag--subject">{q.subject}</span>
+                            <span className="qsel-meta-tag qsel-meta-tag--paper">{paperLabel}</span>
+                            {q.chapter && (
+                              <span className="qsel-meta-tag qsel-meta-tag--chapter">
+                                <span className="qsel-meta-tag__label">{language === 'en' ? 'Ch' : 'অধ্যায়'}</span>
+                                {q.chapter}
+                              </span>
+                            )}
+                            {q.topic && (
+                              <span className="qsel-meta-tag qsel-meta-tag--topic">
+                                <span className="qsel-meta-tag__label">{language === 'en' ? 'Topic' : 'টপিক'}</span>
+                                {q.topic}
+                              </span>
+                            )}
+                            <span className="qsel-type-badge">{q.type?.toUpperCase()}</span>
+                          </div>
+
+                          <div className="qsel-qtext">
+                            <span dangerouslySetInnerHTML={{ __html: renderLatex(`${idx + 1}. ${q.questionText}`) }}></span>
+                          </div>
+
+                          {q.imageUrl && (
+                            <img src={q.imageUrl} alt="Question" className="qsel-img" />
+                          )}
+
+                          {/* Options if MCQ */}
+                          {q.type === 'mcq' && q.options && (
+                            <div className="qsel-options">
+                              {q.options.map((opt, oIdx) => (
+                                <div key={oIdx} className={`qsel-option ${opt.isCorrect ? 'qsel-option--correct' : ''}`}>
+                                  <span className="qsel-option__letter">{String.fromCharCode(65 + oIdx)}.</span>
+                                  <span dangerouslySetInnerHTML={{ __html: renderLatex(opt.text) }}></span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* All source tags this question carries in the database */}
+                          {q.tags && q.tags.length > 0 && (
+                            <div className="qsel-tags">
+                              <HiTag size={14} className="qsel-tags__icon" />
+                              {q.tags.map((tag, tIdx) => {
+                                const abbr = getTagAbbreviation(tag);
+                                if (!abbr) return null;
+                                return (
+                                  <span
+                                    key={tIdx}
+                                    className={`qsel-tag qsel-tag--${tag.category || 'admission'}`}
+                                    title={getTagTitle(tag)}
+                                  >
+                                    {abbr}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="qsel-save-bar">
                 <button
                   type="button"
                   onClick={handleSaveAndReturn}
-                  className="cc-submit-btn"
-                  style={{ padding: '0.9rem 3rem' }}
+                  className="qsel-save-btn"
+                  disabled={selectedQuestionIds.length === 0}
                 >
-                  📝 {language === 'en' ? 'Save & Add to Contest' : 'সংরক্ষণ করুন এবং কনটেস্টে যোগ করুন'}
+                  <HiCheckCircle size={18} />
+                  {language === 'en' ? 'Save & Add to Contest' : 'সংরক্ষণ করুন এবং কনটেস্টে যোগ করুন'}
                 </button>
               </div>
             </div>

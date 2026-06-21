@@ -11,7 +11,7 @@ const authController = {
   googleAuth: (req, res, next) => {
     const role = req.query.role || 'student';
     const action = req.query.action || 'signup'; // 'signup' or 'login'
-    
+
     passport.authenticate('google', {
       scope: ['profile', 'email'],
       state: JSON.stringify({ role, action })
@@ -56,8 +56,8 @@ const authController = {
       );
 
       // Clean up massive Base64 strings from URL parameter
-      const avatarUrl = user.avatar && user.avatar.startsWith('data:image') 
-        ? '' 
+      const avatarUrl = user.avatar && user.avatar.startsWith('data:image')
+        ? ''
         : user.avatar || '';
 
       res.redirect(`${frontendUrl}?token=${token}&role=${user.role}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&avatar=${encodeURIComponent(avatarUrl)}&isComplete=${isComplete}`);
@@ -334,14 +334,14 @@ const authController = {
       if (req.user.role !== 'tutor' && req.user.role !== 'teacher') {
         return res.status(403).json({ success: false, message: 'Access denied. Only mentors can apply to be teachers.' });
       }
-      const { 
-        checkScript, 
-        checkScriptDetails, 
-        createQuestionBank, 
-        createQuestionBankSubjects, 
-        manageContest, 
-        manageContestDetails, 
-        aboutYou 
+      const {
+        checkScript,
+        checkScriptDetails,
+        createQuestionBank,
+        createQuestionBankSubjects,
+        manageContest,
+        manageContestDetails,
+        aboutYou
       } = req.body;
 
       if (!aboutYou || !aboutYou.trim()) {

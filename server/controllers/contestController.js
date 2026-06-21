@@ -64,8 +64,8 @@ exports.createContest = async (req, res, next) => {
     }
 
     if (level === 'admission' && admissionType === 'varsity') {
-      if (!admissionSubtype || !['science', 'commerce', 'arts'].includes(admissionSubtype)) {
-        return ApiResponse.error(res, 'Valid admission subtype (science, commerce, arts) is required for Varsity level', 400);
+      if (!admissionSubtype || !['science', 'commerce', 'arts', 'iba'].includes(admissionSubtype)) {
+        return ApiResponse.error(res, 'Valid admission subtype (science, commerce, arts, iba) is required for Varsity level', 400);
       }
     }
 
@@ -75,12 +75,21 @@ exports.createContest = async (req, res, next) => {
     }
 
     const embeddedQuestions = [];
+    const addedQBankIds = new Set();
 
     // 1) Add teacher-uploaded questions
     if (confirmedQuestions && Array.isArray(confirmedQuestions)) {
       for (const q of confirmedQuestions) {
+        const source = q.source || 'uploaded';
+        const originalQuestionId = q.originalQuestionId || (source === 'qbank' ? (q._id || q.id) : null);
+        
+        if (source === 'qbank' && originalQuestionId) {
+          addedQBankIds.add(originalQuestionId.toString());
+        }
+
         embeddedQuestions.push({
-          source: 'uploaded',
+          source,
+          originalQuestionId,
           teacher: user._id,
           questionText: q.questionText || q.text || '',
           imageUrl: q.imageUrl || (q.images?.[0] || ''),
@@ -98,11 +107,14 @@ exports.createContest = async (req, res, next) => {
       }
     }
 
-    // 2) Add each question picked from the question bank
+    // 2) Add each question picked from the question bank (only if not already embedded as a confirmed question)
     if (qbankSelections && Array.isArray(qbankSelections)) {
       for (const selection of qbankSelections) {
         const picked = Array.isArray(selection.questionIds) ? selection.questionIds : [];
         for (const qid of picked) {
+          if (addedQBankIds.has(qid.toString())) {
+            continue; // Skip, already added with full content in loop 1
+          }
           embeddedQuestions.push({
             source: 'qbank',
             originalQuestionId: qid,

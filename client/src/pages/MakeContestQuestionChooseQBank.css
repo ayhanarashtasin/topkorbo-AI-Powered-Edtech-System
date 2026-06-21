@@ -1,0 +1,430 @@
+/* ============================================
+   Choose from Question Bank — Step 3 (Select Questions)
+   Warm TopKorbo theme (#C08552 → #8C5A3C)
+   ============================================ */
+
+.qsel {
+  padding: 1.5rem 0.5rem;
+}
+
+/* ── Toolbar (back button + selection controls) ── */
+.qsel-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.qsel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.qsel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1.5px solid rgba(192, 133, 82, 0.35);
+  background: #fff;
+  color: var(--text-accent);
+}
+
+.qsel-btn:hover {
+  border-color: #C08552;
+  background: rgba(192, 133, 82, 0.06);
+  transform: translateY(-1px);
+}
+
+.qsel-btn--primary {
+  border-color: #C08552;
+  background: rgba(192, 133, 82, 0.08);
+  color: #8C5A3C;
+}
+
+.qsel-btn--ghost {
+  border-color: rgba(140, 90, 60, 0.18);
+  color: var(--text-secondary);
+}
+
+.qsel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  background: #fff;
+  border-color: rgba(140, 90, 60, 0.15);
+}
+
+.qsel-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #8C5A3C;
+  background: rgba(192, 133, 82, 0.1);
+  border: 1px solid rgba(192, 133, 82, 0.22);
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+}
+
+/* ── Section title ── */
+.qsel-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.01em;
+}
+
+.qsel-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0 0 1.5rem;
+}
+
+/* ── States: loading / empty ── */
+.qsel-state {
+  text-align: center;
+  padding: 3.5rem 1rem;
+  color: var(--text-secondary);
+}
+
+.qsel-state__icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+.qsel-spinner {
+  margin: 0 auto 1rem;
+  width: 42px;
+  height: 42px;
+  border: 4px solid rgba(192, 133, 82, 0.2);
+  border-top-color: #C08552;
+  border-radius: 50%;
+  animation: qselSpin 0.9s linear infinite;
+}
+
+@keyframes qselSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Question list ── */
+.qsel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.qsel-card {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: var(--bg-card);
+  border: 1.5px solid rgba(140, 90, 60, 0.14);
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  box-shadow: 0 2px 10px rgba(37, 24, 23, 0.03);
+}
+
+.qsel-card:hover {
+  border-color: rgba(192, 133, 82, 0.5);
+  box-shadow: 0 6px 22px rgba(140, 90, 60, 0.1);
+  transform: translateY(-2px);
+}
+
+.qsel-card--selected {
+  border-color: #C08552;
+  background: linear-gradient(180deg, rgba(192, 133, 82, 0.06), rgba(192, 133, 82, 0.02));
+  box-shadow: 0 6px 22px rgba(140, 90, 60, 0.14);
+}
+
+.qsel-card__check {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-muted);
+  display: flex;
+}
+
+.qsel-card--selected .qsel-card__check {
+  color: #C08552;
+}
+
+.qsel-card__check-empty {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(140, 90, 60, 0.25);
+  border-radius: 50%;
+}
+
+.qsel-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Meta tags row (subject / paper / chapter / topic) ── */
+.qsel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.7rem;
+}
+
+.qsel-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+}
+
+.qsel-meta-tag__label {
+  font-weight: 600;
+  opacity: 0.65;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+}
+
+/* subject — strongest warm accent */
+.qsel-meta-tag--subject {
+  background: #C08552;
+  color: #fff;
+}
+.qsel-meta-tag--subject .qsel-meta-tag__label { color: rgba(255, 255, 255, 0.8); opacity: 1; }
+
+/* paper */
+.qsel-meta-tag--paper {
+  background: rgba(192, 133, 82, 0.14);
+  color: #8C5A3C;
+}
+
+/* chapter */
+.qsel-meta-tag--chapter {
+  background: #F7EBE1;
+  color: #6b4427;
+}
+
+/* topic */
+.qsel-meta-tag--topic {
+  background: #fff;
+  color: #8C5A3C;
+  border: 1px dashed rgba(192, 133, 82, 0.5);
+}
+
+/* type badge pushed to the right */
+.qsel-type-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  text-transform: uppercase;
+}
+
+/* ── Question text & media ── */
+.qsel-qtext {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 0.9rem;
+}
+
+.qsel-img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 10px;
+  margin-bottom: 0.9rem;
+  border: 1px solid rgba(140, 90, 60, 0.12);
+}
+
+/* ── MCQ options ── */
+.qsel-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .qsel-options { grid-template-columns: 1fr; }
+}
+
+.qsel-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(140, 90, 60, 0.15);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  background: #fff;
+}
+
+.qsel-option--correct {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10B981;
+  color: #166534;
+}
+
+.qsel-option__letter {
+  font-weight: 800;
+  color: var(--text-accent);
+  flex-shrink: 0;
+}
+
+.qsel-option--correct .qsel-option__letter { color: #166534; }
+
+/* ── Database tags (board / admission / college) ── */
+.qsel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0.95rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed rgba(140, 90, 60, 0.18);
+}
+
+.qsel-tags__icon {
+  color: var(--text-muted);
+  display: flex;
+}
+
+.qsel-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: help;
+}
+
+.qsel-tag--board {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.qsel-tag--admission {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.qsel-tag--college {
+  background: #fdf4ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+/* ── Save bar ── */
+.qsel-save-bar {
+  display: flex;
+  justify-content: center;
+}
+
+.qsel-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 3rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: #fff;
+  background: linear-gradient(135deg, #C08552, #8C5A3C);
+  box-shadow: 0 6px 18px rgba(140, 90, 60, 0.25);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.qsel-save-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(140, 90, 60, 0.32);
+}
+
+.qsel-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Review list (selected questions shown back on the "Add Questions" page) ── */
+.qsel-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.qsel-review-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1.5px solid rgba(140, 90, 60, 0.14);
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem;
+  box-shadow: 0 2px 10px rgba(37, 24, 23, 0.03);
+}
+
+/* leave room for the absolute remove button */
+.qsel-review-card .qsel-meta {
+  padding-right: 6.5rem;
+}
+
+.qsel-remove-btn {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #DC3232;
+  background: rgba(220, 50, 50, 0.08);
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.qsel-remove-btn:hover {
+  background: rgba(220, 50, 50, 0.16);
+  transform: translateY(-1px);
+}

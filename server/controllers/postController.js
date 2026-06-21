@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const User = require('../models/User');
+const Reaction = require('../models/Reaction');
 const { uploadImage, deleteImage } = require('../services/uploadService');
 const { sanitize, htmlToText } = require('../services/sanitizeService');
 const { ensureUsername, resolveMentions } = require('../services/mentionService');
@@ -23,6 +24,24 @@ function computeScore(post) {
   const comments = post.commentsCount || 0;
   const hours = Math.max(1, (Date.now() - new Date(post.createdAt).getTime()) / 3.6e6);
   return (likes + 3 * comments) / Math.pow(hours, 1.5);
+}
+
+async function attachUserReactions(docs, userId, targetType) {
+  if (!userId || !docs || docs.length === 0) return docs;
+  const ids = docs.map(d => d._id);
+  const myReactions = await Reaction.find({
+    targetType,
+    target: { $in: ids },
+    user: userId
+  }).lean();
+  const reactionMap = {};
+  for (const r of myReactions) {
+    reactionMap[String(r.target)] = r.type;
+  }
+  for (const d of docs) {
+    d.userReaction = reactionMap[String(d._id)] || null;
+  }
+  return docs;
 }
 
 const createLimiter = rateLimit({
@@ -160,11 +179,14 @@ const postController = {
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
 
+      await attachUserReactions(posts, req.user?.id, 'post');
+
       let nextCursor = null;
       if (posts.length > limit) {
         const last = posts.pop();
         nextCursor = last._id;
       }
+
 
       return res.json({ success: true, data: posts, nextCursor });
     } catch (err) {
@@ -177,10 +199,10 @@ const postController = {
    */
   async getOne(req, res, next) {
     try {
-      const post = await Post.findById(req.params.id).populate(
-        'author',
-        POPULATE_AUTHOR
-      );
+      const post = await Post.findById(req.params.id)
+        .populate('author', POPULATE_AUTHOR)
+        .lean({ virtuals: true });
+        
       if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
       if (post.isHidden) {
         const isOwner = req.user && String(req.user.id) === String(post.author._id);
@@ -189,6 +211,9 @@ const postController = {
           return res.status(404).json({ success: false, message: 'Post not found' });
         }
       }
+      
+      await attachUserReactions([post], req.user?.id, 'post');
+      
       return res.json({ success: true, data: post });
     } catch (err) {
       next(err);
@@ -310,6 +335,9 @@ const postController = {
         .limit(limit + 1)
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
+        
+      await attachUserReactions(posts, req.user?.id, 'post');
+      
       let nextCursor = null;
       if (posts.length > limit) {
         const last = posts.pop();
@@ -334,6 +362,9 @@ const postController = {
         .sort({ createdAt: -1 })
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
+        
+      await attachUserReactions(posts, req.user?.id, 'post');
+      
       return res.json({ success: true, data: posts });
     } catch (err) {
       next(err);

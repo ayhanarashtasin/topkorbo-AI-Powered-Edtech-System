@@ -87,10 +87,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         if (profileAvatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(profileAvatar));
         if (profileEmail) localStorage.setItem('topkorbo_email', decodeURIComponent(profileEmail));
         if (callbackRole) localStorage.setItem('topkorbo_role', callbackRole);
-        
+
         setRole(callbackRole || 'student');
         setStep('profile_form');
-        
+
         // Dynamically pre-populate Google profile details inside the form
         setFormData(prev => ({
           ...prev,
@@ -106,7 +106,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         setMode('signup');
         setStep('choose');
         setErrorMsg('No existing account found with this email. Let\'s create one! Please choose your role below to sign up:');
-        
+
         if (profileName) localStorage.setItem('topkorbo_name', decodeURIComponent(profileName));
         if (profileAvatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(profileAvatar));
         if (profileEmail) localStorage.setItem('topkorbo_email', decodeURIComponent(profileEmail));
@@ -500,13 +500,13 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         >
           {/* Back button */}
           {(step === 'google' || step === 'profile_form' || step === 'phone_verification') && (
-            <button 
-              className="signup-modal__back-btn" 
+            <button
+              className="signup-modal__back-btn"
               onClick={() => {
                 if (step === 'phone_verification') setStep('profile_form');
                 else if (step === 'profile_form') setStep('google');
                 else setStep('choose');
-              }} 
+              }}
               aria-label="Go Back"
             >
               <HiArrowLeft size={20} />
@@ -521,7 +521,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
           )}
 
           <AnimatePresence mode="wait">
-            
+
             {/* Step 1: Role Selection */}
             {step === 'choose' && (
               <motion.div
@@ -598,7 +598,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                 <div style={{ marginTop: '32px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                   Already have an account?{' '}
-                  <button 
+                  <button
                     type="button"
                     onClick={() => { setMode('login'); setStep('login'); setErrorMsg(''); }}
                     style={{ background: 'none', border: 'none', color: 'var(--sky-blue)', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline', padding: '0' }}
@@ -638,7 +638,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                 <div style={{ marginTop: '32px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                   New to TopKorbo?{' '}
-                  <button 
+                  <button
                     type="button"
                     onClick={() => { setMode('signup'); setStep('choose'); setErrorMsg(''); }}
                     style={{ background: 'none', border: 'none', color: 'var(--sky-blue)', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline', padding: '0' }}
@@ -692,8 +692,8 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
               >
                 <h3 className="signup-modal__title">Complete Your Profile</h3>
                 <p className="signup-modal__subtitle">
-                  {role === 'tutor' 
-                    ? 'Verify your identity and academic details to start guiding' 
+                  {role === 'tutor'
+                    ? 'Verify your identity and academic details to start guiding'
                     : 'Tell us about your academic goals to customize TopKorbo'}
                 </p>
 
@@ -703,7 +703,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                       {/* Left Column: Basic Information & Identity */}
                       <div className="signup-modal__form-left">
                         <h4 className="signup-modal__form-section-title">1. Basic Information</h4>
-                        
+
                         <div className="signup-modal__avatar-preview-container">
                           <div className="signup-modal__avatar-circle-wrapper">
                             <div className="signup-modal__avatar-circle">
@@ -716,20 +716,20 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                             <label htmlFor="profile-pic-upload" className="signup-modal__avatar-upload-overlay">
                               <span>Upload</span>
                             </label>
-                            <input 
-                              type="file" 
-                              id="profile-pic-upload" 
-                              accept="image/*" 
-                              onChange={handleImageUpload} 
-                              style={{ display: 'none' }} 
+                            <input
+                              type="file"
+                              id="profile-pic-upload"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              style={{ display: 'none' }}
                             />
                           </div>
                           <div className="signup-modal__avatar-info">
                             <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Full Name</label>
-                            <input 
-                              type="text" 
-                              name="fullName" 
-                              value={formData.fullName} 
+                            <input
+                              type="text"
+                              name="fullName"
+                              value={formData.fullName}
                               onChange={handleInputChange}
                               className="signup-modal__input"
                               required
@@ -737,22 +737,22 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                               style={{ marginBottom: '12px' }}
                             />
                             <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Email Address</label>
-                            <input 
-                              type="text" 
-                              name="email" 
-                              value={formData.email} 
-                              className="signup-modal__input signup-modal__input--readonly" 
-                              readOnly 
+                            <input
+                              type="text"
+                              name="email"
+                              value={formData.email}
+                              className="signup-modal__input signup-modal__input--readonly"
+                              readOnly
                             />
                           </div>
                         </div>
 
                         <div className="signup-modal__form-group">
                           <label className="signup-modal__label">Gender (optional)</label>
-                          <select 
-                            name="gender" 
-                            value={formData.gender} 
-                            onChange={handleInputChange} 
+                          <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={handleInputChange}
                             className="signup-modal__select"
                           >
                             <option value="">Select Gender</option>
@@ -763,11 +763,11 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                         <div className="signup-modal__form-group">
                           <label className="signup-modal__label">Date of Birth (optional)</label>
-                          <input 
-                            type="date" 
-                            name="dob" 
-                            value={formData.dob} 
-                            onChange={handleInputChange} 
+                          <input
+                            type="date"
+                            name="dob"
+                            value={formData.dob}
+                            onChange={handleInputChange}
                             className="signup-modal__input"
                           />
                         </div>
@@ -776,14 +776,14 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                       {/* Right Column: Identity Verification, Academic & Achievements */}
                       <div className="signup-modal__form-right-fields">
                         <h4 className="signup-modal__form-section-title">2. Identity Verification</h4>
-                        
+
                         <div className="signup-modal__input-row">
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">Student ID Number</label>
-                            <input 
-                              type="text" 
-                              name="studentIdNumber" 
-                              placeholder="e.g. 21101424" 
+                            <input
+                              type="text"
+                              name="studentIdNumber"
+                              placeholder="e.g. 21101424"
                               value={formData.studentIdNumber}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -797,12 +797,12 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                               <label htmlFor="id-card-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
                                 {formData.studentIdCardPhoto ? 'Change Photo' : 'Upload ID Photo'}
                               </label>
-                              <input 
-                                type="file" 
-                                id="id-card-upload" 
-                                accept="image/*" 
-                                onChange={handleIdCardUpload} 
-                                style={{ display: 'none' }} 
+                              <input
+                                type="file"
+                                id="id-card-upload"
+                                accept="image/*"
+                                onChange={handleIdCardUpload}
+                                style={{ display: 'none' }}
                               />
                               {formData.studentIdCardPhoto && (
                                 <span style={{ fontSize: '1.2rem', color: '#10B981' }}>✅</span>
@@ -825,8 +825,8 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                           <div className="signup-modal__checkbox-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                             {['Medical', 'Buet', 'University', 'HSC Academic'].map((guideArea) => (
                               <label className="signup-modal__checkbox-label" key={guideArea}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={formData.interestedToGuide.includes(guideArea)}
                                   onChange={() => handleGuideCheckboxChange(guideArea)}
                                   className="signup-modal__checkbox"
@@ -838,14 +838,14 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         </div>
 
                         <h4 className="signup-modal__form-section-title">3. Academic Information</h4>
-                        
+
                         <div className="signup-modal__input-row">
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">College Name</label>
-                            <input 
-                              type="text" 
-                              name="collegeName" 
-                              placeholder="e.g. Notre Dame College" 
+                            <input
+                              type="text"
+                              name="collegeName"
+                              placeholder="e.g. Notre Dame College"
                               value={formData.collegeName}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -855,10 +855,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">HSC Batch</label>
-                            <select 
-                              name="hscBatch" 
-                              value={formData.hscBatch} 
-                              onChange={handleInputChange} 
+                            <select
+                              name="hscBatch"
+                              value={formData.hscBatch}
+                              onChange={handleInputChange}
                               className="signup-modal__select"
                             >
                               <option value="2020">HSC 2020</option>
@@ -874,10 +874,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         <div className="signup-modal__input-row">
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">University Name</label>
-                            <input 
-                              type="text" 
-                              name="universityName" 
-                              placeholder="e.g. BUET" 
+                            <input
+                              type="text"
+                              name="universityName"
+                              placeholder="e.g. BUET"
                               value={formData.universityName}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -887,10 +887,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">Department</label>
-                            <input 
-                              type="text" 
-                              name="department" 
-                              placeholder="e.g. CSE" 
+                            <input
+                              type="text"
+                              name="department"
+                              placeholder="e.g. CSE"
                               value={formData.department}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -902,10 +902,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         <div className="signup-modal__input-row">
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">Current Year / Semester</label>
-                            <input 
-                              type="text" 
-                              name="currentYearSemester" 
-                              placeholder="e.g. 3rd Year 2nd Semester" 
+                            <input
+                              type="text"
+                              name="currentYearSemester"
+                              placeholder="e.g. 3rd Year 2nd Semester"
                               value={formData.currentYearSemester}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -920,12 +920,12 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         </div>
 
                         <h4 className="signup-modal__form-section-title">4. Admission Achievements</h4>
-                        
+
                         <div className="signup-modal__form-group" style={{ marginBottom: '16px' }}>
                           <label className="signup-modal__label">Admission Achievement Section Description (BIO)</label>
-                          <textarea 
-                            name="admissionAchievement" 
-                            placeholder="Describe your admission achievements (e.g. BUET 45th merit position, Medical Admission score 78.5). This will be showcased on your mentor public BIO profile." 
+                          <textarea
+                            name="admissionAchievement"
+                            placeholder="Describe your admission achievements (e.g. BUET 45th merit position, Medical Admission score 78.5). This will be showcased on your mentor public BIO profile."
                             value={formData.admissionAchievement}
                             onChange={handleInputChange}
                             className="signup-modal__input"
@@ -938,9 +938,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         {errorMsg && <p className="signup-modal__error-text">{errorMsg}</p>}
 
                         <div className="signup-modal__form-actions">
-                          <button 
-                            type="submit" 
-                            disabled={loading} 
+                          <button
+                            type="submit"
+                            disabled={loading}
                             className="btn btn-primary btn-lg signup-modal__submit-btn"
                           >
                             {loading ? 'Saving...' : 'Next'}
@@ -953,7 +953,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                       {/* Left Column: Basic Information */}
                       <div className="signup-modal__form-left">
                         <h4 className="signup-modal__form-section-title">Basic Information</h4>
-                        
+
                         <div className="signup-modal__avatar-preview-container">
                           <div className="signup-modal__avatar-circle-wrapper">
                             <div className="signup-modal__avatar-circle">
@@ -966,20 +966,20 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                             <label htmlFor="profile-pic-upload" className="signup-modal__avatar-upload-overlay">
                               <span>Upload</span>
                             </label>
-                            <input 
-                              type="file" 
-                              id="profile-pic-upload" 
-                              accept="image/*" 
-                              onChange={handleImageUpload} 
-                              style={{ display: 'none' }} 
+                            <input
+                              type="file"
+                              id="profile-pic-upload"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              style={{ display: 'none' }}
                             />
                           </div>
                           <div className="signup-modal__avatar-info">
                             <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Full Name</label>
-                            <input 
-                              type="text" 
-                              name="fullName" 
-                              value={formData.fullName} 
+                            <input
+                              type="text"
+                              name="fullName"
+                              value={formData.fullName}
                               onChange={handleInputChange}
                               className="signup-modal__input"
                               required
@@ -987,12 +987,12 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                               style={{ marginBottom: '12px' }}
                             />
                             <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Email Address</label>
-                            <input 
-                              type="text" 
-                              name="email" 
-                              value={formData.email} 
-                              className="signup-modal__input signup-modal__input--readonly" 
-                              readOnly 
+                            <input
+                              type="text"
+                              name="email"
+                              value={formData.email}
+                              className="signup-modal__input signup-modal__input--readonly"
+                              readOnly
                             />
                           </div>
                         </div>
@@ -1002,12 +1002,12 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                           <div className="signup-modal__radio-group">
                             {['Bangla Medium', 'English Version', 'English Medium'].map((item) => (
                               <label className="signup-modal__radio-label" key={item}>
-                                <input 
-                                  type="radio" 
-                                  name="medium" 
-                                  value={item} 
-                                  checked={formData.medium === item} 
-                                  onChange={handleInputChange} 
+                                <input
+                                  type="radio"
+                                  name="medium"
+                                  value={item}
+                                  checked={formData.medium === item}
+                                  onChange={handleInputChange}
                                   className="signup-modal__radio"
                                 />
                                 <span>{item}</span>
@@ -1020,14 +1020,14 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                       {/* Right Column: Academic & Location */}
                       <div className="signup-modal__form-right-fields">
                         <h4 className="signup-modal__form-section-title">Academic Details</h4>
-                        
+
                         <div className="signup-modal__input-row">
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">College Name</label>
-                            <input 
-                              type="text" 
-                              name="collegeName" 
-                              placeholder="e.g. Notre Dame College" 
+                            <input
+                              type="text"
+                              name="collegeName"
+                              placeholder="e.g. Notre Dame College"
                               value={formData.collegeName}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -1037,10 +1037,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">HSC Batch</label>
-                            <select 
-                              name="hscBatch" 
-                              value={formData.hscBatch} 
-                              onChange={handleInputChange} 
+                            <select
+                              name="hscBatch"
+                              value={formData.hscBatch}
+                              onChange={handleInputChange}
                               className="signup-modal__select"
                             >
                               <option value="2024">HSC 2024</option>
@@ -1057,12 +1057,12 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                             <div className="signup-modal__radio-row">
                               {['Science', 'Business Studies', 'Humanities'].map((item) => (
                                 <label className="signup-modal__radio-label" key={item}>
-                                  <input 
-                                    type="radio" 
-                                    name="stream" 
-                                    value={item} 
-                                    checked={formData.stream === item} 
-                                    onChange={handleInputChange} 
+                                  <input
+                                    type="radio"
+                                    name="stream"
+                                    value={item}
+                                    checked={formData.stream === item}
+                                    onChange={handleInputChange}
                                     className="signup-modal__radio"
                                   />
                                   <span>{item}</span>
@@ -1073,10 +1073,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">Academic Status</label>
-                            <select 
-                              name="academicStatus" 
-                              value={formData.academicStatus} 
-                              onChange={handleInputChange} 
+                            <select
+                              name="academicStatus"
+                              value={formData.academicStatus}
+                              onChange={handleInputChange}
                               className="signup-modal__select"
                             >
                               <option value="HSC 1st Year">HSC 1st Year</option>
@@ -1091,10 +1091,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         <div className="signup-modal__input-row signup-modal__input-row--three">
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">District</label>
-                            <input 
-                              type="text" 
-                              name="district" 
-                              placeholder="e.g. Dhaka" 
+                            <input
+                              type="text"
+                              name="district"
+                              placeholder="e.g. Dhaka"
                               value={formData.district}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -1103,10 +1103,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                           </div>
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">Division</label>
-                            <input 
-                              type="text" 
-                              name="division" 
-                              placeholder="e.g. Dhaka" 
+                            <input
+                              type="text"
+                              name="division"
+                              placeholder="e.g. Dhaka"
                               value={formData.division}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -1115,10 +1115,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                           </div>
                           <div className="signup-modal__form-group">
                             <label className="signup-modal__label">Area Name</label>
-                            <input 
-                              type="text" 
-                              name="areaName" 
-                              placeholder="e.g. Cantonment" 
+                            <input
+                              type="text"
+                              name="areaName"
+                              placeholder="e.g. Cantonment"
                               value={formData.areaName}
                               onChange={handleInputChange}
                               className="signup-modal__input"
@@ -1132,8 +1132,8 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                           <div className="signup-modal__checkbox-grid">
                             {['Engineering', 'University', 'Medical'].map((aspiration) => (
                               <label className="signup-modal__checkbox-label" key={aspiration}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={formData.aspirations.includes(aspiration)}
                                   onChange={() => handleCheckboxChange(aspiration)}
                                   className="signup-modal__checkbox"
@@ -1147,9 +1147,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                         {errorMsg && <p className="signup-modal__error-text">{errorMsg}</p>}
 
                         <div className="signup-modal__form-actions">
-                          <button 
-                            type="submit" 
-                            disabled={loading} 
+                          <button
+                            type="submit"
+                            disabled={loading}
                             className="btn btn-primary btn-lg signup-modal__submit-btn"
                           >
                             {loading ? 'Saving...' : 'Next'}
@@ -1184,10 +1184,10 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                     <label className="signup-modal__label" style={{ display: 'block', textAlign: 'left', marginBottom: '6px' }}>Phone Number</label>
                     <div className="signup-modal__phone-input-wrapper" style={{ display: 'flex', alignItems: 'center', border: '1px solid rgba(230, 204, 178, 0.7)', borderRadius: 'var(--radius-sm)', background: 'var(--white)', overflow: 'hidden' }}>
                       <span className="signup-modal__phone-prefix" style={{ padding: '10px 14px', background: 'rgba(230, 204, 178, 0.15)', borderRight: '1px solid rgba(230, 204, 178, 0.7)', fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>+880</span>
-                      <input 
-                        type="tel" 
-                        name="phoneNumber" 
-                        placeholder="1XXXXXXXXX" 
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        placeholder="1XXXXXXXXX"
                         pattern="[0-9]{10}"
                         value={formData.phoneNumber}
                         onChange={(e) => {
@@ -1207,16 +1207,16 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   {errorMsg && <p className="signup-modal__error-text">{errorMsg}</p>}
 
                   <div className="signup-modal__phone-actions" style={{ display: 'flex', gap: '16px', width: '100%', maxWidth: '360px', margin: '24px auto 0 auto' }}>
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       disabled={loading}
                       className="btn btn-primary btn-lg signup-modal__verify-btn"
                       style={{ flex: '2' }}
                     >
                       {loading ? 'Verifying...' : 'Verify Phone'}
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={handlePhoneSkip}
                       className="btn btn-secondary btn-lg signup-modal__skip-btn"
                       style={{ flex: '1', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)' }}
@@ -1242,7 +1242,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                 </div>
                 <h3 className="signup-modal__title">Welcome Aboard, {formData.fullName}!</h3>
                 <p className="signup-modal__subtitle">
-                  {role === 'tutor' 
+                  {role === 'tutor'
                     ? "Your mentor profile has been fully registered. You are ready to share your expertise, guide students, and make an impact in Bangladesh's #1 competitive EdTech platform."
                     : "Your student profile has been fully registered. You've earned your starter rank and early access to Bangladesh's #1 competitive EdTech platform."
                   }

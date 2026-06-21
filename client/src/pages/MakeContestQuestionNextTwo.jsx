@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { 
+import {
   HiArrowLeft, HiPlusCircle, HiBookOpen, HiPencilAlt, HiPhotograph, HiX, HiSearch, HiCheckCircle,
-  HiUpload, HiPlus, HiTrash, HiDocumentText, HiClipboardList, HiLightBulb,
+  HiUpload, HiPlus, HiTrash, HiDocumentText, HiClipboardList, HiLightBulb, HiTag,
   HiOutlineSparkles, HiOutlineDocumentText, HiOutlinePhotograph, HiOutlineClipboardCopy,
   HiOutlineRefresh, HiOutlineCheck, HiOutlineExclamationCircle, HiOutlineUpload,
   HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineLightBulb
@@ -11,10 +11,12 @@ import {
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import { aiApi } from '../services/aiApi';
+import { getTagAbbreviation, getTagTitle, buildSelectionsFromQuestions } from '../utils/questionTags';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import './MakeContestQuestion.css';
 import './MakeContestQuestionNextTwo.css';
+import './MakeContestQuestionChooseQBank.css';
 import './UploadQuestion.css';
 import './AiQuestionHelper.css';
 
@@ -396,17 +398,71 @@ export default function MakeContestQuestionNextTwo() {
     return saved ? JSON.parse(saved) : null;
   })();
 
-  const qbankSelections = location.state?.qbankSelections || (() => {
+  const [qbankSelections, setQbankSelections] = useState(() => {
+    if (location.state?.qbankSelections) return location.state.qbankSelections;
     const saved = sessionStorage.getItem('cc_qbankSelections');
     return saved ? JSON.parse(saved) : null;
-  })();
+  });
 
-  // Persist qbankSelections when received via router state
+  // Full question objects for the picked qbank questions (for display + removal)
+  const [qbankQuestions, setQbankQuestions] = useState(() => {
+    if (location.state?.qbankQuestions) return location.state.qbankQuestions;
+    const saved = sessionStorage.getItem('cc_qbankQuestions');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Persist qbank selections/questions when received via router state
   useEffect(() => {
     if (location.state?.qbankSelections) {
+      setQbankSelections(location.state.qbankSelections);
       sessionStorage.setItem('cc_qbankSelections', JSON.stringify(location.state.qbankSelections));
     }
-  }, [location.state?.qbankSelections]);
+    if (location.state?.qbankQuestions) {
+      setQbankQuestions(location.state.qbankQuestions);
+      sessionStorage.setItem('cc_qbankQuestions', JSON.stringify(location.state.qbankQuestions));
+    }
+  }, [location.state?.qbankSelections, location.state?.qbankQuestions]);
+
+  // Remove a picked question from this contest draft (NOT from the database).
+  const handleRemoveQbankQuestion = (qid) => {
+    const updatedQuestions = qbankQuestions.filter(q => q._id !== qid);
+    setQbankQuestions(updatedQuestions);
+    sessionStorage.setItem('cc_qbankQuestions', JSON.stringify(updatedQuestions));
+
+    // Rebuild the backend payload from what remains so they stay in sync.
+    const rebuilt = buildSelectionsFromQuestions(updatedQuestions);
+
+    // Carry over any "leftover" ids (no metadata) that are still selected.
+    const remainingIds = new Set(updatedQuestions.map(q => q._id));
+    const knownIds = new Set(qbankQuestions.map(q => q._id));
+    (qbankSelections || []).forEach(sel => {
+      (sel.questionIds || []).forEach(id => {
+        if (!knownIds.has(id) && id !== qid && !remainingIds.has(id)) {
+          remainingIds.add(id);
+          rebuilt.push({ questionIds: [id], numberOfQuestions: 1, chapters: [] });
+        }
+      });
+    });
+
+    const finalSelections = rebuilt.length > 0 ? rebuilt : null;
+    setQbankSelections(finalSelections);
+    if (finalSelections) {
+      sessionStorage.setItem('cc_qbankSelections', JSON.stringify(finalSelections));
+    } else {
+      sessionStorage.removeItem('cc_qbankSelections');
+    }
+
+    // Keep the QBank page's own selection memory in sync for "Edit Selection".
+    const savedIds = sessionStorage.getItem('cc_qbank_selectedQuestionIds');
+    if (savedIds) {
+      try {
+        const ids = JSON.parse(savedIds).filter(id => id !== qid);
+        sessionStorage.setItem('cc_qbank_selectedQuestionIds', JSON.stringify(ids));
+      } catch (_) { /* ignore */ }
+    }
+
+    toast.success(language === 'en' ? 'Question removed from this contest.' : 'প্রশ্নটি এই কনটেস্ট থেকে সরানো হয়েছে।');
+  };
 
   // ── UI / Confirmed State ──
   const [confirmedQuestions, setConfirmedQuestions] = useState(() => {
@@ -1186,11 +1242,11 @@ export default function MakeContestQuestionNextTwo() {
           )}
 
           {/* ═══════ Selected Question Bank Chapters ═══════ */}
-          {qbankSelections && qbankSelections.length > 0 && (
+          {((qbankQuestions && qbankQuestions.length > 0) || (qbankSelections && qbankSelections.length > 0)) && (
             <section className="cc-section cq-selection-summary-card">
               <div className="cq-section-top-bar" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 className="cc-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                  📚 {language === 'en' ? 'Selected Chapters' : 'নির্বাচিত অধ্যায়সমূহ'}
+                  📚 {language === 'en' ? `Selected Questions (${qbankQuestions.length})` : 'নির্বাচিত অধ্যায়সমূহ'}
                 </h3>
                 <button
                   type="button"
@@ -1202,8 +1258,86 @@ export default function MakeContestQuestionNextTwo() {
                 </button>
               </div>
 
+              {qbankQuestions && qbankQuestions.length > 0 ? (
+                <div className="qsel-review-list">
+                  {qbankQuestions.map((q, idx) => {
+                    const paperLabel = q.paper === '1st'
+                      ? (language === 'en' ? '1st Paper' : '১ম পত্র')
+                      : (language === 'en' ? '2nd Paper' : '২য় পত্র');
+                    return (
+                      <div key={q._id || idx} className="qsel-review-card">
+                        <button
+                          type="button"
+                          className="qsel-remove-btn"
+                          onClick={() => handleRemoveQbankQuestion(q._id)}
+                          title={language === 'en' ? 'Remove from contest' : 'কনটেস্ট থেকে সরান'}
+                        >
+                          <HiTrash size={14} />
+                          {language === 'en' ? 'Remove' : 'সরান'}
+                        </button>
+
+                        <div className="qsel-meta">
+                          <span className="qsel-meta-tag qsel-meta-tag--subject">{q.subject}</span>
+                          <span className="qsel-meta-tag qsel-meta-tag--paper">{paperLabel}</span>
+                          {q.chapter && (
+                            <span className="qsel-meta-tag qsel-meta-tag--chapter">
+                              <span className="qsel-meta-tag__label">{language === 'en' ? 'Ch' : 'অধ্যায়'}</span>
+                              {q.chapter}
+                            </span>
+                          )}
+                          {q.topic && (
+                            <span className="qsel-meta-tag qsel-meta-tag--topic">
+                              <span className="qsel-meta-tag__label">{language === 'en' ? 'Topic' : 'টপিক'}</span>
+                              {q.topic}
+                            </span>
+                          )}
+                          <span className="qsel-type-badge">{q.type?.toUpperCase()}</span>
+                        </div>
+
+                        <div className="qsel-qtext">
+                          <span dangerouslySetInnerHTML={{ __html: renderLatex(`${idx + 1}. ${q.questionText}`) }}></span>
+                        </div>
+
+                        {q.imageUrl && (
+                          <img src={q.imageUrl} alt="Question" className="qsel-img" />
+                        )}
+
+                        {q.type === 'mcq' && q.options && (
+                          <div className="qsel-options">
+                            {q.options.map((opt, oIdx) => (
+                              <div key={oIdx} className={`qsel-option ${opt.isCorrect ? 'qsel-option--correct' : ''}`}>
+                                <span className="qsel-option__letter">{String.fromCharCode(65 + oIdx)}.</span>
+                                <span dangerouslySetInnerHTML={{ __html: renderLatex(opt.text) }}></span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {q.tags && q.tags.length > 0 && (
+                          <div className="qsel-tags">
+                            <HiTag size={14} className="qsel-tags__icon" />
+                            {q.tags.map((tag, tIdx) => {
+                              const abbr = getTagAbbreviation(tag);
+                              if (!abbr) return null;
+                              return (
+                                <span
+                                  key={tIdx}
+                                  className={`qsel-tag qsel-tag--${tag.category || 'admission'}`}
+                                  title={getTagTitle(tag)}
+                                >
+                                  {abbr}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
               <div className="cq-selected-chapters-grid" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {qbankSelections.map((sel, idx) => (
+                {(qbankSelections || []).map((sel, idx) => (
                   <div key={idx} style={{
                     background: '#FFFBF7',
                     border: '1.2px solid rgba(192, 133, 82, 0.15)',
@@ -1216,7 +1350,7 @@ export default function MakeContestQuestionNextTwo() {
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      {sel.chapters.map((ch, cidx) => (
+                      {(sel.chapters || []).map((ch, cidx) => (
                         <span key={cidx} style={{
                           background: 'rgba(192, 133, 82, 0.08)',
                           border: '1px solid rgba(192, 133, 82, 0.15)',
@@ -1233,6 +1367,7 @@ export default function MakeContestQuestionNextTwo() {
                   </div>
                 ))}
               </div>
+              )}
             </section>
           )}
 

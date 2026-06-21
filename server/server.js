@@ -42,7 +42,7 @@ const aiRoutes = require("./routes/aiRoutes");
 
 // Community / Forum
 const postRoutes = require("./routes/postRoutes");
-const { postComments } = require("./routes/commentRoutes");
+const { postComments, router: commentRoutes } = require("./routes/commentRoutes");
 const reactionRoutes = require("./routes/reactionRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const searchRoutes = require("./routes/searchRoutes");
@@ -102,6 +102,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/posts/:postId/comments", postComments);
+app.use("/api/comments", commentRoutes);
 app.use("/api/reactions", reactionRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);

@@ -98,6 +98,8 @@ export default function MakeContestQuestionConfirm() {
         sessionStorage.removeItem('cc_qbank_selectedChapters');
         sessionStorage.removeItem('cc_qbank_topicsMap');
         sessionStorage.removeItem('cc_qbank_selectedTopics');
+        sessionStorage.removeItem('cc_qbank_selectedQuestionIds');
+        sessionStorage.removeItem('cc_qbankQuestions');
 
         navigate('/dashboard');
       } else {
@@ -204,7 +206,7 @@ export default function MakeContestQuestionConfirm() {
                         {language === 'en' ? 'Standard Level' : 'স্ট্যান্ডার্ড লেভেল'}
                       </strong>
                       <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-                        {contestData.level} {contestData.admissionType ? `(${contestData.admissionType}${contestData.admissionSubtype ? ` - ${contestData.admissionSubtype}` : ''})` : ''}
+                        {contestData.level} {contestData.admissionType ? `(${contestData.admissionType}${contestData.admissionSubtype ? ` - ${contestData.admissionSubtype === 'arts' ? 'humanities' : contestData.admissionSubtype}` : ''})` : ''}
                       </span>
                     </div>
                   </div>
@@ -276,23 +278,39 @@ export default function MakeContestQuestionConfirm() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
                     <HiBookOpen size={18} style={{ color: '#8C5A3C' }} />
                     <strong style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                      {language === 'en' ? 'Question Bank Chapters' : 'প্রশ্ন ব্যাংক অধ্যায়সমূহ'}
+                      {language === 'en' ? 'Question Bank Questions' : 'প্রশ্ন ব্যাংক অধ্যায়সমূহ'}
                     </strong>
                   </div>
 
                   {qbankSelections && qbankSelections.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {qbankSelections.map((sel, idx) => (
-                        <div key={idx} style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                          <span style={{ fontWeight: '700', color: '#8C5A3C' }}>
-                            {sel.subject} ({sel.paper}):
-                          </span>
-                          <span style={{ marginLeft: '0.4rem' }}>
-                            {sel.chapters.map(ch => ch.name).join(', ')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <>
+                      <div style={{ marginBottom: '0.85rem' }}>
+                        <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#8C5A3C' }}>
+                          {qbankSelections.reduce((sum, sel) => sum + (sel.questionIds?.length || 0), 0)}
+                        </span>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                          {language === 'en' ? 'questions picked from the bank' : 'টি প্রশ্ন ব্যাংক থেকে নির্বাচিত'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {qbankSelections.map((sel, idx) => {
+                          const chapterNames = (sel.chapters || []).map(ch => ch?.name).filter(Boolean);
+                          return (
+                            <div key={idx} style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                              <span style={{ fontWeight: '700', color: '#8C5A3C' }}>
+                                {sel.subject ? `${sel.subject}${sel.paper ? ` (${sel.paper})` : ''}` : (language === 'en' ? 'Selected questions' : 'নির্বাচিত প্রশ্ন')}
+                                {` · ${sel.questionIds?.length || 0}`}
+                              </span>
+                              {chapterNames.length > 0 && (
+                                <span style={{ marginLeft: '0.4rem' }}>
+                                  {chapterNames.join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   ) : (
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                       {language === 'en' ? 'No question bank chapters selected' : 'কোনো প্রশ্ন ব্যাংক অধ্যায় নির্বাচন করা হয়নি'}

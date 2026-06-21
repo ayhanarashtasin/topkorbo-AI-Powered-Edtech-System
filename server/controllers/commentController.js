@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const User = require('../models/User');
+const Reaction = require('../models/Reaction');
 const { uploadImage } = require('../services/uploadService');
 const { sanitize, htmlToText } = require('../services/sanitizeService');
 const { resolveMentions, ensureUsername } = require('../services/mentionService');
@@ -23,6 +24,24 @@ const commentLimiter = rateLimit({
   message: { success: false, message: 'Slow down — too many comments in a short time.' }
 });
 
+async function attachUserReactions(docs, userId, targetType) {
+  if (!userId || !docs || docs.length === 0) return docs;
+  const ids = docs.map(d => d._id);
+  const myReactions = await Reaction.find({
+    targetType,
+    target: { $in: ids },
+    user: userId
+  }).lean();
+  const reactionMap = {};
+  for (const r of myReactions) {
+    reactionMap[String(r.target)] = r.type;
+  }
+  for (const d of docs) {
+    d.userReaction = reactionMap[String(d._id)] || null;
+  }
+  return docs;
+}
+
 const commentController = {
   /** Rate limiter exposed for routes file to mount. */
   commentLimiter,
@@ -43,6 +62,9 @@ const commentController = {
         .limit(limit + 1)
         .populate('author', POPULATE_AUTHOR)
         .lean();
+        
+      await attachUserReactions(comments, req.user?.id, 'comment');
+      
       let nextCursor = null;
       if (comments.length > limit) {
         const last = comments.pop();
