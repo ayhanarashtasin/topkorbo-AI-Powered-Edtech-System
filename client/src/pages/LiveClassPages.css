@@ -1,0 +1,124 @@
+.live-page {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.live-page__intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 24px 26px;
+}
+
+.live-page__intro h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.live-page__intro p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.live-page__usage {
+  border-radius: 999px;
+  background: rgba(192, 133, 82, 0.1);
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #8c5a3c;
+}
+
+.live-page__launcher,
+.live-page__directory {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 24px;
+}
+
+.live-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.live-page__field span {
+  font-weight: 700;
+}
+
+.live-page__field input {
+  border: 1px solid rgba(192, 133, 82, 0.18);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font: inherit;
+}
+
+.live-page__hint {
+  margin: 14px 0 0;
+  color: var(--text-secondary);
+}
+
+.live-page__error,
+.live-page__empty {
+  border-radius: 24px;
+  padding: 20px 22px;
+}
+
+.live-page__error {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(254, 242, 242, 0.9);
+  color: #b91c1c;
+}
+
+.live-page__empty {
+  border: 1px dashed rgba(192, 133, 82, 0.22);
+  background: rgba(255, 251, 247, 0.9);
+  color: var(--text-secondary);
+}
+
+.live-page__directory {
+  display: grid;
+  gap: 16px;
+}
+
+.live-page__card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  background: #fffaf5;
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.live-page__card h3 {
+  margin: 0;
+}
+
+.live-page__card p,
+.live-page__card small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .live-page {
+    padding: 20px;
+  }
+
+  .live-page__intro,
+  .live-page__card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

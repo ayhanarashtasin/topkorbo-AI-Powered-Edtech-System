@@ -18,6 +18,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import Confetti from "react-confetti";
 import toast from "react-hot-toast";
+import { createMockTestAttempt } from "../services/mockTestApi";
 import { buildAttemptPayload, submitAttempt as savePracticeAttempt } from "../services/practiceApi";
 import "./MockTestExam.css";
 
@@ -141,6 +142,7 @@ export default function MockTestExam() {
   const [answers, setAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [attemptRanking, setAttemptRanking] = useState(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [explanationModalQuestion, setExplanationModalQuestion] =
     useState(null);
@@ -336,6 +338,61 @@ export default function MockTestExam() {
     };
   }, [answers, config, questions, timeLeft, writtenAnswers, aiEvaluations]);
 
+  const buildSubjectBreakdown = (evaluationMap = aiEvaluations) => {
+    const subjectMap = new Map();
+
+    questions.forEach((question, index) => {
+      const key = getQuestionKey(question, index);
+      const subject = question.subject || "Mixed";
+      const current = subjectMap.get(subject) || {
+        subject,
+        correct: 0,
+        wrong: 0,
+        skipped: 0,
+        total: 0,
+        score: 0,
+      };
+
+      current.total += 1;
+
+      if (question.type === "mcq") {
+        const selectedIndex = answers[key];
+        const correctIndex = getCorrectOptionIndex(question);
+
+        if (selectedIndex === undefined || selectedIndex === null) {
+          current.skipped += 1;
+        } else if (selectedIndex === correctIndex) {
+          current.correct += 1;
+          current.score += 1;
+        } else {
+          current.wrong += 1;
+          if (config?.negativeMarking) current.score -= 0.25;
+        }
+      } else {
+        const isUploaded = !!writtenAnswers[key];
+        const scoreVal = evaluationMap[key]
+          ? parseFloat(evaluationMap[key].score) || 0
+          : 0;
+
+        if (!isUploaded) {
+          current.skipped += 1;
+        } else if (scoreVal > 0) {
+          current.correct += 1;
+          current.score += scoreVal;
+        } else {
+          current.wrong += 1;
+        }
+      }
+
+      subjectMap.set(subject, current);
+    });
+
+    return Array.from(subjectMap.values()).map((entry) => ({
+      ...entry,
+      score: Math.max(0, Math.round(entry.score * 100) / 100),
+    }));
+  };
+
   useEffect(() => {
     if (isSubmitted || timeLeft <= 0) return;
 
@@ -430,6 +487,26 @@ export default function MockTestExam() {
         (err?.status === 0 ? "Server unreachable" : null) ||
         "Please retry from Practice History.";
       toast.error("Could not save attempt to history. " + reason);
+    }
+
+    try {
+      const attempt = await createMockTestAttempt({
+        config: {
+          standards: Array.isArray(config?.standards) ? config.standards : [],
+          questionType: config?.questionType || "",
+          duration: config?.duration || 0,
+          negativeMarking: !!config?.negativeMarking,
+          totalQuestions: config?.totalQuestions || questions.length,
+        },
+        summary: {
+          ...resultStats,
+          timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+        },
+        subjectBreakdown: buildSubjectBreakdown(latestEvals),
+      });
+      setAttemptRanking(attempt?.ranking || null);
+    } catch (err) {
+      console.error("Failed to save mock test attempt", err);
     }
 
     // Submit to contest backend if it is a contest

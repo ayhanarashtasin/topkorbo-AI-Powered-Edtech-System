@@ -15,15 +15,18 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
+  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     const name = localStorage.getItem('topkorbo_name');
     const avatar = localStorage.getItem('topkorbo_avatar');
+    const role = localStorage.getItem('topkorbo_role');
     if (token) {
       setIsLoggedIn(true);
       setUserName(name || '');
       setUserAvatar(avatar || '');
+      setUserRole(role || '');
     }
   }, []);
 
@@ -53,6 +56,7 @@ export default function Navbar() {
       if (email) localStorage.setItem('topkorbo_email', decodeURIComponent(email));
       if (avatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(avatar));
       if (role) localStorage.setItem('topkorbo_role', role);
+      setUserRole(role || '');
       
       if (isComplete) {
         // Fully registered user: redirect to dashboard directly!
@@ -77,6 +81,9 @@ export default function Navbar() {
     { label: t('nav.battle'), href: '#battle' },
     { label: t('nav.mentors'), href: '#mentors' },
   ];
+  const liveClassHref = userRole === 'student'
+    ? '/student/live-class'
+    : (userRole === 'tutor' || userRole === 'teacher' ? '/mentor/live-class' : '');
 
   return (
     <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`} id="navbar">
@@ -140,6 +147,11 @@ export default function Navbar() {
               <a href="/dashboard" className="btn btn-secondary btn-sm" id="nav-dashboard-mobile" style={{ width: '100%', textAlign: 'center' }}>
                 {t('db.menu.dashboard') || 'Dashboard'}
               </a>
+              {liveClassHref ? (
+                <a href={liveClassHref} className="btn btn-primary btn-sm" id="nav-live-class-mobile" style={{ width: '100%', textAlign: 'center' }}>
+                  Live Class
+                </a>
+              ) : null}
               <a 
                 href="/setting" 
                 className="navbar__user-name-link" 
@@ -194,6 +206,11 @@ export default function Navbar() {
               <a href="/dashboard" className="btn btn-secondary btn-sm" id="nav-dashboard-btn">
                 {t('db.menu.dashboard') || 'Dashboard'}
               </a>
+              {liveClassHref ? (
+                <a href={liveClassHref} className="btn btn-primary btn-sm" id="nav-live-class-btn">
+                  Live Class
+                </a>
+              ) : null}
               <a 
                 href="/setting" 
                 className="navbar__user-name-link" 

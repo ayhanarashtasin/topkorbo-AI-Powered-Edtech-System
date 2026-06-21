@@ -39,9 +39,9 @@ function getToken() {
   }
 }
 
-function buildHeaders(extra) {
+function buildHeaders(extra, hasBody = false) {
   const headers = { ...(extra || {}) };
-  if (!headers['Content-Type'] && headers.body) {
+  if (!headers['Content-Type'] && hasBody) {
     headers['Content-Type'] = 'application/json';
   }
   const token = getToken();
@@ -51,9 +51,13 @@ function buildHeaders(extra) {
 
 async function request(path, init = {}) {
   const url = `${API_BASE}${path}`;
+  const finalInit = {
+    ...init,
+    headers: buildHeaders(init.headers, !!init.body)
+  };
   let res;
   try {
-    res = await fetch(url, init);
+    res = await fetch(url, finalInit);
   } catch (err) {
     // Network / CORS / offline — surface as an ApiError so callers can
     // distinguish it from server errors.

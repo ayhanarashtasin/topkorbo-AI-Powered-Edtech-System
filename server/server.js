@@ -39,6 +39,9 @@ const bookRoutes = require("./routes/bookRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
 const evaluationRoutes = require("./routes/evaluationRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const mentorRoutes = require("./routes/mentorRoutes");
+const mockTestRoutes = require("./routes/mockTestRoutes");
+const liveClassRoutes = require("./routes/liveClassRoutes");
 
 // Community / Forum
 const postRoutes = require("./routes/postRoutes");
@@ -72,7 +75,14 @@ app.use(
     ],
   }),
 );
-app.use(express.json({ limit: "16mb" }));
+app.use(express.json({
+  limit: "16mb",
+  verify: (req, _res, buf) => {
+    if (req.originalUrl === '/api/live-class/webhooks') {
+      req.rawBody = buf.toString('utf8');
+    }
+  },
+}));
 app.use(express.urlencoded({ limit: "16mb", extended: true }));
 app.use(passport.initialize());
 
@@ -98,6 +108,9 @@ app.use("/api/books", bookRoutes);
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/evaluate", evaluationRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/mentor-connections", mentorRoutes);
+app.use("/api/mock-tests", mockTestRoutes);
+app.use("/api/live-class", liveClassRoutes);
 
 // === Forum / Community routes ===
 app.use("/api/users", userRoutes);
