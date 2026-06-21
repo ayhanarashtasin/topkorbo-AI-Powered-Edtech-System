@@ -14,7 +14,7 @@ import './LiveClassRoom.css';
 
 function RoomLayout({ mode, onEndClass, sessionTitle }) {
   const room = useRoomContext();
-  const participants = useParticipants();
+  const participantSnapshot = useParticipants();
   const { localParticipant, isCameraEnabled, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant();
   const tracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -24,6 +24,10 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
   const [micEnabled, setMicEnabled] = useState(mode === 'mentor');
   const [screenEnabled, setScreenEnabled] = useState(false);
   const [isStageFullscreen, setIsStageFullscreen] = useState(false);
+  const remoteParticipants = useMemo(
+    () => Array.from(room?.remoteParticipants?.values() || []),
+    [room, participantSnapshot]
+  );
 
   const mentorTracks = tracks.filter((trackRef) => trackRef.participant.identity.startsWith('mentor:'));
   const mainMentorTrack = mentorTracks.find((trackRef) => trackRef.source === Track.Source.ScreenShare)
@@ -44,23 +48,28 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     })
     .slice(0, 6);
 
-  const featuredIds = new Set(featuredStudentTracks.map((trackRef) => trackRef.participant.identity));
-  const compactParticipants = participants
+  const studentParticipants = remoteParticipants
     .filter((participant) => (
       participant.identity.startsWith('student:')
-      && participant.identity !== localParticipant?.identity
-      && !featuredIds.has(participant.identity)
     ))
     .map((participant) => ({
       identity: participant.identity,
       name: participant.name || participant.identity,
       isSpeaking: participant.isSpeaking,
     }));
+  const fallbackActiveStudents = featuredStudentTracks.length
+    ? []
+    : studentParticipants.slice(0, 6);
+  const featuredIds = new Set([
+    ...featuredStudentTracks.map((trackRef) => trackRef.participant.identity),
+    ...fallbackActiveStudents.map((participant) => participant.identity),
+  ]);
+  const compactParticipants = studentParticipants.filter((participant) => !featuredIds.has(participant.identity));
 
-  const participantCount = participants.length;
+  const participantCount = remoteParticipants.length + (localParticipant ? 1 : 0);
   const mentorIdentity = mode === 'mentor'
     ? localParticipant?.identity
-    : participants.find((participant) => participant.identity.startsWith('mentor:'))?.identity;
+    : remoteParticipants.find((participant) => participant.identity.startsWith('mentor:'))?.identity;
 
   const mainStageLabel = useMemo(() => {
     if (!mainMentorTrack) return 'Waiting for mentor video';
@@ -69,8 +78,8 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
 
   const fallbackName = useMemo(() => {
     if (mode === 'mentor') return localParticipant?.name || 'Mentor';
-    return participants.find((participant) => participant.identity === mentorIdentity)?.name || 'Mentor';
-  }, [localParticipant?.name, mentorIdentity, mode, participants]);
+    return remoteParticipants.find((participant) => participant.identity === mentorIdentity)?.name || 'Mentor';
+  }, [localParticipant?.name, mentorIdentity, mode, remoteParticipants]);
 
   const fallbackInitial = (fallbackName || 'M').charAt(0).toUpperCase();
 
@@ -187,33 +196,62 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
         </section>
 
         <aside className="live-room__sidebar">
-          <div className="live-room__sidebar-block">
-            <h3>Active students</h3>
-            <div className="live-room__active-grid">
-              {featuredStudentTracks.length ? featuredStudentTracks.map((trackRef) => (
-                <div key={`${trackRef.participant.identity}-${trackRef.source}`} className="live-room__active-tile">
-                  <VideoTrack trackRef={trackRef} />
-                  <span>{trackRef.participant.name || trackRef.participant.identity}</span>
-                </div>
-              )) : (
-                <div className="live-room__compact-empty">Only mentor media is being highlighted right now.</div>
-              )}
+          {mode === 'mentor' ? (
+            <div className="live-room__sidebar-block">
+              <h3>Active students</h3>
+              <div className="live-room__compact-list">
+                {studentParticipants.length ? studentParticipants.map((participant) => (
+                  <div key={participant.identity} className={`live-room__compact-item ${participant.isSpeaking ? 'live-room__compact-item--speaking' : ''}`}>
+                    <div className="live-room__avatar">{participant.name.charAt(0).toUpperCase()}</div>
+                    <span>{participant.name}</span>
+                  </div>
+                )) : (
+                  <div className="live-room__compact-empty">No students have joined this class yet.</div>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="live-room__sidebar-block">
+                <h3>Active students</h3>
+                {featuredStudentTracks.length ? (
+                  <div className="live-room__active-grid">
+                    {featuredStudentTracks.map((trackRef) => (
+                      <div key={`${trackRef.participant.identity}-${trackRef.source}`} className="live-room__active-tile">
+                        <VideoTrack trackRef={trackRef} />
+                        <span>{trackRef.participant.name || trackRef.participant.identity}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : fallbackActiveStudents.length ? (
+                  <div className="live-room__compact-list">
+                    {fallbackActiveStudents.map((participant) => (
+                      <div key={participant.identity} className={`live-room__compact-item ${participant.isSpeaking ? 'live-room__compact-item--speaking' : ''}`}>
+                        <div className="live-room__avatar">{participant.name.charAt(0).toUpperCase()}</div>
+                        <span>{participant.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="live-room__compact-empty">No classmates have joined yet.</div>
+                )}
+              </div>
 
-          <div className="live-room__sidebar-block">
-            <h3>Other classmates</h3>
-            <div className="live-room__compact-list">
-              {compactParticipants.length ? compactParticipants.map((participant) => (
-                <div key={participant.identity} className={`live-room__compact-item ${participant.isSpeaking ? 'live-room__compact-item--speaking' : ''}`}>
-                  <div className="live-room__avatar">{participant.name.charAt(0).toUpperCase()}</div>
-                  <span>{participant.name}</span>
+              <div className="live-room__sidebar-block">
+                <h3>Other classmates</h3>
+                <div className="live-room__compact-list">
+                  {compactParticipants.length ? compactParticipants.map((participant) => (
+                    <div key={participant.identity} className={`live-room__compact-item ${participant.isSpeaking ? 'live-room__compact-item--speaking' : ''}`}>
+                      <div className="live-room__avatar">{participant.name.charAt(0).toUpperCase()}</div>
+                      <span>{participant.name}</span>
+                    </div>
+                  )) : (
+                    <div className="live-room__compact-empty">No additional student tiles are being rendered.</div>
+                  )}
                 </div>
-              )) : (
-                <div className="live-room__compact-empty">No additional student tiles are being rendered.</div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </aside>
       </div>
 
