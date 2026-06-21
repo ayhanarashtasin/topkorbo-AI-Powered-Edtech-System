@@ -243,23 +243,6 @@ export default function MakeContestQuestionChooseQBank() {
         const engineeringIds = ['highermath', 'physics', 'chemistry', 'english'];
         return MOCK_SUBJECTS.filter(s => engineeringIds.includes(s.id));
       }
-      if (contestData.admissionType === 'varsity') {
-        if (contestData.admissionSubtype === 'science') {
-          const scienceIds = ['physics', 'chemistry', 'highermath', 'biology', 'english'];
-          return MOCK_SUBJECTS.filter(s => scienceIds.includes(s.id));
-        }
-        if (contestData.admissionSubtype === 'commerce') {
-          const commerceIds = ['bangla', 'english', 'gk', 'ict'];
-          return MOCK_SUBJECTS.filter(s => commerceIds.includes(s.id));
-        }
-        if (contestData.admissionSubtype === 'arts') {
-          const artsIds = ['bangla', 'english', 'gk', 'ict'];
-          return MOCK_SUBJECTS.filter(s => artsIds.includes(s.id));
-        }
-        if (contestData.admissionSubtype === 'iba') {
-          return MOCK_SUBJECTS.filter(s => s.id === 'iba');
-        }
-      }
     }
 
     return MOCK_SUBJECTS;

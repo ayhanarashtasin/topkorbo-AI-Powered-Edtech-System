@@ -679,36 +679,6 @@
   color: #c08552;
 }
 
-.cc-admission-grid--varsity {
-  grid-template-columns: repeat(2, 1fr) !important;
-}
-
-.cc-admission-card__badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(192, 133, 82, 0.06);
-  border: 1px solid rgba(192, 133, 82, 0.15);
-  color: #8C5A3C;
-  font-size: 0.65rem;
-  font-weight: 750;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  letter-spacing: 0.02em;
-  transition: all 0.3s ease;
-}
-
-.cc-admission-card--active .cc-admission-card__badge {
-  background: #c08552;
-  color: #fff;
-  border-color: #c08552;
-}
-
-.cc-admission-card__check--left {
-  right: auto !important;
-  left: 10px !important;
-}
-
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .cc-form-grid {
@@ -751,10 +721,6 @@
 
   .cc-admission-grid {
     grid-template-columns: 1fr;
-  }
-
-  .cc-admission-grid--varsity {
-    grid-template-columns: 1fr !important;
   }
 
   .cc-qtype-grid {

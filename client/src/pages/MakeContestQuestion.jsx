@@ -42,36 +42,9 @@ const ADMISSION_OPTIONS = [
 ];
 
 const VARSITY_OPTIONS = [
-  {
-    id: 'science',
-    badgeEn: 'Science',
-    badgeBn: 'বিজ্ঞান',
-    labelEn: 'DU A / RU C/ JU A & D/ JnU A/ KU A/ SUST A/ CU A/ GST A',
-    labelBn: 'DU A / RU C/ JU A & D/ JnU A/ KU A/ SUST A/ CU A/ GST A',
-    icon: HiBeaker
-  },
-  {
-    id: 'commerce',
-    badgeEn: 'Commerce',
-    badgeBn: 'ব্যবসায় শিক্ষা',
-    labelEn: 'DU C / RU B/ JU E/ JnU C/ KU C/ CU C/ GST C',
-    labelBn: 'DU C / RU B/ JU E/ JnU C/ KU C/ CU C/ GST C',
-    icon: HiChartBar
-  },
-  {
-    id: 'arts',
-    badgeEn: 'Humanities',
-    badgeBn: 'মানবিক',
-    labelEn: 'DU B/ RU A/ JU B & C/ JnU B/ KU B/ CU B & D/ GST B',
-    labelBn: 'DU B/ RU A/ JU B & C/ JnU B/ KU B/ CU B & D/ GST B',
-    icon: HiPencilAlt
-  },
-  {
-    id: 'iba',
-    labelEn: 'IBA',
-    labelBn: 'IBA',
-    icon: HiBriefcase
-  }
+  { id: 'science', labelEn: 'Science', labelBn: 'বিজ্ঞান', icon: HiBeaker },
+  { id: 'commerce', labelEn: 'Commerce', labelBn: 'ব্যবসায় শিক্ষা', icon: HiChartBar },
+  { id: 'arts', labelEn: 'Arts', labelBn: 'মানবিক', icon: HiPencilAlt },
 ];
 
 // ─── Timezone Data ───────────────────────────────────────────────────────────
@@ -638,7 +611,7 @@ export default function MakeContestQuestion() {
                 <h3 className="cc-sub-section__title">
                   {language === 'en' ? 'Select Varsity Unit' : 'ভার্সিটি ইউনিট নির্বাচন করুন'}
                 </h3>
-                <div className="cc-admission-grid cc-admission-grid--varsity" style={{ marginTop: '1rem' }}>
+                <div className="cc-admission-grid" style={{ marginTop: '1rem' }}>
                   {VARSITY_OPTIONS.map(opt => {
                     const OptionIcon = opt.icon;
                     return (
@@ -648,17 +621,12 @@ export default function MakeContestQuestion() {
                         className={`cc-admission-card ${varsitySubtype === opt.id ? 'cc-admission-card--active' : ''}`}
                         onClick={() => setVarsitySubtype(opt.id)}
                       >
-                        {opt.badgeEn && (
-                          <span className="cc-admission-card__badge">
-                            {language === 'en' ? opt.badgeEn : opt.badgeBn}
-                          </span>
-                        )}
                         <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
-                        <span className="cc-admission-card__label" style={{ padding: opt.badgeEn ? '0.4rem 0.2rem 0' : '0' }}>
+                        <span className="cc-admission-card__label">
                           {language === 'en' ? opt.labelEn : opt.labelBn}
                         </span>
                         {varsitySubtype === opt.id && (
-                          <HiCheckCircle size={18} className={`cc-admission-card__check ${opt.badgeEn ? 'cc-admission-card__check--left' : ''}`} />
+                          <HiCheckCircle size={18} className="cc-admission-card__check" />
                         )}
                       </button>
                     );

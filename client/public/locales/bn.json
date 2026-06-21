@@ -134,6 +134,7 @@
   "db.menu.close_sidebar": "সাইডবার বন্ধ করুন",
   "db.menu.open_sidebar": "সাইডবার খুলুন",
   "db.menu.mock_test": "মক পরীক্ষা",
+  "db.menu.battle": "ব্যাটল",
   "mock.title": "মক পরীক্ষা",
   "mock.subtitle": "বাস্তব পরীক্ষার আদলে নিজের প্রস্তুতি যাচাই করো",
   "mock.select_subject": "টপিক সিলেক্ট করো",

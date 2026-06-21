@@ -15,6 +15,7 @@ import BoardQuestionsView from './pages/BoardQuestionsView';
 import VarsityWrittenView from './pages/VarsityWrittenView';
 import MockTest from './pages/MockTest';
 import MockTestExam from './pages/MockTestExam';
+import Battle from './pages/Battle';
 import MakeContestQuestion from './pages/MakeContestQuestion';
 import MakeContestQuestionNext from './pages/MakeContestQuestionNext';
 import MakeContestQuestionNextTwo from './pages/MakeContestQuestionNextTwo';
@@ -74,6 +75,7 @@ function AppContent() {
         <Route path="/upload-question" element={<UploadQuestion />} />
         <Route path="/mock-test" element={<MockTest />} />
         <Route path="/mock-test/exam" element={<MockTestExam />} />
+        <Route path="/battle" element={<Battle />} />
         <Route path="/make-contest-question" element={<MakeContestQuestion />} />
         <Route path="/make-contest-question/next" element={<MakeContestQuestionNext />} />
         <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />
