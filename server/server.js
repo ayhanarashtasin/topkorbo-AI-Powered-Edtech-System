@@ -2,6 +2,7 @@ const { execSync } = require("child_process");
 const dns = require("node:dns");
 const path = require("node:path");
 const fs = require("node:fs");
+const http = require("node:http");
 
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
@@ -20,8 +21,6 @@ try {
     if (typeof dns.setDefaultResultOrder === "function") {
       dns.setDefaultResultOrder("ipv4first");
     }
-
-    console.log("Using Atlas-friendly DNS servers:", atlasDnsServers);
   }
 } catch (e) {
   console.log("Failed to configure DNS for MongoDB Atlas:", e.message);
@@ -39,6 +38,17 @@ const bookRoutes = require("./routes/bookRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
 const evaluationRoutes = require("./routes/evaluationRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+
+// Community / Forum
+const postRoutes = require("./routes/postRoutes");
+const { postComments } = require("./routes/commentRoutes");
+const reactionRoutes = require("./routes/reactionRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const searchRoutes = require("./routes/searchRoutes");
+const moderationRoutes = require("./routes/moderationRoutes");
+const userRoutes = require("./routes/userRoutes");
+const { initSocket } = require("./socket");
+const bootstrapAdmin = require("./scripts/bootstrapAdmin");
 
 // Load Passport Configuration
 require("./config/passport");
@@ -86,6 +96,15 @@ app.use("/api/highlights", highlightRoutes);
 app.use("/api/evaluate", evaluationRoutes);
 app.use("/api/ai", aiRoutes);
 
+// === Forum / Community routes ===
+app.use("/api/users", userRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/posts/:postId/comments", postComments);
+app.use("/api/reactions", reactionRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api", moderationRoutes);
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "TopKorbo API is running 🚀" });
@@ -103,8 +122,12 @@ process.on("unhandledRejection", (reason) => {
   console.error(" UNHANDLED REJECTION:", reason);
 });
 
-const server = app.listen(PORT, () => {
-  console.log(` TopKorbo Server running on port ${PORT}`);
+const httpServer = http.createServer(app);
+initSocket(httpServer);
+
+const server = httpServer.listen(PORT, () => {
+  // Promote configured admin emails once the DB is reachable.
+  setTimeout(() => bootstrapAdmin(), 1500);
 });
 
 server.on("error", (err) => {

@@ -37,7 +37,7 @@ const connectDB = async () => {
       minPoolSize: 2,
       heartbeatFrequencyMS: 10000
     });
-    console.log(` MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`);
+    console.log('MongoDB Atlas Connected');
   } catch (error) {
     console.error(`MongoDB Error: ${error.message}`);
     console.error(`   URI: ${redactUri(uri)}`);

@@ -450,5 +450,17 @@
   "rb.reader.pen.draw": "Drag to draw smoothly.",
   "rb.reader.eraser.stroke": "Stroke",
   "rb.reader.eraser.standard": "Standard",
-  "rb.reader.error.save": "Failed to save annotations."
+  "rb.reader.error.save": "Failed to save annotations.",
+  "db.menu.forum": "Community",
+  "forum.subtitle": "Connect, share and learn with fellow TopKorbo students.",
+  "forum.search_placeholder": "Search posts, people, or categories",
+  "forum.compose": "New post",
+  "forum.bookmarks": "Bookmarks",
+  "forum.profile": "My profile",
+  "forum.feed.latest": "Latest",
+  "forum.feed.trending": "Trending",
+  "forum.feed.following": "Following",
+  "forum.feed.discussed": "Most Discussed",
+  "forum.empty.title": "Nothing here yet",
+  "forum.empty.message": "Be the first to start a discussion."
 }

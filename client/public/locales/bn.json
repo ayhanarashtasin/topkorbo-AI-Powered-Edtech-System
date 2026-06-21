@@ -449,5 +449,17 @@
   "rb.reader.pen.draw": "মসৃণভাবে আঁকতে ড্র্যাগ করুন।",
   "rb.reader.eraser.stroke": "স্ট্রোক",
   "rb.reader.eraser.standard": "স্ট্যান্ডার্ড",
-  "rb.reader.error.save": "অ্যানোটেশন সংরক্ষণ করা যায়নি।"
+  "rb.reader.error.save": "অ্যানোটেশন সংরক্ষণ করা যায়নি।",
+  "db.menu.forum": "কমিউনিটি",
+  "forum.subtitle": "টপকর্বোর সহপাঠীদের সাথে যুক্ত হোন, শেয়ার করুন ও শিখুন।",
+  "forum.search_placeholder": "পোস্ট, মানুষ বা ক্যাটাগরি খুঁজুন",
+  "forum.compose": "নতুন পোস্ট",
+  "forum.bookmarks": "বুকমার্ক",
+  "forum.profile": "আমার প্রোফাইল",
+  "forum.feed.latest": "সর্বশেষ",
+  "forum.feed.trending": "ট্রেন্ডিং",
+  "forum.feed.following": "অনুসরণ",
+  "forum.feed.discussed": "সর্বাধিক আলোচিত",
+  "forum.empty.title": "এখানে এখনো কিছু নেই",
+  "forum.empty.message": "প্রথম আলোচনা শুরু করুন।"
 }

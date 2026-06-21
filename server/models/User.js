@@ -69,6 +69,28 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['Math', 'Biology', 'Statistics']
   },
+  // ============ Forum / Community additions ============
+  username: { type: String, unique: true, sparse: true, index: true, lowercase: true, trim: true },
+  bio: { type: String, default: '', maxlength: 280 },
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  reputation: { type: Number, default: 0 },
+  warnings: [
+    {
+      reason: String,
+      issuedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      issuedAt: { type: Date, default: Date.now }
+    }
+  ],
+  isBanned: { type: Boolean, default: false },
+  banReason: { type: String, default: '' },
+  banExpiresAt: { type: Date },
+  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
+  forumRole: {
+    type: String,
+    enum: ['user', 'moderator', 'admin'],
+    default: 'user'
+  },
   // Mentor / Tutor Profile Information
   studentIdNumber: {
     type: String
