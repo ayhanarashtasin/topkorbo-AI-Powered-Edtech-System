@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2 } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
@@ -59,6 +59,11 @@ export default function Sidebar({ activeTab, user }) {
       id: 'mock-test',
       label: t('db.menu.mock_test'),
       icon: <HiClipboardList size={20} />
+    });
+    menuItems.push({
+      id: 'battle',
+      label: t('db.menu.battle') || 'Battle',
+      icon: <HiLightningBolt size={20} />
     });
   }
 
@@ -156,6 +161,7 @@ export default function Sidebar({ activeTab, user }) {
 
                   else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
+                  else if (item.id === 'battle') navigate('/battle');
                   else if (item.id === 'reading-books') navigate('/reading-books');
                   else if (item.id === 'forum') navigate('/forum');
                   else navigate('/dashboard');

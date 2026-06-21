@@ -37,10 +37,6 @@ router.get('/varsity-sources', auth, questionController.getVarsityAdmissionSourc
 // @route   GET /api/questions/varsity-written
 router.get('/varsity-written', auth, questionController.getVarsityWrittenQuestions);
 
-// @desc    Fetch ALL questions matching subject/chapter/topic for contest QBank pick
-// @route   POST /api/questions/qbank-browse
-router.post('/qbank-browse', auth, questionController.fetchQBankQuestions);
-
 // @desc    Fetch questions for mock test with filters
 // @route   POST /api/questions/mock-test
 router.post('/mock-test', auth, questionController.fetchMockTestQuestions);
