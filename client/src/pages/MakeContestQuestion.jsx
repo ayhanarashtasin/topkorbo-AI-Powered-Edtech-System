@@ -37,7 +37,7 @@ const HSC_SUBJECTS = [
 // ─── Admission Sub-options ───────────────────────────────────────────────────
 const ADMISSION_OPTIONS = [
   { id: 'medical', labelEn: 'Medical', labelBn: 'মেডিকেল', icon: HiBriefcase },
-  { id: 'varsity', labelEn: 'Varsity', labelBn: 'বিশ্ববিদ্যালয়', icon: HiLibrary },
+  { id: 'university', labelEn: 'University', labelBn: 'বিশ্ববিদ্যালয়', icon: HiLibrary },
   { id: 'engineering', labelEn: 'Engineering', labelBn: 'ইঞ্জিনিয়ারিং', icon: HiCog },
 ];
 
@@ -327,346 +327,346 @@ export default function MakeContestQuestion() {
           {/* ──────── TOP GRID: small sections + Level ──────── */}
           <div className="cc-form-grid">
 
-          {/* ──────── 1. CONTEST NAME ──────── */}
-          <section className="cc-section cc-section--name">
-            <div className="cc-section__header">
-              <div className="cc-section__icon"><HiTag size={18} /></div>
-              <div>
-                <h2 className="cc-section__title">
-                  {language === 'en' ? 'Contest Name' : 'কনটেস্টের নাম'}
-                </h2>
-                <p className="cc-section__desc">
-                  {language === 'en'
-                    ? 'Enter a descriptive name for your contest.'
-                    : 'আপনার কনটেস্টের জন্য একটি বর্ণনামূলক নাম লিখুন।'}
-                </p>
+            {/* ──────── 1. CONTEST NAME ──────── */}
+            <section className="cc-section cc-section--name">
+              <div className="cc-section__header">
+                <div className="cc-section__icon"><HiTag size={18} /></div>
+                <div>
+                  <h2 className="cc-section__title">
+                    {language === 'en' ? 'Contest Name' : 'কনটেস্টের নাম'}
+                  </h2>
+                  <p className="cc-section__desc">
+                    {language === 'en'
+                      ? 'Enter a descriptive name for your contest.'
+                      : 'আপনার কনটেস্টের জন্য একটি বর্ণনামূলক নাম লিখুন।'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="cc-name-input-container">
-              <input
-                type="text"
-                id="contest-name"
-                className="cc-input"
-                placeholder={language === 'en' ? 'e.g. Science Olympiad 2026' : 'যেমন: বিজ্ঞান অলিম্পিয়াড ২০২৬'}
-                value={contestName}
-                onChange={(e) => setContestName(e.target.value)}
-              />
-            </div>
-          </section>
+              <div className="cc-name-input-container">
+                <input
+                  type="text"
+                  id="contest-name"
+                  className="cc-input"
+                  placeholder={language === 'en' ? 'e.g. Science Olympiad 2026' : 'যেমন: বিজ্ঞান অলিম্পিয়াড ২০২৬'}
+                  value={contestName}
+                  onChange={(e) => setContestName(e.target.value)}
+                />
+              </div>
+            </section>
 
-          {/* ──────── 2. CONTEST DATE ──────── */}
-          <section className="cc-section cc-section--date">
-            <div className="cc-section__header">
-              <div className="cc-section__icon"><HiCalendar size={18} /></div>
-              <div>
-                <h2 className="cc-section__title">
-                  {language === 'en' ? 'Contest Date' : 'কনটেস্টের তারিখ'}
-                </h2>
-                <p className="cc-section__desc">
-                  {language === 'en'
-                    ? 'Select the date when the contest will take place.'
-                    : 'কনটেস্ট অনুষ্ঠিত হওয়ার তারিখ নির্বাচন করুন।'}
-                </p>
+            {/* ──────── 2. CONTEST DATE ──────── */}
+            <section className="cc-section cc-section--date">
+              <div className="cc-section__header">
+                <div className="cc-section__icon"><HiCalendar size={18} /></div>
+                <div>
+                  <h2 className="cc-section__title">
+                    {language === 'en' ? 'Contest Date' : 'কনটেস্টের তারিখ'}
+                  </h2>
+                  <p className="cc-section__desc">
+                    {language === 'en'
+                      ? 'Select the date when the contest will take place.'
+                      : 'কনটেস্ট অনুষ্ঠিত হওয়ার তারিখ নির্বাচন করুন।'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="cc-date-picker">
-              <input
-                type="date"
-                id="contest-date"
-                className="cc-input cc-input--date"
-                value={contestDate}
-                onChange={(e) => setContestDate(e.target.value)}
-                min={today}
-              />
-              {contestDate && (
-                <div className="cc-date-preview">
-                  <HiCalendar size={16} />
-                  <span>{new Date(contestDate + 'T00:00:00').toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                  })}</span>
+              <div className="cc-date-picker">
+                <input
+                  type="date"
+                  id="contest-date"
+                  className="cc-input cc-input--date"
+                  value={contestDate}
+                  onChange={(e) => setContestDate(e.target.value)}
+                  min={today}
+                />
+                {contestDate && (
+                  <div className="cc-date-preview">
+                    <HiCalendar size={16} />
+                    <span>{new Date(contestDate + 'T00:00:00').toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', {
+                      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                    })}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ──────── 3. DURATION ──────── */}
+            <section className="cc-section cc-section--duration">
+              <div className="cc-section__header">
+                <div className="cc-section__icon"><HiClock size={18} /></div>
+                <div>
+                  <h2 className="cc-section__title">
+                    {language === 'en' ? 'Duration' : 'সময়কাল'}
+                  </h2>
+                  <p className="cc-section__desc">
+                    {language === 'en'
+                      ? 'Set how long the contest will last (hours and minutes).'
+                      : 'কনটেস্ট কতক্ষণ চলবে তা নির্ধারণ করুন (ঘণ্টা ও মিনিট)।'}
+                  </p>
+                </div>
+              </div>
+              <div className="cc-duration-row">
+                <div className="cc-duration-group">
+                  <label className="cc-label" htmlFor="dur-hours">
+                    {language === 'en' ? 'Hours' : 'ঘণ্টা'}
+                  </label>
+                  <select
+                    id="dur-hours"
+                    className="cc-select"
+                    value={durationHours}
+                    onChange={(e) => setDurationHours(e.target.value)}
+                  >
+                    {[0, 1, 2, 3, 4, 5, 6].map(h => (
+                      <option key={h} value={h}>{h} {language === 'en' ? 'hr' : 'ঘণ্টা'}</option>
+                    ))}
+                  </select>
+                </div>
+                <span className="cc-duration-colon">:</span>
+                <div className="cc-duration-group">
+                  <label className="cc-label" htmlFor="dur-mins">
+                    {language === 'en' ? 'Minutes' : 'মিনিট'}
+                  </label>
+                  <select
+                    id="dur-mins"
+                    className="cc-select"
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(e.target.value)}
+                  >
+                    {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                      <option key={m} value={m}>{String(m).padStart(2, '0')} {language === 'en' ? 'min' : 'মিনিট'}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="cc-duration-preview">
+                  <HiClock size={16} />
+                  <span>{durationHours}h {String(durationMinutes).padStart(2, '0')}m</span>
+                </div>
+              </div>
+            </section>
+
+            {/* ──────── 4. STARTING TIME ──────── */}
+            <section className="cc-section cc-section--start">
+              <div className="cc-section__header">
+                <div className="cc-section__icon"><HiGlobeAlt size={18} /></div>
+                <div>
+                  <h2 className="cc-section__title">
+                    {language === 'en' ? 'Starting Time' : 'শুরুর সময়'}
+                  </h2>
+                  <p className="cc-section__desc">
+                    {language === 'en'
+                      ? 'Set the contest start time with timezone (world clock).'
+                      : 'টাইমজোন সহ কনটেস্টের শুরুর সময় নির্ধারণ করুন (বিশ্ব ঘড়ি)।'}
+                  </p>
+                </div>
+              </div>
+              <div className="cc-time-row">
+                <div className="cc-time-group">
+                  <label className="cc-label" htmlFor="start-hour">
+                    {language === 'en' ? 'Hour' : 'ঘণ্টা'}
+                  </label>
+                  <select
+                    id="start-hour"
+                    className="cc-select"
+                    value={startHour}
+                    onChange={(e) => setStartHour(e.target.value)}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                </div>
+                <span className="cc-time-colon">:</span>
+                <div className="cc-time-group">
+                  <label className="cc-label" htmlFor="start-min">
+                    {language === 'en' ? 'Minute' : 'মিনিট'}
+                  </label>
+                  <select
+                    id="start-min"
+                    className="cc-select"
+                    value={startMinute}
+                    onChange={(e) => setStartMinute(e.target.value)}
+                  >
+                    {[
+                      '00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'
+                    ].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="cc-time-group">
+                  <label className="cc-label">{language === 'en' ? 'Period' : 'পর্ব'}</label>
+                  <div className="cc-period-toggle">
+                    <button
+                      type="button"
+                      className={`cc-period-btn ${startPeriod === 'AM' ? 'cc-period-btn--active' : ''}`}
+                      onClick={() => setStartPeriod('AM')}
+                    >AM</button>
+                    <button
+                      type="button"
+                      className={`cc-period-btn ${startPeriod === 'PM' ? 'cc-period-btn--active' : ''}`}
+                      onClick={() => setStartPeriod('PM')}
+                    >PM</button>
+                  </div>
+                </div>
+                <div className="cc-time-group cc-time-group--tz">
+                  <label className="cc-label" htmlFor="timezone">
+                    {language === 'en' ? 'Timezone' : 'টাইমজোন'}
+                  </label>
+                  <select
+                    id="timezone"
+                    className="cc-select cc-select--tz"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                  >
+                    {TIMEZONES.map(tz => (
+                      <option key={tz.id} value={tz.id}>
+                        {tz.label} (UTC{tz.offset})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            {/* ──────── 5. LEVEL ──────── */}
+            <section className="cc-section cc-section--level">
+              <div className="cc-section__header">
+                <div className="cc-section__icon"><HiAcademicCap size={18} /></div>
+                <div>
+                  <h2 className="cc-section__title">
+                    {language === 'en' ? 'Level' : 'লেভেল'}
+                  </h2>
+                  <p className="cc-section__desc">
+                    {language === 'en'
+                      ? 'Choose the contest level — HSC or Admission.'
+                      : 'কনটেস্টের লেভেল নির্বাচন করুন — HSC অথবা এডমিশন।'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Level Toggle */}
+              <div className="cc-level-toggle">
+                <button
+                  type="button"
+                  className={`cc-level-btn ${level === 'hsc' ? 'cc-level-btn--active' : ''}`}
+                  onClick={() => handleLevelChange('hsc')}
+                >
+                  <span className="cc-level-btn__icon"><HiBookOpen size={22} /></span>
+                  <span className="cc-level-btn__text">HSC</span>
+                </button>
+                <button
+                  type="button"
+                  className={`cc-level-btn ${level === 'admission' ? 'cc-level-btn--active' : ''}`}
+                  onClick={() => handleLevelChange('admission')}
+                >
+                  <span className="cc-level-btn__icon"><HiAcademicCap size={22} /></span>
+                  <span className="cc-level-btn__text">
+                    {language === 'en' ? 'Admission' : 'এডমিশন'}
+                  </span>
+                </button>
+              </div>
+
+              {/* ── HSC: Subject Picker ── */}
+              {level === 'hsc' && (
+                <div className="cc-sub-section cc-sub-section--fade-in">
+                  <div className="cc-sub-section__header">
+                    <h3 className="cc-sub-section__title">
+                      {language === 'en' ? 'Select Subjects' : 'বিষয় নির্বাচন করুন'}
+                    </h3>
+                    <span className="cc-sub-section__hint">
+                      {language === 'en'
+                        ? `Selected: ${selectedSubjects.length}`
+                        : `নির্বাচিত: ${selectedSubjects.length}`}
+                    </span>
+                  </div>
+                  <div className="cc-subject-grid">
+                    {HSC_SUBJECTS.map(sub => {
+                      const isSelected = selectedSubjects.includes(sub.id);
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          className={`cc-subject-chip ${isSelected ? 'cc-subject-chip--active' : ''}`}
+                          onClick={() => toggleSubject(sub.id)}
+                        >
+                          {isSelected && <HiCheckCircle size={16} className="cc-subject-chip__check" />}
+                          <span>{language === 'en' ? sub.labelEn : sub.labelBn}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-            </div>
-          </section>
 
-          {/* ──────── 3. DURATION ──────── */}
-          <section className="cc-section cc-section--duration">
-            <div className="cc-section__header">
-              <div className="cc-section__icon"><HiClock size={18} /></div>
-              <div>
-                <h2 className="cc-section__title">
-                  {language === 'en' ? 'Duration' : 'সময়কাল'}
-                </h2>
-                <p className="cc-section__desc">
-                  {language === 'en'
-                    ? 'Set how long the contest will last (hours and minutes).'
-                    : 'কনটেস্ট কতক্ষণ চলবে তা নির্ধারণ করুন (ঘণ্টা ও মিনিট)।'}
-                </p>
-              </div>
-            </div>
-            <div className="cc-duration-row">
-              <div className="cc-duration-group">
-                <label className="cc-label" htmlFor="dur-hours">
-                  {language === 'en' ? 'Hours' : 'ঘণ্টা'}
-                </label>
-                <select
-                  id="dur-hours"
-                  className="cc-select"
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(e.target.value)}
-                >
-                  {[0,1,2,3,4,5,6].map(h => (
-                    <option key={h} value={h}>{h} {language === 'en' ? 'hr' : 'ঘণ্টা'}</option>
-                  ))}
-                </select>
-              </div>
-              <span className="cc-duration-colon">:</span>
-              <div className="cc-duration-group">
-                <label className="cc-label" htmlFor="dur-mins">
-                  {language === 'en' ? 'Minutes' : 'মিনিট'}
-                </label>
-                <select
-                  id="dur-mins"
-                  className="cc-select"
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value)}
-                >
-                  {[0,5,10,15,20,25,30,35,40,45,50,55].map(m => (
-                    <option key={m} value={m}>{String(m).padStart(2,'0')} {language === 'en' ? 'min' : 'মিনিট'}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="cc-duration-preview">
-                <HiClock size={16} />
-                <span>{durationHours}h {String(durationMinutes).padStart(2,'0')}m</span>
-              </div>
-            </div>
-          </section>
-
-          {/* ──────── 4. STARTING TIME ──────── */}
-          <section className="cc-section cc-section--start">
-            <div className="cc-section__header">
-              <div className="cc-section__icon"><HiGlobeAlt size={18} /></div>
-              <div>
-                <h2 className="cc-section__title">
-                  {language === 'en' ? 'Starting Time' : 'শুরুর সময়'}
-                </h2>
-                <p className="cc-section__desc">
-                  {language === 'en'
-                    ? 'Set the contest start time with timezone (world clock).'
-                    : 'টাইমজোন সহ কনটেস্টের শুরুর সময় নির্ধারণ করুন (বিশ্ব ঘড়ি)।'}
-                </p>
-              </div>
-            </div>
-            <div className="cc-time-row">
-              <div className="cc-time-group">
-                <label className="cc-label" htmlFor="start-hour">
-                  {language === 'en' ? 'Hour' : 'ঘণ্টা'}
-                </label>
-                <select
-                  id="start-hour"
-                  className="cc-select"
-                  value={startHour}
-                  onChange={(e) => setStartHour(e.target.value)}
-                >
-                  {Array.from({length: 12}, (_, i) => i + 1).map(h => (
-                    <option key={h} value={h}>{String(h).padStart(2,'0')}</option>
-                  ))}
-                </select>
-              </div>
-              <span className="cc-time-colon">:</span>
-              <div className="cc-time-group">
-                <label className="cc-label" htmlFor="start-min">
-                  {language === 'en' ? 'Minute' : 'মিনিট'}
-                </label>
-                <select
-                  id="start-min"
-                  className="cc-select"
-                  value={startMinute}
-                  onChange={(e) => setStartMinute(e.target.value)}
-                >
-                  {[
-                    '00','05','10','15','20','25','30','35','40','45','50','55'
-                  ].map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="cc-time-group">
-                <label className="cc-label">{language === 'en' ? 'Period' : 'পর্ব'}</label>
-                <div className="cc-period-toggle">
-                  <button
-                    type="button"
-                    className={`cc-period-btn ${startPeriod === 'AM' ? 'cc-period-btn--active' : ''}`}
-                    onClick={() => setStartPeriod('AM')}
-                  >AM</button>
-                  <button
-                    type="button"
-                    className={`cc-period-btn ${startPeriod === 'PM' ? 'cc-period-btn--active' : ''}`}
-                    onClick={() => setStartPeriod('PM')}
-                  >PM</button>
-                </div>
-              </div>
-              <div className="cc-time-group cc-time-group--tz">
-                <label className="cc-label" htmlFor="timezone">
-                  {language === 'en' ? 'Timezone' : 'টাইমজোন'}
-                </label>
-                <select
-                  id="timezone"
-                  className="cc-select cc-select--tz"
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                >
-                  {TIMEZONES.map(tz => (
-                    <option key={tz.id} value={tz.id}>
-                      {tz.label} (UTC{tz.offset})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* ──────── 5. LEVEL ──────── */}
-          <section className="cc-section cc-section--level">
-            <div className="cc-section__header">
-              <div className="cc-section__icon"><HiAcademicCap size={18} /></div>
-              <div>
-                <h2 className="cc-section__title">
-                  {language === 'en' ? 'Level' : 'লেভেল'}
-                </h2>
-                <p className="cc-section__desc">
-                  {language === 'en'
-                    ? 'Choose the contest level — HSC or Admission.'
-                    : 'কনটেস্টের লেভেল নির্বাচন করুন — HSC অথবা এডমিশন।'}
-                </p>
-              </div>
-            </div>
-
-            {/* Level Toggle */}
-            <div className="cc-level-toggle">
-              <button
-                type="button"
-                className={`cc-level-btn ${level === 'hsc' ? 'cc-level-btn--active' : ''}`}
-                onClick={() => handleLevelChange('hsc')}
-              >
-                <span className="cc-level-btn__icon"><HiBookOpen size={22} /></span>
-                <span className="cc-level-btn__text">HSC</span>
-              </button>
-              <button
-                type="button"
-                className={`cc-level-btn ${level === 'admission' ? 'cc-level-btn--active' : ''}`}
-                onClick={() => handleLevelChange('admission')}
-              >
-                <span className="cc-level-btn__icon"><HiAcademicCap size={22} /></span>
-                <span className="cc-level-btn__text">
-                  {language === 'en' ? 'Admission' : 'এডমিশন'}
-                </span>
-              </button>
-            </div>
-
-            {/* ── HSC: Subject Picker ── */}
-            {level === 'hsc' && (
-              <div className="cc-sub-section cc-sub-section--fade-in">
-                <div className="cc-sub-section__header">
+              {/* ── Admission: Sub-options ── */}
+              {level === 'admission' && (
+                <div className="cc-sub-section cc-sub-section--fade-in">
                   <h3 className="cc-sub-section__title">
-                    {language === 'en' ? 'Select Subjects' : 'বিষয় নির্বাচন করুন'}
+                    {language === 'en' ? 'Select Admission Type' : 'এডমিশনের ধরন নির্বাচন করুন'}
                   </h3>
-                  <span className="cc-sub-section__hint">
-                    {language === 'en'
-                      ? `Selected: ${selectedSubjects.length}`
-                      : `নির্বাচিত: ${selectedSubjects.length}`}
-                  </span>
-                </div>
-                <div className="cc-subject-grid">
-                  {HSC_SUBJECTS.map(sub => {
-                    const isSelected = selectedSubjects.includes(sub.id);
-                    return (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        className={`cc-subject-chip ${isSelected ? 'cc-subject-chip--active' : ''}`}
-                        onClick={() => toggleSubject(sub.id)}
-                      >
-                        {isSelected && <HiCheckCircle size={16} className="cc-subject-chip__check" />}
-                        <span>{language === 'en' ? sub.labelEn : sub.labelBn}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ── Admission: Sub-options ── */}
-            {level === 'admission' && (
-              <div className="cc-sub-section cc-sub-section--fade-in">
-                <h3 className="cc-sub-section__title">
-                  {language === 'en' ? 'Select Admission Type' : 'এডমিশনের ধরন নির্বাচন করুন'}
-                </h3>
-                <div className="cc-admission-grid">
-                  {ADMISSION_OPTIONS.map(opt => {
-                    const OptionIcon = opt.icon;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={`cc-admission-card ${selectedAdmission === opt.id ? 'cc-admission-card--active' : ''}`}
-                        onClick={() => {
-                          setSelectedAdmission(opt.id);
-                          if (opt.id !== 'varsity') {
-                            setVarsitySubtype('');
-                          }
-                        }}
-                      >
-                        <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
-                        <span className="cc-admission-card__label">
-                          {language === 'en' ? opt.labelEn : opt.labelBn}
-                        </span>
-                        {selectedAdmission === opt.id && (
-                          <HiCheckCircle size={18} className="cc-admission-card__check" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ── Admission: Varsity Sub-options ── */}
-            {level === 'admission' && selectedAdmission === 'varsity' && (
-              <div className="cc-sub-section cc-sub-section--fade-in" style={{ marginTop: '1.5rem' }}>
-                <h3 className="cc-sub-section__title">
-                  {language === 'en' ? 'Select Varsity Unit' : 'ভার্সিটি ইউনিট নির্বাচন করুন'}
-                </h3>
-                <div className="cc-admission-grid cc-admission-grid--varsity" style={{ marginTop: '1rem' }}>
-                  {VARSITY_OPTIONS.map(opt => {
-                    const OptionIcon = opt.icon;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={`cc-admission-card ${varsitySubtype === opt.id ? 'cc-admission-card--active' : ''}`}
-                        onClick={() => setVarsitySubtype(opt.id)}
-                      >
-                        {opt.badgeEn && (
-                          <span className="cc-admission-card__badge">
-                            {language === 'en' ? opt.badgeEn : opt.badgeBn}
+                  <div className="cc-admission-grid">
+                    {ADMISSION_OPTIONS.map(opt => {
+                      const OptionIcon = opt.icon;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          className={`cc-admission-card ${selectedAdmission === opt.id ? 'cc-admission-card--active' : ''}`}
+                          onClick={() => {
+                            setSelectedAdmission(opt.id);
+                            if (opt.id !== 'varsity') {
+                              setVarsitySubtype('');
+                            }
+                          }}
+                        >
+                          <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
+                          <span className="cc-admission-card__label">
+                            {language === 'en' ? opt.labelEn : opt.labelBn}
                           </span>
-                        )}
-                        <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
-                        <span className="cc-admission-card__label" style={{ padding: opt.badgeEn ? '0.4rem 0.2rem 0' : '0' }}>
-                          {language === 'en' ? opt.labelEn : opt.labelBn}
-                        </span>
-                        {varsitySubtype === opt.id && (
-                          <HiCheckCircle size={18} className={`cc-admission-card__check ${opt.badgeEn ? 'cc-admission-card__check--left' : ''}`} />
-                        )}
-                      </button>
-                    );
-                  })}
+                          {selectedAdmission === opt.id && (
+                            <HiCheckCircle size={18} className="cc-admission-card__check" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
+              )}
+
+              {/* ── Admission: Varsity Sub-options ── */}
+              {level === 'admission' && selectedAdmission === 'varsity' && (
+                <div className="cc-sub-section cc-sub-section--fade-in" style={{ marginTop: '1.5rem' }}>
+                  <h3 className="cc-sub-section__title">
+                    {language === 'en' ? 'Select Varsity Unit' : 'ভার্সিটি ইউনিট নির্বাচন করুন'}
+                  </h3>
+                  <div className="cc-admission-grid cc-admission-grid--varsity" style={{ marginTop: '1rem' }}>
+                    {VARSITY_OPTIONS.map(opt => {
+                      const OptionIcon = opt.icon;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          className={`cc-admission-card ${varsitySubtype === opt.id ? 'cc-admission-card--active' : ''}`}
+                          onClick={() => setVarsitySubtype(opt.id)}
+                        >
+                          {opt.badgeEn && (
+                            <span className="cc-admission-card__badge">
+                              {language === 'en' ? opt.badgeEn : opt.badgeBn}
+                            </span>
+                          )}
+                          <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
+                          <span className="cc-admission-card__label" style={{ padding: opt.badgeEn ? '0.4rem 0.2rem 0' : '0' }}>
+                            {language === 'en' ? opt.labelEn : opt.labelBn}
+                          </span>
+                          {varsitySubtype === opt.id && (
+                            <HiCheckCircle size={18} className={`cc-admission-card__check ${opt.badgeEn ? 'cc-admission-card__check--left' : ''}`} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </section>
 
           </div>
           {/* ── end cc-form-grid ── */}
