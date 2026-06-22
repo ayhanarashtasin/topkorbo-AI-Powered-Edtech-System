@@ -525,29 +525,43 @@ export default function MakeContestQuestionChooseQBank() {
     // Keep the full question objects for the selected ids so the next page can
     // display & individually remove them. Order follows the on-screen list.
     const selectedSet = new Set(selectedQuestionIds);
-    const qbankQuestions = fetchedQuestions.filter(q => selectedSet.has(q._id));
+    const newQuestions = fetchedQuestions.filter(q => selectedSet.has(q._id));
+
+    let finalQuestions = [];
+    if (location.state?.mode === 'add') {
+      const prevQuestions = location.state?.qbankQuestions || [];
+      const prevIds = new Set(prevQuestions.map(q => q._id));
+      const uniqueNewQuestions = newQuestions.filter(q => !prevIds.has(q._id));
+      finalQuestions = [...prevQuestions, ...uniqueNewQuestions];
+    } else {
+      finalQuestions = newQuestions;
+    }
 
     // Selections carry questionIds (consumed by the backend) + subject/paper/
     // chapters (for the summary), grouped by subject + paper.
-    const qbankSelections = buildSelectionsFromQuestions(qbankQuestions);
+    const finalSelections = buildSelectionsFromQuestions(finalQuestions);
 
     // Preserve any selected ids that weren't in the current fetch (e.g. picked
     // before re-navigating chapters) so the backend still receives them.
-    const accountedFor = new Set(qbankQuestions.map(q => q._id));
+    const accountedFor = new Set(newQuestions.map(q => q._id));
     const leftover = selectedQuestionIds.filter(id => !accountedFor.has(id));
     if (leftover.length > 0) {
-      qbankSelections.push({ questionIds: leftover, numberOfQuestions: leftover.length, chapters: [] });
+      finalSelections.push({ questionIds: leftover, numberOfQuestions: leftover.length, chapters: [] });
     }
 
+    // Update the full set of selected IDs in session storage
+    const allSelectedIds = finalQuestions.map(q => q._id);
+    sessionStorage.setItem('cc_qbank_selectedQuestionIds', JSON.stringify(allSelectedIds));
+
     // Save to sessionStorage so subsequent pages survive reloads
-    sessionStorage.setItem('cc_qbankSelections', JSON.stringify(qbankSelections));
-    sessionStorage.setItem('cc_qbankQuestions', JSON.stringify(qbankQuestions));
+    sessionStorage.setItem('cc_qbankSelections', JSON.stringify(finalSelections));
+    sessionStorage.setItem('cc_qbankQuestions', JSON.stringify(finalQuestions));
 
     navigate('/make-contest-question/next-two', {
       state: {
         contestData,
-        qbankSelections,
-        qbankQuestions
+        qbankSelections: finalSelections,
+        qbankQuestions: finalQuestions
       }
     });
   };

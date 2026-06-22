@@ -423,6 +423,16 @@ export default function MakeContestQuestionNextTwo() {
     }
   }, [location.state?.qbankSelections, location.state?.qbankQuestions]);
 
+  // Sync selected question IDs for QBank page to support Edit Selection
+  useEffect(() => {
+    if (qbankQuestions && qbankQuestions.length > 0) {
+      const ids = qbankQuestions.map(q => q._id);
+      sessionStorage.setItem('cc_qbank_selectedQuestionIds', JSON.stringify(ids));
+    } else {
+      sessionStorage.removeItem('cc_qbank_selectedQuestionIds');
+    }
+  }, [qbankQuestions]);
+
   // Remove a picked question from this contest draft (NOT from the database).
   const handleRemoveQbankQuestion = (qid) => {
     const updatedQuestions = qbankQuestions.filter(q => q._id !== qid);
@@ -450,15 +460,6 @@ export default function MakeContestQuestionNextTwo() {
       sessionStorage.setItem('cc_qbankSelections', JSON.stringify(finalSelections));
     } else {
       sessionStorage.removeItem('cc_qbankSelections');
-    }
-
-    // Keep the QBank page's own selection memory in sync for "Edit Selection".
-    const savedIds = sessionStorage.getItem('cc_qbank_selectedQuestionIds');
-    if (savedIds) {
-      try {
-        const ids = JSON.parse(savedIds).filter(id => id !== qid);
-        sessionStorage.setItem('cc_qbank_selectedQuestionIds', JSON.stringify(ids));
-      } catch (_) { /* ignore */ }
     }
 
     toast.success(language === 'en' ? 'Question removed from this contest.' : 'প্রশ্নটি এই কনটেস্ট থেকে সরানো হয়েছে।');
@@ -752,7 +753,18 @@ export default function MakeContestQuestionNextTwo() {
   };
 
   const handleChooseQBank = () => {
-    navigate('/make-contest-question/choose-qbank', { state: { contestData, qbankSelections } });
+    // Clear qbank session storage when adding fresh
+    sessionStorage.removeItem('cc_qbank_step');
+    sessionStorage.removeItem('cc_qbank_selectedSubjectIds');
+    sessionStorage.removeItem('cc_qbank_selectedChapters');
+    sessionStorage.removeItem('cc_qbank_topicsMap');
+    sessionStorage.removeItem('cc_qbank_selectedTopics');
+    sessionStorage.removeItem('cc_qbank_selectedQuestionIds');
+    navigate('/make-contest-question/choose-qbank', { state: { contestData, qbankSelections, qbankQuestions, mode: 'add' } });
+  };
+
+  const handleEditQBank = () => {
+    navigate('/make-contest-question/choose-qbank', { state: { contestData, qbankSelections, qbankQuestions, mode: 'edit' } });
   };
 
   const handleAddNew = () => {
@@ -1251,7 +1263,7 @@ export default function MakeContestQuestionNextTwo() {
                 <button
                   type="button"
                   className="cq-back-btn"
-                  onClick={handleChooseQBank}
+                  onClick={handleEditQBank}
                   style={{ fontSize: '0.82rem', padding: '0.4rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1.5px solid rgba(192, 133, 82, 0.25)', borderRadius: '8px', background: '#FFFBF7', color: '#8C5A3C' }}
                 >
                   ✏️ {language === 'en' ? 'Edit Selection' : 'পরিবর্তন করুন'}
