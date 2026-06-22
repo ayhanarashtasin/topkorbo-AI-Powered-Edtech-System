@@ -37,7 +37,7 @@ const HSC_SUBJECTS = [
 // ─── Admission Sub-options ───────────────────────────────────────────────────
 const ADMISSION_OPTIONS = [
   { id: 'medical', labelEn: 'Medical', labelBn: 'মেডিকেল', icon: HiBriefcase },
-  { id: 'university', labelEn: 'University', labelBn: 'বিশ্ববিদ্যালয়', icon: HiLibrary },
+  { id: 'varsity', labelEn: 'University', labelBn: 'বিশ্ববিদ্যালয়', icon: HiLibrary },
   { id: 'engineering', labelEn: 'Engineering', labelBn: 'ইঞ্জিনিয়ারিং', icon: HiCog },
 ];
 
