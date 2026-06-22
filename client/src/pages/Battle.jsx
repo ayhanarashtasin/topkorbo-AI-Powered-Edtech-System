@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -96,6 +96,7 @@ const BOARDS = ['Dhaka', 'Comilla', 'Rajshahi', 'Jessore', 'Chittagong', 'Sylhet
 
 const BATTLE_MODES = [
   { id: 'duel', label: '1v1 Duel', players: 2, accent: '#C08552' },
+  { id: 'ai-duel', label: '1v1 vs AI', players: 2, accent: '#8B5CF6', to: '/battle-ai' },
   { id: 'squad', label: 'Squad 5v5', players: 10, accent: '#3B82F6', disabled: true },
   { id: 'platoon', label: 'Platoon 10v10', players: 20, accent: '#10B981', disabled: true },
   { id: 'raid', label: 'Grand Raid', players: 20, accent: '#F97316', disabled: true }
@@ -181,6 +182,7 @@ const renderMath = (text) => {
 
 export default function Battle() {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const stepParam = searchParams.get('step');
   const roomIdParam = searchParams.get('room');
@@ -968,11 +970,15 @@ export default function Battle() {
                     type="button"
                     className={`battle-mode-card ${selectedMode === mode.id ? 'battle-mode-card--selected' : ''} ${mode.disabled ? 'battle-mode-card--disabled' : ''}`}
                     style={{ '--battle-accent': mode.accent }}
-                    onClick={() => { if (!mode.disabled) setSelectedMode(mode.id); }}
+                    onClick={() => {
+                      if (mode.disabled) return;
+                      if (mode.to) { navigate(mode.to); return; }
+                      setSelectedMode(mode.id);
+                    }}
                     disabled={mode.disabled}
                   >
                     <span>{mode.label}</span>
-                    <strong>{mode.disabled ? 'Coming later' : `${mode.players} players`}</strong>
+                    <strong>{mode.disabled ? 'Coming later' : mode.to ? 'Solo vs AI' : `${mode.players} players`}</strong>
                   </button>
                 ))}
               </div>

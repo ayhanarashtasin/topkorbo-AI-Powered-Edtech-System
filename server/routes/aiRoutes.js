@@ -8,6 +8,7 @@ router.use(auth);
 
 router.post('/chat', aiController.chat);
 router.post('/extract-question', aiController.extractQuestion);
+router.post('/answer-mcq', aiController.answerMcq);
 router.get('/history', aiController.getHistory);
 router.delete('/history', aiController.clearHistory);
 
