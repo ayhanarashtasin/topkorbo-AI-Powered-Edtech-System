@@ -7,6 +7,7 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
+import Contests from './pages/Contests';
 import BecomeTeacher from './pages/BecomeTeacher';
 import Setting from './pages/Setting';
 import UploadQuestion from './pages/UploadQuestion';
@@ -67,6 +68,7 @@ function AppContent() {
           }
         />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/contests" element={<Contests />} />
         <Route path="/qbank" element={<QuestionBank />} />
         <Route path="/qbank/source-questions" element={<BoardQuestionsView />} />
         <Route path="/qbank/varsity-written" element={<VarsityWrittenView />} />

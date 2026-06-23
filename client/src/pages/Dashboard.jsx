@@ -28,10 +28,11 @@ export default function Dashboard() {
     window.location.href = '/';
   };
 
-  const fetchContests = async (authToken) => {
+  const fetchContests = async (authToken, role) => {
     try {
       const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const response = await fetch(`${backendBaseUrl}/contests/mine`, {
+      const endpoint = role === 'teacher' ? '/contests/mine' : '/contests/upcoming';
+      const response = await fetch(`${backendBaseUrl}${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -119,8 +120,8 @@ export default function Dashboard() {
           localStorage.setItem('topkorbo_email', resData.data.email);
           localStorage.setItem('topkorbo_role', resData.data.role);
 
-          if (resData.data.role === 'teacher') {
-            fetchContests(token);
+          if (resData.data.role === 'teacher' || resData.data.role === 'student') {
+            fetchContests(token, resData.data.role);
           }
         }
       } catch (err) {
@@ -131,12 +132,12 @@ export default function Dashboard() {
     fetchUserData();
   }, []);
 
-  // Fetch contests immediately if role is cached as teacher
+  // Fetch contests immediately if role is cached
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     const role = localStorage.getItem('topkorbo_role');
-    if (token && role === 'teacher') {
-      fetchContests(token);
+    if (token && (role === 'teacher' || role === 'student')) {
+      fetchContests(token, role);
     }
   }, []);
 
@@ -218,7 +219,7 @@ export default function Dashboard() {
         </header>
 
         {/* Blank Page / Main content workspace area */}
-        <div className={`dashboard-workspace ${user.role === 'teacher' ? 'dashboard-workspace--teacher' : ''}`}>
+        <div className={`dashboard-workspace ${user.role === 'teacher' || user.role === 'student' ? 'dashboard-workspace--teacher' : ''}`}>
           <div className="dashboard-workspace__card">
             <div className="dashboard-workspace__illustration-wrapper">
               <svg className="dashboard-workspace__illustration" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -245,10 +246,15 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {user.role === 'teacher' && (
+          {(user.role === 'teacher' || user.role === 'student') && (
             <div className="dashboard-upcoming-contests">
               <div className="upcoming-contests-header">
-                <h3>{language === 'en' ? 'Upcoming contest' : 'আসন্ন কনটেস্ট'}</h3>
+                <h3>
+                  {user.role === 'student'
+                    ? (language === 'en' ? 'Next upcoming Contest' : 'পরবর্তী আসন্ন কনটেস্ট')
+                    : (language === 'en' ? 'Upcoming contests' : 'আসন্ন কনটেস্টসমূহ')
+                  }
+                </h3>
               </div>
               <div className="upcoming-contests-list">
                 {upcomingContests.length === 0 ? (
@@ -257,20 +263,22 @@ export default function Dashboard() {
                     <p>{language === 'en' ? 'No upcoming contests' : 'কোনো আসন্ন কনটেস্ট নেই'}</p>
                   </div>
                 ) : (
-                  upcomingContests.map((contest) => (
+                  (user.role === 'student' ? upcomingContests.slice(0, 1) : upcomingContests).map((contest) => (
                     <div key={contest._id} className="contest-card-upcoming">
                       <div className="contest-card-upcoming__header">
                         <span className="contest-badge-icon">🏆</span>
                         <h4 className="contest-title" title={contest.name}>{contest.name}</h4>
-                        <button
-                          type="button"
-                          className="contest-card-upcoming__delete"
-                          title={language === 'en' ? 'Delete contest' : 'কনটেস্ট মুছুন'}
-                          aria-label="Delete contest"
-                          onClick={() => handleDeleteContest(contest._id, contest.name)}
-                        >
-                          🗑️
-                        </button>
+                        {user.role === 'teacher' && (
+                          <button
+                            type="button"
+                            className="contest-card-upcoming__delete"
+                            title={language === 'en' ? 'Delete contest' : 'কনটেস্ট মুছুন'}
+                            aria-label="Delete contest"
+                            onClick={() => handleDeleteContest(contest._id, contest.name)}
+                          >
+                            🗑️
+                          </button>
+                        )}
                       </div>
                       <div className="contest-card-upcoming__details">
                         <div className="contest-detail-item">
@@ -283,6 +291,14 @@ export default function Dashboard() {
                             {contest.startTime?.hour}:{String(contest.startTime?.minute).padStart(2, '0')} {contest.startTime?.period} ({contest.startTime?.timezone})
                           </span>
                         </div>
+                        {user.role === 'student' && contest.creator && (
+                          <div className="contest-detail-item" style={{ marginTop: '4px', borderTop: '1px solid rgba(192, 133, 82, 0.08)', paddingTop: '4px' }}>
+                            <span className="detail-icon">👨‍🏫</span>
+                            <span className="detail-value" style={{ fontWeight: '500' }}>
+                              {contest.creator.name}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))

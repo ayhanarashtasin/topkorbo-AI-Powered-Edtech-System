@@ -67,6 +67,15 @@ export default function Sidebar({ activeTab, user }) {
     });
   }
 
+  // Show Contests tab only for students
+  if (safeUser.role === 'student') {
+    menuItems.push({
+      id: 'contests',
+      label: language === 'en' ? 'Contests' : 'কনটেস্টসমূহ',
+      icon: <HiCalendar size={20} />
+    });
+  }
+
   // Show teacher application tab only for tutors or approved teachers
   if (safeUser.role === 'tutor' || safeUser.role === 'teacher') {
     menuItems.push({
@@ -162,6 +171,7 @@ export default function Sidebar({ activeTab, user }) {
                   else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
                   else if (item.id === 'battle') navigate('/battle');
+                  else if (item.id === 'contests') navigate('/contests');
                   else if (item.id === 'reading-books') navigate('/reading-books');
                   else if (item.id === 'forum') navigate('/forum');
                   else navigate('/dashboard');

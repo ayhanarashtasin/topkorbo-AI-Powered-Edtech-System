@@ -1,6 +1,8 @@
 const Contest = require('../models/Contest');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
+const Question = require('../models/Question');
+const ContestResult = require('../models/ContestResult');
 
 /**
  * @desc    Create a new contest (teacher only)
@@ -193,49 +195,129 @@ exports.getMyContests = async (req, res, next) => {
       'Australia/Sydney': '+10:00'
     };
 
-    const upcomingContests = contests.filter(contest => {
-      const tz = contest.startTime?.timezone || 'Asia/Dhaka';
+    const getContestDates = (c) => {
+      const tz = c.startTime?.timezone || 'Asia/Dhaka';
       const offset = offsets[tz] || '+06:00';
-
-      let hour = contest.startTime?.hour || 12;
-      const minute = contest.startTime?.minute || 0;
-      const period = contest.startTime?.period || 'AM';
-
+      let hour = c.startTime?.hour || 12;
+      const minute = c.startTime?.minute || 0;
+      const period = c.startTime?.period || 'AM';
       if (period === 'PM' && hour < 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;
-
       const pad = (num) => String(num).padStart(2, '0');
-      const startStr = `${contest.date}T${pad(hour)}:${pad(minute)}:00${offset}`;
-      const startDate = new Date(startStr);
-
-      const durationHours = contest.duration?.hours || 0;
-      const durationMinutes = contest.duration?.minutes || 0;
-
-      // End Date = Start Date + duration
+      const startDate = new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
+      const durationHours = c.duration?.hours || 0;
+      const durationMinutes = c.duration?.minutes || 0;
       const endDate = new Date(startDate.getTime() + (durationHours * 60 * 60 * 1000) + (durationMinutes * 60 * 1000));
+      return { startDate, endDate };
+    };
 
-      return endDate > now;
-    });
-
-    // Sort by start date ascending
-    upcomingContests.sort((a, b) => {
-      const getStart = (c) => {
-        const tz = c.startTime?.timezone || 'Asia/Dhaka';
-        const offset = offsets[tz] || '+06:00';
-        let hour = c.startTime?.hour || 12;
-        const minute = c.startTime?.minute || 0;
-        const period = c.startTime?.period || 'AM';
-        if (period === 'PM' && hour < 12) hour += 12;
-        if (period === 'AM' && hour === 12) hour = 0;
-        const pad = (num) => String(num).padStart(2, '0');
-        return new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
+    const mappedContests = contests.map(contest => {
+      const { startDate, endDate } = getContestDates(contest);
+      return {
+        ...contest,
+        startDate,
+        endDate
       };
-      return getStart(a) - getStart(b);
     });
 
-    return ApiResponse.success(res, upcomingContests, 'Upcoming contests fetched successfully');
+    // Sort: running first, then upcoming (ascending), then ended (descending)
+    mappedContests.sort((a, b) => {
+      const isRunningA = a.startDate <= now && now <= a.endDate;
+      const isRunningB = b.startDate <= now && now <= b.endDate;
+      if (isRunningA && !isRunningB) return -1;
+      if (!isRunningA && isRunningB) return 1;
+
+      const isUpcomingA = a.startDate > now;
+      const isUpcomingB = b.startDate > now;
+      if (isUpcomingA && !isUpcomingB) return -1;
+      if (!isUpcomingA && isUpcomingB) return 1;
+
+      if (isUpcomingA && isUpcomingB) {
+        return a.startDate - b.startDate;
+      }
+      return b.endDate - a.endDate;
+    });
+
+    return ApiResponse.success(res, mappedContests, 'My contests fetched successfully');
   } catch (err) {
     console.error('Get my contests controller error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Get all upcoming/active/ended contests with participation status
+ * @route   GET /api/contests/upcoming
+ * @access  Private
+ */
+exports.getUpcomingContests = async (req, res, next) => {
+  try {
+    const contests = await Contest.find().populate('creator', 'name').lean();
+    
+    // Find contest results for this student
+    const studentId = req.user.id;
+    const results = await ContestResult.find({ student: studentId }).lean();
+    const participatedContestIds = new Set(results.map(r => r.contest.toString()));
+
+    const now = new Date();
+    const offsets = {
+      'Asia/Dhaka': '+06:00',
+      'Asia/Kolkata': '+05:30',
+      'Asia/Dubai': '+04:00',
+      'Europe/London': '+00:00',
+      'America/New_York': '-05:00',
+      'Asia/Tokyo': '+09:00',
+      'Asia/Singapore': '+08:00',
+      'Australia/Sydney': '+10:00'
+    };
+
+    const getContestDates = (c) => {
+      const tz = c.startTime?.timezone || 'Asia/Dhaka';
+      const offset = offsets[tz] || '+06:00';
+      let hour = c.startTime?.hour || 12;
+      const minute = c.startTime?.minute || 0;
+      const period = c.startTime?.period || 'AM';
+      if (period === 'PM' && hour < 12) hour += 12;
+      if (period === 'AM' && hour === 12) hour = 0;
+      const pad = (num) => String(num).padStart(2, '0');
+      const startDate = new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
+      const durationHours = c.duration?.hours || 0;
+      const durationMinutes = c.duration?.minutes || 0;
+      const endDate = new Date(startDate.getTime() + (durationHours * 60 * 60 * 1000) + (durationMinutes * 60 * 1000));
+      return { startDate, endDate };
+    };
+
+    const mappedContests = contests.map(contest => {
+      const { startDate, endDate } = getContestDates(contest);
+      return {
+        ...contest,
+        startDate,
+        endDate,
+        hasParticipated: participatedContestIds.has(contest._id.toString())
+      };
+    });
+
+    // Sort: running first, then upcoming (ascending), then ended (descending)
+    mappedContests.sort((a, b) => {
+      const isRunningA = a.startDate <= now && now <= a.endDate;
+      const isRunningB = b.startDate <= now && now <= b.endDate;
+      if (isRunningA && !isRunningB) return -1;
+      if (!isRunningA && isRunningB) return 1;
+
+      const isUpcomingA = a.startDate > now;
+      const isUpcomingB = b.startDate > now;
+      if (isUpcomingA && !isUpcomingB) return -1;
+      if (!isUpcomingA && isUpcomingB) return 1;
+
+      if (isUpcomingA && isUpcomingB) {
+        return a.startDate - b.startDate;
+      }
+      return b.endDate - a.endDate;
+    });
+
+    return ApiResponse.success(res, mappedContests, 'Upcoming contests fetched successfully');
+  } catch (err) {
+    console.error('Get upcoming contests controller error:', err);
     return next(err);
   }
 };
@@ -270,3 +352,148 @@ exports.deleteContest = async (req, res, next) => {
     return next(err);
   }
 };
+
+/**
+ * @desc    Get a single contest by ID (fully populated questions)
+ * @route   GET /api/contests/:id
+ * @access  Private
+ */
+exports.getContestById = async (req, res, next) => {
+  try {
+    const contest = await Contest.findById(req.params.id).populate('creator', 'name').lean();
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
+
+    // Populate actual QBank questions content
+    const populatedQuestions = [];
+    for (const q of contest.questions) {
+      if (q.source === 'qbank' && q.originalQuestionId) {
+        const originalQ = await Question.findById(q.originalQuestionId).lean();
+        if (originalQ) {
+          populatedQuestions.push({
+            ...q,
+            questionText: originalQ.questionText || originalQ.text || '',
+            imageUrl: originalQ.imageUrl || (originalQ.images?.[0] || ''),
+            type: originalQ.type || 'mcq',
+            options: originalQ.options || [],
+            cq: originalQ.cq,
+            subject: originalQ.subject,
+            paper: originalQ.paper,
+            chapter: originalQ.chapter,
+            topic: originalQ.topic,
+            solution: originalQ.solution || '',
+            solutionImageUrl: originalQ.solutionImageUrl || '',
+            tags: originalQ.tags || []
+          });
+          continue;
+        }
+      }
+      populatedQuestions.push(q);
+    }
+
+    contest.questions = populatedQuestions;
+
+    return ApiResponse.success(res, contest, 'Contest fetched successfully');
+  } catch (err) {
+    console.error('Get contest by ID controller error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Submit a student's contest exam result
+ * @route   POST /api/contests/:id/submit
+ * @access  Private (student)
+ */
+exports.submitContestResult = async (req, res, next) => {
+  try {
+    const { score, totalQuestions, timeTakenSeconds } = req.body;
+    const contestId = req.params.id;
+    const studentId = req.user.id;
+
+    const contest = await Contest.findById(contestId);
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
+
+    const result = await ContestResult.findOneAndUpdate(
+      { contest: contestId, student: studentId },
+      {
+        score,
+        totalQuestions,
+        timeTakenSeconds,
+        submittedAt: new Date()
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    return ApiResponse.success(res, result, 'Contest result submitted successfully');
+  } catch (err) {
+    console.error('Submit contest result error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Get ranks, scores and leaderboard for a contest
+ * @route   GET /api/contests/:id/result
+ * @access  Private
+ */
+exports.getContestResult = async (req, res, next) => {
+  try {
+    const contestId = req.params.id;
+    
+    // Find all results for this contest, populated with student's name
+    const results = await ContestResult.find({ contest: contestId })
+      .populate('student', 'name')
+      .lean();
+
+    // Sort: score desc, timeTakenSeconds asc
+    results.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return a.timeTakenSeconds - b.timeTakenSeconds;
+    });
+
+    // Calculate ranks (handling ties)
+    let lastScore = -1;
+    let lastTime = -1;
+    let currentRank = 0;
+
+    const rankedResults = results.map((resItem, index) => {
+      if (resItem.score !== lastScore || resItem.timeTakenSeconds !== lastTime) {
+        currentRank = index + 1;
+      }
+      lastScore = resItem.score;
+      lastTime = resItem.timeTakenSeconds;
+
+      return {
+        ...resItem,
+        rank: currentRank
+      };
+    });
+
+    const userResult = rankedResults.find(r => r.student && r.student._id.toString() === req.user.id);
+    
+    return ApiResponse.success(res, {
+      userResult: userResult ? {
+        score: userResult.score,
+        totalQuestions: userResult.totalQuestions,
+        percentage: userResult.totalQuestions > 0 ? Math.round((userResult.score / userResult.totalQuestions) * 100) : 0,
+        rank: userResult.rank,
+        timeTakenSeconds: userResult.timeTakenSeconds
+      } : null,
+      leaderboard: {
+        first: rankedResults[0]?.student?.name || '—',
+        second: rankedResults[1]?.student?.name || '—',
+        third: rankedResults[2]?.student?.name || '—'
+      }
+    }, 'Contest results fetched successfully');
+  } catch (err) {
+    console.error('Get contest result controller error:', err);
+    return next(err);
+  }
+};
+

@@ -167,8 +167,16 @@ export default function MockTestExam() {
     const storedFromQbank =
       sessionStorage.getItem("mock_exam_from_qbank") === "true";
 
+    let isContest = false;
+    if (storedConfig) {
+      try {
+        const parsed = JSON.parse(storedConfig);
+        if (parsed.contestId) isContest = true;
+      } catch (_) { }
+    }
+
     if (!storedQuestions || !storedConfig) {
-      navigate(storedFromQbank ? "/qbank" : "/mock-test");
+      navigate(isContest ? "/contests" : storedFromQbank ? "/qbank" : "/mock-test");
       return;
     }
 
@@ -184,7 +192,7 @@ export default function MockTestExam() {
       if (savedAnswers) {
         try {
           setAnswers(JSON.parse(savedAnswers));
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // ── Restore saved written answers ────────────────────────────────────
@@ -194,7 +202,7 @@ export default function MockTestExam() {
       if (savedWrittenAnswers) {
         try {
           setWrittenAnswers(JSON.parse(savedWrittenAnswers));
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // ── Restore saved ai evals ──────────────────────────────────────────
@@ -202,7 +210,7 @@ export default function MockTestExam() {
       if (savedAiEvals) {
         try {
           setAiEvaluations(JSON.parse(savedAiEvals));
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // ── Restore submitted / review state ────────────────────────────────
@@ -245,7 +253,7 @@ export default function MockTestExam() {
       }
     } catch (e) {
       console.error("Failed to parse exam data", e);
-      navigate(storedFromQbank ? "/qbank" : "/mock-test");
+      navigate(isContest ? "/contests" : storedFromQbank ? "/qbank" : "/mock-test");
     }
   }, [navigate]);
 
@@ -299,7 +307,7 @@ export default function MockTestExam() {
       } else if (question.type === "written" || question.type === "cq") {
         const isUploaded = !!writtenAnswers[key];
         const scoreVal = aiEvaluations[key] ? parseFloat(aiEvaluations[key].score) || 0 : 0;
-        
+
         if (isUploaded) {
           score += scoreVal;
           if (scoreVal > 0) {
@@ -346,6 +354,7 @@ export default function MockTestExam() {
   const handleSubmit = async () => {
     if (isSubmitted || isEvaluating) return;
 
+    let latestEvals = aiEvaluations;
     const writtenKeys = Object.keys(writtenAnswers);
     if (writtenKeys.length > 0) {
       setIsEvaluating(true);
@@ -365,6 +374,7 @@ export default function MockTestExam() {
         });
         if (res.ok) {
           const evalData = await res.json();
+          latestEvals = evalData;
           setAiEvaluations(evalData);
           sessionStorage.setItem("mock_exam_ai_evals", JSON.stringify(evalData));
         }
@@ -372,6 +382,79 @@ export default function MockTestExam() {
         console.error("AI Evaluation error", err);
       }
       setIsEvaluating(false);
+    }
+
+    // Submit to contest backend if it is a contest
+    if (config?.contestId) {
+      let finalScore = 0;
+      questions.forEach((question, index) => {
+        const key = getQuestionKey(question, index);
+        const selectedIndex = answers[key];
+        const correctIndex = getCorrectOptionIndex(question);
+
+        if (question.type === "mcq") {
+          if (selectedIndex !== undefined && selectedIndex !== null) {
+            if (selectedIndex === correctIndex) {
+              finalScore += 1;
+            } else {
+              if (config?.negativeMarking) finalScore -= 0.25;
+            }
+          }
+        } else if (question.type === "written" || question.type === "cq") {
+          const isUploaded = !!writtenAnswers[key];
+          const scoreVal = latestEvals[key] ? parseFloat(latestEvals[key].score) || 0 : 0;
+          if (isUploaded) {
+            finalScore += scoreVal;
+          }
+        }
+      });
+      finalScore = Math.max(0, finalScore);
+
+      try {
+        const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
+        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            score: finalScore,
+            totalQuestions: questions.length,
+            timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+          }),
+        });
+      } catch (err) {
+        console.error("Error submitting contest result:", err);
+      }
+
+      // Clear session storage for this exam
+      [
+        "mock_test_step",
+        "mock_test_subject_ids",
+        "mock_test_chapters",
+        "mock_test_selected_topics",
+        "mock_exam_standard",
+        "mock_question_type",
+        "mock_total_questions",
+        "mock_exam_duration",
+        "mock_negative_marking",
+        "mock_exam_questions",
+        "mock_exam_config",
+        "mock_exam_from_qbank",
+        "mock_exam_answers",
+        "mock_exam_end_time",
+        "mock_exam_submitted",
+        "mock_exam_review_mode",
+        "mock_exam_time_left",
+        "mock_exam_written_answers",
+        "mock_exam_ai_evals",
+      ].forEach((key) => sessionStorage.removeItem(key));
+
+      // Redirect directly to /contests
+      navigate("/contests");
+      return;
     }
 
     setIsSubmitted(true);
@@ -389,6 +472,7 @@ export default function MockTestExam() {
   };
 
   const handleStartAgain = () => {
+    const isContest = !!config?.contestId;
     [
       "mock_test_step",
       "mock_test_subject_ids",
@@ -410,7 +494,7 @@ export default function MockTestExam() {
       "mock_exam_written_answers",
       "mock_exam_ai_evals",
     ].forEach((key) => sessionStorage.removeItem(key));
-    navigate(fromQbank ? "/qbank" : "/mock-test");
+    navigate(isContest ? "/contests" : fromQbank ? "/qbank" : "/mock-test");
   };
 
   const handleOptionSelect = (questionId, optionIndex) => {
@@ -793,19 +877,21 @@ export default function MockTestExam() {
           <button
             type="button"
             className="exam-back-btn"
-            onClick={() => navigate(fromQbank ? "/qbank" : "/mock-test")}
+            onClick={() => navigate(config?.contestId ? "/contests" : fromQbank ? "/qbank" : "/mock-test")}
           >
             <HiArrowLeft size={22} />
           </button>
         )}
         <h1 className="exam-title">
-          {fromQbank
-            ? language === "en"
-              ? "Question Bank Exam"
-              : "প্রশ্নব্যাংক পরীক্ষা"
-            : language === "en"
-              ? "Mock Test"
-              : "মক পরীক্ষা"}
+          {config?.contestId
+            ? config.standard
+            : fromQbank
+              ? language === "en"
+                ? "Question Bank Exam"
+                : "প্রশ্নব্যাংক পরীক্ষা"
+              : language === "en"
+                ? "Mock Test"
+                : "মক পরীক্ষা"}
         </h1>
         {fromQbank && config?.sourceLabel && (
           <p className="exam-source-label">{config.sourceLabel}</p>
@@ -847,56 +933,60 @@ export default function MockTestExam() {
                 <strong>◉ {timeLabel}</strong>
               </div>
             </div>
-              <div className="exam-result-chips">
-                <button
-                  type="button"
-                  className={`exam-result-chip exam-result-chip--correct ${filterType === "correct" ? "exam-result-chip--active" : ""}`}
-                  onClick={() =>
-                    setFilterType((prev) =>
-                      prev === "correct" ? "all" : "correct",
-                    )
-                  }
-                >
-                  <i /> {formatDisplayNumber(resultStats.correct)}{" "}
-                  {language === "en" ? "Correct" : "সঠিক"}
-                </button>
-                <button
-                  type="button"
-                  className={`exam-result-chip exam-result-chip--skipped ${filterType === "skipped" ? "exam-result-chip--active" : ""}`}
-                  onClick={() =>
-                    setFilterType((prev) =>
-                      prev === "skipped" ? "all" : "skipped",
-                    )
-                  }
-                >
-                  <i /> {formatDisplayNumber(resultStats.skipped)}{" "}
-                  {language === "en" ? "Skipped" : "স্কিপ"}
-                </button>
-                <button
-                  type="button"
-                  className={`exam-result-chip exam-result-chip--wrong ${filterType === "wrong" ? "exam-result-chip--active" : ""}`}
-                  onClick={() =>
-                    setFilterType((prev) =>
-                      prev === "wrong" ? "all" : "wrong",
-                    )
-                  }
-                >
-                  <i /> {formatDisplayNumber(resultStats.wrong)}{" "}
-                  {language === "en" ? "Wrong" : "ভুল"}
-                </button>
-              </div>
+            <div className="exam-result-chips">
+              <button
+                type="button"
+                className={`exam-result-chip exam-result-chip--correct ${filterType === "correct" ? "exam-result-chip--active" : ""}`}
+                onClick={() =>
+                  setFilterType((prev) =>
+                    prev === "correct" ? "all" : "correct",
+                  )
+                }
+              >
+                <i /> {formatDisplayNumber(resultStats.correct)}{" "}
+                {language === "en" ? "Correct" : "সঠিক"}
+              </button>
+              <button
+                type="button"
+                className={`exam-result-chip exam-result-chip--skipped ${filterType === "skipped" ? "exam-result-chip--active" : ""}`}
+                onClick={() =>
+                  setFilterType((prev) =>
+                    prev === "skipped" ? "all" : "skipped",
+                  )
+                }
+              >
+                <i /> {formatDisplayNumber(resultStats.skipped)}{" "}
+                {language === "en" ? "Skipped" : "স্কিপ"}
+              </button>
+              <button
+                type="button"
+                className={`exam-result-chip exam-result-chip--wrong ${filterType === "wrong" ? "exam-result-chip--active" : ""}`}
+                onClick={() =>
+                  setFilterType((prev) =>
+                    prev === "wrong" ? "all" : "wrong",
+                  )
+                }
+              >
+                <i /> {formatDisplayNumber(resultStats.wrong)}{" "}
+                {language === "en" ? "Wrong" : "ভুল"}
+              </button>
+            </div>
             <button
               type="button"
               className="exam-start-again-btn"
               onClick={handleStartAgain}
             >
-              {fromQbank
+              {config?.contestId
                 ? language === "en"
-                  ? "Back to Question Bank"
-                  : "প্রশ্নব্যাংকে ফিরে যাও"
-                : language === "en"
-                  ? "Back to Mock Test"
-                  : "মক টেস্টে ফিরে যাও"}
+                  ? "Back to Contests"
+                  : "কনটেস্টে ফিরে যাও"
+                : fromQbank
+                  ? language === "en"
+                    ? "Back to Question Bank"
+                    : "প্রশ্নব্যাংকে ফিরে যাও"
+                  : language === "en"
+                    ? "Back to Mock Test"
+                    : "মক টেস্টে ফিরে যাও"}
             </button>
           </>
         ) : (
@@ -1227,7 +1317,7 @@ export default function MockTestExam() {
                         </div>
                         <div style={{ color: '#166534', fontSize: '14px' }}>
                           <strong>{language === "en" ? "Feedback: " : "মতামত: "}</strong>
-                          <div 
+                          <div
                             style={{ display: 'inline', marginLeft: '4px', lineHeight: '1.6' }}
                             dangerouslySetInnerHTML={renderMarkdownWithMath(aiEvaluations[questionKey].feedback)}
                           />
@@ -1551,9 +1641,9 @@ export default function MockTestExam() {
                         className="exam-explanation-body-text"
                         dangerouslySetInnerHTML={renderMath(
                           solutionStr ||
-                            (language === "en"
-                              ? "No explanation added yet."
-                              : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
+                          (language === "en"
+                            ? "No explanation added yet."
+                            : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
                         )}
                       />
                       {explanationModalQuestion.solutionImageUrl && (
@@ -1585,8 +1675,8 @@ export default function MockTestExam() {
                   {!aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', padding: '32px 16px' }}>
                       <p style={{ margin: '0 0 8px', color: '#64748B', fontSize: '15px', textAlign: 'center', lineHeight: '1.6' }}>
-                        {language === "en" 
-                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat." 
+                        {language === "en"
+                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat."
                           : "এআই টিউটরের কাছ থেকে এই প্রশ্নটির একটি বিস্তারিত সমাধান তৈরি করো। তুমি চ্যাটের মাধ্যমে পরবর্তী প্রশ্ন জিজ্ঞাসা করতে এবং ছবি আপলোড করতে পারবে।"}
                       </p>
                       <button
@@ -1609,7 +1699,7 @@ export default function MockTestExam() {
                             if (res.ok) {
                               const data = await res.json();
                               setAiExplanations(prev => ({ ...prev, [explanationModalQuestion._id]: data.explanation }));
-                              
+
                               const initialThread = [
                                 {
                                   role: "user",
@@ -1620,7 +1710,7 @@ export default function MockTestExam() {
                                   content: data.explanation
                                 }
                               ];
-                              
+
                               setAiChatThreads(prev => ({
                                 ...prev,
                                 [explanationModalQuestion._id]: initialThread
@@ -1681,11 +1771,11 @@ export default function MockTestExam() {
                   {aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       {/* Messages Thread */}
-                      <div 
+                      <div
                         className="ai-chat-thread-container"
-                        style={{ 
-                          maxHeight: '400px', 
-                          overflowY: 'auto', 
+                        style={{
+                          maxHeight: '400px',
+                          overflowY: 'auto',
                           padding: '12px',
                           border: '1px solid #F1F5F9',
                           borderRadius: '12px',
@@ -1700,7 +1790,7 @@ export default function MockTestExam() {
                         ]).map((msg, index) => {
                           const isUser = msg.role === 'user';
                           return (
-                            <div 
+                            <div
                               key={index}
                               style={{
                                 display: 'flex',
@@ -1713,16 +1803,16 @@ export default function MockTestExam() {
                             >
                               {/* Avatar / Name label */}
                               <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px' }}>
-                                {isUser 
-                                  ? (language === "en" ? "You" : "তুমি") 
+                                {isUser
+                                  ? (language === "en" ? "You" : "তুমি")
                                   : (language === "en" ? "AI Tutor" : "এআই টিউটর")}
                               </span>
 
                               {/* Message bubble */}
                               <div
                                 style={{
-                                  background: isUser 
-                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)' 
+                                  background: isUser
+                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)'
                                     : '#FFFFFF',
                                   color: isUser ? '#FFFFFF' : '#1E293B',
                                   border: isUser ? 'none' : '1px solid #E2E8F0',
@@ -1736,24 +1826,24 @@ export default function MockTestExam() {
                                 {/* Thumbnail attachment if present */}
                                 {msg.image && (
                                   <div style={{ marginBottom: '8px' }}>
-                                    <img 
-                                      src={msg.image} 
-                                      alt="Attachment" 
-                                      style={{ 
-                                        maxWidth: '180px', 
-                                        maxHeight: '130px', 
-                                        objectFit: 'contain', 
-                                        borderRadius: '8px', 
-                                        border: '1px solid rgba(255, 255, 255, 0.2)' 
-                                      }} 
+                                    <img
+                                      src={msg.image}
+                                      alt="Attachment"
+                                      style={{
+                                        maxWidth: '180px',
+                                        maxHeight: '130px',
+                                        objectFit: 'contain',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                                      }}
                                     />
                                   </div>
                                 )}
-                                <div 
+                                <div
                                   className="chat-bubble-text"
                                   dangerouslySetInnerHTML={
-                                    isUser 
-                                      ? { __html: msg.content.replace(/\n/g, '<br/>') } 
+                                    isUser
+                                      ? { __html: msg.content.replace(/\n/g, '<br/>') }
                                       : renderMarkdownWithMath(msg.content)
                                   }
                                 />
@@ -1764,7 +1854,7 @@ export default function MockTestExam() {
 
                         {/* Typing / Sending indicator */}
                         {isSendingFollowUp && (
-                          <div 
+                          <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1829,10 +1919,10 @@ export default function MockTestExam() {
                         {followUpImage && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <img 
-                                src={followUpImage} 
-                                alt="Attachment preview" 
-                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }} 
+                              <img
+                                src={followUpImage}
+                                alt="Attachment preview"
+                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }}
                               />
                               <button
                                 type="button"
@@ -1861,15 +1951,15 @@ export default function MockTestExam() {
                         )}
 
                         {/* Input bar */}
-                        <div 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            border: '1.5px solid #CBD5E1', 
-                            borderRadius: '10px', 
-                            padding: '4px 8px', 
-                            backgroundColor: '#FFF' 
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            border: '1.5px solid #CBD5E1',
+                            borderRadius: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#FFF'
                           }}
                         >
                           {/* Image Attach Button */}
