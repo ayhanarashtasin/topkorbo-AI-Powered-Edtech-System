@@ -97,9 +97,9 @@ const BOARDS = ['Dhaka', 'Comilla', 'Rajshahi', 'Jessore', 'Chittagong', 'Sylhet
 const BATTLE_MODES = [
   { id: 'duel', label: '1v1 Duel', players: 2, accent: '#C08552' },
   { id: 'ai-duel', label: '1v1 vs AI', players: 2, accent: '#8B5CF6', to: '/battle-ai' },
-  { id: 'squad', label: 'Squad 5v5', players: 10, accent: '#3B82F6', disabled: true },
-  { id: 'platoon', label: 'Platoon 10v10', players: 20, accent: '#10B981', disabled: true },
-  { id: 'raid', label: 'Grand Raid', players: 20, accent: '#F97316', disabled: true }
+  { id: 'squad', label: 'Squad 5v5', players: 10, accent: '#3B82F6' },
+  { id: 'custom-squad', label: 'Custom Squad', players: 10, accent: '#10B981' },
+  { id: 'raid', label: 'Grand Raid', players: 30, accent: '#F97316' }
 ];
 
 const FALLBACK_QUESTIONS = [
@@ -196,7 +196,7 @@ export default function Battle() {
     role: localStorage.getItem('topkorbo_role') || 'student',
     streak: parseInt(localStorage.getItem('topkorbo_streak')) || 5
   });
-  const [selectedMode, setSelectedMode] = useState('duel');
+  const [selectedMode, setSelectedMode] = useState(() => sessionStorage.getItem('battle_mode') || 'duel');
   const [selectedSubjectIds, setSelectedSubjectIds] = useState(() => JSON.parse(sessionStorage.getItem('battle_subject_ids') || '[]'));
   const [selectedChapters, setSelectedChapters] = useState(() => JSON.parse(sessionStorage.getItem('battle_chapters') || '{}'));
   const [selectedStandards, setSelectedStandards] = useState(() => JSON.parse(sessionStorage.getItem('battle_standards') || '[]'));
@@ -208,6 +208,9 @@ export default function Battle() {
   const [totalQuestions, setTotalQuestions] = useState(() => parseInt(sessionStorage.getItem('battle_total_questions')) || 10);
   const [questionTimeSeconds, setQuestionTimeSeconds] = useState(() => parseInt(sessionStorage.getItem('battle_question_time_seconds')) || 15);
   const [negativeMarking, setNegativeMarking] = useState(() => sessionStorage.getItem('battle_negative_marking') === 'true');
+  const [teamNames, setTeamNames] = useState(() => JSON.parse(sessionStorage.getItem('battle_team_names') || '{"A":"Team A","B":"Team B"}'));
+  const [customSquadSize, setCustomSquadSize] = useState(() => parseInt(sessionStorage.getItem('battle_custom_squad_size')) || 5);
+  const [raidMaxPlayers, setRaidMaxPlayers] = useState(() => parseInt(sessionStorage.getItem('battle_raid_max_players')) || 20);
   const [showSelectedTopics, setShowSelectedTopics] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [battleState, setBattleState] = useState(null);
@@ -218,6 +221,8 @@ export default function Battle() {
   const [nowMs, setNowMs] = useState(0);
 
   const activeMode = BATTLE_MODES.find((mode) => mode.id === selectedMode) || BATTLE_MODES[0];
+  const activeTeamSize = activeMode.id === 'custom-squad' ? customSquadSize : 5;
+  const isSquadSetupMode = activeMode.id === 'squad' || activeMode.id === 'custom-squad';
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
@@ -267,6 +272,9 @@ export default function Battle() {
   useEffect(() => { sessionStorage.setItem('battle_total_questions', String(totalQuestions)); }, [totalQuestions]);
   useEffect(() => { sessionStorage.setItem('battle_question_time_seconds', String(questionTimeSeconds)); }, [questionTimeSeconds]);
   useEffect(() => { sessionStorage.setItem('battle_negative_marking', String(negativeMarking)); }, [negativeMarking]);
+  useEffect(() => { sessionStorage.setItem('battle_team_names', JSON.stringify(teamNames)); }, [teamNames]);
+  useEffect(() => { sessionStorage.setItem('battle_custom_squad_size', String(customSquadSize)); }, [customSquadSize]);
+  useEffect(() => { sessionStorage.setItem('battle_raid_max_players', String(raidMaxPlayers)); }, [raidMaxPlayers]);
 
   const QUESTION_STANDARDS = [
     { id: 'engineering', labelEn: 'Engineering', labelBn: 'ইঞ্জিনিয়ারিং', icon: <HiLightningBolt size={28} />, desc: 'BUET, CUET, KUET, RUET', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)' },
@@ -289,7 +297,10 @@ export default function Battle() {
   };
 
   const roomToBattleState = useCallback((room) => ({
-    mode: BATTLE_MODES[0],
+    mode: {
+      ...(BATTLE_MODES.find((mode) => mode.id === room.settings?.mode) || BATTLE_MODES[0]),
+      label: room.settings?.modeLabel || (BATTLE_MODES.find((mode) => mode.id === room.settings?.mode) || BATTLE_MODES[0]).label
+    },
     roomId: room.id,
     isRemote: true,
     status: room.status,
@@ -298,7 +309,7 @@ export default function Battle() {
     currentIndex: room.currentIndex,
     players: room.players.map((player, index) => ({
       ...player,
-      team: index === 0 ? 'A' : 'B',
+      team: player.team || (index === 0 ? 'A' : 'B'),
       isYou: player.id === user.id
     })),
     selectedAnswer: room.questions?.[room.currentIndex]?.viewerAnswer ?? null,
@@ -499,17 +510,21 @@ export default function Battle() {
       const questions = await fetchBattleQuestions(token);
       const battleQuestionCount = Math.min(questions.length, totalQuestions);
 
-      if (activeMode.id === 'duel') {
+      if (activeMode.id === 'duel' || activeMode.id === 'squad' || activeMode.id === 'custom-squad' || activeMode.id === 'raid') {
         const createRes = await fetch(`${apiBase}/battles/rooms`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             questions: questions.slice(0, battleQuestionCount),
             settings: {
+              mode: activeMode.id,
               questionTimeSeconds,
               totalQuestions: battleQuestionCount,
               questionType,
-              negativeMarking
+              negativeMarking,
+              teamNames,
+              teamSize: activeTeamSize,
+              maxPlayers: activeMode.id === 'raid' ? raidMaxPlayers : undefined
             }
           })
         });
@@ -520,7 +535,7 @@ export default function Battle() {
         }
         setInviteRoom(createData.data);
         setSearchParams({ room: createData.data.id, step: '4' });
-        toast.success('1v1 room created. Share the invite link.');
+        toast.success(`${activeMode.label} room created. Share the invite code.`);
         return;
       }
 
@@ -689,7 +704,11 @@ export default function Battle() {
         return;
       }
       setInviteRoom(data.data);
-      setBattleState(roomToBattleState(data.data));
+      if (data.data.status === 'active' || data.data.status === 'finished') {
+        setBattleState(roomToBattleState(data.data));
+      } else {
+        setBattleState(null);
+      }
     } catch (err) {
       console.error('Error starting battle room:', err);
       toast.error('Network error while starting room.');
@@ -706,11 +725,34 @@ export default function Battle() {
   ];
 
   if (inviteRoom && inviteRoom.status === 'waiting') {
-    const opponent = inviteRoom.players.find((player) => player.id !== user.id);
     const currentWaitingPlayer = inviteRoom.players.find((player) => player.id === user.id);
     const readyCount = inviteRoom.players.filter((player) => player.ready).length;
     const isCurrentReady = Boolean(currentWaitingPlayer?.ready);
-    const canReady = inviteRoom.players.length === 2 && !isCurrentReady;
+    const mode = BATTLE_MODES.find((item) => item.id === inviteRoom.settings?.mode) || BATTLE_MODES[0];
+    const requiredPlayers = inviteRoom.settings?.maxPlayers || mode.players || 2;
+    const teamSize = inviteRoom.settings?.teamSize || 1;
+    const waitingSlots = Math.max(0, requiredPlayers - inviteRoom.players.length);
+    const teamAPlayers = inviteRoom.players.filter((player) => player.team === 'A');
+    const teamBPlayers = inviteRoom.players.filter((player) => player.team === 'B');
+    const roomTeamNames = inviteRoom.settings?.teamNames || { A: 'Team A', B: 'Team B' };
+    const realPlayerCount = inviteRoom.players.filter((player) => !player.isTestPlayer).length;
+    const isSquadRoom = mode.id === 'squad' || mode.id === 'custom-squad';
+    const isRaidRoom = mode.id === 'raid';
+    const requiredRealPlayers = isSquadRoom ? 2 : requiredPlayers;
+    const realPlayersReady = realPlayerCount >= requiredRealPlayers;
+    const readyDenominator = requiredPlayers;
+    const canReady = inviteRoom.players.length === requiredPlayers && realPlayersReady && !isCurrentReady;
+    const isLastPlayerToReady = canReady && readyCount === readyDenominator - 1;
+    const waitingButtonLabel = inviteRoom.players.length < requiredPlayers
+      ? `Waiting for ${waitingSlots} ${isRaidRoom ? 'raider' : 'player'}${waitingSlots === 1 ? '' : 's'}`
+      : (!realPlayersReady ? 'Waiting for real player' : (isCurrentReady ? 'Waiting for everyone' : (isLastPlayerToReady ? (isRaidRoom ? 'Start Raid' : 'Start Battle') : 'I’m Ready')));
+    const renderWaitingPlayer = (player, slotLabel) => (
+      <div key={player?.id || slotLabel} className={`battle-waiting-player ${!player ? 'battle-waiting-player--empty' : ''}`}>
+        <div className="battle-waiting-avatar">{player ? (player.avatar ? <img src={player.avatar} alt="" /> : player.name.charAt(0)) : '?'}</div>
+        <strong>{player?.name || 'Waiting'}</strong>
+        <span>{player ? (player.ready ? 'Ready' : (player.id === inviteRoom.hostId ? 'Host' : roomTeamNames[player.team])) : slotLabel}</span>
+      </div>
+    );
 
     return (
       <div className="dashboard-container">
@@ -719,10 +761,10 @@ export default function Battle() {
           <header className="dashboard-header">
             <div className="dashboard-header__welcome">
               <h2>Battle Arena</h2>
-              <p>1v1 real-student duel room is waiting for an opponent.</p>
+              <p>{mode.label} real-student room is waiting for players.</p>
             </div>
             <div className="mock-header__actions">
-              <div className="battle-room-pill"><HiFire size={18} /> 1v1 Duel</div>
+              <div className="battle-room-pill"><HiFire size={18} /> {mode.label}</div>
               <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
             </div>
           </header>
@@ -730,42 +772,79 @@ export default function Battle() {
           <div className="battle-waiting-room">
             <section className="battle-invite-card">
               <span className="battle-room-code">Room #{inviteRoom.id}</span>
-              <h3>Invite one real student</h3>
-              <p>Share this battle code with another logged-in student. The duel starts only when both players are inside the room.</p>
+              <h3>{isSquadRoom ? `Build your ${teamSize}v${teamSize} squad` : (isRaidRoom ? 'Open the Grand Raid' : 'Invite one real student')}</h3>
+              <p>{isRaidRoom ? 'Share this battle code with anyone. Every joined student competes solo on one leaderboard.' : 'Share this battle code with logged-in students. The match starts only when every player is inside and ready.'}</p>
 
               <div className="battle-invite-link">
                 <span>{inviteRoom.id}</span>
                 <button type="button" onClick={copyRoomCode}>{copiedInvite ? 'Copied' : 'Copy Code'}</button>
               </div>
 
-              <div className="battle-waiting-grid">
-                {inviteRoom.players.map((player) => (
-                  <div key={player.id} className="battle-waiting-player">
-                    <div className="battle-waiting-avatar">{player.avatar ? <img src={player.avatar} alt="" /> : player.name.charAt(0)}</div>
-                    <strong>{player.name}</strong>
-                    <span>{player.ready ? 'Ready' : (player.id === inviteRoom.hostId ? 'Host' : 'Opponent')}</span>
-                  </div>
-                ))}
-                {!opponent && (
-                  <div className="battle-waiting-player battle-waiting-player--empty">
-                    <div className="battle-waiting-avatar">?</div>
-                    <strong>Waiting</strong>
-                    <span>Opponent slot</span>
-                  </div>
-                )}
+              <div className="battle-ready-panel">
+                <div>
+                  <strong>{isRaidRoom ? `${inviteRoom.players.length}/${requiredPlayers} joined` : `${readyCount}/${readyDenominator} ready`}</strong>
+                  <span>
+                    {isRaidRoom
+                      ? (inviteRoom.players.length < requiredPlayers
+                        ? `${waitingSlots} more raider${waitingSlots === 1 ? '' : 's'} must join before ready check.`
+                        : (isCurrentReady ? 'You are ready. Waiting for every raider to ready up.' : 'Click ready when you are set. Grand Raid starts when all raiders are ready.'))
+                      : inviteRoom.players.length < requiredPlayers
+                      ? `${waitingSlots} more player${waitingSlots === 1 ? '' : 's'} needed before ready check.`
+                      : (!realPlayersReady ? 'One more real student must join before the match can start.'
+                        : (isCurrentReady ? 'You are ready. Waiting for the other real player.' : 'Click ready when you are set. The match opens after everyone is ready.'))}
+                  </span>
+                </div>
+                <button type="button" className="btn btn-primary mock-next-btn" disabled={!canReady || isRoomActionLoading} onClick={startRemoteRoom}>
+                  <span>{waitingButtonLabel}</span>
+                  <HiArrowRight size={18} />
+                </button>
               </div>
+
+              {isSquadRoom ? (
+                <div className="battle-team-lobby">
+                  {[
+                    { team: 'A', players: teamAPlayers },
+                    { team: 'B', players: teamBPlayers }
+                  ].map((group) => (
+                    <div key={group.team} className="battle-team-column">
+                      <h4>
+                        <span>{roomTeamNames[group.team]}</span>
+                        <em>{group.players.length}/{teamSize}</em>
+                      </h4>
+                      {Array.from({ length: teamSize }).map((_, index) => renderWaitingPlayer(group.players[index], `Slot ${index + 1}`))}
+                    </div>
+                  ))}
+                </div>
+              ) : isRaidRoom ? (
+                <div className="battle-raid-lobby">
+                  {Array.from({ length: requiredPlayers }).map((_, index) => {
+                    const player = inviteRoom.players[index];
+                    return (
+                      <div key={player?.id || `raid-slot-${index}`} className={`battle-waiting-player ${!player ? 'battle-waiting-player--empty' : ''}`}>
+                        <div className="battle-waiting-avatar">{player ? (player.avatar ? <img src={player.avatar} alt="" /> : player.name.charAt(0)) : '?'}</div>
+                        <strong>{player?.name || 'Waiting'}</strong>
+                        <span>{player ? (player.ready ? 'Ready' : (index === 0 ? 'Host' : 'Raider')) : `Raider slot ${index + 1}`}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="battle-waiting-grid">
+                  {Array.from({ length: requiredPlayers }).map((_, index) => renderWaitingPlayer(inviteRoom.players[index], index === 0 ? 'Host slot' : 'Opponent slot'))}
+                </div>
+              )}
 
               <div className="battle-room-settings-strip">
                 <span>{inviteRoom.settings.totalQuestions} questions</span>
                 <span>{inviteRoom.settings.questionTimeSeconds}s per question</span>
                 <span>{inviteRoom.settings.negativeMarking ? 'Negative marking on' : 'No negative marking'}</span>
-                <span>{readyCount}/2 ready</span>
+                <span>{isRaidRoom ? `${readyCount}/${readyDenominator} ready` : `${readyCount}/${requiredPlayers} ready`}</span>
               </div>
 
               <div className="mock-selection-actions">
                 <button type="button" className="battle-outline-btn" onClick={resetBattle}>Cancel</button>
                 <button type="button" className="btn btn-primary mock-next-btn" disabled={!canReady || isRoomActionLoading} onClick={startRemoteRoom}>
-                  <span>{inviteRoom.players.length < 2 ? 'Waiting for opponent' : (isCurrentReady ? 'Waiting for other player' : 'Ready to Start')}</span>
+                  <span>{waitingButtonLabel}</span>
                   <HiArrowRight size={18} />
                 </button>
               </div>
@@ -785,7 +864,16 @@ export default function Battle() {
     const yourRank = sortedPlayers.findIndex((player) => player.id === currentPlayer.id) + 1;
     const teamA = battleState.players.filter((player) => player.team === 'A').reduce((sum, player) => sum + player.score, 0);
     const teamB = battleState.players.filter((player) => player.team === 'B').reduce((sum, player) => sum + player.score, 0);
-    const didWin = !opponentPlayer || currentPlayer.score >= opponentPlayer.score;
+    const teamAList = battleState.players.filter((player) => player.team === 'A').sort((a, b) => b.score - a.score);
+    const teamBList = battleState.players.filter((player) => player.team === 'B').sort((a, b) => b.score - a.score);
+    const isTeamBattle = battleState.settings?.mode === 'squad' || battleState.settings?.mode === 'custom-squad';
+    const isRaidBattle = battleState.settings?.mode === 'raid';
+    const currentTeam = currentPlayer.team || 'A';
+    const battleTeamNames = battleState.settings?.teamNames || { A: 'Team A', B: 'Team B' };
+    const yourTeamScore = currentTeam === 'A' ? teamA : teamB;
+    const opposingTeamScore = currentTeam === 'A' ? teamB : teamA;
+    const didWin = isTeamBattle ? yourTeamScore >= opposingTeamScore : (isRaidBattle ? yourRank === 1 : (!opponentPlayer || currentPlayer.score >= opponentPlayer.score));
+    const mvp = sortedPlayers[0];
     const questionTimeLimit = battleState.settings?.questionTimeSeconds || questionTimeSeconds;
     const remainingSeconds = battleState.isRemote && battleState.questionStartedAt && nowMs
       ? Math.max(0, questionTimeLimit - Math.floor((nowMs - battleState.questionStartedAt) / 1000))
@@ -808,11 +896,19 @@ export default function Battle() {
 
           <div className="battle-room">
             <section className="battle-room__stage">
-              <div className="battle-score-strip">
-                <div><span>{battleState.players[0]?.name || 'Player A'}</span><strong>{teamA}</strong></div>
-                <div className="battle-vs-core">VS</div>
-                <div><span>{opponentPlayer?.name || 'Player B'}</span><strong>{teamB}</strong></div>
-              </div>
+              {isRaidBattle ? (
+                <div className="battle-score-strip battle-score-strip--raid">
+                  <div><span>Your Score</span><strong>{currentPlayer.score}</strong></div>
+                  <div className="battle-vs-core">#{yourRank}</div>
+                  <div><span>Raiders</span><strong>{battleState.players.length}</strong></div>
+                </div>
+              ) : (
+                <div className="battle-score-strip">
+                  <div><span>{isTeamBattle ? battleTeamNames.A : (battleState.players[0]?.name || 'Player A')}</span><strong>{teamA}</strong></div>
+                  <div className="battle-vs-core">VS</div>
+                  <div><span>{isTeamBattle ? battleTeamNames.B : (opponentPlayer?.name || 'Player B')}</span><strong>{teamB}</strong></div>
+                </div>
+              )}
 
               {battleState.finished ? (
                 <div className="battle-finish-card">
@@ -824,20 +920,20 @@ export default function Battle() {
                   <div className={`battle-result-badge ${didWin ? 'battle-result-badge--win' : 'battle-result-badge--loss'}`}>
                     {didWin ? 'WIN' : 'RUN'}
                   </div>
-                  <h3>{didWin ? 'Congratulations Champ!' : 'Next time champ'}</h3>
-                  <p>{didWin ? 'You won the 1v1 battle.' : 'You fought well. Warm up and take the next one.'}</p>
+                  <h3>{didWin ? (isTeamBattle ? 'Squad Victory!' : (isRaidBattle ? 'Raid Champion!' : 'Congratulations Champ!')) : 'Next time champ'}</h3>
+                  <p>{didWin ? (isTeamBattle ? `${battleTeamNames[currentTeam]} won the ${battleState.settings?.teamSize || 5}v${battleState.settings?.teamSize || 5} battle.` : (isRaidBattle ? 'You topped the Grand Raid leaderboard.' : 'You won the 1v1 battle.')) : 'You fought well. Warm up and take the next one.'}</p>
                   <div className="battle-result-stats">
                     <div>
-                      <span>Your Score</span>
-                      <strong>{currentPlayer.score}</strong>
+                      <span>{isTeamBattle ? 'Team Score' : 'Your Score'}</span>
+                      <strong>{isTeamBattle ? yourTeamScore : currentPlayer.score}</strong>
                     </div>
                     <div>
                       <span>Rank</span>
                       <strong>#{yourRank}</strong>
                     </div>
                     <div>
-                      <span>Questions</span>
-                      <strong>{battleState.questions.length}</strong>
+                      <span>{isTeamBattle ? 'MVP' : (isRaidBattle ? 'Raiders' : 'Questions')}</span>
+                      <strong>{isTeamBattle ? (mvp?.name || '-') : (isRaidBattle ? battleState.players.length : battleState.questions.length)}</strong>
                     </div>
                   </div>
                   <button className="btn btn-primary mock-next-btn" type="button" onClick={resetBattle}>
@@ -896,15 +992,37 @@ export default function Battle() {
 
             <aside className="battle-leaderboard">
               <h3>Leaderboard</h3>
-              <div className="battle-rank-list">
-                {sortedPlayers.slice(0, 8).map((player, index) => (
-                  <div key={player.id} className={`battle-rank-row ${player.id === 'you' || player.id === currentPlayer.id ? 'battle-rank-row--you' : ''}`}>
-                    <span>#{index + 1}</span>
-                    <strong>{player.name}</strong>
-                    <em>{player.score}</em>
-                  </div>
-                ))}
-              </div>
+              {isTeamBattle ? (
+                <div className="battle-team-score-list">
+                  {[
+                    { id: 'A', name: battleTeamNames.A, score: teamA, players: teamAList },
+                    { id: 'B', name: battleTeamNames.B, score: teamB, players: teamBList }
+                  ].sort((a, b) => b.score - a.score).map((team, index) => (
+                    <div key={team.id} className={`battle-team-score-card ${team.id === currentTeam ? 'battle-team-score-card--you' : ''}`}>
+                      <div className="battle-team-score-card__top">
+                        <span>#{index + 1}</span>
+                        <strong>{team.name}</strong>
+                        <em>{team.score}</em>
+                      </div>
+                      <div className="battle-team-score-card__members">
+                        {team.players.slice(0, 5).map((player) => (
+                          <span key={player.id}>{player.name} {player.score}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="battle-rank-list">
+                  {sortedPlayers.slice(0, isRaidBattle ? battleState.players.length : 8).map((player, index) => (
+                    <div key={player.id} className={`battle-rank-row ${player.id === 'you' || player.id === currentPlayer.id ? 'battle-rank-row--you' : ''}`}>
+                      <span>#{index + 1}</span>
+                      <strong>{player.name}</strong>
+                      <em>{player.score}</em>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="battle-log">
                 {battleState.log.map((item) => <span key={item}>{item}</span>)}
               </div>
@@ -973,19 +1091,21 @@ export default function Battle() {
                     onClick={() => {
                       if (mode.disabled) return;
                       if (mode.to) { navigate(mode.to); return; }
+                      sessionStorage.setItem('battle_mode', mode.id);
                       setSelectedMode(mode.id);
+                      setStep(2);
                     }}
                     disabled={mode.disabled}
                   >
                     <span>{mode.label}</span>
-                    <strong>{mode.disabled ? 'Coming later' : mode.to ? 'Solo vs AI' : `${mode.players} players`}</strong>
+                    <strong>{selectedMode === mode.id ? 'Selected' : mode.disabled ? 'Coming later' : mode.to ? 'Solo vs AI' : mode.id === 'custom-squad' ? `${customSquadSize}v${customSquadSize}` : mode.id === 'raid' ? `Up to ${raidMaxPlayers}` : `${mode.players} players`}</strong>
                   </button>
                 ))}
               </div>
               <div className="battle-join-card">
                 <div>
-                  <h3>Join 1v1 Battle</h3>
-                  <p>Have a room code from a friend? Enter it here to join the duel.</p>
+                  <h3>Join Battle Room</h3>
+                  <p>Have a room code from a friend? Enter it here to join the live match.</p>
                 </div>
                 <div className="battle-join-controls">
                   <input
@@ -1002,7 +1122,7 @@ export default function Battle() {
               </div>
               <div className="mock-selection-actions">
                 <button type="button" className="btn btn-primary mock-next-btn" onClick={() => setStep(2)}>
-                  <span>Next Step</span>
+                  <span>Continue with {activeMode.label}</span>
                   <HiArrowRight size={18} />
                 </button>
               </div>
@@ -1149,7 +1269,7 @@ export default function Battle() {
                 </button>
                 {showSelectedTopics && (
                   <div className="battle-summary-chips animate-slide-down">
-                    <span>{activeMode.label}</span>
+                    <span>{activeMode.id === 'custom-squad' ? `${customSquadSize}v${customSquadSize} Custom Squad` : activeMode.label}</span>
                     <span>{summary.subjectCount} subjects</span>
                     <span>{summary.chapterCount} chapters</span>
                     <span>{questionTimeSeconds}s per question</span>
@@ -1210,6 +1330,67 @@ export default function Battle() {
                   ))}
                 </div>
               </div>
+
+              {isSquadSetupMode && (
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiAcademicCap size={20} className="mock-config-section-icon" />
+                    <h4>Team Names</h4>
+                  </div>
+                  <div className="battle-team-name-grid">
+                    <label>
+                      <span>Team A</span>
+                      <input
+                        type="text"
+                        value={teamNames.A}
+                        maxLength={24}
+                        onChange={(event) => setTeamNames((prev) => ({ ...prev, A: event.target.value }))}
+                        placeholder="Team A"
+                      />
+                    </label>
+                    <label>
+                      <span>Team B</span>
+                      <input
+                        type="text"
+                        value={teamNames.B}
+                        maxLength={24}
+                        onChange={(event) => setTeamNames((prev) => ({ ...prev, B: event.target.value }))}
+                        placeholder="Team B"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {activeMode.id === 'custom-squad' && (
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiCollection size={20} className="mock-config-section-icon" />
+                    <h4>Squad Size</h4>
+                  </div>
+                  <p className="mock-config-section-desc">Choose how many players each team should have.</p>
+                  <div className="battle-preset-row">
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((size) => (
+                      <button key={size} type="button" className={`battle-preset-chip ${customSquadSize === size ? 'battle-preset-chip--selected' : ''}`} onClick={() => setCustomSquadSize(size)}>{size}v{size}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeMode.id === 'raid' && (
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiCollection size={20} className="mock-config-section-icon" />
+                    <h4>Raid Room Limit</h4>
+                  </div>
+                  <p className="mock-config-section-desc">Choose how many students can join this solo leaderboard room.</p>
+                  <div className="battle-preset-row">
+                    {[5, 10, 15, 20, 25, 30].map((count) => (
+                      <button key={count} type="button" className={`battle-preset-chip ${raidMaxPlayers === count ? 'battle-preset-chip--selected' : ''}`} onClick={() => setRaidMaxPlayers(count)}>{count}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="battle-settings-grid">
                 <div className="mock-config-section">
