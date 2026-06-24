@@ -15,6 +15,7 @@ import {
 } from 'react-icons/hi';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { buildInlinePayload, submitAttempt as saveInlineAttempt } from '../services/practiceApi';
 import './BoardQuestionsView.css';
 import './MockTestExam.css';
 
@@ -159,6 +160,8 @@ export default function BoardQuestionsView() {
   const [loading, setLoading] = useState(true);
   const [showAllAnswers, setShowAllAnswers] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState({});
+  // Track when each question was first rendered so we can record time-spent
+  const questionStartRef = useRef({});
 
   // AI Explanation & Tutor Modal states
   const [explanationModalQuestion, setExplanationModalQuestion] = useState(null);
@@ -467,10 +470,34 @@ export default function BoardQuestionsView() {
 
   const handleOptionSelect = (questionId, optionIndex) => {
     if (showAllAnswers) return;
+    const newSelected =
+      selectedAnswers[questionId] === optionIndex ? null : optionIndex;
     setSelectedAnswers(prev => ({
       ...prev,
-      [questionId]: prev[questionId] === optionIndex ? null : optionIndex
+      [questionId]: newSelected
     }));
+
+    // ── Inline practice persistence (option B): every answered Q is logged
+    //    as a lightweight `inline_qbank` PracticeAttempt in the backend.
+    try {
+      const idx = typeof questionId === "string" && questionId.startsWith("q-")
+        ? Number(questionId.slice(2))
+        : questions.findIndex((qq) => (qq._id || `q-${questions.indexOf(qq)}`) === questionId);
+      const question = questions[idx];
+      if (!question) return;
+      const startedAt = questionStartRef.current[questionId] || Date.now();
+      const timeSpent = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+      const payload = buildInlinePayload({
+        question,
+        selectedIndex: newSelected,
+        timeSpentSeconds: timeSpent
+      });
+      saveInlineAttempt(payload).catch((err) =>
+        console.warn("[practice] inline save failed", err)
+      );
+    } catch (err) {
+      console.warn("[practice] inline save failed", err);
+    }
   };
 
   if (!name || (sourceType !== 'admission' && !subject)) {
@@ -549,6 +576,10 @@ export default function BoardQuestionsView() {
           questions.map((q, idx) => {
             const id = q._id || idx;
             const isMcq = q.type === 'mcq';
+            // Stamp the moment the question enters the DOM for time-spent tracking
+            if (!questionStartRef.current[`q-${idx}`] && !questionStartRef.current[id]) {
+              questionStartRef.current[id] = Date.now();
+            }
             const isCq = q.type === 'cq';
             const questionKey = q._id || `q-${idx}`;
 

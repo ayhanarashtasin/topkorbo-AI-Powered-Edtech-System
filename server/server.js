@@ -48,6 +48,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const moderationRoutes = require("./routes/moderationRoutes");
 const userRoutes = require("./routes/userRoutes");
+const practiceRoutes = require("./routes/practiceRoutes");
 const { initSocket } = require("./socket");
 const bootstrapAdmin = require("./scripts/bootstrapAdmin");
 
@@ -107,6 +108,7 @@ app.use("/api/reactions", reactionRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api", moderationRoutes);
+app.use("/api/practice", practiceRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

@@ -26,6 +26,8 @@ import MakeContestQuestionConfirm from './pages/MakeContestQuestionConfirm';
 import ReadingBooks from './pages/ReadingBooks';
 import UploadBook from './pages/UploadBook';
 import ReadingBookView from './pages/ReadingBookView';
+import PracticeHistory from './pages/PracticeHistory';
+import './pages/PracticeHistory.css';
 
 // === Forum / Community ===
 import ForumLayout from './components/forum/ForumLayout';
@@ -78,6 +80,7 @@ function AppContent() {
         <Route path="/upload-question" element={<UploadQuestion />} />
         <Route path="/mock-test" element={<MockTest />} />
         <Route path="/mock-test/exam" element={<MockTestExam />} />
+        <Route path="/practice-history" element={<PracticeHistory />} />
         <Route path="/battle" element={<Battle />} />
         <Route path="/battle-ai" element={<AIBattle />} />
         <Route path="/make-contest-question" element={<MakeContestQuestion />} />

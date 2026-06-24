@@ -301,3 +301,77 @@
 
 
 
+
+
+/* ============================================
+   Practice Stats Widget
+   ============================================ */
+.dashboard-practice-widget {
+  background-color: var(--white);
+  border: 1.5px solid rgba(75, 46, 43, 0.12);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-top: 24px;
+  box-shadow: 0 1px 4px rgba(75, 46, 43, 0.04);
+}
+
+.practice-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.practice-widget-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.practice-widget-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6d28d9;
+  text-decoration: none;
+}
+
+.practice-widget-link:hover {
+  text-decoration: underline;
+}
+
+.practice-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.practice-widget-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: rgba(192, 133, 82, 0.06);
+  border: 1px solid rgba(192, 133, 82, 0.12);
+  color: #4b2e2b;
+}
+
+.practice-widget-stat svg {
+  color: #8C5A3C;
+  flex-shrink: 0;
+}
+
+.practice-widget-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.practice-widget-label {
+  font-size: 11px;
+  color: rgba(75, 46, 43, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}

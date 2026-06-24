@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { HiArrowRight } from 'react-icons/hi';
+import { HiArrowRight, HiClipboardCheck, HiChartBar, HiClock } from 'react-icons/hi';
 import { useLanguage } from '../hooks/useLanguage';
 import Sidebar from '../components/layout/Sidebar';
+import { getStats } from '../services/practiceApi';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -13,6 +14,7 @@ export default function Dashboard() {
     role: localStorage.getItem('topkorbo_role') || 'student'
   });
   const [upcomingContests, setUpcomingContests] = useState([]);
+  const [practiceStats, setPracticeStats] = useState(null);
 
   const activeTab = 'dashboard';
 
@@ -141,6 +143,20 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Fetch practice stats (best-effort — silently skips on 401)
+  useEffect(() => {
+    const token = localStorage.getItem('topkorbo_token');
+    if (!token) return;
+    (async () => {
+      try {
+        const s = await getStats();
+        setPracticeStats(s);
+      } catch (err) {
+        console.warn('Practice stats unavailable:', err);
+      }
+    })();
+  }, []);
+
   const getRemainingTime = (contest) => {
     const offsets = {
       'Asia/Dhaka': '+06:00',
@@ -245,6 +261,44 @@ export default function Dashboard() {
               <HiArrowRight size={16} />
             </button>
           </div>
+
+          {(user.role === 'teacher' || user.role === 'student') && practiceStats && practiceStats.overall?.totalAttempts > 0 && (
+            <div className="dashboard-practice-widget" data-testid="practice-widget">
+              <div className="practice-widget-header">
+                <h3>{language === 'en' ? 'Practice Stats' : 'অনুশীলন পরিসংখ্যান'}</h3>
+                <a href="/practice-history" className="practice-widget-link">
+                  {language === 'en' ? 'View all →' : 'সব দেখুন →'}
+                </a>
+              </div>
+              <div className="practice-widget-grid">
+                <div className="practice-widget-stat">
+                  <HiClipboardCheck size={20} />
+                  <div>
+                    <div className="practice-widget-value">{practiceStats.overall.totalAttempts}</div>
+                    <div className="practice-widget-label">{language === 'en' ? 'Attempts' : 'চেষ্টা'}</div>
+                  </div>
+                </div>
+                <div className="practice-widget-stat">
+                  <HiChartBar size={20} />
+                  <div>
+                    <div className="practice-widget-value">
+                      {(practiceStats.overall.accuracy * 100).toFixed(0)}%
+                    </div>
+                    <div className="practice-widget-label">{language === 'en' ? 'Accuracy' : 'নির্ভুলতা'}</div>
+                  </div>
+                </div>
+                <div className="practice-widget-stat">
+                  <HiClock size={20} />
+                  <div>
+                    <div className="practice-widget-value">
+                      {Math.round((practiceStats.overall.totalTimeSeconds || 0) / 60)}m
+                    </div>
+                    <div className="practice-widget-label">{language === 'en' ? 'Total Time' : 'মোট সময়'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {(user.role === 'teacher' || user.role === 'student') && (
             <div className="dashboard-upcoming-contests">

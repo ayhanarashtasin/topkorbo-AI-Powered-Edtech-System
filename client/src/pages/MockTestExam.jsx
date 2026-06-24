@@ -17,6 +17,8 @@ import {
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import Confetti from "react-confetti";
+import toast from "react-hot-toast";
+import { buildAttemptPayload, submitAttempt as savePracticeAttempt } from "../services/practiceApi";
 import "./MockTestExam.css";
 
 const BOARD_ABBRS = {
@@ -382,6 +384,52 @@ export default function MockTestExam() {
         console.error("AI Evaluation error", err);
       }
       setIsEvaluating(false);
+    }
+
+    // ── Persist this full attempt to the practice history (best-effort) ──────
+    try {
+      const durationMinutes =
+        (config && (config.duration || config.durationMinutes)) || 0;
+      const endTimeStr = sessionStorage.getItem("mock_exam_end_time");
+      const examStartedAt = endTimeStr
+        ? Number(endTimeStr) - durationMinutes * 60 * 1000
+        : Date.now();
+      const mode = "mock_test";
+      const title = (() => {
+        const subs = Array.isArray(config?.subjects) && config.subjects.length
+          ? config.subjects.join(", ")
+          : "";
+        const papers = Array.isArray(config?.papers) && config.papers.length
+          ? ` (${config.papers.join(", ")})`
+          : "";
+        return `Mock Test${subs ? " · " + subs : ""}${papers} · ${questions.length} Q`;
+      })();
+
+      const attemptPayload = buildAttemptPayload({
+        mode,
+        title,
+        contestId: config?.contestId || null,
+        config,
+        questions,
+        answers,
+        writtenAnswers,
+        writtenEvaluations: latestEvals,
+        startedAt: examStartedAt,
+        durationMinutes,
+        negativeMarking: !!config?.negativeMarking
+      });
+
+      await savePracticeAttempt(attemptPayload);
+    } catch (err) {
+      // Practice history is non-blocking — log and toast but don't fail submit
+      console.warn("[practice] failed to persist attempt:", err);
+      const reason =
+        err?.message ||
+        err?.payload?.message ||
+        (err?.status === 401 ? "Not signed in" : null) ||
+        (err?.status === 0 ? "Server unreachable" : null) ||
+        "Please retry from Practice History.";
+      toast.error("Could not save attempt to history. " + reason);
     }
 
     // Submit to contest backend if it is a contest
