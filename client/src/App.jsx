@@ -95,6 +95,8 @@ function AppContent() {
         <Route path="/reading-books" element={<ReadingBooks />} />
         <Route path="/reading-books/upload" element={<UploadBook />} />
         <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
+        <Route path="/mentor/live-class" element={<MentorLiveClass />} />
+        <Route path="/student/live-class" element={<StudentLiveClass />} />
 
         <Route path="/mentor/live-class" element={<MentorLiveClass />} />
         <Route path="/student/live-class" element={<StudentLiveClass />} />

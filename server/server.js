@@ -40,6 +40,8 @@ const highlightRoutes = require("./routes/highlightRoutes");
 const evaluationRoutes = require("./routes/evaluationRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const studyRoutineRoutes = require("./routes/studyRoutineRoutes");
+const mentorRoutes = require("./routes/mentorRoutes");
+const mockTestRoutes = require("./routes/mockTestRoutes");
 const liveClassRoutes = require("./routes/liveClassRoutes");
 
 // Community / Forum
@@ -131,6 +133,8 @@ app.use("/api/highlights", highlightRoutes);
 app.use("/api/evaluate", evaluationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/study-routine", studyRoutineRoutes);
+app.use("/api/mentor-connections", mentorRoutes);
+app.use("/api/mock-tests", mockTestRoutes);
 app.use("/api/live-class", liveClassRoutes);
 
 // === Forum / Community routes ===

@@ -27,6 +27,7 @@ export default function Navbar() {
       setIsLoggedIn(true);
       setUserName(name || '');
       setUserAvatar(avatar || '');
+      setUserRole(role || '');
     }
   }, []);
 
