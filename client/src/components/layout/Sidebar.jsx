@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
@@ -60,6 +60,13 @@ export default function Sidebar({ activeTab, user }) {
       label: t('db.menu.mock_test'),
       icon: <HiClipboardList size={20} />
     });
+    if (safeUser.role === 'student') {
+      menuItems.push({
+        id: 'study-routine',
+        label: language === 'en' ? 'Study Routine' : 'Study Routine',
+        icon: <HiCalendar size={20} />
+      });
+    }
     menuItems.push({
       id: 'practice-history',
       label: t('db.menu.practice_history') || 'Practice History',
@@ -69,6 +76,11 @@ export default function Sidebar({ activeTab, user }) {
       id: 'battle',
       label: t('db.menu.battle') || 'Battle',
       icon: <HiLightningBolt size={20} />
+    });
+    menuItems.push({
+      id: 'live-class',
+      label: 'Live Class',
+      icon: <HiVideoCamera size={20} />
     });
   }
 
@@ -175,8 +187,13 @@ export default function Sidebar({ activeTab, user }) {
 
                   else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
+                  else if (item.id === 'study-routine') navigate('/study-routine');
                   else if (item.id === 'practice-history') navigate('/practice-history');
                   else if (item.id === 'battle') navigate('/battle');
+                  else if (item.id === 'live-class') {
+                    if (safeUser.role === 'student') navigate('/student/live-class');
+                    else navigate('/mentor/live-class');
+                  }
                   else if (item.id === 'contests') navigate('/contests');
                   else if (item.id === 'reading-books') navigate('/reading-books');
                   else if (item.id === 'forum') navigate('/forum');

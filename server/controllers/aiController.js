@@ -334,6 +334,296 @@ function normaliseExtracted(obj) {
   return { questionText, options, correctOption, solution };
 }
 
+// ---------------------------------------------------------------------------
+// AI Study Routine Mentor
+// ---------------------------------------------------------------------------
+
+const MAX_ROUTINE_MESSAGES = 20;
+const MAX_ROUTINE_MESSAGE_CHARS = 3000;
+
+// Phase 1: Chat prompt — collects exam-specific information
+const STUDY_ROUTINE_CHAT_PROMPT =
+  'You are a friendly AI Study Mentor for HSC students in Bangladesh.\n\n' +
+  'Your ONLY job is to gather information about the student through a short conversation.\n' +
+  'You must NEVER generate a study routine or timetable yourself.\n\n' +
+  'RULES:\n' +
+  '- Ask 2-3 simple questions per message.\n' +
+  '- NEVER repeat a question the student already answered. Read the conversation history carefully.\n' +
+  '- Keep your tone friendly, short, and encouraging.\n' +
+  '- Once you have gathered ENOUGH information, set "readyToGenerate" to true.\n\n' +
+  'Information to gather:\n' +
+  '1. HSC year (1st or 2nd) and stream (Science/Business/Humanities)\n' +
+  '2. Exam name and approximate exam date\n' +
+  '3. Subjects they need to study, with paper names (e.g. Physics 1st Paper, Physics 2nd Paper)\n' +
+  '4. For each subject+paper: which chapters/topics they need to cover\n' +
+  '5. Which subjects are weak / need extra attention\n' +
+  '6. College hours and any coaching/private tutor hours\n' +
+  '7. Wake-up time and sleep time\n' +
+  '8. Target GPA\n' +
+  '9. Plan duration in days — must be ONE of: 30, 35, or 40 days\n' +
+  '10. How many days per week they will study (e.g. 6 days/week with one rest day, 7 days/week, etc.)\n' +
+  '11. (Optional) Preferred start date. If they do not specify, use today.\n\n' +
+  'You MUST have at minimum: year, stream, exam info, planDurationDays (30/35/40), studyDaysPerWeek (1-7), at least 2 subjects with chapters, wake/sleep time, and weak subjects.\n\n' +
+  'Return ONLY a JSON object:\n' +
+  '- While gathering: {"reply":"<message>","readyToGenerate":false}\n' +
+  '- When ready: {"reply":"<short closing message like: I have everything I need! Generating your 35-day routine now...>","readyToGenerate":true,"studentProfile":{"year":"1st","stream":"Science","collegeHours":"8AM-2PM","wakeUpTime":"7AM","sleepTime":"11PM","weakSubjects":["Biology"],"targetGpa":"5","dailyStudyHours":"5","planDurationDays":35,"studyDaysPerWeek":6,"startDate":"2026-06-26"},"examInfo":{"examName":"HSC 2026","examDate":"2026-08-25","subjects":[{"name":"Physics","paper":"1st Paper","chapters":["Motion","Force","Work & Energy"]},{"name":"Biology","paper":"1st Paper","chapters":["Cell Biology","Genetics"]}]}}\n\n' +
+  'For examDate, calculate the approximate date based on what the student says (e.g. "2 months" = today + 60 days). Use ISO format YYYY-MM-DD.\n' +
+  'planDurationDays MUST be exactly 30, 35, or 40. studyDaysPerWeek MUST be an integer between 1 and 7.\n' +
+  'The studentProfile and examInfo must contain ALL the info you gathered.';
+
+// Phase 2: Dedicated routine generation — receives profile + exam info, outputs structured routine
+const STUDY_ROUTINE_GENERATE_PROMPT =
+  'You are a study routine generator for HSC students in Bangladesh.\n\n' +
+  'You will receive a student profile and exam information as JSON. Generate a COMPLETE, REALISTIC, DATE-AWARE study routine that covers all their chapters before the exam date.\n\n' +
+  'RULES:\n' +
+  '- Output ONLY a JSON object.\n' +
+  '- Respect wake/sleep times and college hours.\n' +
+  '- Include breaks (lunch, rest) as segments with subject "Break".\n' +
+  '- Include college time as segments with subject "College".\n' +
+  '- Give EXTRA study time to weak subjects (mark those segments with "priority":"high").\n' +
+  '- Use studentProfile.startDate (ISO YYYY-MM-DD) as the FIRST day of the routine.\n' +
+  '- Generate EXACTLY planDurationDays day entries by walking forward one calendar day at a time from startDate.\n' +
+  '- If studyDaysPerWeek < 7, skip the appropriate number of rest days (e.g. 6 days/week = rest every Sunday). Still produce planDurationDays total day entries; rest days are included as "Rest" entries with no segments.\n' +
+  '- For EACH day, set "dayDate" to the ISO date (YYYY-MM-DD) of that calendar day and "day" to its weekday name.\n' +
+  '- For EACH segment, set "startAt" and "endAt" as full ISO datetimes (with Z timezone) for that segment within dayDate. They MUST be ordered: earliest first. Use the student\'s wakeUpTime as the earliest non-morning-routine time.\n' +
+  '- For EACH segment, set "estimatedMinutes" to the integer duration in minutes.\n' +
+  '- For EACH study segment, set "priority" to "high" if the subject is in weakSubjects, otherwise "medium". Set "low" for breaks and college.\n' +
+  '- Each study day should have 6-12 segments.\n' +
+  '- Each study segment MUST include "subject", "paper", "chapter", and "task".\n' +
+  '- Distribute ALL chapters across the generated days so every chapter gets covered.\n' +
+  '- For non-study segments (Break, College, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
+  '- The "task" field should be specific: "Solve exercises 3.1-3.5", "Read and take notes on section 2", "Practice MCQs from chapter 4", etc.\n\n' +
+  'JSON shape:\n' +
+  '{\n' +
+  '  "routine":[\n' +
+  '    {\n' +
+  '      "day":"Monday",\n' +
+  '      "dayDate":"2026-06-29",\n' +
+  '      "segments":[\n' +
+  '        {"time":"7:00 AM - 7:30 AM","startAt":"2026-06-29T01:00:00.000Z","endAt":"2026-06-29T01:30:00.000Z","subject":"Morning Routine","paper":"","chapter":"","task":"Wake up, freshen up","priority":"low","estimatedMinutes":30,"completed":false},\n' +
+  '        {"time":"7:30 AM - 9:00 AM","startAt":"2026-06-29T01:30:00.000Z","endAt":"2026-06-29T03:00:00.000Z","subject":"Physics","paper":"1st Paper","chapter":"Motion","task":"Read theory, solve exercise 1.1-1.5","priority":"high","estimatedMinutes":90,"completed":false},\n' +
+  '        {"time":"9:00 AM - 9:15 AM","startAt":"2026-06-29T03:00:00.000Z","endAt":"2026-06-29T03:15:00.000Z","subject":"Break","paper":"","chapter":"","task":"Short rest, snack","priority":"low","estimatedMinutes":15,"completed":false}\n' +
+  '      ]\n' +
+  '    }\n' +
+  '  ]\n' +
+  '}\n\n' +
+  'CRITICAL: startAt and endAt MUST be valid ISO datetimes within dayDate. estimatedMinutes must equal (endAt - startAt) in minutes. Output ONLY the JSON object. No prose, no markdown.';
+
+// Phase 3: AI modification prompt — receives current routine + user request, outputs modified routine
+const STUDY_ROUTINE_MODIFY_PROMPT =
+  'You are a study routine modifier for HSC students.\n\n' +
+  'You will receive:\n' +
+  '1. The student\'s current routine as JSON (with dayDate, startAt, endAt, priority, estimatedMinutes)\n' +
+  '2. The student\'s modification request\n\n' +
+  'Your job is to modify the routine according to the student\'s request and return the COMPLETE modified routine.\n\n' +
+  'RULES:\n' +
+  '- Return ONLY a JSON object with the full modified routine.\n' +
+  '- Keep ALL segments that were not affected by the modification.\n' +
+  '- Maintain the same JSON structure: {"routine":[{"day":"...","dayDate":"...","segments":[...]}]}\n' +
+  '- Each segment must have: time, startAt, endAt, priority, estimatedMinutes, subject, paper, chapter, task, completed (preserve existing completed status).\n' +
+  '- Be smart about modifications: if the user says "swap Biology and Physics on Monday", swap ALL Biology and Physics segments on Monday while keeping their original startAt/endAt times.\n' +
+  '- If the user says "add more Biology", find free slots or reduce less important segments. Adjust startAt/endAt accordingly.\n' +
+  '- Always maintain breaks and reasonable study hours.\n' +
+  '- NEVER change dayDate of an existing day. You may add new days but cannot shift existing dates.\n\n' +
+  'Output ONLY the JSON object. No explanation.';
+
+function normaliseRoutineMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .map((message) => {
+      const role = message?.role === 'assistant' ? 'assistant' : 'user';
+      const content = typeof message?.content === 'string'
+        ? message.content.replace(/\s+/g, ' ').trim().slice(0, MAX_ROUTINE_MESSAGE_CHARS)
+        : '';
+      return { role, content };
+    })
+    .filter((message) => message.content)
+    .slice(-MAX_ROUTINE_MESSAGES);
+}
+
+/**
+ * Wraps a Groq chat call with exponential backoff for transient 503/429/500
+ * "over capacity" / "rate limit" errors. Returns the final response (success
+ * or last error). Does NOT retry on 4xx client errors — those won't recover.
+ */
+async function groqWithRetry(groq, params, opts = {}) {
+  const maxAttempts = Math.max(1, Number(opts.maxAttempts) || 4);
+  const baseDelayMs = Math.max(100, Number(opts.baseDelayMs) || 800);
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await groq.chat.completions.create(params);
+    } catch (err) {
+      lastErr = err;
+      const status = err?.statusCode || err?.status || 0;
+      const transient = status === 503 || status === 429 || status === 500 || status === 502;
+      const isLast = attempt === maxAttempts;
+      if (!transient || isLast) throw err;
+      // Exponential backoff with full jitter, capped at 8s
+      const delay = Math.min(8000, baseDelayMs * 2 ** (attempt - 1));
+      const jitter = Math.floor(Math.random() * delay);
+      console.warn(
+        `[aiController] Groq transient ${status} (attempt ${attempt}/${maxAttempts}); retrying in ${jitter}ms`
+      );
+      await new Promise((resolve) => setTimeout(resolve, jitter));
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * POST /api/ai/study-routine
+ * Phase 1: Chat to collect exam-specific info.
+ * When readyToGenerate, automatically calls Phase 2 to generate the routine.
+ */
+exports.studyRoutine = async (req, res, next) => {
+  try {
+    const conversation = normaliseRoutineMessages(req.body?.messages);
+    if (conversation.length === 0 || conversation[conversation.length - 1].role !== 'user') {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one latest user message is required.'
+      });
+    }
+
+    const groq = getGroqClient();
+
+    // --- Phase 1: Chat ---
+    const chatCompletion = await groqWithRetry(groq, {
+      model: DEFAULT_MODEL,
+      response_format: { type: 'json_object' },
+      temperature: 0.4,
+      max_tokens: 1000,
+      messages: [
+        { role: 'system', content: STUDY_ROUTINE_CHAT_PROMPT },
+        ...conversation
+      ]
+    });
+
+    const chatParsed = safeParseJson(chatCompletion?.choices?.[0]?.message?.content);
+    if (!chatParsed || typeof chatParsed.reply !== 'string' || !chatParsed.reply.trim()) {
+      return res.status(502).json({
+        success: false,
+        message: 'AI mentor returned an unusable response. Please try again.'
+      });
+    }
+
+    const readyToGenerate = chatParsed.readyToGenerate === true || String(chatParsed.readyToGenerate).toLowerCase() === 'true';
+
+    if (!readyToGenerate) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          reply: chatParsed.reply.trim(),
+          routineReady: false,
+          routine: [],
+          examInfo: null,
+          studentProfile: null
+        }
+      });
+    }
+
+    // --- Phase 2: Generate ---
+    const studentProfile = chatParsed.studentProfile || {};
+    const examInfo = chatParsed.examInfo || {};
+    const profileAndExam = JSON.stringify({ studentProfile, examInfo }, null, 2);
+
+    let routine = [];
+    try {
+      const genCompletion = await groqWithRetry(groq, {
+        model: DEFAULT_MODEL,
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+        max_tokens: 4096,
+        messages: [
+          { role: 'system', content: STUDY_ROUTINE_GENERATE_PROMPT },
+          { role: 'user', content: `Student & Exam Info:\n${profileAndExam}\n\nGenerate the complete weekly study routine as JSON.` }
+        ]
+      });
+
+      const genParsed = safeParseJson(genCompletion?.choices?.[0]?.message?.content);
+      if (genParsed && Array.isArray(genParsed.routine)) {
+        routine = genParsed.routine;
+      }
+    } catch (genErr) {
+      console.error('[aiController] routine generation failed:', genErr?.message);
+    }
+
+    if (routine.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          reply: chatParsed.reply.trim() + '\n\n⚠️ I had trouble generating the schedule. Please send another message (e.g. "generate now") and I\'ll try again.',
+          routineReady: false,
+          routine: [],
+          examInfo: null,
+          studentProfile: null
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        reply: chatParsed.reply.trim(),
+        routineReady: true,
+        routine,
+        examInfo,
+        studentProfile
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/ai/study-routine/modify
+ * Phase 3: AI-driven routine modification.
+ * Body: { message: string, currentRoutine: array }
+ */
+exports.modifyStudyRoutine = async (req, res, next) => {
+  try {
+    const { message, currentRoutine } = req.body || {};
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'A modification message is required.' });
+    }
+    if (!currentRoutine || !Array.isArray(currentRoutine)) {
+      return res.status(400).json({ success: false, message: 'Current routine is required.' });
+    }
+
+    const groq = getGroqClient();
+    const routineJson = JSON.stringify(currentRoutine, null, 2);
+
+    const completion = await groqWithRetry(groq, {
+      model: DEFAULT_MODEL,
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 4096,
+      messages: [
+        { role: 'system', content: STUDY_ROUTINE_MODIFY_PROMPT },
+        { role: 'user', content: `Current Routine:\n${routineJson}\n\nModification Request: ${message.trim()}` }
+      ]
+    });
+
+    const parsed = safeParseJson(completion?.choices?.[0]?.message?.content);
+    if (!parsed || !Array.isArray(parsed.routine)) {
+      return res.status(502).json({
+        success: false,
+        message: 'AI could not modify the routine. Please try a different request.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { routine: parsed.routine }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * POST /api/ai/extract-question
  * Body: { text?: string, imageBase64?: string, mimeType?: string }

@@ -76,6 +76,21 @@ export function extractQuestion(payload) {
 }
 
 /**
+ * Continue the AI study routine mentor conversation. The server decides
+ * whether to ask more questions or generate the final routine.
+ *
+ * @param {{ messages: { role: 'user'|'assistant', content: string }[] }} payload
+ * @returns {Promise<{ reply: string, routineReady: boolean }>}
+ */
+export function generateStudyRoutine(payload) {
+  return request('/ai/study-routine', {
+    method: 'POST',
+    headers: buildHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
  * Ask the AI opponent to answer a single MCQ (used by the 1v1-vs-AI battle).
  * The answer key is intentionally NOT sent — the model genuinely answers and
  * correctness is judged client-side. The server falls back to a random valid
@@ -97,6 +112,7 @@ export const aiApi = {
   history: getHistory,
   clear: clearHistory,
   extract: extractQuestion,
+  studyRoutine: generateStudyRoutine,
   answerMcq
 };
 

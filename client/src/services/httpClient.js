@@ -51,6 +51,10 @@ function buildHeaders(extra) {
 
 async function request(path, init = {}) {
   const url = `${API_BASE}${path}`;
+  
+  // Inject headers, including Authorization token
+  init.headers = buildHeaders(init.headers);
+  
   let res;
   try {
     res = await fetch(url, init);

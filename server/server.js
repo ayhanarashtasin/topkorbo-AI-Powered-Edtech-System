@@ -39,6 +39,8 @@ const bookRoutes = require("./routes/bookRoutes");
 const highlightRoutes = require("./routes/highlightRoutes");
 const evaluationRoutes = require("./routes/evaluationRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const studyRoutineRoutes = require("./routes/studyRoutineRoutes");
+const liveClassRoutes = require("./routes/liveClassRoutes");
 
 // Community / Forum
 const postRoutes = require("./routes/postRoutes");
@@ -58,6 +60,22 @@ require("./config/passport");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Fail closed on missing or placeholder JWT secret. The auth middleware
+// (middleware/auth.js) and the socket.io handshake (socket/index.js) both
+// rely on JWT_SECRET for token verification. Silently falling back to a
+// hard-coded placeholder would let anyone forge tokens and take over
+// accounts — including mentor accounts that can mint LiveKit room tokens.
+const PLACEHOLDER_JWT_SECRETS = new Set(['24241122', 'changeme', 'secret', '']);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret || PLACEHOLDER_JWT_SECRETS.has(jwtSecret)) {
+  console.error(
+    '\nFATAL: JWT_SECRET is missing or set to a known placeholder.\n' +
+      'Set JWT_SECRET in server/.env to a strong random value, e.g.:\n' +
+      '  node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64\'))"\n',
+  );
+  process.exit(1);
+}
+
 // Connect to MongoDB
 connectDB();
 
@@ -72,7 +90,21 @@ app.use(
     ],
   }),
 );
-app.use(express.json({ limit: "16mb" }));
+// JSON body parser with a `verify` callback that stashes the raw bytes on
+// req.rawBody before parsing. Routes that need HMAC verification over the
+// exact wire bytes (e.g. LiveKit webhooks) read req.rawBody from here. This
+// is the canonical Express pattern — body-parser only reads the stream
+// once, and we get both the raw bytes AND the parsed object.
+app.use(
+  express.json({
+    limit: "16mb",
+    verify: (req, _res, buf) => {
+      if (buf && buf.length > 0) {
+        req.rawBody = buf.toString("utf8");
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ limit: "16mb", extended: true }));
 app.use(passport.initialize());
 
@@ -98,6 +130,8 @@ app.use("/api/books", bookRoutes);
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/evaluate", evaluationRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/study-routine", studyRoutineRoutes);
+app.use("/api/live-class", liveClassRoutes);
 
 // === Forum / Community routes ===
 app.use("/api/users", userRoutes);

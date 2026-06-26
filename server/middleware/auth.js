@@ -8,7 +8,7 @@ module.exports = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || '24241122');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded; // Contains id and role
     next();
   } catch (err) {

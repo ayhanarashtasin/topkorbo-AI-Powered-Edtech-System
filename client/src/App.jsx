@@ -16,6 +16,7 @@ import BoardQuestionsView from './pages/BoardQuestionsView';
 import VarsityWrittenView from './pages/VarsityWrittenView';
 import MockTest from './pages/MockTest';
 import MockTestExam from './pages/MockTestExam';
+import StudyRoutine from './pages/StudyRoutine';
 import Battle from './pages/Battle';
 import AIBattle from './pages/AIBattle';
 import MakeContestQuestion from './pages/MakeContestQuestion';
@@ -27,6 +28,8 @@ import ReadingBooks from './pages/ReadingBooks';
 import UploadBook from './pages/UploadBook';
 import ReadingBookView from './pages/ReadingBookView';
 import PracticeHistory from './pages/PracticeHistory';
+import MentorLiveClass from './pages/MentorLiveClass';
+import StudentLiveClass from './pages/StudentLiveClass';
 import './pages/PracticeHistory.css';
 
 // === Forum / Community ===
@@ -80,6 +83,7 @@ function AppContent() {
         <Route path="/upload-question" element={<UploadQuestion />} />
         <Route path="/mock-test" element={<MockTest />} />
         <Route path="/mock-test/exam" element={<MockTestExam />} />
+        <Route path="/study-routine" element={<StudyRoutine />} />
         <Route path="/practice-history" element={<PracticeHistory />} />
         <Route path="/battle" element={<Battle />} />
         <Route path="/battle-ai" element={<AIBattle />} />
@@ -91,6 +95,9 @@ function AppContent() {
         <Route path="/reading-books" element={<ReadingBooks />} />
         <Route path="/reading-books/upload" element={<UploadBook />} />
         <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
+
+        <Route path="/mentor/live-class" element={<MentorLiveClass />} />
+        <Route path="/student/live-class" element={<StudentLiveClass />} />
 
         {/* === Forum / Community === */}
         <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
