@@ -466,6 +466,7 @@ export default function MakeContestQuestionNextTwo() {
   };
 
   // ── UI / Confirmed State ──
+  const isEditing = sessionStorage.getItem('cc_isEditing') === 'true';
   const [confirmedQuestions, setConfirmedQuestions] = useState(() => {
     const saved = sessionStorage.getItem('cc_confirmedQuestions');
     return saved ? JSON.parse(saved) : [];
@@ -1052,15 +1053,23 @@ export default function MakeContestQuestionNextTwo() {
         <div className="cc-page__header">
           <div className="cc-page__badge">
             <span className="cc-page__badge-dot"></span>
-            Step 2: Add Questions
+            {isEditing 
+              ? (language === 'en' ? 'Edit Questions' : 'প্রশ্ন এডিট করুন')
+              : (language === 'en' ? 'Step 2: Add Questions' : 'ধাপ ২: প্রশ্ন যোগ করুন')}
           </div>
           <h1 className="cc-page__title">
-            {language === 'en' ? 'Create Questions' : 'প্রশ্ন তৈরি করুন'}
+            {isEditing
+              ? (language === 'en' ? 'Edit question' : 'প্রশ্ন এডিট করুন')
+              : (language === 'en' ? 'Create Questions' : 'প্রশ্ন তৈরি করুন')}
           </h1>
           <p className="cc-page__subtitle">
-            {language === 'en'
-              ? 'Add questions to your contest from the question bank or create new ones.'
-              : 'প্রশ্ন ব্যাংক থেকে অথবা নতুন প্রশ্ন তৈরি করে আপনার কনটেস্টে প্রশ্ন যোগ করুন।'}
+            {isEditing
+              ? (language === 'en' 
+                  ? 'From here a teacher can add new question or discard question.' 
+                  : 'এখান থেকে একজন শিক্ষক নতুন প্রশ্ন যোগ করতে পারেন বা প্রশ্ন বাদ দিতে পারেন।')
+              : (language === 'en'
+                  ? 'Add questions to your contest from the question bank or create new ones.'
+                  : 'প্রশ্ন ব্যাংক থেকে অথবা নতুন প্রশ্ন তৈরি করে আপনার কনটেস্টে প্রশ্ন যোগ করুন।')}
           </p>
         </div>
 
@@ -1131,16 +1140,80 @@ export default function MakeContestQuestionNextTwo() {
 
                     {/* Question Text */}
                     {(q.questionText || q.text) && (
-                      <p style={{
-                        margin: '0 0 1rem 0',
-                        fontSize: '0.95rem',
-                        color: 'var(--text-primary)',
-                        lineHeight: '1.6',
-                        fontWeight: '500',
-                        whiteSpace: 'pre-wrap'
+                      <div 
+                        style={{
+                          margin: '0 0 1rem 0',
+                          fontSize: '0.95rem',
+                          color: 'var(--text-primary)',
+                          lineHeight: '1.6',
+                          fontWeight: '500'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: renderLatex(q.questionText || q.text) }}
+                      />
+                    )}
+
+                    {/* MCQ Options */}
+                    {q.type === 'mcq' && q.options && q.options.length > 0 && (
+                      <div className="qsel-options" style={{ marginTop: '0.5rem', marginBottom: '1rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                        {q.options.map((opt, oIdx) => (
+                          <div key={oIdx} className={`qsel-option ${opt.isCorrect ? 'qsel-option--correct' : ''}`} style={{
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: '#fff',
+                            border: '1px solid rgba(75, 46, 43, 0.06)',
+                            fontSize: '0.85rem'
+                          }}>
+                            <span className="qsel-option__letter" style={{ marginRight: '6px', fontWeight: 'bold' }}>{String.fromCharCode(65 + oIdx)}.</span>
+                            <span dangerouslySetInnerHTML={{ __html: renderLatex(opt.text) }}></span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* CQ Parts */}
+                    {q.type === 'cq' && q.cq && q.cq.parts && (
+                      <div className="qsel-cq-parts" style={{ marginTop: '0.5rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {q.cq.parts.map((part, pIdx) => (
+                          <div key={pIdx} className="qsel-cq-part" style={{ fontSize: '0.88rem', lineHeight: '1.5' }}>
+                            <strong>({part.label || String.fromCharCode(97 + pIdx)})</strong>{' '}
+                            <span dangerouslySetInnerHTML={{ __html: renderLatex(part.text) }}></span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Solution Explanation */}
+                    {q.solution && (
+                      <div style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--text-secondary)',
+                        borderTop: '1px dashed rgba(192, 133, 82, 0.15)',
+                        paddingTop: '0.75rem',
+                        marginTop: '0.75rem',
+                        marginBottom: '0.5rem'
                       }}>
-                        {q.questionText || q.text}
-                      </p>
+                        <strong>{language === 'en' ? 'Explanation/Solution:' : 'ব্যাখ্যা/সমাধান:'}</strong>
+                        <div style={{ margin: '4px 0 0 0', lineHeight: '1.4' }} dangerouslySetInnerHTML={{ __html: renderLatex(q.solution) }}></div>
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    {q.tags && q.tags.length > 0 && (
+                      <div className="qsel-tags" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                        {q.tags.map((tag, tIdx) => {
+                          const abbr = getTagAbbreviation(tag);
+                          if (!abbr) return null;
+                          return (
+                            <span
+                              key={tIdx}
+                              className={`qsel-tag qsel-tag--${tag.category || 'admission'}`}
+                              title={getTagTitle(tag)}
+                            >
+                              {abbr}
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
 
                     {/* Question Images */}
@@ -1167,89 +1240,6 @@ export default function MakeContestQuestionNextTwo() {
                   </div>
                 ))}
               </div>
-            </section>
-          )}
-
-          {/* ═══════ Combined Add Question & Options Section (Always visible when not editing) ═══════ */}
-          {!activeOption && (
-            <section className="cc-section cq-add-section" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: showOptions ? '1.5rem' : '0',
-              padding: showOptions ? '1.5rem' : '1rem 0.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              {/* Trigger Header */}
-              <div 
-                className="cq-add-trigger" 
-                onClick={handleAddQuestion} 
-                style={{ cursor: 'pointer', padding: 0 }}
-              >
-                <div className="cq-add-trigger__icon">
-                  <HiPlusCircle size={32} />
-                </div>
-                <div className="cq-add-trigger__text">
-                  <h3>{language === 'en' ? 'Add Question' : 'প্রশ্ন যোগ করুন'}</h3>
-                  <p>{language === 'en'
-                    ? 'Click here to add a question to your contest'
-                    : 'আপনার কনটেস্টে প্রশ্ন যোগ করতে এখানে ক্লিক করুন'}</p>
-                </div>
-              </div>
-
-              {/* Collapsible Options Body */}
-              {showOptions && (
-                <div className="cq-options-combined-body" style={{
-                  borderTop: '1.5px solid rgba(192, 133, 82, 0.15)',
-                  paddingTop: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.25rem',
-                  animation: 'cqExpandIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)'
-                }}>
-                  <div className="cq-options-header" style={{ marginBottom: 0 }}>
-                    <h3 className="cc-section__title" style={{ margin: 0, fontSize: '1.1rem' }}>
-                      {language === 'en' ? 'How would you like to add a question?' : 'আপনি কিভাবে প্রশ্ন যোগ করতে চান?'}
-                    </h3>
-                    <p className="cc-section__desc" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
-                      {language === 'en'
-                        ? 'Choose from existing questions or create a new one.'
-                        : 'বিদ্যমান প্রশ্ন থেকে বেছে নিন অথবা একটি নতুন তৈরি করুন।'}
-                    </p>
-                  </div>
-
-                  <div className="cq-options-grid">
-                    {/* Option 1: Choose from Question Bank */}
-                    <button type="button" className="cq-option-card" onClick={handleChooseQBank}>
-                      <div className="cq-option-card__icon">
-                        <HiBookOpen size={28} />
-                      </div>
-                      <h4 className="cq-option-card__title">
-                        {language === 'en' ? 'Choose from Question Bank' : 'প্রশ্ন ব্যাংক থেকে বেছে নিন'}
-                      </h4>
-                      <p className="cq-option-card__desc">
-                        {language === 'en'
-                          ? 'Browse and select from your existing question library'
-                          : 'আপনার বিদ্যমান প্রশ্ন লাইব্রেরি ব্রাউজ করুন এবং নির্বাচন করুন'}
-                      </p>
-                    </button>
-
-                    {/* Option 2: Upload New Question */}
-                    <button type="button" className="cq-option-card" onClick={handleAddNew}>
-                      <div className="cq-option-card__icon cq-option-card__icon--new">
-                        <HiPencilAlt size={28} />
-                      </div>
-                      <h4 className="cq-option-card__title">
-                        {language === 'en' ? 'Upload New Question' : 'নতুন প্রশ্ন আপলোড করুন'}
-                      </h4>
-                      <p className="cq-option-card__desc">
-                        {language === 'en'
-                          ? 'Write a new question with options, solutions, and tags'
-                          : 'অপশন, সমাধান এবং ট্যাগ সহ একটি নতুন প্রশ্ন তৈরি করুন'}
-                      </p>
-                    </button>
-                  </div>
-                </div>
-              )}
             </section>
           )}
 
@@ -1379,6 +1369,89 @@ export default function MakeContestQuestionNextTwo() {
                   </div>
                 ))}
               </div>
+              )}
+            </section>
+          )}
+
+          {/* ═══════ Combined Add Question & Options Section (Always visible when not editing) ═══════ */}
+          {!activeOption && (
+            <section className="cc-section cq-add-section" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: showOptions ? '1.5rem' : '0',
+              padding: showOptions ? '1.5rem' : '1rem 0.5rem',
+              transition: 'all 0.3s ease'
+            }}>
+              {/* Trigger Header */}
+              <div 
+                className="cq-add-trigger" 
+                onClick={handleAddQuestion} 
+                style={{ cursor: 'pointer', padding: 0 }}
+              >
+                <div className="cq-add-trigger__icon">
+                  <HiPlusCircle size={32} />
+                </div>
+                <div className="cq-add-trigger__text">
+                  <h3>{language === 'en' ? 'Add Question' : 'প্রশ্ন যোগ করুন'}</h3>
+                  <p>{language === 'en'
+                    ? 'Click here to add a question to your contest'
+                    : 'আপনার কনটেস্টে প্রশ্ন যোগ করতে এখানে ক্লিক করুন'}</p>
+                </div>
+              </div>
+
+              {/* Collapsible Options Body */}
+              {showOptions && (
+                <div className="cq-options-combined-body" style={{
+                  borderTop: '1.5px solid rgba(192, 133, 82, 0.15)',
+                  paddingTop: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem',
+                  animation: 'cqExpandIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+                }}>
+                  <div className="cq-options-header" style={{ marginBottom: 0 }}>
+                    <h3 className="cc-section__title" style={{ margin: 0, fontSize: '1.1rem' }}>
+                      {language === 'en' ? 'How would you like to add a question?' : 'আপনি কিভাবে প্রশ্ন যোগ করতে চান?'}
+                    </h3>
+                    <p className="cc-section__desc" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
+                      {language === 'en'
+                        ? 'Choose from existing questions or create a new one.'
+                        : 'বিদ্যমান প্রশ্ন থেকে বেছে নিন অথবা একটি নতুন তৈরি করুন।'}
+                    </p>
+                  </div>
+
+                  <div className="cq-options-grid">
+                    {/* Option 1: Choose from Question Bank */}
+                    <button type="button" className="cq-option-card" onClick={handleChooseQBank}>
+                      <div className="cq-option-card__icon">
+                        <HiBookOpen size={28} />
+                      </div>
+                      <h4 className="cq-option-card__title">
+                        {language === 'en' ? 'Choose from Question Bank' : 'প্রশ্ন ব্যাংক থেকে বেছে নিন'}
+                      </h4>
+                      <p className="cq-option-card__desc">
+                        {language === 'en'
+                          ? 'Browse and select from your existing question library'
+                          : 'আপনার বিদ্যমান প্রশ্ন লাইব্রেরি ব্রাউজ করুন এবং নির্বাচন করুন'}
+                      </p>
+                    </button>
+
+                    {/* Option 2: Upload New Question */}
+                    <button type="button" className="cq-option-card" onClick={handleAddNew}>
+                      <div className="cq-option-card__icon cq-option-card__icon--new">
+                        <HiPencilAlt size={28} />
+                      </div>
+                      <h4 className="cq-option-card__title">
+                        {language === 'en' ? 'Upload New Question' : 'নতুন প্রশ্ন আপলোড করুন'}
+                      </h4>
+                      <p className="cq-option-card__desc">
+                        {language === 'en'
+                          ? 'Write a new question with options, solutions, and tags'
+                          : 'অপশন, সমাধান এবং ট্যাগ সহ একটি নতুন প্রশ্ন তৈরি করুন'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
               )}
             </section>
           )}

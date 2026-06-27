@@ -36,6 +36,8 @@ export default function MakeContestQuestionConfirm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isEditing = sessionStorage.getItem('cc_isEditing') === 'true';
+
   // ── Auth Guard ──
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
@@ -63,8 +65,13 @@ export default function MakeContestQuestionConfirm() {
         confirmedQuestions
       };
 
-      const response = await fetch(`${API_BASE}/contests/create`, {
-        method: 'POST',
+      const isEditing = sessionStorage.getItem('cc_isEditing') === 'true';
+      const editingId = sessionStorage.getItem('cc_editingContestId');
+      const url = isEditing ? `${API_BASE}/contests/${editingId}` : `${API_BASE}/contests/create`;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -74,7 +81,10 @@ export default function MakeContestQuestionConfirm() {
 
       const resData = await response.json();
       if (response.ok) {
-        toast.success(language === 'en' ? 'Contest created successfully!' : 'কনটেস্ট সফলভাবে তৈরি হয়েছে!');
+        toast.success(isEditing 
+          ? (language === 'en' ? 'Contest updated successfully!' : 'কনটেস্ট সফলভাবে আপডেট হয়েছে!') 
+          : (language === 'en' ? 'Contest created successfully!' : 'কনটেস্ট সফলভাবে তৈরি হয়েছে!')
+        );
         
         // Clear all contest setup session storage items
         sessionStorage.removeItem('cc_contestName');
@@ -100,13 +110,15 @@ export default function MakeContestQuestionConfirm() {
         sessionStorage.removeItem('cc_qbank_selectedTopics');
         sessionStorage.removeItem('cc_qbank_selectedQuestionIds');
         sessionStorage.removeItem('cc_qbankQuestions');
+        sessionStorage.removeItem('cc_isEditing');
+        sessionStorage.removeItem('cc_editingContestId');
 
-        navigate('/dashboard');
+        navigate('/make-contest-question');
       } else {
-        toast.error(resData.message || (language === 'en' ? 'Failed to create contest' : 'কনটেস্ট তৈরি করতে ব্যর্থ হয়েছে'));
+        toast.error(resData.message || (language === 'en' ? 'Failed to submit contest' : 'কনটেস্ট জমা দিতে ব্যর্থ হয়েছে'));
       }
     } catch (err) {
-      console.error('Error creating contest:', err);
+      console.error('Error submitting contest:', err);
       toast.error(language === 'en' ? 'Network error. Please try again.' : 'নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
@@ -122,15 +134,23 @@ export default function MakeContestQuestionConfirm() {
         <div className="cc-page__header">
           <div className="cc-page__badge">
             <span className="cc-page__badge-dot"></span>
-            {language === 'en' ? 'Step 3: Final Review' : 'ধাপ ৩: চূড়ান্ত পর্যালোচনা'}
+            {isEditing
+              ? (language === 'en' ? 'Step 3: Save Changes' : 'ধাপ ৩: পরিবর্তন সংরক্ষণ করুন')
+              : (language === 'en' ? 'Step 3: Final Review' : 'ধাপ ৩: চূড়ান্ত পর্যালোচনা')}
           </div>
           <h1 className="cc-page__title">
-            {language === 'en' ? 'Confirm Contest & Questions' : 'কনটেস্ট এবং প্রশ্নাবলী নিশ্চিত করুন'}
+            {isEditing
+              ? (language === 'en' ? 'Save Contest Changes' : 'কনটেস্টের পরিবর্তন সংরক্ষণ করুন')
+              : (language === 'en' ? 'Confirm Contest & Questions' : 'কনটেস্ট এবং প্রশ্নাবলী নিশ্চিত করুন')}
           </h1>
           <p className="cc-page__subtitle">
-            {language === 'en'
-              ? 'Review all the details of the contest and the selected question set before publishing.'
-              : 'প্রকাশ করার আগে কনটেস্টের সমস্ত বিবরণ এবং নির্বাচিত প্রশ্ন সেট পর্যালোচনা করে নিন।'}
+            {isEditing
+              ? (language === 'en'
+                  ? 'Review all updated details of the contest and question set before saving.'
+                  : 'সংরক্ষণ করার আগে কনটেস্ট এবং প্রশ্ন সেটের সমস্ত আপডেট করা বিবরণ পর্যালোচনা করে নিন।')
+              : (language === 'en'
+                  ? 'Review all the details of the contest and the selected question set before publishing.'
+                  : 'প্রকাশ করার আগে কনটেস্টের সমস্ত বিবরণ এবং নির্বাচিত প্রশ্ন সেট পর্যালোচনা করে নিন।')}
           </p>
         </div>
 
@@ -362,8 +382,11 @@ export default function MakeContestQuestionConfirm() {
             >
               <HiCheckCircle size={20} />
               {isSubmitting
-                ? (language === 'en' ? 'Submitting...' : 'জমা দেওয়া হচ্ছে...')
-                : (language === 'en' ? 'Submit contest details and Questions' : 'কনটেস্টের বিবরণ এবং প্রশ্নাবলী জমা দিন')}
+                ? (language === 'en' ? 'Saving...' : 'সংরক্ষণ করা হচ্ছে...')
+                : (isEditing 
+                  ? (language === 'en' ? 'Save & Update Contest' : 'সংরক্ষণ এবং কনটেস্ট আপডেট করুন')
+                  : (language === 'en' ? 'Submit contest details and Questions' : 'কনটেস্টের বিবরণ এবং প্রশ্নাবলী জমা দিন')
+                )}
             </button>
           </div>
         </div>

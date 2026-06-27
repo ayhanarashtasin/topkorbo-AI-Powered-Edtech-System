@@ -112,7 +112,7 @@ export default function Sidebar({ activeTab, user }) {
 
     menuItems.push({
       id: 'make-contest-question',
-      label: t('db.menu.make_contest'),
+      label: language === 'en' ? 'Contests' : 'কনটেস্টসমূহ',
       icon: <HiCalendar size={20} />
     });
   }

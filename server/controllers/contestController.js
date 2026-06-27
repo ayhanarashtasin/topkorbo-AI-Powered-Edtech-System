@@ -362,6 +362,125 @@ exports.deleteContest = async (req, res, next) => {
 };
 
 /**
+ * @desc    Update a contest created by the current teacher
+ * @route   PUT /api/contests/:id
+ * @access  Private (teacher)
+ */
+exports.updateContest = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== 'teacher') {
+      return ApiResponse.error(res, 'Only teachers can update contests', 403);
+    }
+
+    const contest = await Contest.findOne({ _id: req.params.id, creator: user._id });
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found or not owned by you', 404);
+    }
+
+    const {
+      name,
+      date,
+      duration,
+      startTime,
+      level,
+      subjects,
+      admissionType,
+      admissionSubtype,
+      questionType,
+      qbankSelections,
+      confirmedQuestions
+    } = req.body;
+
+    const embeddedQuestions = [];
+    const addedQBankIds = new Set();
+
+    // 1) Add teacher-uploaded questions
+    if (confirmedQuestions && Array.isArray(confirmedQuestions)) {
+      for (const q of confirmedQuestions) {
+        const source = q.source || 'uploaded';
+        const originalQuestionId = q.originalQuestionId || (source === 'qbank' ? (q._id || q.id) : null);
+        
+        if (source === 'qbank' && originalQuestionId) {
+          addedQBankIds.add(originalQuestionId.toString());
+        }
+
+        embeddedQuestions.push({
+          source,
+          originalQuestionId,
+          teacher: user._id,
+          questionText: q.questionText || q.text || '',
+          imageUrl: q.imageUrl || (q.images?.[0] || ''),
+          type: q.type || 'mcq',
+          options: q.options || [],
+          cq: q.cq,
+          subject: q.subject || 'Physics',
+          paper: q.paper || '1st',
+          chapter: q.chapter || 'General',
+          topic: q.topic || 'General',
+          solution: q.solution || '',
+          solutionImageUrl: q.solutionImageUrl || '',
+          tags: q.tags || []
+        });
+      }
+    }
+
+    // 2) Add questions picked from the question bank (if not already embedded)
+    if (qbankSelections && Array.isArray(qbankSelections)) {
+      for (const selection of qbankSelections) {
+        const picked = Array.isArray(selection.questionIds) ? selection.questionIds : [];
+        for (const qid of picked) {
+          if (addedQBankIds.has(qid.toString())) {
+            continue; // Skip, already added
+          }
+          embeddedQuestions.push({
+            source: 'qbank',
+            originalQuestionId: qid,
+            selectionMeta: {
+              subject: selection.subject,
+              paper: selection.paper,
+              chapter: selection.chapter,
+              topic: selection.topic,
+              numberOfQuestions: selection.numberOfQuestions
+            },
+            teacher: user._id,
+            questionText: `(qbank ref: ${qid})`,
+            type: 'mcq',
+            subject: selection.subject || 'Physics',
+            paper: selection.paper || '1st',
+            chapter: selection.chapter || 'General',
+            topic: selection.topic || 'General',
+            options: [],
+            tags: []
+          });
+        }
+      }
+    }
+
+    if (name) contest.name = name.trim();
+    if (date) contest.date = date;
+    if (duration) contest.duration = duration;
+    if (startTime) contest.startTime = startTime;
+    if (level) {
+      contest.level = level;
+      contest.subjects = level === 'hsc' ? (subjects || []) : [];
+      contest.admissionType = level === 'admission' ? (admissionType || '') : '';
+      contest.admissionSubtype = (level === 'admission' && admissionType === 'varsity') ? (admissionSubtype || '') : '';
+    }
+    if (questionType) contest.questionType = questionType;
+    if (qbankSelections !== undefined) contest.qbankSelections = qbankSelections;
+    contest.questions = embeddedQuestions;
+
+    await contest.save();
+
+    return ApiResponse.success(res, contest, 'Contest updated successfully');
+  } catch (err) {
+    console.error('Update contest controller error:', err);
+    return next(err);
+  }
+};
+
+/**
  * @desc    Get a single contest by ID (fully populated questions)
  * @route   GET /api/contests/:id
  * @access  Private

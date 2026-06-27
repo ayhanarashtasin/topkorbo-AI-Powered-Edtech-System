@@ -23,6 +23,10 @@ router.delete('/:id', auth, contestController.deleteContest);
 // @route   GET /api/contests/:id
 router.get('/:id', auth, contestController.getContestById);
 
+// @desc    Update a contest owned by current teacher
+// @route   PUT /api/contests/:id
+router.put('/:id', auth, contestController.updateContest);
+
 // @desc    Register a student for a contest
 // @route   POST /api/contests/:id/register
 router.post('/:id/register', auth, contestController.registerForContest);
