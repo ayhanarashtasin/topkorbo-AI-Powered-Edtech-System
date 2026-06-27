@@ -287,13 +287,21 @@ exports.getUpcomingContests = async (req, res, next) => {
       return { startDate, endDate };
     };
 
+    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
     const mappedContests = contests.map(contest => {
       const { startDate, endDate } = getContestDates(contest);
+      const registeredIds = (contest.registeredStudents || []).map(id => id.toString());
+      const hasRegistered = registeredIds.includes(studentId.toString());
+      const registrationDeadline = new Date(startDate.getTime() - TWELVE_HOURS_MS);
+      const registrationOpen = now < registrationDeadline;
       return {
         ...contest,
         startDate,
         endDate,
-        hasParticipated: participatedContestIds.has(contest._id.toString())
+        hasParticipated: participatedContestIds.has(contest._id.toString()),
+        hasRegistered,
+        registrationOpen
       };
     });
 
@@ -417,6 +425,12 @@ exports.submitContestResult = async (req, res, next) => {
       return ApiResponse.error(res, 'Contest not found', 404);
     }
 
+    // Only registered students can submit results
+    const registeredIds = (contest.registeredStudents || []).map(id => id.toString());
+    if (!registeredIds.includes(studentId.toString())) {
+      return ApiResponse.error(res, 'You must register for this contest before participating', 403);
+    }
+
     const result = await ContestResult.findOneAndUpdate(
       { contest: contestId, student: studentId },
       {
@@ -497,3 +511,66 @@ exports.getContestResult = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Register a student for a contest
+ * @route   POST /api/contests/:id/register
+ * @access  Private (student)
+ */
+exports.registerForContest = async (req, res, next) => {
+  try {
+    const contestId = req.params.id;
+    const studentId = req.user.id;
+
+    const contest = await Contest.findById(contestId);
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
+
+    // Check if already registered
+    const registeredIds = (contest.registeredStudents || []).map(id => id.toString());
+    if (registeredIds.includes(studentId.toString())) {
+      return ApiResponse.error(res, 'You are already registered for this contest', 400);
+    }
+
+    // Calculate contest start time
+    const offsets = {
+      'Asia/Dhaka': '+06:00',
+      'Asia/Kolkata': '+05:30',
+      'Asia/Dubai': '+04:00',
+      'Europe/London': '+00:00',
+      'America/New_York': '-05:00',
+      'Asia/Tokyo': '+09:00',
+      'Asia/Singapore': '+08:00',
+      'Australia/Sydney': '+10:00'
+    };
+
+    const tz = contest.startTime?.timezone || 'Asia/Dhaka';
+    const offset = offsets[tz] || '+06:00';
+    let hour = contest.startTime?.hour || 12;
+    const minute = contest.startTime?.minute || 0;
+    const period = contest.startTime?.period || 'AM';
+    if (period === 'PM' && hour < 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    const pad = (num) => String(num).padStart(2, '0');
+    const startDate = new Date(`${contest.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
+
+    // Registration closes 12 hours before contest start
+    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+    const registrationDeadline = new Date(startDate.getTime() - TWELVE_HOURS_MS);
+    const now = new Date();
+
+    if (now >= registrationDeadline) {
+      return ApiResponse.error(res, 'Registration has closed for this contest (closes 12 hours before start)', 400);
+    }
+
+    // Add student to registeredStudents
+    await Contest.findByIdAndUpdate(contestId, {
+      $addToSet: { registeredStudents: studentId }
+    });
+
+    return ApiResponse.success(res, { contestId, registered: true }, 'Successfully registered for the contest', 200);
+  } catch (err) {
+    console.error('Register for contest error:', err);
+    return next(err);
+  }
+};

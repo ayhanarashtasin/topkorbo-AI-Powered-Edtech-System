@@ -23,6 +23,10 @@ router.delete('/:id', auth, contestController.deleteContest);
 // @route   GET /api/contests/:id
 router.get('/:id', auth, contestController.getContestById);
 
+// @desc    Register a student for a contest
+// @route   POST /api/contests/:id/register
+router.post('/:id/register', auth, contestController.registerForContest);
+
 // @desc    Submit a student's contest result
 // @route   POST /api/contests/:id/submit
 router.post('/:id/submit', auth, contestController.submitContestResult);
