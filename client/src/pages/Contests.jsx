@@ -92,15 +92,61 @@ function ContestFilterBar({ searchQuery, setSearchQuery, levelFilter, setLevelFi
 export default function Contests() {
   const { language } = useLanguage();
   const navigate = useNavigate();
+
+  const getAdmissionTypeLabel = (type) => {
+    if (type === 'varsity') return language === 'en' ? 'University' : 'বিশ্ববিদ্যালয়';
+    if (type === 'medical') return language === 'en' ? 'Medical' : 'মেডিকেল';
+    if (type === 'engineering') return language === 'en' ? 'Engineering' : 'ইঞ্জিনিয়ারিং';
+    return type;
+  };
+
+  const getAdmissionSubtypeLabel = (subtype) => {
+    if (!subtype) return '';
+    if (subtype === 'science') return language === 'en' ? 'Science' : 'বিজ্ঞান';
+    if (subtype === 'commerce') return language === 'en' ? 'Commerce' : 'ব্যবসায় শিক্ষা';
+    if (subtype === 'arts') return language === 'en' ? 'Humanities' : 'মানবিক';
+    if (subtype === 'iba') return 'IBA';
+    return subtype;
+  };
+
+  const getSubjectLabel = (sub) => {
+    const subjectMap = {
+      'Physics': { en: 'Physics', bn: 'পদার্থবিজ্ঞান' },
+      'Chemistry': { en: 'Chemistry', bn: 'রসায়ন' },
+      'Higher Math': { en: 'Higher Math', bn: 'উচ্চতর গণিত' },
+      'Biology': { en: 'Biology', bn: 'জীববিজ্ঞান' },
+      'ICT': { en: 'ICT', bn: 'তথ্য ও যোগাযোগ প্রযুক্তি' },
+      'English': { en: 'English', bn: 'ইংরেজি' },
+      'Bangla': { en: 'Bangla', bn: 'বাংলা' }
+    };
+    const mapped = subjectMap[sub];
+    if (mapped) {
+      return language === 'en' ? mapped.en : mapped.bn;
+    }
+    return sub;
+  };
+
   const [user, setUser] = useState({
     name: localStorage.getItem('topkorbo_name') || '',
     avatar: localStorage.getItem('topkorbo_avatar') || '',
     email: localStorage.getItem('topkorbo_email') || '',
-    role: localStorage.getItem('topkorbo_role') || 'student'
+    role: localStorage.getItem('topkorbo_role') || 'student',
+    collegeName: localStorage.getItem('topkorbo_collegeName') || '',
+    hscBatch: localStorage.getItem('topkorbo_hscBatch') || '',
+    phoneNumber: localStorage.getItem('topkorbo_phoneNumber') || '',
   });
 
   const [contests, setContests] = useState([]);
   const [now, setNow] = useState(new Date());
+
+  // Registration modal state variables
+  const [showRegModal, setShowRegModal] = useState(false);
+  const [regContestId, setRegContestId] = useState('');
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regCollege, setRegCollege] = useState('');
+  const [regHscBatch, setRegHscBatch] = useState('');
 
   // Independent filters for each table
   const [upcomingSearch, setUpcomingSearch] = useState('');
@@ -149,12 +195,23 @@ export default function Contests() {
 
         const resData = await response.json();
         if (resData.success && resData.data) {
+          const u = resData.data;
           setUser({
-            name: resData.data.name,
-            avatar: resData.data.avatar || '',
-            email: resData.data.email,
-            role: resData.data.role
+            name: u.name,
+            avatar: u.avatar || '',
+            email: u.email,
+            role: u.role,
+            collegeName: u.collegeName || '',
+            hscBatch: u.hscBatch || '',
+            phoneNumber: u.phoneNumber || ''
           });
+          localStorage.setItem('topkorbo_name', u.name);
+          localStorage.setItem('topkorbo_avatar', u.avatar || '');
+          localStorage.setItem('topkorbo_email', u.email);
+          localStorage.setItem('topkorbo_role', u.role);
+          localStorage.setItem('topkorbo_collegeName', u.collegeName || '');
+          localStorage.setItem('topkorbo_hscBatch', u.hscBatch || '');
+          localStorage.setItem('topkorbo_phoneNumber', u.phoneNumber || '');
         }
       } catch (err) {
         console.error('Error fetching user data on contests page:', err);
@@ -274,25 +331,57 @@ export default function Contests() {
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleRegister = async (contestId) => {
-    setRegisteringContestId(contestId);
+  const openRegistrationModal = (contestId) => {
+    setRegContestId(contestId);
+    setRegName(user.name || '');
+    setRegEmail(user.email || '');
+    setRegPhone(user.phoneNumber || '');
+    setRegCollege(user.collegeName || '');
+    setRegHscBatch(user.hscBatch || '');
+    setShowRegModal(true);
+  };
+
+  const handleConfirmRegistration = async (e) => {
+    e.preventDefault();
+    if (!regName.trim() || !regPhone.trim() || !regCollege.trim() || !regHscBatch.trim()) {
+      toast.error(language === 'en' ? 'All fields are required' : 'সবগুলো ক্ষেত্র পূরণ করা আবশ্যক');
+      return;
+    }
+    setRegisteringContestId(regContestId);
     try {
       const token = localStorage.getItem('topkorbo_token');
       const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const response = await fetch(`${backendBaseUrl}/contests/${contestId}/register`, {
+      const response = await fetch(`${backendBaseUrl}/contests/${regContestId}/register`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          name: regName.trim(),
+          phoneNumber: regPhone.trim(),
+          collegeName: regCollege.trim(),
+          hscBatch: regHscBatch.trim()
+        })
       });
       const resData = await response.json();
       if (resData.success) {
         toast.success(language === 'en' ? 'Successfully registered!' : 'সফলভাবে নিবন্ধিত হয়েছে!');
-        // Update local state
         setContests(prev => prev.map(c =>
-          c._id === contestId ? { ...c, hasRegistered: true } : c
+          c._id === regContestId ? { ...c, hasRegistered: true } : c
         ));
+        setUser(prev => ({
+          ...prev,
+          name: regName.trim(),
+          phoneNumber: regPhone.trim(),
+          collegeName: regCollege.trim(),
+          hscBatch: regHscBatch.trim()
+        }));
+        localStorage.setItem('topkorbo_name', regName.trim());
+        localStorage.setItem('topkorbo_collegeName', regCollege.trim());
+        localStorage.setItem('topkorbo_hscBatch', regHscBatch.trim());
+        localStorage.setItem('topkorbo_phoneNumber', regPhone.trim());
+        setShowRegModal(false);
       } else {
         toast.error(resData.message || (language === 'en' ? 'Failed to register' : 'নিবন্ধন ব্যর্থ'));
       }
@@ -501,7 +590,7 @@ export default function Contests() {
         return (
           <button
             className="contest-table-cta contest-table-cta--register"
-            onClick={() => handleRegister(contest._id)}
+            onClick={() => openRegistrationModal(contest._id)}
             disabled={registeringContestId === contest._id}
           >
             {registeringContestId === contest._id ? (
@@ -592,15 +681,23 @@ export default function Contests() {
 
                   {/* Subjects / Units */}
                   <td>
-                    <div className="contest-badges-cell">
-                      {contest.level === 'hsc' && contest.subjects?.map((sub) => (
-                        <span key={sub} className="badge badge--subject">{sub}</span>
-                      ))}
+                    <div className="contest-level-format-cell">
+                      {contest.level === 'hsc' && (
+                        <>
+                          <span className="capitalize-level">
+                            {contest.subjects?.map(getSubjectLabel).join(', ')}
+                          </span>
+                        </>
+                      )}
                       {contest.level === 'admission' && (
                         <>
-                          <span className="badge badge--adm-type capitalize">{contest.admissionType}</span>
+                          <span className="capitalize-level">
+                            {getAdmissionTypeLabel(contest.admissionType)}
+                          </span>
                           {contest.admissionSubtype && (
-                            <span className="badge badge--adm-sub capitalize">{contest.admissionSubtype}</span>
+                            <span className="format-subtext">
+                              {getAdmissionSubtypeLabel(contest.admissionSubtype)}
+                            </span>
                           )}
                         </>
                       )}
@@ -817,6 +914,100 @@ export default function Contests() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Form Modal */}
+      {showRegModal && (
+        <div className="contest-modal-overlay" onClick={() => setShowRegModal(false)}>
+          <div className="contest-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="contest-modal-close" onClick={() => setShowRegModal(false)}>
+              &times;
+            </button>
+            <div className="contest-modal-header">
+              <span className="contest-modal-header-icon">📝</span>
+              <h2>{language === 'en' ? 'Contest Registration' : 'কনটেস্ট নিবন্ধন'}</h2>
+            </div>
+
+            <form onSubmit={handleConfirmRegistration} className="registration-form">
+              <div className="form-group">
+                <label>{language === 'en' ? 'Full Name' : 'পূর্ণ নাম'}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  placeholder={language === 'en' ? 'Enter your full name' : 'আপনার পূর্ণ নাম লিখুন'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'Email Address' : 'ইমেইল ঠিকানা'}</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={regEmail}
+                  disabled
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'Phone Number' : 'ফোন নম্বর'}</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder={language === 'en' ? 'Enter phone number' : 'ফোন নম্বর লিখুন'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'College Name / Institution' : 'কলেজের নাম / শিক্ষা প্রতিষ্ঠান'}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regCollege}
+                  onChange={(e) => setRegCollege(e.target.value)}
+                  placeholder={language === 'en' ? 'Enter college name' : 'কলেজের নাম লিখুন'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'HSC Batch' : 'HSC ব্যাচ'}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regHscBatch}
+                  onChange={(e) => setRegHscBatch(e.target.value)}
+                  placeholder={language === 'en' ? 'e.g. HSC 2025' : 'যেমন: HSC 2025'}
+                  required
+                />
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setShowRegModal(false)}
+                >
+                  {language === 'en' ? 'Cancel' : 'বাতিল'}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-confirm"
+                  disabled={registeringContestId !== ''}
+                >
+                  {registeringContestId !== '' 
+                    ? (language === 'en' ? 'Registering...' : 'নিবন্ধন হচ্ছে...') 
+                    : (language === 'en' ? 'Confirm Registration' : 'নিবন্ধন নিশ্চিত করুন')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

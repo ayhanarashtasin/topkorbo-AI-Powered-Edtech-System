@@ -176,6 +176,17 @@ const contestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  registeredStudentsDetails: [
+    {
+      studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      name: String,
+      email: String,
+      phoneNumber: String,
+      collegeName: String,
+      hscBatch: String,
+      registeredAt: { type: Date, default: Date.now }
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now

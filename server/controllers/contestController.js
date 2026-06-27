@@ -640,9 +640,19 @@ exports.registerForContest = async (req, res, next) => {
     const contestId = req.params.id;
     const studentId = req.user.id;
 
+    const { name, phoneNumber, collegeName, hscBatch } = req.body;
+    if (!name || !phoneNumber || !collegeName || !hscBatch) {
+      return ApiResponse.error(res, 'Name, phone number, college name, and HSC batch are required for registration', 400);
+    }
+
     const contest = await Contest.findById(contestId);
     if (!contest) {
       return ApiResponse.error(res, 'Contest not found', 404);
+    }
+
+    const student = await User.findById(studentId);
+    if (!student) {
+      return ApiResponse.error(res, 'Student not found', 404);
     }
 
     // Check if already registered
@@ -682,9 +692,27 @@ exports.registerForContest = async (req, res, next) => {
       return ApiResponse.error(res, 'Registration has closed for this contest (closes 12 hours before start)', 400);
     }
 
-    // Add student to registeredStudents
+    // Update student's user profile database
+    student.name = name;
+    student.phoneNumber = phoneNumber;
+    student.collegeName = collegeName;
+    student.hscBatch = hscBatch;
+    await student.save();
+
+    // Add student registration details to contest database
     await Contest.findByIdAndUpdate(contestId, {
-      $addToSet: { registeredStudents: studentId }
+      $addToSet: { registeredStudents: studentId },
+      $push: {
+        registeredStudentsDetails: {
+          studentId: student._id,
+          name: name,
+          email: student.email,
+          phoneNumber: phoneNumber,
+          collegeName: collegeName,
+          hscBatch: hscBatch,
+          registeredAt: new Date()
+        }
+      }
     });
 
     return ApiResponse.success(res, { contestId, registered: true }, 'Successfully registered for the contest', 200);

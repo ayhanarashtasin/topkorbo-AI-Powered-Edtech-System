@@ -26,7 +26,24 @@ import {
 } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import './MakeContestQuestion.css';
+
+function renderLatex(text) {
+  if (!text || !text.trim()) return '';
+  try {
+    const rendered = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+      return katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
+    }).replace(/\$(.*?)\$/g, (_, math) => {
+      return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
+    });
+    return rendered;
+  } catch {
+    return text;
+  }
+}
+
 
 // ─── HSC Subject Data ────────────────────────────────────────────────────────
 const HSC_SUBJECTS = [
@@ -1092,7 +1109,7 @@ export default function MakeContestQuestion() {
                         </div>
                       </div>
 
-                      <div className="mc-q-text">{q.questionText}</div>
+                      <div className="mc-q-text" dangerouslySetInnerHTML={{ __html: renderLatex(q.questionText) }} />
 
                       {q.imageUrl && (
                         <img src={q.imageUrl} alt="question illustration" className="mc-q-image" />
@@ -1106,7 +1123,7 @@ export default function MakeContestQuestion() {
                               key={oIdx}
                               className={`mc-q-opt ${opt.isCorrect ? 'mc-q-opt--correct' : ''}`}
                             >
-                              <strong>{['A', 'B', 'C', 'D'][oIdx] || oIdx + 1}.</strong> {opt.text}
+                              <strong>{['A', 'B', 'C', 'D'][oIdx] || oIdx + 1}.</strong> <span dangerouslySetInnerHTML={{ __html: renderLatex(opt.text) }} />
                             </div>
                           ))}
                         </div>
@@ -1117,7 +1134,7 @@ export default function MakeContestQuestion() {
                         <div className="mc-q-cq-parts">
                           {q.cq.parts.map((p, pIdx) => (
                             <div key={pIdx} className="mc-q-cq-part">
-                              <strong>({p.label})</strong> {p.text}
+                              <strong>({p.label})</strong> <span dangerouslySetInnerHTML={{ __html: renderLatex(p.text) }} />
                             </div>
                           ))}
                         </div>
@@ -1126,7 +1143,7 @@ export default function MakeContestQuestion() {
                       {q.solution && (
                         <div className="mc-q-solution">
                           <strong>{language === 'en' ? 'Explanation/Solution:' : 'ব্যাখ্যা/সমাধান:'}</strong>
-                          <p style={{ margin: '4px 0 0 0', lineHeight: '1.4' }}>{q.solution}</p>
+                          <p style={{ margin: '4px 0 0 0', lineHeight: '1.4' }} dangerouslySetInnerHTML={{ __html: renderLatex(q.solution) }} />
                         </div>
                       )}
                     </div>
