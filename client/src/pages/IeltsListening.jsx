@@ -1,0 +1,251 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../hooks/useLanguage';
+import {
+  HiVolumeUp,
+  HiArrowLeft,
+  HiArrowRight,
+  HiClipboardList,
+  HiClock,
+  HiPlay,
+} from 'react-icons/hi';
+import Sidebar from '../components/layout/Sidebar';
+import { motion } from 'framer-motion';
+import './IeltsListening.css';
+
+export default function IeltsListening() {
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState({
+    name: localStorage.getItem('topkorbo_name') || 'Student',
+    avatar: localStorage.getItem('topkorbo_avatar') || '',
+    email: localStorage.getItem('topkorbo_email') || '',
+    role: localStorage.getItem('topkorbo_role') || 'student',
+  });
+
+  // Auth Guard
+  useEffect(() => {
+    const token = localStorage.getItem('topkorbo_token');
+    if (!token) {
+      navigate('/');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${backendBaseUrl}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('topkorbo_token');
+          navigate('/');
+          return;
+        }
+
+        const resData = await response.json();
+        if (resData.success && resData.data) {
+          const u = resData.data;
+          setUser({
+            name: u.name,
+            avatar: u.avatar || '',
+            email: u.email,
+            role: u.role,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user data in IELTS Listening:', err);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
+
+  // Guard role
+  if (user.role !== 'student') {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        <h2>Access Denied</h2>
+        <p>IELTS Listening is only available for students.</p>
+        <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', cursor: 'pointer' }}>
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ielts-listening-container">
+      <Sidebar activeTab="ielts-prep" user={user} />
+
+      <main className="ielts-listening-main">
+        {/* Header */}
+        <header className="ielts-listening-header">
+          <div className="ielts-listening-header__left">
+            <button
+              onClick={() => navigate('/ielts-prep')}
+              className="ielts-listening-back-btn"
+              title={language === 'en' ? 'Back to IELTS Prep' : 'আইইএলটিএস প্রস্তুতিতে ফিরে যান'}
+            >
+              <HiArrowLeft size={20} />
+            </button>
+            <div className="ielts-listening-header__title">
+              <h2>{language === 'en' ? 'IELTS Listening' : 'আইইএলটিএস লিসেনিং'}</h2>
+              <p>
+                {language === 'en'
+                  ? 'Master the listening module with structured practice'
+                  : 'সুসংগঠিত অনুশীলনের মাধ্যমে লিসেনিং মডিউল আয়ত্ত করুন'}
+              </p>
+            </div>
+          </div>
+          <div className="ielts-listening-badge">
+            <HiVolumeUp size={18} />
+            <span>{language === 'en' ? 'Listening Module' : 'লিসেনিং মডিউল'}</span>
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="ielts-listening-workspace">
+          <div className="ielts-listening-workspace__body">
+
+            {/* Hero / Description Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="ielts-listening-hero"
+            >
+              <div className="ielts-listening-hero__icon-row">
+                <div className="ielts-listening-hero__icon">
+                  <HiVolumeUp size={32} />
+                </div>
+                <h1>{language === 'en' ? 'Listening Section Overview' : 'লিসেনিং সেকশন ওভারভিউ'}</h1>
+              </div>
+
+              <div className="ielts-listening-description">
+                <p><strong>⏱ Time:</strong> 30 minutes</p>
+
+                <p><strong>There are 4 sections:</strong></p>
+                <ul>
+                  <li><strong>Section 1:</strong> Everyday conversation (easy)</li>
+                  <li><strong>Section 2:</strong> Monologue (e.g., tour guide)</li>
+                  <li><strong>Section 3:</strong> Academic discussion (students &amp; teacher)</li>
+                  <li><strong>Section 4:</strong> Academic lecture (hardest)</li>
+                </ul>
+
+                <p><strong>Question types include:</strong></p>
+                <ul>
+                  <li>Multiple choice</li>
+                  <li>Fill in the blanks</li>
+                  <li>Matching</li>
+                  <li>Maps</li>
+                  <li>Sentence completion</li>
+                </ul>
+
+                <p><strong>Marks Distribution:</strong></p>
+                <p>There are 40 questions.</p>
+
+                <p style={{ marginTop: '1.5rem' }}><strong>Band Score Conversion Table:</strong></p>
+                <div className="ielts-band-table-container">
+                  <table className="ielts-band-table">
+                    <thead>
+                      <tr>
+                        <th>Correct Answers</th>
+                        <th>Band Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>39–40</td>
+                        <td className="band-highlight">9.0</td>
+                      </tr>
+                      <tr>
+                        <td>37–38</td>
+                        <td className="band-highlight">8.5</td>
+                      </tr>
+                      <tr>
+                        <td>35–36</td>
+                        <td className="band-highlight">8.0</td>
+                      </tr>
+                      <tr>
+                        <td>32–34</td>
+                        <td className="band-highlight">7.5</td>
+                      </tr>
+                      <tr>
+                        <td>30–31</td>
+                        <td className="band-highlight">7.0</td>
+                      </tr>
+                      <tr>
+                        <td>26–29</td>
+                        <td className="band-highlight">6.5</td>
+                      </tr>
+                      <tr>
+                        <td>23–25</td>
+                        <td className="band-highlight">6.0</td>
+                      </tr>
+                      <tr>
+                        <td>18–22</td>
+                        <td className="band-highlight">5.5</td>
+                      </tr>
+                      <tr>
+                        <td>16–17</td>
+                        <td className="band-highlight">5.0</td>
+                      </tr>
+                      <tr>
+                        <td>13–15</td>
+                        <td className="band-highlight">4.5</td>
+                      </tr>
+                      <tr>
+                        <td>10–12</td>
+                        <td className="band-highlight">4.0</td>
+                      </tr>
+                      <tr>
+                        <td>0–9</td>
+                        <td className="band-highlight">3.5 or below</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Demo Question Action Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="ielts-listening-actions"
+            >
+              <div
+                className="ielts-listening-action-card"
+                onClick={() => navigate('/ielts-prep/listening/demo')}
+              >
+                <div className="ielts-listening-action-card__left">
+                  <div className="ielts-listening-action-card__icon">
+                    <HiPlay size={28} />
+                  </div>
+                  <div className="ielts-listening-action-card__text">
+                    <h3>{language === 'en' ? 'Demo Question' : 'ডেমো প্রশ্ন'}</h3>
+                    <p>
+                      {language === 'en'
+                        ? 'Try a sample listening question to familiarize yourself with the format and experience.'
+                        : 'ফরম্যাট এবং অভিজ্ঞতার সাথে পরিচিত হতে একটি নমুনা লিসেনিং প্রশ্ন চেষ্টা করুন।'}
+                    </p>
+                  </div>
+                </div>
+                <div className="ielts-listening-action-card__arrow">
+                  <HiArrowRight size={22} />
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

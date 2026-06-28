@@ -287,13 +287,13 @@ exports.getUpcomingContests = async (req, res, next) => {
       return { startDate, endDate };
     };
 
-    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+    const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
 
     const mappedContests = contests.map(contest => {
       const { startDate, endDate } = getContestDates(contest);
       const registeredIds = (contest.registeredStudents || []).map(id => id.toString());
       const hasRegistered = registeredIds.includes(studentId.toString());
-      const registrationDeadline = new Date(startDate.getTime() - TWELVE_HOURS_MS);
+      const registrationDeadline = new Date(startDate.getTime() - ONE_HOUR_MS);
       const registrationOpen = now < registrationDeadline;
       return {
         ...contest,
@@ -683,13 +683,13 @@ exports.registerForContest = async (req, res, next) => {
     const pad = (num) => String(num).padStart(2, '0');
     const startDate = new Date(`${contest.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
 
-    // Registration closes 12 hours before contest start
-    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-    const registrationDeadline = new Date(startDate.getTime() - TWELVE_HOURS_MS);
+    // Registration closes 1 hour before contest start
+    const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
+    const registrationDeadline = new Date(startDate.getTime() - ONE_HOUR_MS);
     const now = new Date();
 
     if (now >= registrationDeadline) {
-      return ApiResponse.error(res, 'Registration has closed for this contest (closes 12 hours before start)', 400);
+      return ApiResponse.error(res, 'Registration has closed for this contest (closes 1 hour before start)', 400);
     }
 
     // Update student's user profile database

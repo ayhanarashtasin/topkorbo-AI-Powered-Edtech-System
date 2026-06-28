@@ -91,6 +91,11 @@ export default function Sidebar({ activeTab, user }) {
       label: language === 'en' ? 'Contests' : 'কনটেস্টসমূহ',
       icon: <HiCalendar size={20} />
     });
+    menuItems.push({
+      id: 'ielts-prep',
+      label: language === 'en' ? 'IELTS Preparation' : 'আইইএলটিএস প্রস্তুতি',
+      icon: <HiClipboardList size={20} />
+    });
   }
 
   // Show teacher application tab only for tutors or approved teachers
@@ -114,6 +119,12 @@ export default function Sidebar({ activeTab, user }) {
       id: 'make-contest-question',
       label: language === 'en' ? 'Contests' : 'কনটেস্টসমূহ',
       icon: <HiCalendar size={20} />
+    });
+
+    menuItems.push({
+      id: 'ielts-teacher',
+      label: language === 'en' ? 'IELTS' : 'আইইএলটিএস',
+      icon: <HiClipboardList size={20} />
     });
   }
 
@@ -184,6 +195,7 @@ export default function Sidebar({ activeTab, user }) {
                     navigate('/qbank');
                   }
                   else if (item.id === 'upload-question') navigate('/upload-question');
+                  else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
 
                   else if (item.id === 'make-contest-question') navigate('/make-contest-question');
                   else if (item.id === 'mock-test') navigate('/mock-test');
@@ -195,6 +207,7 @@ export default function Sidebar({ activeTab, user }) {
                     else navigate('/mentor/live-class');
                   }
                   else if (item.id === 'contests') navigate('/contests');
+                  else if (item.id === 'ielts-prep') navigate('/ielts-prep');
                   else if (item.id === 'reading-books') navigate('/reading-books');
                   else if (item.id === 'forum') navigate('/forum');
                   else navigate('/dashboard');

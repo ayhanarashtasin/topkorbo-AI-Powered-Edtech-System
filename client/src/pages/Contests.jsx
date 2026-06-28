@@ -583,8 +583,8 @@ export default function Contests() {
         );
       }
 
-      const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-      const isRegistrationOpen = timeInfo.startDate ? (timeInfo.startDate.getTime() - now.getTime() >= TWELVE_HOURS_MS) : false;
+      const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
+      const isRegistrationOpen = timeInfo.startDate ? (timeInfo.startDate.getTime() - now.getTime() >= ONE_HOUR_MS) : false;
 
       if (isRegistrationOpen) {
         return (
