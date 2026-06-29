@@ -219,6 +219,10 @@ export default function Battle() {
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [nowMs, setNowMs] = useState(0);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState('');
+  const [coachReport, setCoachReport] = useState(null);
+  const [rematchLoading, setRematchLoading] = useState(false);
 
   const activeMode = BATTLE_MODES.find((mode) => mode.id === selectedMode) || BATTLE_MODES[0];
   const activeTeamSize = activeMode.id === 'custom-squad' ? customSquadSize : 5;
@@ -504,6 +508,10 @@ export default function Battle() {
       return;
     }
 
+    setCoachReport(null);
+    setCoachError('');
+    setCoachLoading(false);
+    setRematchLoading(false);
     setIsStarting(true);
     try {
       const token = localStorage.getItem('topkorbo_token');
@@ -550,6 +558,7 @@ export default function Battle() {
         locked: false,
         questionStartedAt: Date.now(),
         finished: false,
+        answerHistory: {},
         log: []
       });
     } catch (err) {
@@ -565,6 +574,7 @@ export default function Battle() {
         locked: false,
         questionStartedAt: Date.now(),
         finished: false,
+        answerHistory: {},
         log: []
       });
     } finally {
@@ -628,6 +638,15 @@ export default function Battle() {
       ...battleState,
       selectedAnswer: optionIndex,
       locked: true,
+      answerHistory: {
+        ...(battleState.answerHistory || {}),
+        [battleState.currentIndex]: {
+          selectedAnswer: optionIndex,
+          answeredAtSeconds: submittedAt,
+          points: yourPoints,
+          isCorrect
+        }
+      },
       players: [you, ...botUpdates],
       log: [
         `${you.name}: ${yourPoints > 0 ? '+' : ''}${yourPoints} pts at ${submittedAt}s`,
@@ -655,7 +674,159 @@ export default function Battle() {
   const resetBattle = () => {
     setBattleState(null);
     setInviteRoom(null);
+    setCoachReport(null);
+    setCoachError('');
+    setCoachLoading(false);
+    setRematchLoading(false);
     setSearchParams({ step: '1' });
+  };
+
+  const buildCoachPayload = (state) => {
+    if (!state) return null;
+
+    const players = state.players || [];
+    const sorted = [...players].sort((a, b) => b.score - a.score);
+    const player = players.find((item) => item.isYou || item.id === 'you') || players[0] || {};
+    const rank = Math.max(1, sorted.findIndex((item) => item.id === player.id) + 1);
+    const isTeamMode = state.settings?.mode === 'squad' || state.settings?.mode === 'custom-squad';
+    const teamScore = isTeamMode
+      ? players.filter((item) => item.team === player.team).reduce((sum, item) => sum + (Number(item.score) || 0), 0)
+      : null;
+
+    return {
+      mode: state.settings?.mode || state.mode?.id || state.mode?.label || 'battle',
+      questionCount: state.questions?.length || 0,
+      negativeMarking: Boolean(state.settings?.negativeMarking),
+      player: {
+        score: Number(player.score) || 0,
+        rank,
+        team: isTeamMode ? (player.team || null) : null,
+        teamScore
+      },
+      questions: (state.questions || []).map((item, index) => {
+        const options = getQuestionOptions(item);
+        const localHistory = state.answerHistory?.[index] || {};
+        const selectedIndex = item.viewerAnswer ?? localHistory.selectedAnswer ?? null;
+        const correctIndex = item.correctOptionIndex ?? options.findIndex((option) => option.isCorrect);
+        const selectedOption = selectedIndex === null ? null : options[selectedIndex];
+        const correctOption = correctIndex >= 0 ? options[correctIndex] : null;
+        const isCorrect = item.viewerIsCorrect ?? localHistory.isCorrect ?? (selectedIndex !== null && correctIndex >= 0 ? selectedIndex === correctIndex : false);
+
+        return {
+          subject: item.subject || '',
+          chapter: item.chapter || '',
+          type: item.type || 'mcq',
+          questionText: String(item.questionText || '').slice(0, 280),
+          selectedAnswer: selectedOption?.text || '',
+          correctAnswer: correctOption?.text || '',
+          isCorrect: Boolean(isCorrect),
+          answeredAtSeconds: item.viewerAnsweredAtSeconds ?? localHistory.answeredAtSeconds ?? null,
+          points: item.viewerPoints ?? localHistory.points ?? 0
+        };
+      })
+    };
+  };
+
+  const requestBattleCoach = async () => {
+    if (!battleState?.finished || coachLoading) return;
+
+    setCoachLoading(true);
+    setCoachError('');
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const payload = buildCoachPayload(battleState);
+      const res = await fetch(`${apiBase}/battles/coach`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Could not generate battle coach.');
+      }
+      setCoachReport(data.data?.report || null);
+      if (data.data?.fallback) {
+        setCoachError('AI coach used a fallback report this time.');
+      }
+    } catch (err) {
+      console.error('Error generating battle coach:', err);
+      setCoachError('AI coach is unavailable right now. Your battle result is still safe.');
+    } finally {
+      setCoachLoading(false);
+    }
+  };
+
+  const createRematch = async () => {
+    if (!battleState?.isRemote || !battleState.roomId || rematchLoading) return;
+
+    const openRematchRoom = (room) => {
+      setCoachReport(null);
+      setCoachError('');
+      setCoachLoading(false);
+      setInviteRoom(room);
+      setBattleState(null);
+      setSearchParams({ room: room.id, step: '4' });
+      toast.success('Rematch room created. Share the new code.');
+    };
+
+    const createRoomFromCurrentBattle = async (token) => {
+      const settings = battleState.settings || {};
+      const questions = (battleState.questions || []).map((question) => ({
+        ...question,
+        options: (question.options || []).map((option, index) => ({
+          ...option,
+          isCorrect: question.correctOptionIndex === index
+        }))
+      }));
+
+      const res = await fetch(`${apiBase}/battles/rooms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          questions,
+          settings: {
+            ...settings,
+            totalQuestions: questions.length
+          }
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Could not create rematch.');
+      }
+      return data.data;
+    };
+
+    setRematchLoading(true);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      let rematchRoom = null;
+
+      try {
+        const res = await fetch(`${apiBase}/battles/rooms/${battleState.roomId}/rematch`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const contentType = res.headers.get('content-type') || '';
+        const data = contentType.includes('application/json') ? await res.json() : null;
+        if (data?.success) {
+          rematchRoom = data.data;
+        }
+      } catch (endpointErr) {
+        console.warn('Dedicated rematch endpoint failed, using room-create fallback:', endpointErr);
+      }
+
+      if (!rematchRoom) {
+        rematchRoom = await createRoomFromCurrentBattle(token);
+      }
+
+      openRematchRoom(rematchRoom);
+    } catch (err) {
+      console.error('Error creating rematch:', err);
+      toast.error(err.message || 'Network error while creating rematch.');
+    } finally {
+      setRematchLoading(false);
+    }
   };
 
   const copyRoomCode = async () => {
@@ -882,7 +1053,7 @@ export default function Battle() {
     return (
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
-        <main className="dashboard-main">
+        <main className={`dashboard-main ${battleState?.finished ? 'battle-dashboard-main--scroll' : ''}`}>
           <header className="dashboard-header">
             <div className="dashboard-header__welcome">
               <h2>Battle Arena</h2>
@@ -894,7 +1065,7 @@ export default function Battle() {
             </div>
           </header>
 
-          <div className="battle-room">
+          <div className={`battle-room ${battleState.finished ? 'battle-room--finished' : ''}`}>
             <section className="battle-room__stage">
               {isRaidBattle ? (
                 <div className="battle-score-strip battle-score-strip--raid">
@@ -936,10 +1107,56 @@ export default function Battle() {
                       <strong>{isTeamBattle ? (mvp?.name || '-') : (isRaidBattle ? battleState.players.length : battleState.questions.length)}</strong>
                     </div>
                   </div>
-                  <button className="btn btn-primary mock-next-btn" type="button" onClick={resetBattle}>
-                    <HiRefresh size={18} />
-                    <span>New Battle</span>
-                  </button>
+                  <div className="battle-coach-actions">
+                    <button className="battle-outline-btn" type="button" onClick={requestBattleCoach} disabled={coachLoading}>
+                      {coachLoading ? 'Coaching...' : 'AI Battle Coach'}
+                    </button>
+                    {coachError && <span>{coachError}</span>}
+                  </div>
+                  {coachReport && (
+                    <div className="battle-coach-card">
+                      <div>
+                        <span>AI Coach</span>
+                        <h4>Battle Review</h4>
+                        <p>{coachReport.summary}</p>
+                      </div>
+                      <div className="battle-coach-grid">
+                        <section>
+                          <h5>Strengths</h5>
+                          <ul>{(coachReport.strengths || []).map((item, index) => <li key={`strength-${index}`}>{item}</li>)}</ul>
+                        </section>
+                        <section>
+                          <h5>Weak Spots</h5>
+                          <ul>{(coachReport.weaknesses || []).map((item, index) => <li key={`weakness-${index}`}>{item}</li>)}</ul>
+                        </section>
+                        <section>
+                          <h5>Mistake Patterns</h5>
+                          <ul>{(coachReport.mistakePatterns || []).map((item, index) => <li key={`mistake-${index}`}>{item}</li>)}</ul>
+                        </section>
+                        <section>
+                          <h5>Practice Actions</h5>
+                          <ul>{(coachReport.practiceActions || []).map((item, index) => <li key={`action-${index}`}>{item}</li>)}</ul>
+                        </section>
+                      </div>
+                      <div className="battle-coach-note">
+                        <strong>Speed vs Accuracy</strong>
+                        <p>{coachReport.speedAccuracy}</p>
+                      </div>
+                      <p className="battle-coach-motivation">{coachReport.motivation}</p>
+                    </div>
+                  )}
+                  <div className="battle-finish-actions">
+                    {battleState.isRemote && (
+                      <button className="btn btn-primary mock-next-btn" type="button" onClick={createRematch} disabled={rematchLoading}>
+                        <HiRefresh size={18} />
+                        <span>{rematchLoading ? 'Creating...' : 'Create Rematch'}</span>
+                      </button>
+                    )}
+                    <button className="battle-outline-btn" type="button" onClick={resetBattle}>
+                      <HiRefresh size={18} />
+                      <span>New Battle</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="battle-question-card">

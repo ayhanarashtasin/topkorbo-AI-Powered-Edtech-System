@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const ApiResponse = require('../utils/apiResponse');
 const User = require('../models/User');
+const { generateBattleCoachReport, normalizeCoachReport } = require('../services/groqBattleCoachService');
 
 const rooms = new Map();
 const ROOM_TTL_MS = 1000 * 60 * 60 * 4;
@@ -81,7 +82,7 @@ const createSquadTestPlayers = (teamSize = 5) => {
   const teamANames = ['Nusrat J.', 'Mahin R.', 'Farhan S.', 'Rodela K.', 'Tuba W.', 'Samin V.', 'Jarin M.', 'Rifat Z.', 'Tania C.'];
   const teamBNames = ['Araf T.', 'Samia N.', 'Ayon D.', 'Mim F.', 'Shuvo P.', 'Sadia L.', 'Nabil Q.', 'Arif B.', 'Mehrab I.', 'Rafiq H.'];
   const testNames = [
-    ...teamANames.slice(0, Math.max(0, teamSize - 1)).map((name, index) => [`squad-bot-a${index + 1}`, 'A', name]),
+    ...teamANames.slice(0, teamSize).map((name, index) => [`squad-bot-a${index + 1}`, 'A', name]),
     ...teamBNames.slice(0, teamSize).map((name, index) => [`squad-bot-b${index + 1}`, 'B', name])
   ];
 
@@ -119,6 +120,30 @@ const ensureSquadTestPlayers = (room) => {
   });
 };
 
+const resetBattlePlayer = (profile, team = null) => ({
+  ...profile,
+  team,
+  score: 0,
+  lastDelta: 0,
+  answeredAt: null,
+  isCorrect: null,
+  ready: false,
+  answers: {},
+  answerDetails: {}
+});
+
+const cloneBattleQuestions = (questions = []) => questions.map((question) => ({
+  ...question,
+  options: (question.options || []).map((option) => ({ ...option }))
+}));
+
+const buildPreferredTeams = (players = []) => players.reduce((map, player) => {
+  if (!player.isTestPlayer && player.id) {
+    map[player.id] = player.team || null;
+  }
+  return map;
+}, {});
+
 const cleanExpiredRooms = () => {
   const now = Date.now();
   rooms.forEach((room, id) => {
@@ -141,6 +166,7 @@ const getUserProfile = async (userId) => {
 const sanitizeQuestions = (questions = [], room = null, viewerId = '') => questions.map((question, index) => {
   const viewer = room?.players?.find((player) => player.id === String(viewerId));
   const viewerAnswer = viewer?.answers?.[index];
+  const viewerAnswerDetails = viewer?.answerDetails?.[index] || {};
   const canRevealAnswer = viewerAnswer !== undefined || room?.status === 'finished';
 
   return {
@@ -151,6 +177,9 @@ const sanitizeQuestions = (questions = [], room = null, viewerId = '') => questi
     chapter: question.chapter || '',
     options: (question.options || []).map((option) => ({ text: option.text })),
     viewerAnswer: viewerAnswer ?? null,
+    viewerAnsweredAtSeconds: viewerAnswerDetails.answeredAtSeconds ?? null,
+    viewerPoints: viewerAnswerDetails.points ?? null,
+    viewerIsCorrect: viewerAnswerDetails.isCorrect ?? null,
     correctOptionIndex: canRevealAnswer
       ? (question.options || []).findIndex((option) => option.isCorrect)
       : null
@@ -258,16 +287,7 @@ exports.createRoom = async (req, res, next) => {
         negativeMarking: Boolean(settings?.negativeMarking)
       },
       questions: roomQuestions,
-      players: [{
-        ...host,
-        team: isRaidMode(mode) ? null : 'A',
-        score: 0,
-        lastDelta: 0,
-        answeredAt: null,
-        isCorrect: null,
-        ready: false,
-        answers: {}
-      }, ...(isSquadMode(mode) ? createSquadTestPlayers(modeConfig.teamSize) : [])],
+      players: [resetBattlePlayer(host, isRaidMode(mode) ? null : 'A')],
       log: [
         ...(isSquadMode(mode) ? [`Test squad players are ready for ${modeConfig.teamSize}v${modeConfig.teamSize} local testing.`] : []),
         `${host.name} created the ${modeConfig.label} room.`
@@ -309,33 +329,81 @@ exports.joinRoom = async (req, res, next) => {
     const alreadyJoined = room.players.some((player) => player.id === profile.id);
       if (!alreadyJoined) {
       const modeConfig = getModeConfig(room.settings?.mode, room.settings?.teamSize, room.settings?.maxPlayers);
-      let team = isSquadMode(room.settings?.mode) ? getBalancedTeam(room.players, modeConfig.teamSize) : null;
+      const preferredTeam = room.preferredTeams?.[profile.id];
+      const preferredTeamHasSpace = preferredTeam && room.players.filter((player) => player.team === preferredTeam).length < modeConfig.teamSize;
+      let team = isSquadMode(room.settings?.mode)
+        ? (preferredTeamHasSpace ? preferredTeam : getBalancedTeam(room.players, modeConfig.teamSize))
+        : null;
       let replacedTestPlayer = false;
       if (room.players.length >= modeConfig.maxPlayers) {
         if (!isSquadMode(room.settings?.mode)) return ApiResponse.error(res, `This ${modeConfig.label} room is full`, 409);
-        team = getRealJoinTeam(room.players, modeConfig.teamSize);
+        team = preferredTeam || getRealJoinTeam(room.players, modeConfig.teamSize);
         const replaceableIndex = room.players.findIndex((player) => player.isTestPlayer && player.team === team);
         if (replaceableIndex === -1) return ApiResponse.error(res, `This ${modeConfig.label} room is full`, 409);
         const replacedPlayer = room.players.splice(replaceableIndex, 1)[0];
         room.log.unshift(`${profile.name} replaced ${replacedPlayer.name} on Team ${team}.`);
         replacedTestPlayer = true;
       }
-      room.players.push({
-        ...profile,
-        team,
-        score: 0,
-        lastDelta: 0,
-        answeredAt: null,
-        isCorrect: null,
-        ready: false,
-        answers: {}
-      });
+      room.players.push(resetBattlePlayer(profile, team));
       if (!replacedTestPlayer) {
         room.log.unshift(isRaidMode(room.settings?.mode) ? `${profile.name} joined the raid.` : `${profile.name} joined Team ${team}.`);
       }
     }
 
     return ApiResponse.success(res, sanitizeRoom(room, req.user.id), 'Joined battle room');
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.createRematchRoom = async (req, res, next) => {
+  try {
+    cleanExpiredRooms();
+    const sourceRoom = rooms.get(req.params.roomId);
+    if (!sourceRoom) return ApiResponse.error(res, 'Battle room not found', 404);
+    if (sourceRoom.status !== 'finished') return ApiResponse.error(res, 'Rematch is available after the battle finishes', 400);
+
+    const sourcePlayer = sourceRoom.players.find((player) => player.id === String(req.user.id));
+    if (!sourcePlayer) return ApiResponse.error(res, 'You are not in this battle room', 403);
+
+    const modeConfig = getModeConfig(sourceRoom.settings?.mode, sourceRoom.settings?.teamSize, sourceRoom.settings?.maxPlayers);
+    const host = await getUserProfile(req.user.id);
+    const roomId = crypto.randomBytes(4).toString('hex');
+    const mode = sourceRoom.settings?.mode || 'duel';
+    const hostTeam = isRaidMode(mode) ? null : (sourcePlayer.team || 'A');
+    const questions = cloneBattleQuestions(sourceRoom.questions);
+
+    const room = {
+      id: roomId,
+      hostId: host.id,
+      rematchOf: sourceRoom.id,
+      preferredTeams: buildPreferredTeams(sourceRoom.players),
+      status: 'waiting',
+      createdAt: Date.now(),
+      currentIndex: 0,
+      questionStartedAt: null,
+      settings: {
+        ...sourceRoom.settings,
+        mode,
+        modeLabel: modeConfig.label,
+        maxPlayers: modeConfig.maxPlayers,
+        minPlayers: modeConfig.minPlayers,
+        teamSize: modeConfig.teamSize,
+        teamNames: normalizeTeamNames(sourceRoom.settings?.teamNames),
+        totalQuestions: questions.length
+      },
+      questions,
+      players: [resetBattlePlayer(host, hostTeam)],
+      log: [
+        ...(isSquadMode(mode) ? [`Rematch keeps the same ${modeConfig.teamSize}v${modeConfig.teamSize} teams when students rejoin.`] : []),
+        `${host.name} created a rematch room.`
+      ]
+    };
+
+    ensureSquadTestPlayers(room);
+    rooms.set(roomId, room);
+
+    return ApiResponse.success(res, sanitizeRoom(room, req.user.id), 'Rematch room created', 201);
   } catch (err) {
     next(err);
   }
@@ -409,6 +477,15 @@ exports.submitAnswer = async (req, res, next) => {
       ...(player.answers || {}),
       [room.currentIndex]: optionIndex
     };
+    player.answerDetails = {
+      ...(player.answerDetails || {}),
+      [room.currentIndex]: {
+        answeredAtSeconds: cappedSeconds,
+        isCorrect,
+        points,
+        selectedOptionText: selectedOption?.text || ''
+      }
+    };
     player.answeredAt = cappedSeconds;
     player.isCorrect = isCorrect;
     player.lastDelta = points;
@@ -417,6 +494,61 @@ exports.submitAnswer = async (req, res, next) => {
 
     advanceRoomIfNeeded(room);
     return ApiResponse.success(res, sanitizeRoom(room, req.user.id), 'Answer submitted');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const sanitizeCoachQuestion = (question = {}) => ({
+  subject: String(question.subject || '').slice(0, 80),
+  chapter: String(question.chapter || '').slice(0, 120),
+  type: String(question.type || '').slice(0, 40),
+  questionText: String(question.questionText || '').slice(0, 280),
+  selectedAnswer: String(question.selectedAnswer || '').slice(0, 220),
+  correctAnswer: String(question.correctAnswer || '').slice(0, 220),
+  isCorrect: Boolean(question.isCorrect),
+  answeredAtSeconds: question.answeredAtSeconds === null || question.answeredAtSeconds === undefined
+    ? null
+    : Math.max(0, Math.min(120, Number(question.answeredAtSeconds) || 0)),
+  points: Math.max(-10, Math.min(100, Number(question.points) || 0))
+});
+
+const sanitizeCoachPayload = (body = {}) => {
+  const player = body.player || {};
+  const questions = Array.isArray(body.questions) ? body.questions : [];
+
+  return {
+    mode: String(body.mode || 'battle').slice(0, 40),
+    questionCount: Math.max(0, Math.min(100, Number(body.questionCount) || questions.length)),
+    negativeMarking: Boolean(body.negativeMarking),
+    player: {
+      score: Number(player.score) || 0,
+      rank: Math.max(1, Math.min(1000, Number(player.rank) || 1)),
+      team: player.team === 'A' || player.team === 'B' ? player.team : null,
+      teamScore: player.teamScore === null || player.teamScore === undefined ? null : Number(player.teamScore) || 0
+    },
+    questions: questions.slice(0, 50).map(sanitizeCoachQuestion)
+  };
+};
+
+exports.generateCoach = async (req, res, next) => {
+  try {
+    const battleSummary = sanitizeCoachPayload(req.body || {});
+    if (!battleSummary.questions.length) {
+      const report = normalizeCoachReport({
+        summary: 'No answered battle questions were available for analysis yet.',
+        strengths: ['You completed the battle flow.'],
+        weaknesses: ['There is not enough answer data to identify weak chapters.'],
+        speedAccuracy: 'Finish a battle with answered questions to get speed and accuracy feedback.',
+        mistakePatterns: ['No answer pattern could be detected from the provided data.'],
+        practiceActions: ['Play a full battle round.', 'Answer every question if possible.', 'Request the coach again after the result screen.'],
+        motivation: 'Play one more round and the coach will have more to analyze.'
+      });
+      return ApiResponse.success(res, { report, fallback: true }, 'Battle coach fallback generated');
+    }
+
+    const result = await generateBattleCoachReport(battleSummary);
+    return ApiResponse.success(res, result, result.fallback ? 'Battle coach fallback generated' : 'Battle coach generated');
   } catch (err) {
     next(err);
   }

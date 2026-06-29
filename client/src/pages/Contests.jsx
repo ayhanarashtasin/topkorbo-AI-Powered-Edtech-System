@@ -8,31 +8,159 @@ import {
   HiBookOpen,
   HiSearch,
   HiCollection,
-  HiArrowRight
+  HiArrowRight,
+  HiCheckCircle,
+  HiBan
 } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import './Contests.css';
 
+// ─── Shared timezone offsets ─────────────────────────────────────────────────
+const TZ_OFFSETS = {
+  'Asia/Dhaka': '+06:00',
+  'Asia/Kolkata': '+05:30',
+  'Asia/Dubai': '+04:00',
+  'Europe/London': '+00:00',
+  'America/New_York': '-05:00',
+  'Asia/Tokyo': '+09:00',
+  'Asia/Singapore': '+08:00',
+  'Australia/Sydney': '+10:00'
+};
+
+function getStartMs(c) {
+  const tz = c.startTime?.timezone || 'Asia/Dhaka';
+  const offset = TZ_OFFSETS[tz] || '+06:00';
+  let hour = c.startTime?.hour || 12;
+  const minute = c.startTime?.minute || 0;
+  const period = c.startTime?.period || 'AM';
+  if (period === 'PM' && hour < 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
+  const pad = (num) => String(num).padStart(2, '0');
+  return new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`).getTime();
+}
+
+// ─── Filter bar sub-component ────────────────────────────────────────────────
+function ContestFilterBar({ searchQuery, setSearchQuery, levelFilter, setLevelFilter, typeFilter, setTypeFilter, language }) {
+  return (
+    <section className="contests-filter-bar">
+      <div className="contests-search-wrapper">
+        <HiSearch className="contests-search-icon" size={20} />
+        <input
+          type="text"
+          placeholder={language === 'en' ? 'Search contests...' : 'কনটেস্ট খুঁজুন...'}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="contests-search-input"
+        />
+      </div>
+
+      <div className="contests-filters">
+        <div className="contests-select-group">
+          <HiAcademicCap className="select-icon" size={16} />
+          <select
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="contests-select"
+          >
+            <option value="all">{language === 'en' ? 'All Levels' : 'সকল লেভেল'}</option>
+            <option value="hsc">HSC</option>
+            <option value="admission">{language === 'en' ? 'Admission' : 'এডমিশন'}</option>
+          </select>
+        </div>
+
+        <div className="contests-select-group">
+          <HiCollection className="select-icon" size={16} />
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="contests-select"
+          >
+            <option value="all">{language === 'en' ? 'All Formats' : 'সকল ফরম্যাট'}</option>
+            <option value="mcq">MCQ</option>
+            <option value="cq">CQ</option>
+            <option value="both">{language === 'en' ? 'Mixed' : 'মিশ্রিত'}</option>
+          </select>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 export default function Contests() {
   const { language } = useLanguage();
   const navigate = useNavigate();
+
+  const getAdmissionTypeLabel = (type) => {
+    if (type === 'varsity') return language === 'en' ? 'University' : 'বিশ্ববিদ্যালয়';
+    if (type === 'medical') return language === 'en' ? 'Medical' : 'মেডিকেল';
+    if (type === 'engineering') return language === 'en' ? 'Engineering' : 'ইঞ্জিনিয়ারিং';
+    return type;
+  };
+
+  const getAdmissionSubtypeLabel = (subtype) => {
+    if (!subtype) return '';
+    if (subtype === 'science') return language === 'en' ? 'Science' : 'বিজ্ঞান';
+    if (subtype === 'commerce') return language === 'en' ? 'Commerce' : 'ব্যবসায় শিক্ষা';
+    if (subtype === 'arts') return language === 'en' ? 'Humanities' : 'মানবিক';
+    if (subtype === 'iba') return 'IBA';
+    return subtype;
+  };
+
+  const getSubjectLabel = (sub) => {
+    const subjectMap = {
+      'Physics': { en: 'Physics', bn: 'পদার্থবিজ্ঞান' },
+      'Chemistry': { en: 'Chemistry', bn: 'রসায়ন' },
+      'Higher Math': { en: 'Higher Math', bn: 'উচ্চতর গণিত' },
+      'Biology': { en: 'Biology', bn: 'জীববিজ্ঞান' },
+      'ICT': { en: 'ICT', bn: 'তথ্য ও যোগাযোগ প্রযুক্তি' },
+      'English': { en: 'English', bn: 'ইংরেজি' },
+      'Bangla': { en: 'Bangla', bn: 'বাংলা' }
+    };
+    const mapped = subjectMap[sub];
+    if (mapped) {
+      return language === 'en' ? mapped.en : mapped.bn;
+    }
+    return sub;
+  };
+
   const [user, setUser] = useState({
     name: localStorage.getItem('topkorbo_name') || '',
     avatar: localStorage.getItem('topkorbo_avatar') || '',
     email: localStorage.getItem('topkorbo_email') || '',
-    role: localStorage.getItem('topkorbo_role') || 'student'
+    role: localStorage.getItem('topkorbo_role') || 'student',
+    collegeName: localStorage.getItem('topkorbo_collegeName') || '',
+    hscBatch: localStorage.getItem('topkorbo_hscBatch') || '',
+    phoneNumber: localStorage.getItem('topkorbo_phoneNumber') || '',
   });
-  
+
   const [contests, setContests] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [levelFilter, setLevelFilter] = useState('all'); // 'all', 'hsc', 'admission'
-  const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'mcq', 'cq', 'both'
   const [now, setNow] = useState(new Date());
-  
+
+  // Registration modal state variables
+  const [showRegModal, setShowRegModal] = useState(false);
+  const [regContestId, setRegContestId] = useState('');
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regCollege, setRegCollege] = useState('');
+  const [regHscBatch, setRegHscBatch] = useState('');
+
+  // Independent filters for each table
+  const [upcomingSearch, setUpcomingSearch] = useState('');
+  const [upcomingLevelFilter, setUpcomingLevelFilter] = useState('all');
+  const [upcomingTypeFilter, setUpcomingTypeFilter] = useState('all');
+
+  const [pastSearch, setPastSearch] = useState('');
+  const [pastLevelFilter, setPastLevelFilter] = useState('all');
+  const [pastTypeFilter, setPastTypeFilter] = useState('all');
+
   const [selectedResult, setSelectedResult] = useState(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [loadingResult, setLoadingResult] = useState(false);
+  const [registeringContestId, setRegisteringContestId] = useState('');
 
   const activeTab = 'contests';
 
@@ -67,12 +195,23 @@ export default function Contests() {
 
         const resData = await response.json();
         if (resData.success && resData.data) {
+          const u = resData.data;
           setUser({
-            name: resData.data.name,
-            avatar: resData.data.avatar || '',
-            email: resData.data.email,
-            role: resData.data.role
+            name: u.name,
+            avatar: u.avatar || '',
+            email: u.email,
+            role: u.role,
+            collegeName: u.collegeName || '',
+            hscBatch: u.hscBatch || '',
+            phoneNumber: u.phoneNumber || ''
           });
+          localStorage.setItem('topkorbo_name', u.name);
+          localStorage.setItem('topkorbo_avatar', u.avatar || '');
+          localStorage.setItem('topkorbo_email', u.email);
+          localStorage.setItem('topkorbo_role', u.role);
+          localStorage.setItem('topkorbo_collegeName', u.collegeName || '');
+          localStorage.setItem('topkorbo_hscBatch', u.hscBatch || '');
+          localStorage.setItem('topkorbo_phoneNumber', u.phoneNumber || '');
         }
       } catch (err) {
         console.error('Error fetching user data on contests page:', err);
@@ -100,20 +239,11 @@ export default function Contests() {
     fetchAllUpcomingContests();
   }, [navigate]);
 
-  const getContestTimeInfo = (contest) => {
-    const offsets = {
-      'Asia/Dhaka': '+06:00',
-      'Asia/Kolkata': '+05:30',
-      'Asia/Dubai': '+04:00',
-      'Europe/London': '+00:00',
-      'America/New_York': '-05:00',
-      'Asia/Tokyo': '+09:00',
-      'Asia/Singapore': '+08:00',
-      'Australia/Sydney': '+10:00'
-    };
+  // ─── Time helpers ──────────────────────────────────────────────────────────
 
+  const getContestTimeInfo = (contest) => {
     const tz = contest.startTime?.timezone || 'Asia/Dhaka';
-    const offset = offsets[tz] || '+06:00';
+    const offset = TZ_OFFSETS[tz] || '+06:00';
 
     let hour = contest.startTime?.hour || 12;
     const minute = contest.startTime?.minute || 0;
@@ -134,7 +264,6 @@ export default function Contests() {
     const diffToEnd = endDate - now;
 
     if (diffToStart > 0) {
-      // Upcoming
       const d = Math.floor(diffToStart / (1000 * 60 * 60 * 24));
       const h = Math.floor((diffToStart % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const m = Math.floor((diffToStart % (1000 * 60 * 60)) / (1000 * 60));
@@ -153,7 +282,6 @@ export default function Contests() {
         endDate
       };
     } else if (diffToEnd > 0) {
-      // Running
       const h = Math.floor((diffToEnd % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const m = Math.floor((diffToEnd % (1000 * 60 * 60)) / (1000 * 60));
       const s = Math.floor((diffToEnd % (1000 * 60)) / 1000);
@@ -168,11 +296,10 @@ export default function Contests() {
         endDate
       };
     } else {
-      // Ended
       return {
         status: 'ended',
-        badgeText: language === 'en' ? 'Ended' : 'শেষ হয়েছে',
-        remainingText: language === 'en' ? 'Contest has ended' : 'কনটেস্টটি শেষ হয়েছে',
+        badgeText: language === 'en' ? 'Ended' : 'শেষ হয়েছে',
+        remainingText: language === 'en' ? 'Contest has ended' : 'কনটেস্টটি শেষ হয়েছে',
         startDate,
         endDate
       };
@@ -200,6 +327,70 @@ export default function Contests() {
   const formatTime = (startTime) => {
     if (!startTime) return '';
     return `${startTime.hour}:${String(startTime.minute).padStart(2, '0')} ${startTime.period}`;
+  };
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+
+  const openRegistrationModal = (contestId) => {
+    setRegContestId(contestId);
+    setRegName(user.name || '');
+    setRegEmail(user.email || '');
+    setRegPhone(user.phoneNumber || '');
+    setRegCollege(user.collegeName || '');
+    setRegHscBatch(user.hscBatch || '');
+    setShowRegModal(true);
+  };
+
+  const handleConfirmRegistration = async (e) => {
+    e.preventDefault();
+    if (!regName.trim() || !regPhone.trim() || !regCollege.trim() || !regHscBatch.trim()) {
+      toast.error(language === 'en' ? 'All fields are required' : 'সবগুলো ক্ষেত্র পূরণ করা আবশ্যক');
+      return;
+    }
+    setRegisteringContestId(regContestId);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${backendBaseUrl}/contests/${regContestId}/register`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: regName.trim(),
+          phoneNumber: regPhone.trim(),
+          collegeName: regCollege.trim(),
+          hscBatch: regHscBatch.trim()
+        })
+      });
+      const resData = await response.json();
+      if (resData.success) {
+        toast.success(language === 'en' ? 'Successfully registered!' : 'সফলভাবে নিবন্ধিত হয়েছে!');
+        setContests(prev => prev.map(c =>
+          c._id === regContestId ? { ...c, hasRegistered: true } : c
+        ));
+        setUser(prev => ({
+          ...prev,
+          name: regName.trim(),
+          phoneNumber: regPhone.trim(),
+          collegeName: regCollege.trim(),
+          hscBatch: regHscBatch.trim()
+        }));
+        localStorage.setItem('topkorbo_name', regName.trim());
+        localStorage.setItem('topkorbo_collegeName', regCollege.trim());
+        localStorage.setItem('topkorbo_hscBatch', regHscBatch.trim());
+        localStorage.setItem('topkorbo_phoneNumber', regPhone.trim());
+        setShowRegModal(false);
+      } else {
+        toast.error(resData.message || (language === 'en' ? 'Failed to register' : 'নিবন্ধন ব্যর্থ'));
+      }
+    } catch (err) {
+      console.error('Error registering for contest:', err);
+      toast.error(language === 'en' ? 'Network error' : 'নেটওয়ার্ক সমস্যা');
+    } finally {
+      setRegisteringContestId('');
+    }
   };
 
   const handleParticipate = async (contestId) => {
@@ -243,7 +434,6 @@ export default function Contests() {
           'mock_exam_ai_evals'
         ].forEach((key) => sessionStorage.removeItem(key));
 
-        // Save contest questions and config for the exam room
         sessionStorage.setItem('mock_exam_questions', JSON.stringify(populatedContest.questions));
         sessionStorage.setItem('mock_exam_config', JSON.stringify({
           duration: (populatedContest.duration.hours * 60) + populatedContest.duration.minutes,
@@ -255,7 +445,6 @@ export default function Contests() {
         }));
         sessionStorage.setItem('mock_exam_from_qbank', 'false');
 
-        // Go to exam room
         navigate('/mock-test/exam');
       } else {
         alert(resData.message || 'Failed to enter contest');
@@ -291,41 +480,277 @@ export default function Contests() {
     }
   };
 
-  // 1) Filter
-  const filteredContests = contests.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesLevel = levelFilter === 'all' || c.level === levelFilter;
-    const matchesType = typeFilter === 'all' || c.questionType === typeFilter;
-    return matchesSearch && matchesLevel && matchesType;
+  // ─── Filtering & sorting ──────────────────────────────────────────────────
+
+  const filterContests = (list, search, level, type) => {
+    return list.filter((c) => {
+      const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+      const matchesLevel = level === 'all' || c.level === level;
+      const matchesType = type === 'all' || c.questionType === type;
+      return matchesSearch && matchesLevel && matchesType;
+    });
+  };
+
+  // Partition contests by status
+  const currentOrUpcoming = [];
+  const past = [];
+
+  contests.forEach((c) => {
+    const timeInfo = getContestTimeInfo(c);
+    if (timeInfo.status === 'ended') {
+      past.push(c);
+    } else {
+      currentOrUpcoming.push(c);
+    }
   });
 
-  // 2) Sort by nearest (starting time) first
-  const sortedContests = [...filteredContests].sort((a, b) => {
-    const offsets = {
-      'Asia/Dhaka': '+06:00',
-      'Asia/Kolkata': '+05:30',
-      'Asia/Dubai': '+04:00',
-      'Europe/London': '+00:00',
-      'America/New_York': '-05:00',
-      'Asia/Tokyo': '+09:00',
-      'Asia/Singapore': '+08:00',
-      'Australia/Sydney': '+10:00'
-    };
-    
-    const getStartMs = (c) => {
-      const tz = c.startTime?.timezone || 'Asia/Dhaka';
-      const offset = offsets[tz] || '+06:00';
-      let hour = c.startTime?.hour || 12;
-      const minute = c.startTime?.minute || 0;
-      const period = c.startTime?.period || 'AM';
-      if (period === 'PM' && hour < 12) hour += 12;
-      if (period === 'AM' && hour === 12) hour = 0;
-      const pad = (num) => String(num).padStart(2, '0');
-      return new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`).getTime();
-    };
+  // Apply independent filters
+  const filteredUpcoming = filterContests(currentOrUpcoming, upcomingSearch, upcomingLevelFilter, upcomingTypeFilter);
+  const filteredPast = filterContests(past, pastSearch, pastLevelFilter, pastTypeFilter);
 
+  // Sort upcoming: running first, then by start time ascending
+  const sortedUpcoming = [...filteredUpcoming].sort((a, b) => {
+    const aInfo = getContestTimeInfo(a);
+    const bInfo = getContestTimeInfo(b);
+    if (aInfo.status === 'running' && bInfo.status !== 'running') return -1;
+    if (aInfo.status !== 'running' && bInfo.status === 'running') return 1;
     return getStartMs(a) - getStartMs(b);
   });
+
+  // Sort past: most recently ended first
+  const sortedPast = [...filteredPast].sort((a, b) => getStartMs(b) - getStartMs(a));
+
+  // ─── Action button renderer ───────────────────────────────────────────────
+
+  const renderActionButton = (contest, timeInfo) => {
+    const isUpcoming = timeInfo.status === 'upcoming';
+    const isRunning = timeInfo.status === 'running';
+    const isEnded = timeInfo.status === 'ended';
+
+    // Ended contests
+    if (isEnded) {
+      if (contest.hasParticipated) {
+        return (
+          <button
+            className="contest-table-cta contest-table-cta--result"
+            onClick={() => handleViewResult(contest._id)}
+          >
+            <span>{language === 'en' ? 'View Result' : 'ফলাফল দেখুন'}</span>
+            <HiArrowRight size={14} />
+          </button>
+        );
+      }
+      return (
+        <button
+          className="contest-table-cta"
+          onClick={() => handleParticipate(contest._id)}
+        >
+          <span>{language === 'en' ? 'Practice' : 'অনুশীলন'}</span>
+          <HiArrowRight size={14} />
+        </button>
+      );
+    }
+
+    // Running contests
+    if (isRunning) {
+      if (contest.hasRegistered) {
+        return (
+          <button
+            className="contest-table-cta contest-table-cta--active"
+            onClick={() => handleParticipate(contest._id)}
+          >
+            <span>{language === 'en' ? 'Participate' : 'অংশ নিন'}</span>
+            <HiArrowRight size={14} />
+          </button>
+        );
+      }
+      return (
+        <button className="contest-table-cta contest-table-cta--not-registered" disabled>
+          <HiBan size={14} />
+          <span>{language === 'en' ? 'Not Registered' : 'নিবন্ধিত নয়'}</span>
+        </button>
+      );
+    }
+
+    // Upcoming contests
+    if (isUpcoming) {
+      if (contest.hasRegistered) {
+        return (
+          <button className="contest-table-cta contest-table-cta--registered" disabled>
+            <HiCheckCircle size={14} />
+            <span>{language === 'en' ? 'Registered' : 'নিবন্ধিত'}</span>
+          </button>
+        );
+      }
+
+      const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
+      const isRegistrationOpen = timeInfo.startDate ? (timeInfo.startDate.getTime() - now.getTime() >= ONE_HOUR_MS) : false;
+
+      if (isRegistrationOpen) {
+        return (
+          <button
+            className="contest-table-cta contest-table-cta--register"
+            onClick={() => openRegistrationModal(contest._id)}
+            disabled={registeringContestId === contest._id}
+          >
+            {registeringContestId === contest._id ? (
+              <span>{language === 'en' ? 'Registering...' : 'নিবন্ধন হচ্ছে...'}</span>
+            ) : (
+              <>
+                <span>{language === 'en' ? 'Register' : 'নিবন্ধন করুন'}</span>
+                <HiArrowRight size={14} />
+              </>
+            )}
+          </button>
+        );
+      }
+      // Registration closed
+      return (
+        <button className="contest-table-cta contest-table-cta--closed" disabled>
+          <HiClock size={14} />
+          <span>{language === 'en' ? 'Reg. Closed' : 'নিবন্ধন বন্ধ'}</span>
+        </button>
+      );
+    }
+
+    return null;
+  };
+
+  // ─── Table renderer ───────────────────────────────────────────────────────
+
+  const renderContestTable = (contestList, emptyMsg) => {
+    if (contestList.length === 0) {
+      return (
+        <div className="contests-empty-state">
+          <div className="empty-icon-wrap">📅</div>
+          <h3>{language === 'en' ? 'No Contests Found' : 'কোনো কনটেস্ট পাওয়া যায়নি'}</h3>
+          <p>{emptyMsg}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="contests-table-container">
+        <table className="contests-table">
+          <thead>
+            <tr>
+              <th>{language === 'en' ? 'Contest' : 'কনটেস্ট'}</th>
+              <th>{language === 'en' ? 'Level & Format' : 'লেভেল ও ফরম্যাট'}</th>
+              <th>{language === 'en' ? 'Subjects / Units' : 'বিষয় / ইউনিট'}</th>
+              <th>{language === 'en' ? 'Duration' : 'সময়কাল'}</th>
+              <th>{language === 'en' ? 'Hosted By' : 'আয়োজক'}</th>
+              <th>{language === 'en' ? 'Start Time' : 'শুরুর সময়'}</th>
+              <th>{language === 'en' ? 'Countdown / Status' : 'কাউন্টডাউন / স্ট্যাটাস'}</th>
+              <th className="text-right">{language === 'en' ? 'Action' : 'অ্যাকশন'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contestList.map((contest, index) => {
+              const timeInfo = getContestTimeInfo(contest);
+
+              return (
+                <motion.tr
+                  key={contest._id}
+                  className={`contest-row contest-row--${timeInfo.status}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                >
+                  {/* Title & Badge */}
+                  <td>
+                    <div className="contest-name-cell">
+                      <span className={`status-dot status-dot--${timeInfo.status}`}></span>
+                      <div className="contest-title-wrap">
+                        <span className="contest-row-title" title={contest.name}>
+                          {contest.name}
+                        </span>
+                        <span className={`status-badge-inline status-badge-inline--${timeInfo.status}`}>
+                          {timeInfo.badgeText}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Level & Format */}
+                  <td>
+                    <div className="contest-level-format-cell">
+                      <span className="capitalize-level">{contest.level}</span>
+                      <span className="format-subtext">{getFormatLabel(contest.questionType)}</span>
+                    </div>
+                  </td>
+
+                  {/* Subjects / Units */}
+                  <td>
+                    <div className="contest-level-format-cell">
+                      {contest.level === 'hsc' && (
+                        <>
+                          <span className="capitalize-level">
+                            {contest.subjects?.map(getSubjectLabel).join(', ')}
+                          </span>
+                        </>
+                      )}
+                      {contest.level === 'admission' && (
+                        <>
+                          <span className="capitalize-level">
+                            {getAdmissionTypeLabel(contest.admissionType)}
+                          </span>
+                          {contest.admissionSubtype && (
+                            <span className="format-subtext">
+                              {getAdmissionSubtypeLabel(contest.admissionSubtype)}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Duration */}
+                  <td>
+                    <span className="duration-text">
+                      {contest.duration.hours}h {contest.duration.minutes}m
+                    </span>
+                  </td>
+
+                  {/* Hosted By */}
+                  <td>
+                    <span className="organizer-name">
+                      {contest.creator ? contest.creator.name : '—'}
+                    </span>
+                  </td>
+
+                  {/* Start Time */}
+                  <td>
+                    <div className="start-time-cell">
+                      <span className="start-date">{formatDate(contest.date)}</span>
+                      <span className="start-time-sub">
+                        {formatTime(contest.startTime)} ({contest.startTime?.timezone})
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Countdown */}
+                  <td>
+                    <div className="countdown-cell">
+                      <span className={`countdown-value countdown-value--${timeInfo.status}`}>
+                        {timeInfo.remainingText}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* CTA */}
+                  <td className="text-right">
+                    {renderActionButton(contest, timeInfo)}
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="contests-page">
@@ -347,205 +772,86 @@ export default function Contests() {
           </p>
         </header>
 
-        {/* Filters and Search Bar */}
-        <section className="contests-filter-bar">
-          <div className="contests-search-wrapper">
-            <HiSearch className="contests-search-icon" size={20} />
-            <input
-              type="text"
-              placeholder={language === 'en' ? 'Search contests...' : 'কনটেস্ট খুঁজুন...'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="contests-search-input"
-            />
+        {/* ═══════ Table 1: Current or Upcoming Contests ═══════ */}
+        <section className="contests-table-section">
+          <div className="contests-section-header">
+            <div className="contests-section-header__icon contests-section-header__icon--active">
+              <HiClock size={20} />
+            </div>
+            <div>
+              <h2 className="contests-section-title">
+                {language === 'en' ? 'Current or Upcoming Contests' : 'বর্তমান বা আসন্ন কনটেস্টসমূহ'}
+              </h2>
+              <p className="contests-section-subtitle">
+                {language === 'en'
+                  ? 'Register for upcoming contests or participate in running ones.'
+                  : 'আসন্ন কনটেস্টে নিবন্ধন করুন অথবা চলমান কনটেস্টে অংশ নিন।'}
+              </p>
+            </div>
+            <span className="contests-section-count">
+              {sortedUpcoming.length} {language === 'en' ? (sortedUpcoming.length === 1 ? 'contest' : 'contests') : 'টি কনটেস্ট'}
+            </span>
           </div>
 
-          <div className="contests-filters">
-            {/* Level Filter */}
-            <div className="contests-select-group">
-              <HiAcademicCap className="select-icon" size={16} />
-              <select
-                value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value)}
-                className="contests-select"
-              >
-                <option value="all">{language === 'en' ? 'All Levels' : 'সকল লেভেল'}</option>
-                <option value="hsc">HSC</option>
-                <option value="admission">{language === 'en' ? 'Admission' : 'এডমিশন'}</option>
-              </select>
-            </div>
+          <div className="contests-card">
+            <ContestFilterBar
+              searchQuery={upcomingSearch}
+              setSearchQuery={setUpcomingSearch}
+              levelFilter={upcomingLevelFilter}
+              setLevelFilter={setUpcomingLevelFilter}
+              typeFilter={upcomingTypeFilter}
+              setTypeFilter={setUpcomingTypeFilter}
+              language={language}
+            />
 
-            {/* Format Filter */}
-            <div className="contests-select-group">
-              <HiCollection className="select-icon" size={16} />
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="contests-select"
-              >
-                <option value="all">{language === 'en' ? 'All Formats' : 'সকল ফরম্যাট'}</option>
-                <option value="mcq">MCQ</option>
-                <option value="cq">CQ</option>
-                <option value="both">{language === 'en' ? 'Mixed' : 'মিশ্রিত'}</option>
-              </select>
-            </div>
+            {renderContestTable(
+              sortedUpcoming,
+              language === 'en'
+                ? 'No current or upcoming contests. Check back later!'
+                : 'কোনো বর্তমান বা আসন্ন কনটেস্ট নেই। পরে আবার দেখুন!'
+            )}
           </div>
         </section>
 
-        {/* Contests Table Section */}
-        <section className="contests-table-section">
-          {sortedContests.length === 0 ? (
-            <div className="contests-empty-state">
-              <div className="empty-icon-wrap">📅</div>
-              <h3>{language === 'en' ? 'No Contests Found' : 'কোনো কনটেস্ট পাওয়া যায়নি'}</h3>
-              <p>
+        {/* ═══════ Table 2: Past Contests ═══════ */}
+        <section className="contests-table-section contests-table-section--past">
+          <div className="contests-section-header">
+            <div className="contests-section-header__icon contests-section-header__icon--past">
+              <HiCalendar size={20} />
+            </div>
+            <div>
+              <h2 className="contests-section-title">
+                {language === 'en' ? 'Past Contests' : 'বিগত কনটেস্টসমূহ'}
+              </h2>
+              <p className="contests-section-subtitle">
                 {language === 'en'
-                  ? 'Try adjusting your filters or search keywords.'
-                  : 'অনুগ্রহ করে ফিল্টার পরিবর্তন করে অথবা অন্য কি-ওয়ার্ড লিখে পুনরায় চেষ্টা করুন।'}
+                  ? 'View results of completed contests or practice with past questions.'
+                  : 'সম্পন্ন কনটেস্টের ফলাফল দেখুন অথবা বিগত প্রশ্ন দিয়ে অনুশীলন করুন।'}
               </p>
             </div>
-          ) : (
-            <div className="contests-table-container">
-              <table className="contests-table">
-                <thead>
-                  <tr>
-                    <th>{language === 'en' ? 'Contest' : 'কনটেস্ট'}</th>
-                    <th>{language === 'en' ? 'Level & Format' : 'লেভেল ও ফরম্যাট'}</th>
-                    <th>{language === 'en' ? 'Subjects / Units' : 'বিষয় / ইউনিট'}</th>
-                    <th>{language === 'en' ? 'Duration' : 'সময়কাল'}</th>
-                    <th>{language === 'en' ? 'Hosted By' : 'আয়োজক'}</th>
-                    <th>{language === 'en' ? 'Start Time' : 'শুরুর সময়'}</th>
-                    <th>{language === 'en' ? 'Countdown / Status' : 'কাউন্টডাউন / স্ট্যাটাস'}</th>
-                    <th className="text-right">{language === 'en' ? 'Action' : 'অ্যাকশন'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedContests.map((contest, index) => {
-                    const timeInfo = getContestTimeInfo(contest);
-                    const isUpcoming = timeInfo.status === 'upcoming';
-                    const isRunning = timeInfo.status === 'running';
+            <span className="contests-section-count">
+              {sortedPast.length} {language === 'en' ? (sortedPast.length === 1 ? 'contest' : 'contests') : 'টি কনটেস্ট'}
+            </span>
+          </div>
 
-                    return (
-                      <motion.tr
-                        key={contest._id}
-                        className={`contest-row contest-row--${timeInfo.status}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: index * 0.03 }}
-                      >
-                        {/* Title & Badge */}
-                        <td>
-                          <div className="contest-name-cell">
-                            <span className={`status-dot status-dot--${timeInfo.status}`}></span>
-                            <div className="contest-title-wrap">
-                              <span className="contest-row-title" title={contest.name}>
-                                {contest.name}
-                              </span>
-                              <span className={`status-badge-inline status-badge-inline--${timeInfo.status}`}>
-                                {timeInfo.badgeText}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
+          <div className="contests-card">
+            <ContestFilterBar
+              searchQuery={pastSearch}
+              setSearchQuery={setPastSearch}
+              levelFilter={pastLevelFilter}
+              setLevelFilter={setPastLevelFilter}
+              typeFilter={pastTypeFilter}
+              setTypeFilter={setPastTypeFilter}
+              language={language}
+            />
 
-                        {/* Level & Format */}
-                        <td>
-                          <div className="contest-level-format-cell">
-                            <span className="capitalize-level">{contest.level}</span>
-                            <span className="format-subtext">{getFormatLabel(contest.questionType)}</span>
-                          </div>
-                        </td>
-
-                        {/* Subjects / Units */}
-                        <td>
-                          <div className="contest-badges-cell">
-                            {contest.level === 'hsc' && contest.subjects?.map((sub) => (
-                              <span key={sub} className="badge badge--subject">{sub}</span>
-                            ))}
-                            {contest.level === 'admission' && (
-                              <>
-                                <span className="badge badge--adm-type capitalize">{contest.admissionType}</span>
-                                {contest.admissionSubtype && (
-                                  <span className="badge badge--adm-sub capitalize">{contest.admissionSubtype}</span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Duration */}
-                        <td>
-                          <span className="duration-text">
-                            {contest.duration.hours}h {contest.duration.minutes}m
-                          </span>
-                        </td>
-
-                        {/* Hosted By */}
-                        <td>
-                          <span className="organizer-name">
-                            {contest.creator ? contest.creator.name : '—'}
-                          </span>
-                        </td>
-
-                        {/* Start Time */}
-                        <td>
-                          <div className="start-time-cell">
-                            <span className="start-date">{formatDate(contest.date)}</span>
-                            <span className="start-time-sub">
-                              {formatTime(contest.startTime)} ({contest.startTime?.timezone})
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Countdown */}
-                        <td>
-                          <div className="countdown-cell">
-                            <span className={`countdown-value countdown-value--${timeInfo.status}`}>
-                              {timeInfo.remainingText}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* CTA */}
-                        <td className="text-right">
-                          {contest.hasParticipated ? (
-                            <button
-                              className="contest-table-cta contest-table-cta--result"
-                              onClick={() => handleViewResult(contest._id)}
-                            >
-                              <span>
-                                {language === 'en' ? 'View Result' : 'ফলাফল দেখুন'}
-                              </span>
-                              <HiArrowRight size={14} />
-                            </button>
-                          ) : (
-                            <button
-                              className={`contest-table-cta ${isRunning ? 'contest-table-cta--active' : ''}`}
-                              disabled={isUpcoming}
-                              onClick={() => {
-                                if (isRunning || timeInfo.status === 'ended') {
-                                  handleParticipate(contest._id);
-                                }
-                              }}
-                            >
-                              <span>
-                                {isRunning
-                                  ? (language === 'en' ? 'Participate' : 'অংশ নিন')
-                                  : isUpcoming
-                                  ? (language === 'en' ? 'Wait' : 'অপেক্ষা')
-                                  : (language === 'en' ? 'Practice' : 'অনুশীলন')}
-                              </span>
-                              <HiArrowRight size={14} />
-                            </button>
-                          )}
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {renderContestTable(
+              sortedPast,
+              language === 'en'
+                ? 'No past contests to display yet.'
+                : 'এখনো কোনো বিগত কনটেস্ট প্রদর্শনের জন্য নেই।'
+            )}
+          </div>
         </section>
       </main>
 
@@ -560,7 +866,7 @@ export default function Contests() {
               <span className="contest-modal-header-icon">🏆</span>
               <h2>{language === 'en' ? 'Contest Results' : 'কনটেস্টের ফলাফল'}</h2>
             </div>
-            
+
             <div className="contest-metrics-grid">
               <div className="contest-metric-item score">
                 <span className="metric-label">{language === 'en' ? 'Marks Obtained' : 'প্রাপ্ত নম্বর'}</span>
@@ -608,6 +914,100 @@ export default function Contests() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Form Modal */}
+      {showRegModal && (
+        <div className="contest-modal-overlay" onClick={() => setShowRegModal(false)}>
+          <div className="contest-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="contest-modal-close" onClick={() => setShowRegModal(false)}>
+              &times;
+            </button>
+            <div className="contest-modal-header">
+              <span className="contest-modal-header-icon">📝</span>
+              <h2>{language === 'en' ? 'Contest Registration' : 'কনটেস্ট নিবন্ধন'}</h2>
+            </div>
+
+            <form onSubmit={handleConfirmRegistration} className="registration-form">
+              <div className="form-group">
+                <label>{language === 'en' ? 'Full Name' : 'পূর্ণ নাম'}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  placeholder={language === 'en' ? 'Enter your full name' : 'আপনার পূর্ণ নাম লিখুন'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'Email Address' : 'ইমেইল ঠিকানা'}</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={regEmail}
+                  disabled
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'Phone Number' : 'ফোন নম্বর'}</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder={language === 'en' ? 'Enter phone number' : 'ফোন নম্বর লিখুন'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'College Name / Institution' : 'কলেজের নাম / শিক্ষা প্রতিষ্ঠান'}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regCollege}
+                  onChange={(e) => setRegCollege(e.target.value)}
+                  placeholder={language === 'en' ? 'Enter college name' : 'কলেজের নাম লিখুন'}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>{language === 'en' ? 'HSC Batch' : 'HSC ব্যাচ'}</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={regHscBatch}
+                  onChange={(e) => setRegHscBatch(e.target.value)}
+                  placeholder={language === 'en' ? 'e.g. HSC 2025' : 'যেমন: HSC 2025'}
+                  required
+                />
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setShowRegModal(false)}
+                >
+                  {language === 'en' ? 'Cancel' : 'বাতিল'}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-confirm"
+                  disabled={registeringContestId !== ''}
+                >
+                  {registeringContestId !== '' 
+                    ? (language === 'en' ? 'Registering...' : 'নিবন্ধন হচ্ছে...') 
+                    : (language === 'en' ? 'Confirm Registration' : 'নিবন্ধন নিশ্চিত করুন')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

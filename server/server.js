@@ -43,6 +43,7 @@ const studyRoutineRoutes = require("./routes/studyRoutineRoutes");
 const mentorRoutes = require("./routes/mentorRoutes");
 const mockTestRoutes = require("./routes/mockTestRoutes");
 const liveClassRoutes = require("./routes/liveClassRoutes");
+const ieltsRoutes = require("./routes/ieltsRoutes");
 
 // Community / Forum
 const postRoutes = require("./routes/postRoutes");
@@ -136,6 +137,7 @@ app.use("/api/study-routine", studyRoutineRoutes);
 app.use("/api/mentor-connections", mentorRoutes);
 app.use("/api/mock-tests", mockTestRoutes);
 app.use("/api/live-class", liveClassRoutes);
+app.use("/api/ielts", ieltsRoutes);
 
 // === Forum / Community routes ===
 app.use("/api/users", userRoutes);

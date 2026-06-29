@@ -8,5 +8,7 @@ router.get('/rooms/:roomId', auth, battleController.getRoom);
 router.post('/rooms/:roomId/join', auth, battleController.joinRoom);
 router.post('/rooms/:roomId/start', auth, battleController.startRoom);
 router.post('/rooms/:roomId/answer', auth, battleController.submitAnswer);
+router.post('/rooms/:roomId/rematch', auth, battleController.createRematchRoom);
+router.post('/coach', auth, battleController.generateCoach);
 
 module.exports = router;

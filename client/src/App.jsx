@@ -30,6 +30,10 @@ import ReadingBookView from './pages/ReadingBookView';
 import PracticeHistory from './pages/PracticeHistory';
 import MentorLiveClass from './pages/MentorLiveClass';
 import StudentLiveClass from './pages/StudentLiveClass';
+import IeltsPrep from './pages/IeltsPrep';
+import IeltsTeacher from './pages/IeltsTeacher';
+import IeltsListeningUpload from './pages/IeltsListeningUpload';
+import IeltsListening from './pages/IeltsListening';
 import './pages/PracticeHistory.css';
 
 // === Forum / Community ===
@@ -97,9 +101,10 @@ function AppContent() {
         <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
         <Route path="/mentor/live-class" element={<MentorLiveClass />} />
         <Route path="/student/live-class" element={<StudentLiveClass />} />
-
-        <Route path="/mentor/live-class" element={<MentorLiveClass />} />
-        <Route path="/student/live-class" element={<StudentLiveClass />} />
+        <Route path="/ielts-prep" element={<IeltsPrep />} />
+        <Route path="/ielts-teacher" element={<IeltsTeacher />} />
+        <Route path="/ielts-teacher/listening/upload" element={<IeltsListeningUpload />} />
+        <Route path="/ielts-prep/listening" element={<IeltsListening />} />
 
         {/* === Forum / Community === */}
         <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
