@@ -17,7 +17,7 @@ import CalendarView from '../components/study/CalendarView';
 import DayDetailList from '../components/study/DayDetailList';
 import { aiApi } from '../services/aiApi';
 import { studyRoutineApi } from '../services/studyRoutineApi';
-import { todayKey, toISODate, findDayByKey } from '../utils/dateHelpers';
+import { todayKey, toISODate, findDayByKey, hasMoreWeeksToGenerate } from '../utils/dateHelpers';
 import './StudyRoutine.css';
 
 const STORAGE_KEY = 'topkorbo_study_routine_messages';
@@ -90,6 +90,9 @@ export default function StudyRoutine() {
   const [modifyInput, setModifyInput] = useState('');
   const [isModifying, setIsModifying] = useState(false);
 
+  // Week-by-week generation
+  const [isGeneratingWeek, setIsGeneratingWeek] = useState(false);
+
   const messagesEndRef = useRef(null);
   const activeTab = 'study-routine';
 
@@ -140,6 +143,14 @@ export default function StudyRoutine() {
     };
     init();
   }, []);
+
+  const isExpired = useMemo(() => {
+    if (!activeRoutine?.examInfo?.examDate) return false;
+    const d = new Date(activeRoutine.examInfo.examDate);
+    const now = new Date();
+    const diff = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    return diff < 0;
+  }, [activeRoutine]);
 
   // Default selected day → today, falling back to first day in routine
   useEffect(() => {
@@ -264,13 +275,17 @@ export default function StudyRoutine() {
       if (seg) seg.completed = newVal;
       return u;
     });
-    // Optimistic stats update
+    // Optimistic stats update — recompute from actual counts
     setStats((prev) => {
-      const delta = newVal ? 1 : -1;
-      return {
-        ...prev,
-        overallCompletionPct: Math.max(0, Math.min(100, prev.overallCompletionPct + delta))
-      };
+      const totalSegments = activeRoutine?.routine?.reduce(
+        (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.length : 0), 0
+      ) || 1;
+      const doneSegments = activeRoutine?.routine?.reduce(
+        (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.filter((s) => s.completed).length : 0), 0
+      ) || 0;
+      const newDone = doneSegments + (newVal ? 1 : -1);
+      const newPct = Math.round(Math.max(0, newDone / totalSegments) * 100);
+      return { ...prev, overallCompletionPct: newPct };
     });
     try {
       await studyRoutineApi.toggleSegment(dayId, segmentId, newVal);
@@ -288,11 +303,15 @@ export default function StudyRoutine() {
         return u;
       });
       setStats((prev) => {
-        const delta = newVal ? -1 : 1;
-        return {
-          ...prev,
-          overallCompletionPct: Math.max(0, Math.min(100, prev.overallCompletionPct + delta))
-        };
+        const totalSegments = activeRoutine?.routine?.reduce(
+          (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.length : 0), 0
+        ) || 1;
+        const doneSegments = activeRoutine?.routine?.reduce(
+          (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.filter((s) => s.completed).length : 0), 0
+        ) || 0;
+        const newDone = doneSegments - (newVal ? 1 : -1);
+        const newPct = Math.round(Math.max(0, newDone / totalSegments) * 100);
+        return { ...prev, overallCompletionPct: newPct };
       });
     }
   }, []);
@@ -328,6 +347,60 @@ export default function StudyRoutine() {
     }
   };
 
+  // --- Week-by-week generation ---
+  // The button only makes sense when there are days past `generatedUpTo` that
+  // don't yet have any segments. After `saveRoutine` (server side) we set
+  // `generatedUpTo = planEnd`, so for a complete plan the button stays hidden
+  // even when the final day is a rest day with empty segments.
+  const hasMoreWeeks = useMemo(
+    () => hasMoreWeeksToGenerate(activeRoutine),
+    [activeRoutine]
+  );
+
+  const handleGenerateNextWeek = async () => {
+    if (isGeneratingWeek || !activeRoutine) return;
+    setIsGeneratingWeek(true);
+    try {
+      const res = await studyRoutineApi.generateNextWeek();
+      if (res?.routine) {
+        setActiveRoutine((prev) => ({ ...prev, routine: res.routine, generatedUpTo: res.generatedUpTo }));
+        if (res.done) {
+          toast.success('All weeks generated! Your full plan is ready.');
+        } else {
+          toast.success('Next week generated!');
+        }
+        try {
+          const statsRes = await studyRoutineApi.getStats();
+          if (statsRes) setStats(statsRes);
+        } catch {}
+      }
+    } catch (err) {
+      // 404 means the routine was removed server-side (reset, deleted, or
+      // never saved). Refresh state to drop the stale client view instead of
+      // surfacing a confusing "Not Found" toast.
+      const status = err?.status || err?.statusCode || 0;
+      if (status === 404) {
+        try {
+          const fresh = await studyRoutineApi.get();
+          if (fresh?.routine) {
+            setActiveRoutine(fresh.routine);
+          } else {
+            setActiveRoutine(null);
+            setSelectedDayKey(null);
+          }
+        } catch {
+          setActiveRoutine(null);
+          setSelectedDayKey(null);
+        }
+        toast.error('Your routine is out of date — refreshing.', { duration: 4000 });
+      } else {
+        toast.error(formatAiError(err, 'Failed to generate next week.'), { duration: 6000 });
+      }
+    } finally {
+      setIsGeneratingWeek(false);
+    }
+  };
+
   // --- Navigation helpers ---
   const navigateDay = (direction) => {
     const days = activeRoutine?.routine || [];
@@ -358,13 +431,6 @@ export default function StudyRoutine() {
     setCalendarCursor(t);
   };
 
-  const examDateLabel = useMemo(() => {
-    if (!activeRoutine?.examInfo?.examDate) return null;
-    const d = new Date(activeRoutine.examInfo.examDate);
-    const diff = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? `${diff} days until exam` : 'Exam date passed';
-  }, [activeRoutine]);
-
   if (isFetching) {
     return (
       <div className="dashboard-container">
@@ -393,9 +459,8 @@ export default function StudyRoutine() {
             <p>Date-aware study planner with streak tracking and calendar view.</p>
           </div>
           <div className="routine-header-actions">
-            {examDateLabel && <span className="routine-exam-countdown">{examDateLabel}</span>}
-            <span className={`routine-status ${activeRoutine ? 'routine-status--ready' : ''}`}>
-              {activeRoutine ? 'Routine Active' : messages.length === 0 ? 'Ready to start' : 'Collecting details'}
+            <span className={`routine-status ${isExpired ? 'routine-status--expired' : activeRoutine ? 'routine-status--ready' : ''}`}>
+              {isExpired ? 'Routine Expired' : activeRoutine ? 'Routine Active' : messages.length === 0 ? 'Ready to start' : 'Collecting details'}
             </span>
             <button
               type="button"
@@ -433,13 +498,29 @@ export default function StudyRoutine() {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="routine-modify-btn"
-                  onClick={() => setShowModifyPanel(!showModifyPanel)}
-                >
-                  <HiSparkles /> {showModifyPanel ? 'Close AI Modifier' : 'Modify with AI'}
-                </button>
+                <div className="routine-header-btns">
+                  {hasMoreWeeks && (
+                    <button
+                      type="button"
+                      className="routine-generate-week-btn"
+                      onClick={handleGenerateNextWeek}
+                      disabled={isGeneratingWeek}
+                    >
+                      {isGeneratingWeek ? (
+                        <><span className="routine-spinner" /> Generating...</>
+                      ) : (
+                        <><HiSparkles /> Generate Next Week</>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="routine-modify-btn"
+                    onClick={() => setShowModifyPanel(!showModifyPanel)}
+                  >
+                    <HiSparkles /> {showModifyPanel ? 'Close AI Modifier' : 'Modify with AI'}
+                  </button>
+                </div>
               </div>
 
               {/* Stats bar */}
@@ -447,6 +528,7 @@ export default function StudyRoutine() {
                 stats={stats}
                 routine={activeRoutine}
                 examDate={activeRoutine.examInfo?.examDate}
+                isExpired={isExpired}
               />
 
               {/* AI Modify Panel */}
@@ -505,6 +587,7 @@ export default function StudyRoutine() {
                       setSelectedDayKey(key);
                       setCalendarCursor(key);
                     }}
+                    generatedUpTo={activeRoutine?.generatedUpTo || null}
                   />
                 </div>
                 <div className="routine-day-pane">
@@ -540,6 +623,8 @@ export default function StudyRoutine() {
                     dayKey={selectedDayKey}
                     onToggle={toggleSegment}
                     onEdit={saveEdit}
+                    isExpired={isExpired}
+                    generatedUpTo={activeRoutine?.generatedUpTo || null}
                   />
                 </div>
               </div>

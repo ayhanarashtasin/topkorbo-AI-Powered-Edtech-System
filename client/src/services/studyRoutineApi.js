@@ -65,6 +65,13 @@ export function deleteStudyRoutine() {
   });
 }
 
+export function generateNextWeek() {
+  return request('/study-routine/generate-week', {
+    method: 'POST',
+    headers: buildHeaders({ 'Content-Type': 'application/json' })
+  });
+}
+
 export function getStudyStats() {
   return request('/study-routine/stats', {
     headers: buildHeaders()
@@ -97,7 +104,8 @@ export const studyRoutineApi = {
   delete: deleteStudyRoutine,
   getStats: getStudyStats,
   startSession: startFocusSession,
-  stopSession: stopFocusSession
+  stopSession: stopFocusSession,
+  generateNextWeek
 };
 
 export default studyRoutineApi;

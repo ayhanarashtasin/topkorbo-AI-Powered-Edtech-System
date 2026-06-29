@@ -1,5 +1,7 @@
 const Groq = require('groq-sdk');
 const ChatMessage = require('../models/ChatMessage');
+const StudyRoutine = require('../models/StudyRoutine');
+const { toISODate } = require('../utils/recurrence');
 
 /**
  * Lazily construct the Groq client. We instantiate per-request because the
@@ -382,15 +384,15 @@ const STUDY_ROUTINE_GENERATE_PROMPT =
   '- Include college time as segments with subject "College".\n' +
   '- Give EXTRA study time to weak subjects (mark those segments with "priority":"high").\n' +
   '- Use studentProfile.startDate (ISO YYYY-MM-DD) as the FIRST day of the routine.\n' +
-  '- Generate EXACTLY planDurationDays day entries by walking forward one calendar day at a time from startDate.\n' +
-  '- If studyDaysPerWeek < 7, skip the appropriate number of rest days (e.g. 6 days/week = rest every Sunday). Still produce planDurationDays total day entries; rest days are included as "Rest" entries with no segments.\n' +
+  '- Generate ONLY the FIRST 7 day entries (the first week) by walking forward one calendar day at a time from startDate. If planDurationDays < 7, generate exactly planDurationDays entries instead. Do NOT generate the whole plan — the remaining weeks are generated later, one week at a time.\n' +
+  '- If studyDaysPerWeek < 7, skip the appropriate number of rest days within these 7 days (e.g. 6 days/week = rest every Sunday). Rest days are included as "Rest" entries with no segments.\n' +
   '- For EACH day, set "dayDate" to the ISO date (YYYY-MM-DD) of that calendar day and "day" to its weekday name.\n' +
   '- For EACH segment, set "startAt" and "endAt" as full ISO datetimes (with Z timezone) for that segment within dayDate. They MUST be ordered: earliest first. Use the student\'s wakeUpTime as the earliest non-morning-routine time.\n' +
   '- For EACH segment, set "estimatedMinutes" to the integer duration in minutes.\n' +
   '- For EACH study segment, set "priority" to "high" if the subject is in weakSubjects, otherwise "medium". Set "low" for breaks and college.\n' +
   '- Each study day should have 6-12 segments.\n' +
   '- Each study segment MUST include "subject", "paper", "chapter", and "task".\n' +
-  '- Distribute ALL chapters across the generated days so every chapter gets covered.\n' +
+  '- Across these first 7 days, prioritise the most important chapters and the weak subjects first; the remaining chapters are scheduled in later weeks.\n' +
   '- For non-study segments (Break, College, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
   '- The "task" field should be specific: "Solve exercises 3.1-3.5", "Read and take notes on section 2", "Practice MCQs from chapter 4", etc.\n\n' +
   'JSON shape:\n' +
@@ -426,6 +428,38 @@ const STUDY_ROUTINE_MODIFY_PROMPT =
   '- Always maintain breaks and reasonable study hours.\n' +
   '- NEVER change dayDate of an existing day. You may add new days but cannot shift existing dates.\n\n' +
   'Output ONLY the JSON object. No explanation.';
+
+// Week-by-week generation prompt — generates 7 days based on previous week's progress
+const STUDY_ROUTINE_WEEKLY_PROMPT =
+  'You are a study routine generator for HSC students in Bangladesh.\n\n' +
+  'You will receive:\n' +
+  '1. Student profile (wake/sleep times, college hours, weak subjects)\n' +
+  '2. Exam info (exam date, subjects with chapters)\n' +
+  '3. Previous week\'s progress summary (completion rates, which subjects were strong/weak)\n' +
+  '4. The 7-day date range to generate\n\n' +
+  'Generate a 7-day study routine that ADAPTS based on the student\'s previous week.\n\n' +
+  'RULES:\n' +
+  '- Output ONLY a JSON object with exactly 7 day entries.\n' +
+  '- Each day must have "day" (weekday name), "dayDate" (YYYY-MM-DD), and "segments" array.\n' +
+  '- Each segment must have: time, startAt, endAt, subject, paper, chapter, task, priority, estimatedMinutes, completed (always false for new segments).\n' +
+  '- For EACH segment, set "startAt" and "endAt" as full ISO datetimes (with Z timezone) for that segment within dayDate. They MUST be ordered: earliest first.\n' +
+  '- Each study day should have 6-12 segments.\n' +
+  '- Include breaks (lunch, rest) as segments with subject "Break".\n' +
+  '- Include college time as segments with subject "College" if college hours are provided.\n' +
+  '- Give EXTRA study time to weak subjects (mark those segments with "priority":"high").\n' +
+  '- If a subject had LOW completion last week, increase its time this week or move it to a better time slot.\n' +
+  '- If the student had a good streak, maintain the same study pattern.\n' +
+  '- If the student struggled with a subject, add a review session before new material.\n' +
+  '- Respect the student\'s wake/sleep times and college hours.\n' +
+  '- If studyDaysPerWeek < 7, skip the appropriate rest days.\n' +
+  '- Each study segment MUST include "subject", "paper", "chapter", and "task".\n' +
+  '- The "task" field should be specific: "Solve exercises 3.1-3.5", "Read and take notes on section 2", etc.\n' +
+  '- Distribute chapters so that all remaining chapters are covered before the exam date.\n' +
+  '- For non-study segments (Break, College, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
+  '- For rest days, return an empty segments array.\n\n' +
+  'JSON shape:\n' +
+  '{"routine":[{"day":"Monday","dayDate":"2026-07-04","segments":[{"time":"7:00 AM - 7:30 AM","startAt":"2026-07-04T01:00:00.000Z","endAt":"2026-07-04T01:30:00.000Z","subject":"Morning Routine","paper":"","chapter":"","task":"Wake up, freshen up","priority":"low","estimatedMinutes":30,"completed":false}]}]}\n\n' +
+  'CRITICAL: startAt and endAt MUST be valid ISO datetimes within dayDate. estimatedMinutes must equal (endAt - startAt) in minutes. Output ONLY the JSON object. No prose, no markdown.';
 
 function normaliseRoutineMessages(messages) {
   if (!Array.isArray(messages)) return [];
@@ -537,7 +571,7 @@ exports.studyRoutine = async (req, res, next) => {
         max_tokens: 4096,
         messages: [
           { role: 'system', content: STUDY_ROUTINE_GENERATE_PROMPT },
-          { role: 'user', content: `Student & Exam Info:\n${profileAndExam}\n\nGenerate the complete weekly study routine as JSON.` }
+          { role: 'user', content: `Student & Exam Info:\n${profileAndExam}\n\nGenerate ONLY the first 7 days (the first week) of the study routine as JSON.` }
         ]
       });
 
@@ -782,6 +816,208 @@ exports.answerMcq = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: { answerIndex }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/study-routine/generate-week
+ * Week-by-week AI generation. Generates 7 days based on previous week's progress.
+ */
+exports.generateNextWeek = async (req, res, next) => {
+  try {
+    const userId = req.user._id || req.user.id;
+    const studyRoutine = await StudyRoutine.findOne({ userId });
+    if (!studyRoutine) {
+      return res.status(404).json({
+        success: false,
+        code: 'NO_ROUTINE',
+        message: 'No routine found. Please create one first.'
+      });
+    }
+
+    const startDate = studyRoutine.startDate;
+    const durationDays = studyRoutine.durationDays || 30;
+    if (!startDate) {
+      // Routine exists but is missing plan metadata. Treat the same as a
+      // 404 — the client should drop its stale view and start fresh.
+      return res.status(404).json({
+        success: false,
+        code: 'NO_ROUTINE',
+        message: 'Routine is missing plan dates. Please create a new routine.'
+      });
+    }
+
+    // Determine the date range for the next week
+    const planEnd = new Date(startDate);
+    planEnd.setUTCDate(planEnd.getUTCDate() + durationDays - 1);
+
+    let weekStart;
+    if (studyRoutine.generatedUpTo) {
+      weekStart = new Date(studyRoutine.generatedUpTo);
+      weekStart.setUTCDate(weekStart.getUTCDate() + 1);
+    } else {
+      weekStart = new Date(startDate);
+    }
+
+    // Nothing left to generate
+    if (weekStart > planEnd) {
+      return res.status(200).json({
+        success: true,
+        data: { routine: studyRoutine.routine, generatedUpTo: studyRoutine.generatedUpTo, done: true }
+      });
+    }
+
+    // Calculate week end (6 days later, or plan end — whichever is sooner)
+    let weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+    if (weekEnd > planEnd) weekEnd = new Date(planEnd);
+
+    // Extract previous week's completion data
+    const routine = studyRoutine.routine || [];
+    const previousWeekDays = [];
+    if (studyRoutine.generatedUpTo) {
+      const prevWeekStart = new Date(studyRoutine.generatedUpTo);
+      prevWeekStart.setUTCDate(prevWeekStart.getUTCDate() - 6);
+      for (const day of routine) {
+        if (!day.dayDate) continue;
+        const d = new Date(day.dayDate);
+        if (d >= prevWeekStart && d <= studyRoutine.generatedUpTo) {
+          const segs = Array.isArray(day.segments) ? day.segments : [];
+          const done = segs.filter((s) => s.completed).length;
+          const bySubject = {};
+          for (const seg of segs) {
+            const subj = seg.subject || 'Other';
+            if (!bySubject[subj]) bySubject[subj] = { planned: 0, done: 0 };
+            bySubject[subj].planned++;
+            if (seg.completed) bySubject[subj].done++;
+          }
+          previousWeekDays.push({
+            dayDate: toISODate(d),
+            day: day.day,
+            planned: segs.length,
+            done,
+            bySubject
+          });
+        }
+      }
+    }
+
+    const prevWeekSummary = previousWeekDays.length > 0 ? {
+      totalPlanned: previousWeekDays.reduce((s, d) => s + d.planned, 0),
+      totalDone: previousWeekDays.reduce((s, d) => s + d.done, 0),
+      days: previousWeekDays
+    } : null;
+
+    // Build the prompt context
+    const groq = getGroqClient();
+    const profileAndExam = JSON.stringify({
+      studentProfile: studyRoutine.studentProfile || {},
+      examInfo: studyRoutine.examInfo || {}
+    }, null, 2);
+
+    const weekContext = JSON.stringify({
+      weekStart: toISODate(weekStart),
+      weekEnd: toISODate(weekEnd),
+      previousWeekProgress: prevWeekSummary
+    }, null, 2);
+
+    // Call AI
+    let weekRoutine = [];
+    try {
+      const completion = await groqWithRetry(groq, {
+        model: DEFAULT_MODEL,
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+        max_tokens: 4096,
+        messages: [
+          { role: 'system', content: STUDY_ROUTINE_WEEKLY_PROMPT },
+          { role: 'user', content: `Student & Exam Info:\n${profileAndExam}\n\nWeek to Generate:\n${weekContext}\n\nGenerate the 7-day study routine as JSON.` }
+        ]
+      });
+
+      const parsed = safeParseJson(completion?.choices?.[0]?.message?.content);
+      if (parsed && Array.isArray(parsed.routine)) {
+        weekRoutine = parsed.routine;
+      }
+    } catch (genErr) {
+      console.error('[aiController] weekly generation failed:', genErr?.message);
+    }
+
+    if (weekRoutine.length === 0) {
+      return res.status(502).json({
+        success: false,
+        message: 'AI could not generate the week. Please try again.'
+      });
+    }
+
+    // Merge AI-generated days into the existing routine
+    // Build a map of existing days by date key
+    const existingByDate = {};
+    for (const day of routine) {
+      if (day.dayDate) {
+        const key = toISODate(new Date(day.dayDate));
+        existingByDate[key] = day;
+      }
+    }
+
+    // Replace only the days that the AI generated
+    let lastGeneratedDate = null;
+    for (const aiDay of weekRoutine) {
+      if (!aiDay.dayDate) continue;
+      const dateKey = typeof aiDay.dayDate === 'string' ? aiDay.dayDate.slice(0, 10) : toISODate(new Date(aiDay.dayDate));
+
+      // Find existing day or create new one
+      const existing = existingByDate[dateKey];
+      if (existing) {
+        existing.segments = (aiDay.segments || []).map((seg) => ({
+          ...seg,
+          completed: false,
+          startAt: seg.startAt ? new Date(seg.startAt) : null,
+          endAt: seg.endAt ? new Date(seg.endAt) : null
+        }));
+      } else {
+        routine.push({
+          day: aiDay.day,
+          dayDate: new Date(dateKey + 'T00:00:00.000Z'),
+          segments: (aiDay.segments || []).map((seg) => ({
+            ...seg,
+            completed: false,
+            startAt: seg.startAt ? new Date(seg.startAt) : null,
+            endAt: seg.endAt ? new Date(seg.endAt) : null
+          }))
+        });
+      }
+
+      const d = new Date(dateKey + 'T00:00:00.000Z');
+      if (!lastGeneratedDate || d > lastGeneratedDate) lastGeneratedDate = d;
+    }
+
+    // Sort routine by dayDate
+    routine.sort((a, b) => {
+      if (!a.dayDate) return 1;
+      if (!b.dayDate) return -1;
+      return new Date(a.dayDate) - new Date(b.dayDate);
+    });
+
+    // Advance generatedUpTo to the intended week boundary (weekEnd), not just
+    // the last day the AI happened to emit. This guarantees forward progress so
+    // the "Generate Next Week" button keeps moving even if the model omits a
+    // trailing rest day in its output.
+    studyRoutine.routine = routine;
+    const advancedTo = lastGeneratedDate && lastGeneratedDate > weekEnd ? lastGeneratedDate : weekEnd;
+    studyRoutine.generatedUpTo = advancedTo;
+    await studyRoutine.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        routine: studyRoutine.routine,
+        generatedUpTo: studyRoutine.generatedUpTo,
+        done: advancedTo >= planEnd
+      }
     });
   } catch (err) {
     next(err);

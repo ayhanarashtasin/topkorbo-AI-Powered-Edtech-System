@@ -71,18 +71,28 @@ function generateDayPlan({ startDate, durationDays, studyDaysPerWeek }) {
 /**
  * Backfill dayDate / startAt / endAt / estimatedMinutes / priority on segments
  * when the AI omits them. Walks the routine day-by-day and assigns each
- * segment a default 90-minute window starting at 7am local server time.
+ * segment a default 90-minute window starting at the student's wake-up time
+ * expressed as UTC.
+ *
+ * The timezoneOffsetHours parameter converts the local wakeUp hour to its UTC
+ * equivalent. For Bangladesh (UTC+6), local 7 AM = UTC 1 AM, so offset = 6.
  *
  * @param {Array} routine - the routine array from AI
+ * @param {Object} defaults
+ * @param {number} [defaults.wakeUpHour=7] - Wake-up hour in LOCAL time
+ * @param {number} [defaults.defaultSegmentMinutes=90]
+ * @param {number} [defaults.timezoneOffsetHours=6] - Hours AHEAD of UTC
  * @returns {Array} routine with date fields filled in
  */
 function backfillDates(routine, defaults = {}) {
   if (!Array.isArray(routine)) return routine;
   const wakeUp = defaults.wakeUpHour ?? 7;
   const defaultSegmentMinutes = defaults.defaultSegmentMinutes ?? 90;
+  const tzOffsetHours = defaults.timezoneOffsetHours ?? 6;
 
   let cursor = new Date();
-  cursor.setUTCHours(wakeUp, 0, 0, 0);
+  const cursorUtcHour = wakeUp - tzOffsetHours;
+  cursor.setUTCHours(cursorUtcHour, 0, 0, 0);
 
   return routine.map((day, dayIdx) => {
     let dayDate = day.dayDate ? new Date(day.dayDate) : new Date(cursor);
@@ -95,7 +105,8 @@ function backfillDates(routine, defaults = {}) {
     day.dayDate = dayDate.toISOString();
 
     let segStart = new Date(dayDate);
-    segStart.setUTCHours(wakeUp, 0, 0, 0);
+    const utcHour = wakeUp - tzOffsetHours;
+    segStart.setUTCHours(utcHour, 0, 0, 0);
 
     const segs = Array.isArray(day.segments) ? day.segments : [];
     day.segments = segs.map((seg) => {

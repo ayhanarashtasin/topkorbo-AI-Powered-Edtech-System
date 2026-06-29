@@ -13,6 +13,7 @@ router.patch('/segment', studyRoutineController.toggleSegment);
 router.patch('/segment/edit', studyRoutineController.updateSegment);
 router.put('/replace', studyRoutineController.replaceRoutine);
 router.post('/modify', aiController.modifyStudyRoutine);
+router.post('/generate-week', aiController.generateNextWeek);
 router.delete('/', studyRoutineController.deleteRoutine);
 
 // Phase 2 focus-mode session endpoints

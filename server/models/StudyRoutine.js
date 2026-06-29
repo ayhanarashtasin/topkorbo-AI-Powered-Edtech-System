@@ -53,7 +53,9 @@ const studyRoutineSchema = new mongoose.Schema(
     // Phase 1 additions — explicit plan horizon
     startDate: { type: Date, default: null },
     durationDays: { type: Number, default: 30, min: 1, max: 365 },
-    routine: [DayRoutineSchema]
+    routine: [DayRoutineSchema],
+    // Week-by-week generation — tracks the last date for which AI segments exist
+    generatedUpTo: { type: Date, default: null }
   },
   { timestamps: true }
 );

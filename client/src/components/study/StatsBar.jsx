@@ -1,3 +1,4 @@
+import React from 'react';
 import { HiFire, HiAcademicCap } from 'react-icons/hi';
 
 /**
@@ -8,18 +9,29 @@ import { HiFire, HiAcademicCap } from 'react-icons/hi';
  *  - stats: { streakDays, overallCompletionPct, bySubject }
  *  - routine: full routine doc
  *  - examDate: optional Date
+ *  - isExpired: bool — routine is past its exam date
  */
-export default function StatsBar({ stats, routine, examDate }) {
+export default function StatsBar({ stats, routine, examDate, isExpired }) {
   const pct = stats?.overallCompletionPct ?? 0;
   const streak = stats?.streakDays ?? 0;
   const subjects = stats?.bySubject || {};
 
-  const daysUntilExam = (() => {
+  const examCountdown = (() => {
     if (!examDate) return null;
     const d = new Date(examDate);
-    const diff = Math.ceil((d - new Date()) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
+    const now = new Date();
+    const diff = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+    if (diff > 0) return `${diff} day${diff === 1 ? '' : 's'} until exam`;
+    if (diff === 0) return 'Exam today';
+    return null;
   })();
+
+  const totalCompleted = routine?.routine?.reduce(
+    (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.filter((s) => s.completed).length : 0), 0
+  ) || 0;
+  const totalSegments = routine?.routine?.reduce(
+    (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.length : 0), 0
+  ) || 0;
 
   return (
     <div className="routine-stats-bar">
@@ -54,9 +66,9 @@ export default function StatsBar({ stats, routine, examDate }) {
           <span className="routine-overall-progress__text">{pct}%</span>
         </div>
         <div className="routine-overall-progress__label">
-          <strong>{routine?.routine?.reduce((acc, d) => acc + d.segments.filter((s) => s.completed).length, 0) || 0}</strong>
+          <strong>{totalCompleted}</strong>
           {' / '}
-          {routine?.routine?.reduce((acc, d) => acc + d.segments.length, 0) || 0} done
+          {totalSegments} done
         </div>
       </div>
 
@@ -77,12 +89,16 @@ export default function StatsBar({ stats, routine, examDate }) {
         )}
       </div>
 
-      {/* Exam countdown */}
-      {daysUntilExam !== null && (
-        <div className="routine-exam-countdown">
-          📅 {daysUntilExam} day{daysUntilExam === 1 ? '' : 's'} until exam
+      {/* Exam countdown or expired badge */}
+      {isExpired ? (
+        <div className="routine-exam-countdown routine-exam-countdown--expired">
+          Exam date passed
         </div>
-      )}
+      ) : examCountdown ? (
+        <div className="routine-exam-countdown">
+          {examCountdown}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -3,7 +3,7 @@
  * Pure functions; no React imports.
  */
 
-/** Return YYYY-MM-DD string for `date`. Prevents timezone shifts if already an ISO string. */
+/** Return YYYY-MM-DD string for `date`. Uses UTC to avoid timezone drift. */
 export function toISODate(date) {
   if (!date) return null;
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
@@ -11,9 +11,9 @@ export function toISODate(date) {
   }
   const d = new Date(date);
   if (isNaN(d.getTime())) return null;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
 }
 
@@ -109,34 +109,6 @@ export function eventsFromRoutine(routine) {
   return events;
 }
 
-/**
- * Walk back from today through the routine's days and count consecutive
- * fully-completed days. Returns 0 if today is not in the routine yet.
- */
-export function streakFromRoutine(routine) {
-  if (!routine || !Array.isArray(routine.routine)) return 0;
-  const map = new Map();
-  for (const day of routine.routine) {
-    if (!day.dayDate) continue;
-    map.set(toISODate(day.dayDate), day);
-  }
-  let streak = 0;
-  const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
-  for (let i = 0; i < 365; i++) {
-    const key = toISODate(cursor);
-    const day = map.get(key);
-    if (!day) break;
-    const segs = Array.isArray(day.segments) ? day.segments : [];
-    if (segs.length === 0) break;
-    const allDone = segs.every((s) => s.completed);
-    if (allDone) streak++;
-    else break;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
-
 /** Returns today's routine day or null. */
 export function findToday(routine) {
   if (!routine?.routine) return null;
@@ -148,4 +120,44 @@ export function findToday(routine) {
 export function findDayByKey(routine, dayKey) {
   if (!routine?.routine || !dayKey) return null;
   return routine.routine.find((d) => d.dayDate && toISODate(d.dayDate) === dayKey) || null;
+}
+
+/**
+ * Should the "Generate Next Week" button be visible?
+ *
+ * `generatedUpTo` is the authoritative marker for "the last calendar day we
+ * have generated content for". The button is shown whenever that marker is
+ * strictly before the plan's final day (startDate + durationDays - 1) — i.e.
+ * there are still calendar days left in the plan horizon to generate.
+ *
+ * We intentionally do NOT require an empty placeholder day to physically
+ * exist past `generatedUpTo`. The next-week generator creates those day rows
+ * on demand, and depending on materialized placeholders made the button
+ * silently vanish whenever the later rows weren't pre-created.
+ *
+ * Returns true ONLY when:
+ *   - We have a startDate and durationDays.
+ *   - We have a valid `generatedUpTo` marker.
+ *   - `generatedUpTo` (compared by calendar day) is before the plan end.
+ *
+ * @param {Object|null} routine - StudyRoutine document (with startDate, durationDays, generatedUpTo, routine[])
+ * @returns {boolean}
+ */
+export function hasMoreWeeksToGenerate(routine) {
+  if (!routine?.startDate || !routine?.durationDays) return false;
+  if (!routine.generatedUpTo) return false;
+
+  const start = new Date(routine.startDate);
+  if (isNaN(start.getTime())) return false;
+  const planEnd = new Date(start);
+  planEnd.setUTCDate(planEnd.getUTCDate() + routine.durationDays - 1);
+
+  const generated = new Date(routine.generatedUpTo);
+  if (isNaN(generated.getTime())) return false;
+
+  const cutoff = toISODate(generated);
+  const planEndKey = toISODate(planEnd);
+  if (!cutoff || !planEndKey) return false;
+
+  return cutoff < planEndKey;
 }

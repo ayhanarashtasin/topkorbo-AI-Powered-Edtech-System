@@ -7,6 +7,10 @@
   border-radius: 999px; border: 1px solid rgba(192, 60, 40, 0.2); background: rgba(192, 60, 40, 0.07);
   color: #b93a26; font-size: 0.78rem; font-weight: 750; text-transform: uppercase; letter-spacing: 0.04em;
 }
+.routine-exam-countdown--expired {
+  border-color: rgba(75, 46, 43, 0.2); background: rgba(75, 46, 43, 0.07);
+  color: var(--text-muted);
+}
 
 .routine-status {
   display: inline-flex; align-items: center; min-height: 34px; padding: 6px 12px;
@@ -14,6 +18,7 @@
   color: #1f6f64; font-size: 0.78rem; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em;
 }
 .routine-status--ready { border-color: rgba(46, 125, 50, 0.28); background: rgba(46, 125, 50, 0.1); color: #2e7d32; }
+.routine-status--expired { border-color: rgba(75, 46, 43, 0.2); background: rgba(75, 46, 43, 0.07); color: var(--text-muted); }
 
 .routine-icon-btn {
   width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
@@ -98,13 +103,24 @@
 .routine-overall-progress__label strong { color: #1f7a6d; }
 
 /* Modify Button */
+.routine-header-btns { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 .routine-modify-btn {
-  display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+  display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 18px; border: 1px solid rgba(31, 122, 109, 0.25); border-radius: 8px;
   background: rgba(31, 122, 109, 0.06); color: #1f7a6d; font-weight: 700; font-size: 0.88rem;
   cursor: pointer; transition: all 0.2s;
 }
 .routine-modify-btn:hover { background: rgba(31, 122, 109, 0.12); border-color: rgba(31, 122, 109, 0.4); }
+
+/* Generate Next Week Button */
+.routine-generate-week-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border: 1px solid rgba(59,130,246,0.3); border-radius: 8px;
+  background: rgba(59,130,246,0.08); color: #2563eb; font-weight: 700; font-size: 0.88rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.routine-generate-week-btn:hover { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.5); }
+.routine-generate-week-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* AI Modify Panel */
 .routine-modify-panel {
@@ -220,6 +236,7 @@
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
   padding: 16px 20px; border: 1px solid rgba(31,122,109,0.12); border-radius: 12px;
   background: linear-gradient(180deg, rgba(31,122,109,0.04), rgba(31,122,109,0.01));
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
 .routine-streak-chip {
   display: inline-flex; align-items: center; gap: 10px;
@@ -303,7 +320,7 @@
 
 .routine-cal-event {
   display: flex; align-items: center; gap: 6px;
-  padding: 4px 8px; min-height: 100%;
+  padding: 4px 8px; min-height: 24px;
   font-size: 0.78rem; line-height: 1.2;
 }
 .routine-cal-event__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -339,6 +356,16 @@
   background: rgba(75,46,43,0.08); color: var(--text-muted); padding: 2px 10px; border-radius: 99px;
   font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
 }
+.routine-day-detail__expired-tag {
+  background: rgba(192,60,40,0.1); color: #b93a26; padding: 2px 10px; border-radius: 99px;
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.routine-day-detail__expired-banner {
+  background: rgba(75,46,43,0.06); border: 1px solid rgba(75,46,43,0.12);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+  font-size: 0.82rem; color: var(--text-muted); text-align: center;
+}
+.routine-segment--expired { opacity: 0.75; }
 
 /* === Segment priority + actions === */
 .routine-segment--priority-high { border-left: 3px solid #f59e0b; }
@@ -354,3 +381,13 @@
   cursor: pointer; transition: all 0.15s;
 }
 .routine-segment__focus-btn:hover { background: rgba(31,122,109,0.08); border-color: rgba(31,122,109,0.2); color: #1f7a6d; }
+
+/* Day not yet generated placeholder */
+.routine-day-detail__placeholder {
+  display: flex; align-items: center; justify-content: center;
+  padding: 30px 20px; text-align: center; min-height: 200px;
+}
+.routine-day-detail__placeholder p {
+  color: var(--text-muted); font-size: 0.9rem; margin: 0;
+}
+.routine-day-detail__placeholder strong { color: #2563eb; }

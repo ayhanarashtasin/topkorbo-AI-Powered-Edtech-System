@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   HiCheckCircle,
@@ -19,10 +19,20 @@ import { isToday, formatDayLong, isPast } from '../../utils/dateHelpers';
  *  - onToggle: (dayId, segmentId, currentCompleted) => void
  *  - onEdit: (dayId, segment, fields) => Promise
  *  - onStartFocus: (dayId, segment) => void (Phase 2 hook; for now shows a toast)
+ *  - isExpired: bool — routine is past its exam date (disables toggling)
+ *  - generatedUpTo: ISO date string — last date with AI-generated segments
  */
-export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFocus }) {
+export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFocus, isExpired, generatedUpTo }) {
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({});
+
+  // Determine if this day is a placeholder (not yet generated, not a rest day)
+  const isNotYetGenerated = (() => {
+    if (!generatedUpTo || !dayKey) return false;
+    const segs = Array.isArray(day.segments) ? day.segments : [];
+    if (segs.length > 0) return false;
+    return dayKey > generatedUpTo.slice(0, 10);
+  })();
 
   if (!day) {
     return (
@@ -72,8 +82,18 @@ export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFo
     }
   };
 
+  const handleToggle = (seg) => {
+    if (isExpired) return;
+    onToggle(day._id, seg._id, seg.completed);
+  };
+
   return (
     <div className="routine-day-detail">
+      {isExpired && (
+        <div className="routine-day-detail__expired-banner">
+          This exam date has passed. Task completion is read-only.
+        </div>
+      )}
       <div className="routine-day-detail__header">
         <div>
           <h4>{formatDayLong(day.dayDate || dayKey)}</h4>
@@ -81,6 +101,7 @@ export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFo
             {day.day}
             {isCurrentToday && <span className="routine-day-detail__today-tag">Today</span>}
             {isPastDay && !isCurrentToday && <span className="routine-day-detail__past-tag">Past</span>}
+            {isExpired && <span className="routine-day-detail__expired-tag">Expired</span>}
           </span>
         </div>
         <span className="routine-day-progress">
@@ -89,7 +110,12 @@ export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFo
       </div>
 
       <div className="routine-day-detail__segments">
-        {segs.length === 0 && (
+        {segs.length === 0 && isNotYetGenerated && (
+          <div className="routine-day-detail__placeholder">
+            <p>🔒 Not yet generated — click <strong>Generate Next Week</strong> to plan this day.</p>
+          </div>
+        )}
+        {segs.length === 0 && !isNotYetGenerated && (
           <div className="routine-day-detail__empty">
             <p>🌴 Rest day — take a break or review.</p>
           </div>
@@ -100,7 +126,7 @@ export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFo
           return (
             <div
               key={seg._id}
-              className={`routine-segment ${seg.completed ? 'routine-segment--completed' : ''} routine-segment--priority-${priority}`}
+              className={`routine-segment ${seg.completed ? 'routine-segment--completed' : ''} routine-segment--priority-${priority} ${isExpired ? 'routine-segment--expired' : ''}`}
             >
               {isEditing ? (
                 <div className="routine-segment__edit-form">
@@ -146,7 +172,8 @@ export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFo
                 <>
                   <div
                     className="routine-segment__check"
-                    onClick={() => onToggle(day._id, seg._id, seg.completed)}
+                    onClick={() => handleToggle(seg)}
+                    style={isExpired ? { cursor: 'default', opacity: 0.6 } : undefined}
                   >
                     {seg.completed ? (
                       <HiCheckCircle className="check-icon checked" />
@@ -156,7 +183,8 @@ export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFo
                   </div>
                   <div
                     className="routine-segment__info"
-                    onClick={() => onToggle(day._id, seg._id, seg.completed)}
+                    onClick={() => handleToggle(seg)}
+                    style={isExpired ? { cursor: 'default' } : undefined}
                   >
                     <span className="routine-segment__time">
                       {seg.time || (seg.startAt ? new Date(seg.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '')}

@@ -33,13 +33,14 @@ function colorForSubject(subject) {
  *  - selectedDayKey: YYYY-MM-DD currently selected
  *  - onSelectDay: (dayKey) => void
  *  - height: optional CSS height (default 560px)
+ *  - generatedUpTo: ISO date string — last date with AI-generated segments
  */
-export default function CalendarView({ routine, selectedDayKey, onSelectDay, height = 560 }) {
+export default function CalendarView({ routine, selectedDayKey, onSelectDay, height = 560, generatedUpTo }) {
   const events = eventsFromRoutine(routine);
   const [view, setView] = useState('week');
 
   // Compute the date the calendar should be on — prefers selectedDayKey, else today.
-  const calendarDate = selectedDayKey ? new Date(selectedDayKey) : new Date();
+  const calendarDate = selectedDayKey ? new Date(selectedDayKey + 'T00:00:00') : new Date();
 
   // Custom event renderer
   const EventComponent = ({ event }) => {
@@ -63,8 +64,6 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
     );
   };
 
-  // Toolbar label: navigate back/forward. We pass currentDate so the calendar
-  // jumps to the right month/week when selectedDayKey changes.
   const handleSelectSlot = ({ start }) => {
     if (onSelectDay) onSelectDay(toISODate(start));
   };
@@ -86,9 +85,6 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
         startAccessor="start"
         endAccessor="end"
         selectable
-        onNavigate={(newDate) => {
-          if (onSelectDay) onSelectDay(toISODate(newDate));
-        }}
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
         components={{ event: EventComponent }}
@@ -99,8 +95,6 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
             style: {
               background: r.completed ? 'rgba(46,125,50,0.08)' : 'rgba(31,122,109,0.06)',
               borderLeft: `3px solid ${color}`,
-              border: 'none',
-              borderLeft: `3px solid ${color}`,
               opacity: r.dayCompleted ? 0.7 : 1,
               padding: 0,
               borderRadius: 6
@@ -109,10 +103,24 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
         }}
         dayPropGetter={(date) => {
           const key = toISODate(date);
+          const style = {};
           if (key === todayKey()) {
-            return { style: { background: 'rgba(31,122,109,0.05)' } };
+            style.background = 'rgba(31,122,109,0.05)';
           }
-          return {};
+          if (selectedDayKey && key === selectedDayKey) {
+            style.background = 'rgba(31,122,109,0.15)';
+            style.outline = '2px solid #1f7a6d';
+            style.outlineOffset = '-2px';
+          }
+          // Style placeholder days (after generatedUpTo, no events)
+          if (generatedUpTo && key > generatedUpTo.slice(0, 10)) {
+            const hasEvents = events.some((e) => toISODate(e.start) === key);
+            if (!hasEvents) {
+              style.background = 'rgba(148,163,184,0.08)';
+              style.borderBottom = '2px dashed rgba(148,163,184,0.4)';
+            }
+          }
+          return Object.keys(style).length ? { style } : {};
         }}
       />
     </div>
