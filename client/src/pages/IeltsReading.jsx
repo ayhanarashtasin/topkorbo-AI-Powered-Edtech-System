@@ -1,0 +1,254 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../hooks/useLanguage';
+import {
+  HiBookOpen,
+  HiArrowLeft,
+  HiArrowRight,
+  HiPlay,
+} from 'react-icons/hi';
+import Sidebar from '../components/layout/Sidebar';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import './IeltsReading.css';
+
+export default function IeltsReading() {
+  const { language } = useLanguage();
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState({
+    name: localStorage.getItem('topkorbo_name') || 'Student',
+    avatar: localStorage.getItem('topkorbo_avatar') || '',
+    email: localStorage.getItem('topkorbo_email') || '',
+    role: localStorage.getItem('topkorbo_role') || 'student',
+  });
+
+  // Auth Guard
+  useEffect(() => {
+    const token = localStorage.getItem('topkorbo_token');
+    if (!token) {
+      navigate('/');
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${backendBaseUrl}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('topkorbo_token');
+          navigate('/');
+          return;
+        }
+
+        const resData = await response.json();
+        if (resData.success && resData.data) {
+          const u = resData.data;
+          setUser({
+            name: u.name,
+            avatar: u.avatar || '',
+            email: u.email,
+            role: u.role,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user data in IELTS Reading:', err);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
+
+  // Guard role
+  if (user.role !== 'student') {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        <h2>Access Denied</h2>
+        <p>IELTS Reading is only available for students.</p>
+        <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', cursor: 'pointer' }}>
+          Go to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  const handleStartDemo = () => {
+    toast.success(
+      language === 'en'
+        ? 'Launching Reading demo session...'
+        : 'রিডিং ডেমো সেশন শুরু করা হচ্ছে...'
+    );
+  };
+
+  return (
+    <div className="ielts-reading-container">
+      <Sidebar activeTab="ielts-prep" user={user} />
+
+      <main className="ielts-reading-main">
+        {/* Header */}
+        <header className="ielts-reading-header">
+          <div className="ielts-reading-header__left">
+            <button
+              onClick={() => navigate('/ielts-prep')}
+              className="ielts-reading-back-btn"
+              title={language === 'en' ? 'Back to IELTS Prep' : 'আইইএলটিএস প্রস্তুতিতে ফিরে যান'}
+            >
+              <HiArrowLeft size={20} />
+            </button>
+            <div className="ielts-reading-header__title">
+              <h2>{language === 'en' ? 'IELTS Reading' : 'আইইএলটিএস রিডিং'}</h2>
+              <p>
+                {language === 'en'
+                  ? 'Master the reading module with skimming, scanning, and detailed comprehension practice'
+                  : 'স্কিমিং, স্ক্যানিং এবং বিস্তারিত কম্প্রিহেনশন অনুশীলনের মাধ্যমে রিডিং মডিউল আয়ত্ত করুন'}
+              </p>
+            </div>
+          </div>
+          <div className="ielts-reading-badge">
+            <HiBookOpen size={18} />
+            <span>{language === 'en' ? 'Reading Module' : 'রিডিং মডিউল'}</span>
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="ielts-reading-workspace">
+          <div className="ielts-reading-workspace__body">
+
+            {/* Hero / Description Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="ielts-reading-hero"
+            >
+              <div className="ielts-reading-hero__icon-row">
+                <div className="ielts-reading-hero__icon">
+                  <HiBookOpen size={32} />
+                </div>
+                <h1>{language === 'en' ? 'Reading Section Overview' : 'রিডিং সেকশন ওভারভিউ'}</h1>
+              </div>
+
+              <div className="ielts-reading-description">
+                <p><strong>⏱ Time:</strong> 60 minutes</p>
+
+                <p><strong>Three passages.</strong></p>
+
+                <p><strong>Question types:</strong></p>
+                <ul>
+                  <li>True/False/Not Given</li>
+                  <li>Yes/No/Not Given</li>
+                  <li>Matching headings</li>
+                  <li>Matching information</li>
+                  <li>Fill in blanks</li>
+                  <li>Multiple choice</li>
+                  <li>Summary completion</li>
+                </ul>
+
+                <p><strong>Marks Distribution:</strong></p>
+                <p>There are 40 questions.</p>
+
+                <p style={{ marginTop: '1.5rem' }}><strong>Band Score Conversion Table (Academic):</strong></p>
+                <div className="ielts-band-table-container">
+                  <table className="ielts-band-table">
+                    <thead>
+                      <tr>
+                        <th>Correct Answers</th>
+                        <th>Band Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>39–40</td>
+                        <td className="band-highlight">9.0</td>
+                      </tr>
+                      <tr>
+                        <td>37–38</td>
+                        <td className="band-highlight">8.5</td>
+                      </tr>
+                      <tr>
+                        <td>35–36</td>
+                        <td className="band-highlight">8.0</td>
+                      </tr>
+                      <tr>
+                        <td>33–34</td>
+                        <td className="band-highlight">7.5</td>
+                      </tr>
+                      <tr>
+                        <td>30–32</td>
+                        <td className="band-highlight">7.0</td>
+                      </tr>
+                      <tr>
+                        <td>27–29</td>
+                        <td className="band-highlight">6.5</td>
+                      </tr>
+                      <tr>
+                        <td>23–26</td>
+                        <td className="band-highlight">6.0</td>
+                      </tr>
+                      <tr>
+                        <td>19–22</td>
+                        <td className="band-highlight">5.5</td>
+                      </tr>
+                      <tr>
+                        <td>15–18</td>
+                        <td className="band-highlight">5.0</td>
+                      </tr>
+                      <tr>
+                        <td>13–14</td>
+                        <td className="band-highlight">4.5</td>
+                      </tr>
+                      <tr>
+                        <td>10–12</td>
+                        <td className="band-highlight">4.0</td>
+                      </tr>
+                      <tr>
+                        <td>0–9</td>
+                        <td className="band-highlight">3.5 or below</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Demo Question Action Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="ielts-reading-actions"
+            >
+              <div
+                className="ielts-reading-action-card"
+                onClick={handleStartDemo}
+              >
+                <div className="ielts-reading-action-card__left">
+                  <div className="ielts-reading-action-card__icon">
+                    <HiPlay size={28} />
+                  </div>
+                  <div className="ielts-reading-action-card__text">
+                    <h3>{language === 'en' ? 'Demo Question' : 'ডেমো প্রশ্ন'}</h3>
+                    <p>
+                      {language === 'en'
+                        ? 'Try a sample reading comprehension passage to familiarize yourself with the interface.'
+                        : 'ইন্টারফেসের সাথে পরিচিত হতে একটি নমুনা রিডিং কম্প্রিহেনশন প্যাসেজ চেষ্টা করুন।'}
+                    </p>
+                  </div>
+                </div>
+                <div className="ielts-reading-action-card__arrow">
+                  <HiArrowRight size={22} />
+                </div>
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

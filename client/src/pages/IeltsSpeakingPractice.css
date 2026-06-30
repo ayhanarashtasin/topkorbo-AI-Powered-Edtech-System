@@ -1,0 +1,327 @@
+.ielts-speaking-practice-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #fff8f0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.ielts-speaking-practice-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(192, 133, 82, 0.08), transparent 26%),
+    linear-gradient(180deg, #faf4ee 0%, #f6efe7 100%);
+}
+
+.ielts-speaking-practice-header {
+  padding: 24px 40px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.ielts-speaking-practice-back-btn {
+  background: transparent;
+  border: 1px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-speaking-practice-back-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  border-color: var(--sky-blue);
+  color: var(--text-primary);
+}
+
+.ielts-speaking-practice-header-text h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-speaking-practice-header-text p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.ielts-speaking-practice-workspace {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.ielts-speaking-practice-container {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Set list cards */
+.ielts-practice-set-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.ielts-practice-set-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(140, 90, 60, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: all var(--transition-smooth);
+}
+
+.ielts-practice-set-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--sky-blue);
+  box-shadow: var(--shadow-md);
+}
+
+.ielts-practice-set-info h3 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.ielts-practice-set-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ielts-practice-set-meta span {
+  background: rgba(192, 133, 82, 0.06);
+  padding: 4px 10px;
+  border-radius: 50px;
+}
+
+.ielts-practice-set-btn {
+  background: var(--gradient-cta);
+  color: var(--white);
+  border: none;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 50px;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.ielts-practice-set-btn:hover {
+  opacity: 0.95;
+}
+
+/* Detail panel */
+.ielts-speaking-practice-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: 0 18px 40px rgba(140, 90, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ielts-speaking-practice-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.08);
+  padding-bottom: 1rem;
+}
+
+.ielts-speaking-practice-panel-header h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-speaking-practice-close-btn {
+  background: transparent;
+  border: 1.5px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-speaking-practice-close-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  color: var(--text-primary);
+}
+
+/* Steps indicators */
+.ielts-speaking-steps-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.ielts-speaking-step-btn {
+  background: rgba(253, 250, 248, 0.8);
+  border: 1.5px solid rgba(192, 133, 82, 0.15);
+  padding: 12px;
+  border-radius: 12px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.ielts-speaking-step-btn:hover {
+  background: rgba(192, 133, 82, 0.06);
+  color: var(--text-primary);
+}
+
+.ielts-speaking-step-btn.active {
+  background: var(--sky-blue);
+  color: var(--white);
+  border-color: var(--sky-blue);
+}
+
+/* Practice Content */
+.ielts-speaking-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: #ffffff;
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 20px;
+  padding: 28px;
+  min-height: 350px;
+  justify-content: space-between;
+}
+
+.ielts-speaking-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 1.05rem;
+}
+
+.ielts-speaking-cuecard-box {
+  background: rgba(192, 133, 82, 0.04);
+  border: 1.5px dashed rgba(192, 133, 82, 0.25);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.ielts-speaking-cuecard-box h4 {
+  font-family: var(--font-heading);
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: var(--text-accent);
+  text-align: center;
+}
+
+/* Voice Recorder Controls */
+.ielts-speaking-recorder-box {
+  background: rgba(192, 133, 82, 0.03);
+  border: 1px solid rgba(192, 133, 82, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.ielts-speaking-record-btn {
+  background: #ef4444;
+  color: var(--white);
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transition: all var(--transition-smooth);
+}
+
+.ielts-speaking-record-btn:hover {
+  transform: scale(1.05);
+}
+
+.ielts-speaking-record-btn.recording {
+  background: #ef4444;
+  animation: pulseRecording 1.5s infinite;
+}
+
+@keyframes pulseRecording {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.ielts-speaking-recording-status {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ielts-speaking-audio-player-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ielts-speaking-audio-player-container span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .ielts-practice-set-grid {
+    grid-template-columns: 1fr;
+  }
+  .ielts-speaking-steps-nav {
+    grid-template-columns: 1fr;
+  }
+}

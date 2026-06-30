@@ -6,12 +6,10 @@ import {
   HiBookOpen,
   HiPencilAlt,
   HiChatAlt2,
-  HiUpload,
-  HiX
+  HiUpload
 } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 import './IeltsTeacher.css';
 
 export default function IeltsTeacher() {
@@ -25,25 +23,7 @@ export default function IeltsTeacher() {
     role: localStorage.getItem('topkorbo_role') || 'teacher',
   });
 
-  // Modal State
-  const [showModal, setShowModal] = useState(false);
-  const [activeSegment, setActiveSegment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State
-  const [questionType, setQuestionType] = useState('mcq');
-  const [bandDifficulty, setBandDifficulty] = useState('6.0 - 7.0');
-  const [instructions, setInstructions] = useState('');
-  const [questionText, setQuestionText] = useState('');
-  const [solution, setSolution] = useState('');
-  
-  // MCQ Options
-  const [options, setOptions] = useState([
-    { text: '', isCorrect: false },
-    { text: '', isCorrect: false },
-    { text: '', isCorrect: false },
-    { text: '', isCorrect: false }
-  ]);
 
   // Auth Guard
   useEffect(() => {
@@ -98,55 +78,7 @@ export default function IeltsTeacher() {
     );
   }
 
-  const openUploadModal = (segment) => {
-    setActiveSegment(segment);
-    setShowModal(true);
-    // Reset Form
-    setInstructions('');
-    setQuestionText('');
-    setSolution('');
-    setQuestionType(segment === 'Listening' || segment === 'Reading' ? 'mcq' : 'essay');
-    setOptions([
-      { text: '', isCorrect: false },
-      { text: '', isCorrect: false },
-      { text: '', isCorrect: false },
-      { text: '', isCorrect: false }
-    ]);
-  };
 
-  const handleOptionChange = (index, value) => {
-    const newOptions = [...options];
-    newOptions[index].text = value;
-    setOptions(newOptions);
-  };
-
-  const handleOptionCorrectChange = (index) => {
-    const newOptions = options.map((opt, i) => ({
-      ...opt,
-      isCorrect: i === index
-    }));
-    setOptions(newOptions);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!questionText.trim()) {
-      toast.error(language === 'en' ? 'Please fill in the question text.' : 'অনুগ্রহ করে প্রশ্নের বিবরণ লিখুন।');
-      return;
-    }
-
-    setIsSubmitting(true);
-    // Simulate upload delay
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setShowModal(false);
-      toast.success(
-        language === 'en'
-          ? `IELTS ${activeSegment} question uploaded successfully!`
-          : `আইইএলটিএস ${activeSegment} প্রশ্ন সফলভাবে আপলোড হয়েছে!`
-      );
-    }, 1000);
-  };
 
   return (
     <div className="ielts-teacher-container">
@@ -214,7 +146,7 @@ export default function IeltsTeacher() {
                       : 'রিডিং প্যাসেজ ইনপুট দিন এবং সেই অনুযায়ী মাল্টিপল চয়েস বা হেডিং ম্যাচিং সংক্রান্ত প্রশ্নাবলী ডিজাইন করুন।'}
                   </p>
                 </div>
-                <button className="ielts-upload-btn" onClick={() => openUploadModal('Reading')}>
+                <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/reading/upload')}>
                   <HiUpload size={16} />
                   <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
                 </button>
@@ -231,7 +163,7 @@ export default function IeltsTeacher() {
                       : 'রচনা লেখার টাস্ক এবং চার্ট বা ডায়াগ্রাম বর্ণনার টাস্ক যুক্ত করুন, সাথে আদর্শ মডেল উত্তরপত্রও সরবরাহ করুন।'}
                   </p>
                 </div>
-                <button className="ielts-upload-btn" onClick={() => openUploadModal('Writing')}>
+                <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/writing/upload')}>
                   <HiUpload size={16} />
                   <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
                 </button>
@@ -248,7 +180,7 @@ export default function IeltsTeacher() {
                       : 'স্পিকিং প্রম্পট, কিউ কার্ড এবং সাক্ষাৎকার সংক্রান্ত প্রশ্ন যোগ করুন। ব্যান্ড-৯ মানের উত্তরের জন্য রূপরেখা প্রদান করুন।'}
                   </p>
                 </div>
-                <button className="ielts-upload-btn" onClick={() => openUploadModal('Speaking')}>
+                <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/speaking/upload')}>
                   <HiUpload size={16} />
                   <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
                 </button>
@@ -258,168 +190,7 @@ export default function IeltsTeacher() {
           </div>
         </div>
 
-        {/* Upload Modal Overlay */}
-        {showModal && (
-          <div className="ielts-modal-overlay">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="ielts-modal"
-            >
-              <div className="ielts-modal-header">
-                <h2>
-                  {language === 'en' 
-                    ? `Upload ${activeSegment} Question` 
-                    : `${activeSegment} প্রশ্ন আপলোড করুন`}
-                </h2>
-                <button className="ielts-modal-close" onClick={() => setShowModal(false)}>
-                  <HiX size={20} />
-                </button>
-              </div>
 
-              <form onSubmit={handleSubmit} className="ielts-form">
-                
-                {/* Form Row: Type and Difficulty */}
-                <div className="ielts-form-row">
-                  <div className="ielts-form-group">
-                    <label>{language === 'en' ? 'Question Type' : 'প্রশ্নের ধরণ'}</label>
-                    <select 
-                      value={questionType} 
-                      onChange={(e) => setQuestionType(e.target.value)}
-                      className="ielts-select"
-                    >
-                      <option value="mcq">{language === 'en' ? 'Multiple Choice (MCQ)' : 'মাল্টিপল চয়েস (MCQ)'}</option>
-                      <option value="fill">{language === 'en' ? 'Fill in the Blanks' : 'শূন্যস্থান পূরণ'}</option>
-                      <option value="essay">{language === 'en' ? 'Essay/Topic Prompt' : 'রচনা/টপিক প্রম্পট'}</option>
-                      <option value="short">{language === 'en' ? 'Short Answer' : 'সংক্ষিপ্ত উত্তর'}</option>
-                    </select>
-                  </div>
-
-                  <div className="ielts-form-group">
-                    <label>{language === 'en' ? 'Difficulty Target (Band)' : 'টার্গেট ব্যান্ড স্কোর'}</label>
-                    <select
-                      value={bandDifficulty}
-                      onChange={(e) => setBandDifficulty(e.target.value)}
-                      className="ielts-select"
-                    >
-                      <option value="4.5 - 5.5">Band 4.5 - 5.5 (Intermediate)</option>
-                      <option value="6.0 - 7.0">Band 6.0 - 7.0 (Upper-Intermediate)</option>
-                      <option value="7.5 - 9.0">Band 7.5 - 9.0 (Advanced)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Instructions / Context Passage */}
-                {(activeSegment === 'Reading' || activeSegment === 'Listening') && (
-                  <div className="ielts-form-group">
-                    <label>
-                      {activeSegment === 'Reading' 
-                        ? (language === 'en' ? 'Reading Passage' : 'রিডিং প্যাসেজ') 
-                        : (language === 'en' ? 'Listening Transcript Reference' : 'লিসেনিং ট্রান্সক্রিপ্ট রেফারেন্স')}
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={instructions}
-                      onChange={(e) => setInstructions(e.target.value)}
-                      placeholder={
-                        language === 'en'
-                          ? 'Paste the passage text or transcript here...'
-                          : 'এখানে প্যাসেজ বা অডিওর বিষয়বস্তু লিখুন...'
-                      }
-                      className="ielts-textarea"
-                    />
-                  </div>
-                )}
-
-                {/* Question Text */}
-                <div className="ielts-form-group">
-                  <label>{language === 'en' ? 'Question Prompt / Task Description' : 'প্রশ্ন প্রম্পট / টাস্কের বিবরণ'}</label>
-                  <textarea
-                    rows={3}
-                    value={questionText}
-                    onChange={(e) => setQuestionText(e.target.value)}
-                    placeholder={
-                      language === 'en'
-                        ? 'Enter the question text or essay topic prompt here...'
-                        : 'প্রশ্নের মূল টেক্সট বা রচনার টপিক প্রম্পট লিখুন...'
-                    }
-                    className="ielts-textarea"
-                    required
-                  />
-                </div>
-
-                {/* MCQ Options (Only if type is MCQ) */}
-                {questionType === 'mcq' && (
-                  <div className="ielts-form-group">
-                    <label>{language === 'en' ? 'MCQ Choices (Check the correct option)' : 'এমসিকিউ অপশন (সঠিক অপশনটি চেক করুন)'}</label>
-                    <div className="ielts-options-container">
-                      {options.map((option, index) => (
-                        <div key={index} className="ielts-option-row">
-                          <span>{String.fromCharCode(65 + index)}.</span>
-                          <input
-                            type="text"
-                            value={option.text}
-                            onChange={(e) => handleOptionChange(index, e.target.value)}
-                            placeholder={language === 'en' ? `Option ${String.fromCharCode(65 + index)}` : `অপশন ${String.fromCharCode(65 + index)}`}
-                            className="ielts-input"
-                            style={{ flex: 1 }}
-                            required={questionType === 'mcq'}
-                          />
-                          <label className="ielts-checkbox-label">
-                            <input
-                              type="checkbox"
-                              checked={option.isCorrect}
-                              onChange={() => handleOptionCorrectChange(index)}
-                            />
-                            {language === 'en' ? 'Correct' : 'সঠিক'}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Explanation / Solutions */}
-                <div className="ielts-form-group">
-                  <label>{language === 'en' ? 'Model Answer / Correct Answer Explanation' : 'আদর্শ উত্তর / সঠিক উত্তরের ব্যাখ্যা'}</label>
-                  <textarea
-                    rows={3}
-                    value={solution}
-                    onChange={(e) => setSolution(e.target.value)}
-                    placeholder={
-                      language === 'en'
-                        ? 'Provide the correct answer, model answer, or key scoring points...'
-                        : 'সঠিক উত্তর বা আদর্শ উত্তরের ব্যাখ্যা এখানে প্রদান করুন...'
-                    }
-                    className="ielts-textarea"
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="ielts-modal-actions">
-                  <button 
-                    type="button" 
-                    className="ielts-btn-cancel" 
-                    onClick={() => setShowModal(false)}
-                    disabled={isSubmitting}
-                  >
-                    {language === 'en' ? 'Cancel' : 'বাতিল'}
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="ielts-btn-submit"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting 
-                      ? (language === 'en' ? 'Uploading...' : 'আপলোড হচ্ছে...') 
-                      : (language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন')}
-                  </button>
-                </div>
-
-              </form>
-            </motion.div>
-          </div>
-        )}
       </main>
     </div>
   );

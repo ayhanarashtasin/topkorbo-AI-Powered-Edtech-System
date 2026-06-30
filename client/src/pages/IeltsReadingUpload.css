@@ -1,0 +1,118 @@
+.ielts-reading-upload-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #fff8f0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.ielts-reading-upload-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(192, 133, 82, 0.08), transparent 26%),
+    linear-gradient(180deg, #faf4ee 0%, #f6efe7 100%);
+}
+
+.ielts-reading-upload-header {
+  padding: 24px 40px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.ielts-reading-upload-back-btn {
+  background: transparent;
+  border: 1px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-reading-upload-back-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  border-color: var(--sky-blue);
+  color: var(--text-primary);
+}
+
+.ielts-reading-upload-header-text h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-reading-upload-header-text p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.ielts-reading-upload-workspace {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.ielts-reading-upload-container {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.ielts-reading-upload-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 18px 40px rgba(140, 90, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.5rem;
+  min-height: 400px;
+}
+
+.ielts-reading-upload-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: var(--text-accent);
+  margin: 0;
+}
+
+.ielts-reading-upload-card p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.ielts-reading-placeholder-icon {
+  font-size: 4rem;
+  color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.08);
+  padding: 24px;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+}

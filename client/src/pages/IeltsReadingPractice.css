@@ -1,0 +1,336 @@
+.ielts-reading-practice-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #fff8f0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.ielts-reading-practice-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(192, 133, 82, 0.08), transparent 26%),
+    linear-gradient(180deg, #faf4ee 0%, #f6efe7 100%);
+}
+
+.ielts-reading-practice-header {
+  padding: 24px 40px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.ielts-reading-practice-back-btn {
+  background: transparent;
+  border: 1px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-reading-practice-back-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  border-color: var(--sky-blue);
+  color: var(--text-primary);
+}
+
+.ielts-reading-practice-header-text h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-reading-practice-header-text p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.ielts-reading-practice-workspace {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.ielts-reading-practice-container {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Question Set cards */
+.ielts-practice-set-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.ielts-practice-set-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(140, 90, 60, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: all var(--transition-smooth);
+}
+
+.ielts-practice-set-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--sky-blue);
+  box-shadow: var(--shadow-md);
+}
+
+.ielts-practice-set-info h3 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.ielts-practice-set-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ielts-practice-set-meta span {
+  background: rgba(192, 133, 82, 0.06);
+  padding: 4px 10px;
+  border-radius: 50px;
+}
+
+.ielts-practice-set-btn {
+  background: var(--gradient-cta);
+  color: var(--white);
+  border: none;
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 50px;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.ielts-practice-set-btn:hover {
+  opacity: 0.95;
+}
+
+/* Detail Practice Panel */
+.ielts-reading-practice-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: 0 18px 40px rgba(140, 90, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ielts-reading-practice-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.08);
+  padding-bottom: 1rem;
+}
+
+.ielts-reading-practice-panel-header h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-reading-practice-close-btn {
+  background: transparent;
+  border: 1.5px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-reading-practice-close-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  color: var(--text-primary);
+}
+
+/* Split Layout for Reading Room */
+.ielts-reading-split-workspace {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2rem;
+  height: 550px;
+}
+
+.ielts-reading-passage-box {
+  background: #ffffff;
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 16px;
+  padding: 24px;
+  overflow-y: auto;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+  text-align: justify;
+}
+
+.ielts-reading-passage-box h4 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  color: var(--text-accent);
+  margin-top: 0;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.ielts-reading-questions-box {
+  background: #ffffff;
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 16px;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ielts-reading-question-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(192, 133, 82, 0.08);
+}
+
+.ielts-reading-question-item:last-child {
+  border-bottom: none;
+}
+
+.ielts-reading-question-text {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ielts-reading-mcq-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ielts-reading-mcq-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(192, 133, 82, 0.1);
+  transition: all var(--transition-fast);
+}
+
+.ielts-reading-mcq-label:hover {
+  background-color: rgba(192, 133, 82, 0.04);
+}
+
+.ielts-reading-mcq-label.checked {
+  background-color: rgba(192, 133, 82, 0.08);
+  border-color: var(--sky-blue);
+  font-weight: 600;
+}
+
+/* Review / Solution colors */
+.ielts-reading-mcq-label.correct {
+  background-color: rgba(56, 176, 0, 0.08);
+  border-color: #38b000;
+  color: #2b7a00;
+}
+
+.ielts-reading-mcq-label.incorrect {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+.ielts-reading-explanation-box {
+  margin-top: 6px;
+  background-color: #f7f9fa;
+  border-left: 3px solid var(--sky-blue);
+  padding: 8px 12px;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+/* Submission action */
+.ielts-reading-submit-btn {
+  background: var(--gradient-cta);
+  color: var(--white);
+  border: none;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-smooth);
+}
+
+.ielts-reading-submit-btn:hover {
+  opacity: 0.95;
+}
+
+/* Score Panel */
+.ielts-reading-score-panel {
+  background: rgba(56, 176, 0, 0.05);
+  border: 1.5px solid #38b000;
+  border-radius: 16px;
+  padding: 16px 20px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #2b7a00;
+}
+
+@media (max-width: 900px) {
+  .ielts-reading-split-workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .ielts-reading-passage-box, .ielts-reading-questions-box {
+    max-height: 400px;
+  }
+}

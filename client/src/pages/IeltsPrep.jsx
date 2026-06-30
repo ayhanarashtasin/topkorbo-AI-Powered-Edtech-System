@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
   HiVolumeUp,
@@ -9,8 +9,7 @@ import {
   HiArrowLeft,
   HiArrowRight,
   HiClipboardList,
-  HiAcademicCap,
-  HiSparkles
+  HiAcademicCap
 } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import { motion } from 'framer-motion';
@@ -20,6 +19,7 @@ import './IeltsPrep.css';
 export default function IeltsPrep() {
   const { language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState({
     name: localStorage.getItem('topkorbo_name') || 'Student',
@@ -28,7 +28,7 @@ export default function IeltsPrep() {
     role: localStorage.getItem('topkorbo_role') || 'student',
   });
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(location.state?.step || 1);
 
   // Auth Guard
   useEffect(() => {
@@ -166,7 +166,7 @@ export default function IeltsPrep() {
                     </div>
 
                     {/* Reading */}
-                    <div className="ielts-dist-card">
+                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/reading')} style={{ cursor: 'pointer' }}>
                       <div className="ielts-dist-icon"><HiBookOpen size={24} /></div>
                       <h4>{language === 'en' ? 'Reading' : 'রিডিং'}</h4>
                       <span className="ielts-dist-detail">
@@ -178,7 +178,7 @@ export default function IeltsPrep() {
                     </div>
 
                     {/* Writing */}
-                    <div className="ielts-dist-card">
+                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/writing')} style={{ cursor: 'pointer' }}>
                       <div className="ielts-dist-icon"><HiPencilAlt size={24} /></div>
                       <h4>{language === 'en' ? 'Writing' : 'রাইটিং'}</h4>
                       <span className="ielts-dist-detail">
@@ -190,7 +190,7 @@ export default function IeltsPrep() {
                     </div>
 
                     {/* Speaking */}
-                    <div className="ielts-dist-card">
+                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/speaking')} style={{ cursor: 'pointer' }}>
                       <div className="ielts-dist-icon"><HiChatAlt2 size={24} /></div>
                       <h4>{language === 'en' ? 'Speaking' : 'স্পিকিং'}</h4>
                       <span className="ielts-dist-detail">
@@ -203,20 +203,6 @@ export default function IeltsPrep() {
                   </div>
                 </div>
 
-                {/* Score System Box */}
-                <div className="ielts-scoring-box">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <HiSparkles style={{ color: 'var(--sky-blue)' }} />
-                    <h4 style={{ margin: 0 }}>
-                      {language === 'en' ? 'IELTS Band Score System' : 'আইইএলটিএস ব্যান্ড স্কোর সিস্টেম'}
-                    </h4>
-                  </div>
-                  <p>
-                    {language === 'en'
-                      ? 'You will receive an individual band score from 1 (Non-user) to 9 (Expert) for each module. Your overall band score is calculated as the average of the four individual module scores, rounded up or down to the nearest half or whole band.'
-                      : 'প্রতিটি মডিউলের জন্য আপনি ১ (অদক্ষ) থেকে ৯ (বিশেষজ্ঞ) পর্যন্ত একটি পৃথক ব্যান্ড স্কোর পাবেন। আপনার সামগ্রিক ব্যান্ড স্কোরটি চারটি মডিউলের স্কোরের গড় করে নির্ধারণ করা হয়, যা নিকটতম অর্ধেক বা সম্পূর্ণ ব্যান্ডে উন্নীত বা অবনীত করা হয়।'}
-                  </p>
-                </div>
 
                 {/* Start Button */}
                 <div className="ielts-btn-container">
@@ -253,7 +239,7 @@ export default function IeltsPrep() {
                 {/* Grid of the 4 segments */}
                 <div className="ielts-segments-grid">
                   {/* Listening Card */}
-                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/listening')}>
+                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/listening/practice')}>
                     <div className="ielts-segment-icon"><HiVolumeUp size={36} /></div>
                     <h3>{language === 'en' ? 'Listening' : 'লিসেনিং'}</h3>
                     <p className="ielts-segment-desc">
@@ -267,7 +253,7 @@ export default function IeltsPrep() {
                   </div>
 
                   {/* Reading Card */}
-                  <div className="ielts-segment-card" onClick={() => handleSelectSegment(language === 'en' ? 'Reading' : 'রিডিং')}>
+                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/reading/practice')}>
                     <div className="ielts-segment-icon"><HiBookOpen size={36} /></div>
                     <h3>{language === 'en' ? 'Reading' : 'রিডিং'}</h3>
                     <p className="ielts-segment-desc">
@@ -281,7 +267,7 @@ export default function IeltsPrep() {
                   </div>
 
                   {/* Writing Card */}
-                  <div className="ielts-segment-card" onClick={() => handleSelectSegment(language === 'en' ? 'Writing' : 'রাইটিং')}>
+                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/writing/practice')}>
                     <div className="ielts-segment-icon"><HiPencilAlt size={36} /></div>
                     <h3>{language === 'en' ? 'Writing' : 'রাইটিং'}</h3>
                     <p className="ielts-segment-desc">
@@ -295,7 +281,7 @@ export default function IeltsPrep() {
                   </div>
 
                   {/* Speaking Card */}
-                  <div className="ielts-segment-card" onClick={() => handleSelectSegment(language === 'en' ? 'Speaking' : 'স্পিকিং')}>
+                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/speaking/practice')}>
                     <div className="ielts-segment-icon"><HiChatAlt2 size={36} /></div>
                     <h3>{language === 'en' ? 'Speaking' : 'স্পিকিং'}</h3>
                     <p className="ielts-segment-desc">

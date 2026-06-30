@@ -33,7 +33,17 @@ import StudentLiveClass from './pages/StudentLiveClass';
 import IeltsPrep from './pages/IeltsPrep';
 import IeltsTeacher from './pages/IeltsTeacher';
 import IeltsListeningUpload from './pages/IeltsListeningUpload';
+import IeltsReadingUpload from './pages/IeltsReadingUpload';
+import IeltsWritingUpload from './pages/IeltsWritingUpload';
+import IeltsSpeakingUpload from './pages/IeltsSpeakingUpload';
 import IeltsListening from './pages/IeltsListening';
+import IeltsReading from './pages/IeltsReading';
+import IeltsWriting from './pages/IeltsWriting';
+import IeltsSpeaking from './pages/IeltsSpeaking';
+import IeltsListeningPractice from './pages/IeltsListeningPractice';
+import IeltsReadingPractice from './pages/IeltsReadingPractice';
+import IeltsWritingPractice from './pages/IeltsWritingPractice';
+import IeltsSpeakingPractice from './pages/IeltsSpeakingPractice';
 import './pages/PracticeHistory.css';
 
 // === Forum / Community ===
@@ -104,7 +114,17 @@ function AppContent() {
         <Route path="/ielts-prep" element={<IeltsPrep />} />
         <Route path="/ielts-teacher" element={<IeltsTeacher />} />
         <Route path="/ielts-teacher/listening/upload" element={<IeltsListeningUpload />} />
+        <Route path="/ielts-teacher/reading/upload" element={<IeltsReadingUpload />} />
+        <Route path="/ielts-teacher/writing/upload" element={<IeltsWritingUpload />} />
+        <Route path="/ielts-teacher/speaking/upload" element={<IeltsSpeakingUpload />} />
         <Route path="/ielts-prep/listening" element={<IeltsListening />} />
+        <Route path="/ielts-prep/reading" element={<IeltsReading />} />
+        <Route path="/ielts-prep/writing" element={<IeltsWriting />} />
+        <Route path="/ielts-prep/speaking" element={<IeltsSpeaking />} />
+        <Route path="/ielts-prep/listening/practice" element={<IeltsListeningPractice />} />
+        <Route path="/ielts-prep/reading/practice" element={<IeltsReadingPractice />} />
+        <Route path="/ielts-prep/writing/practice" element={<IeltsWritingPractice />} />
+        <Route path="/ielts-prep/speaking/practice" element={<IeltsSpeakingPractice />} />
 
         {/* === Forum / Community === */}
         <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
