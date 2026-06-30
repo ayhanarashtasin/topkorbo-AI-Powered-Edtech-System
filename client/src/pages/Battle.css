@@ -220,42 +220,6 @@
   gap: 20px;
 }
 
-.battle-team-name-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.battle-team-name-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.battle-team-name-grid span {
-  color: var(--text-secondary);
-  font-size: 0.84rem;
-  font-weight: 850;
-}
-
-.battle-team-name-grid input {
-  min-height: 44px;
-  width: 100%;
-  padding: 0 14px;
-  border: 1.5px solid rgba(75, 46, 43, 0.12);
-  border-radius: var(--radius-sm);
-  background: #FFFBF7;
-  color: var(--text-primary);
-  font-family: var(--font-heading);
-  font-weight: 850;
-  outline: none;
-}
-
-.battle-team-name-grid input:focus {
-  border-color: var(--sky-blue);
-  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.12);
-}
-
 .battle-type-pill {
   display: inline-flex;
   align-items: center;
@@ -527,6 +491,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.battle-team-name-input {
+  min-width: 0;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.64);
+  color: var(--deep-blue);
+  font: inherit;
+  font-weight: 900;
+  outline: none;
+}
+
+.battle-team-name-input:hover,
+.battle-team-name-input:focus {
+  border-color: rgba(192, 133, 82, 0.28);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.1);
+}
+
+.battle-team-name-input:disabled {
+  opacity: 0.72;
 }
 
 .battle-team-column h4 em {
@@ -1281,7 +1270,6 @@
 @media (max-width: 760px) {
   .battle-mode-grid,
   .battle-settings-grid,
-  .battle-team-name-grid,
   .battle-coach-grid,
   .battle-room,
   .battle-options-grid {

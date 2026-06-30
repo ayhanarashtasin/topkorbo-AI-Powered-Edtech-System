@@ -208,7 +208,6 @@ export default function Battle() {
   const [totalQuestions, setTotalQuestions] = useState(() => parseInt(sessionStorage.getItem('battle_total_questions')) || 10);
   const [questionTimeSeconds, setQuestionTimeSeconds] = useState(() => parseInt(sessionStorage.getItem('battle_question_time_seconds')) || 15);
   const [negativeMarking, setNegativeMarking] = useState(() => sessionStorage.getItem('battle_negative_marking') === 'true');
-  const [teamNames, setTeamNames] = useState(() => JSON.parse(sessionStorage.getItem('battle_team_names') || '{"A":"Team A","B":"Team B"}'));
   const [customSquadSize, setCustomSquadSize] = useState(() => parseInt(sessionStorage.getItem('battle_custom_squad_size')) || 5);
   const [raidMaxPlayers, setRaidMaxPlayers] = useState(() => parseInt(sessionStorage.getItem('battle_raid_max_players')) || 20);
   const [showSelectedTopics, setShowSelectedTopics] = useState(false);
@@ -223,10 +222,12 @@ export default function Battle() {
   const [coachError, setCoachError] = useState('');
   const [coachReport, setCoachReport] = useState(null);
   const [rematchLoading, setRematchLoading] = useState(false);
+  const [lobbyTeamNameDrafts, setLobbyTeamNameDrafts] = useState({ A: 'Team A', B: 'Team B' });
+  const [editingTeamName, setEditingTeamName] = useState('');
+  const [teamNameSaving, setTeamNameSaving] = useState('');
 
   const activeMode = BATTLE_MODES.find((mode) => mode.id === selectedMode) || BATTLE_MODES[0];
   const activeTeamSize = activeMode.id === 'custom-squad' ? customSquadSize : 5;
-  const isSquadSetupMode = activeMode.id === 'squad' || activeMode.id === 'custom-squad';
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
@@ -276,7 +277,6 @@ export default function Battle() {
   useEffect(() => { sessionStorage.setItem('battle_total_questions', String(totalQuestions)); }, [totalQuestions]);
   useEffect(() => { sessionStorage.setItem('battle_question_time_seconds', String(questionTimeSeconds)); }, [questionTimeSeconds]);
   useEffect(() => { sessionStorage.setItem('battle_negative_marking', String(negativeMarking)); }, [negativeMarking]);
-  useEffect(() => { sessionStorage.setItem('battle_team_names', JSON.stringify(teamNames)); }, [teamNames]);
   useEffect(() => { sessionStorage.setItem('battle_custom_squad_size', String(customSquadSize)); }, [customSquadSize]);
   useEffect(() => { sessionStorage.setItem('battle_raid_max_players', String(raidMaxPlayers)); }, [raidMaxPlayers]);
 
@@ -530,7 +530,7 @@ export default function Battle() {
               totalQuestions: battleQuestionCount,
               questionType,
               negativeMarking,
-              teamNames,
+              teamNames: { A: 'Team A', B: 'Team B' },
               teamSize: activeTeamSize,
               maxPlayers: activeMode.id === 'raid' ? raidMaxPlayers : undefined
             }
@@ -888,6 +888,39 @@ export default function Battle() {
     }
   };
 
+  const updateLobbyTeamName = async (team) => {
+    if (!inviteRoom?.id || !team || teamNameSaving) return;
+    const nextName = String(lobbyTeamNameDrafts[team] || '').trim().slice(0, 24) || `Team ${team}`;
+    const currentName = inviteRoom.settings?.teamNames?.[team] || `Team ${team}`;
+    setLobbyTeamNameDrafts((prev) => ({ ...prev, [team]: nextName }));
+    setEditingTeamName('');
+    if (nextName === currentName) return;
+
+    setTeamNameSaving(team);
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const res = await fetch(`${apiBase}/battles/rooms/${inviteRoom.id}/team-name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ team, teamName: nextName })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.message || 'Could not update team name.');
+        setLobbyTeamNameDrafts((prev) => ({ ...prev, [team]: currentName }));
+        return;
+      }
+      setInviteRoom(data.data);
+      toast.success(`${data.data.settings?.teamNames?.[team] || nextName} saved.`);
+    } catch (err) {
+      console.error('Error updating team name:', err);
+      setLobbyTeamNameDrafts((prev) => ({ ...prev, [team]: currentName }));
+      toast.error('Network error while updating team name.');
+    } finally {
+      setTeamNameSaving('');
+    }
+  };
+
   const STEP_LABELS = [
     { num: 1, labelEn: 'Mode', labelBn: 'মোড' },
     { num: 2, labelEn: 'Subjects', labelBn: 'বিষয়' },
@@ -979,7 +1012,31 @@ export default function Battle() {
                   ].map((group) => (
                     <div key={group.team} className="battle-team-column">
                       <h4>
-                        <span>{roomTeamNames[group.team]}</span>
+                        {currentWaitingPlayer?.team === group.team ? (
+                          <input
+                            className="battle-team-name-input"
+                            type="text"
+                            value={editingTeamName === group.team ? (lobbyTeamNameDrafts[group.team] ?? roomTeamNames[group.team]) : roomTeamNames[group.team]}
+                            maxLength={24}
+                            aria-label={`Rename Team ${group.team}`}
+                            disabled={teamNameSaving === group.team}
+                            onFocus={() => {
+                              setEditingTeamName(group.team);
+                              setLobbyTeamNameDrafts((prev) => ({ ...prev, [group.team]: roomTeamNames[group.team] }));
+                            }}
+                            onChange={(event) => setLobbyTeamNameDrafts((prev) => ({ ...prev, [group.team]: event.target.value }))}
+                            onBlur={() => updateLobbyTeamName(group.team)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') event.currentTarget.blur();
+                              if (event.key === 'Escape') {
+                                setLobbyTeamNameDrafts((prev) => ({ ...prev, [group.team]: roomTeamNames[group.team] }));
+                                event.currentTarget.blur();
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span>{roomTeamNames[group.team]}</span>
+                        )}
                         <em>{group.players.length}/{teamSize}</em>
                       </h4>
                       {Array.from({ length: teamSize }).map((_, index) => renderWaitingPlayer(group.players[index], `Slot ${index + 1}`))}
@@ -1014,10 +1071,6 @@ export default function Battle() {
 
               <div className="mock-selection-actions">
                 <button type="button" className="battle-outline-btn" onClick={resetBattle}>Cancel</button>
-                <button type="button" className="btn btn-primary mock-next-btn" disabled={!canReady || isRoomActionLoading} onClick={startRemoteRoom}>
-                  <span>{waitingButtonLabel}</span>
-                  <HiArrowRight size={18} />
-                </button>
               </div>
             </section>
           </div>
@@ -1547,37 +1600,6 @@ export default function Battle() {
                   ))}
                 </div>
               </div>
-
-              {isSquadSetupMode && (
-                <div className="mock-config-section">
-                  <div className="mock-config-section-header">
-                    <HiAcademicCap size={20} className="mock-config-section-icon" />
-                    <h4>Team Names</h4>
-                  </div>
-                  <div className="battle-team-name-grid">
-                    <label>
-                      <span>Team A</span>
-                      <input
-                        type="text"
-                        value={teamNames.A}
-                        maxLength={24}
-                        onChange={(event) => setTeamNames((prev) => ({ ...prev, A: event.target.value }))}
-                        placeholder="Team A"
-                      />
-                    </label>
-                    <label>
-                      <span>Team B</span>
-                      <input
-                        type="text"
-                        value={teamNames.B}
-                        maxLength={24}
-                        onChange={(event) => setTeamNames((prev) => ({ ...prev, B: event.target.value }))}
-                        placeholder="Team B"
-                      />
-                    </label>
-                  </div>
-                </div>
-              )}
 
               {activeMode.id === 'custom-squad' && (
                 <div className="mock-config-section">

@@ -356,6 +356,33 @@ exports.joinRoom = async (req, res, next) => {
   }
 };
 
+exports.updateTeamName = async (req, res, next) => {
+  try {
+    cleanExpiredRooms();
+    const room = rooms.get(req.params.roomId);
+    if (!room) return ApiResponse.error(res, 'Battle room not found', 404);
+    if (room.status !== 'waiting') return ApiResponse.error(res, 'Team names can only be changed before the battle starts', 409);
+    if (!isSquadMode(room.settings?.mode)) return ApiResponse.error(res, 'Team names are only available for squad battles', 400);
+
+    const player = room.players.find((item) => item.id === String(req.user.id));
+    if (!player || !player.team) return ApiResponse.error(res, 'You are not in this squad room', 403);
+
+    const team = req.body?.team === 'A' || req.body?.team === 'B' ? req.body.team : player.team;
+    if (team !== player.team) return ApiResponse.error(res, 'You can only rename your own team', 403);
+
+    const teamName = String(req.body?.teamName || '').trim().slice(0, 24) || `Team ${team}`;
+    room.settings.teamNames = normalizeTeamNames({
+      ...(room.settings.teamNames || {}),
+      [team]: teamName
+    });
+    room.log.unshift(`${player.name} renamed Team ${team} to ${room.settings.teamNames[team]}.`);
+
+    return ApiResponse.success(res, sanitizeRoom(room, req.user.id), 'Team name updated');
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.createRematchRoom = async (req, res, next) => {
   try {
     cleanExpiredRooms();
