@@ -151,6 +151,7 @@ exports.startMentorLiveClass = async (req, res, next) => {
     }
 
     const { host, apiKey, apiSecret } = getLiveKitConfig();
+    const roomService = new RoomServiceClient(host, apiKey, apiSecret);
     const mentor = await User.findById(req.user.id).select('name role');
     if (!mentor || !isMentorRole(mentor.role)) {
       return res.status(403).json({ success: false, message: 'Mentor account not found.' });
@@ -170,6 +171,20 @@ exports.startMentorLiveClass = async (req, res, next) => {
         status: 'live',
         actualStart: { $gte: reconnectThreshold },
       });
+
+      if (session) {
+        const activeRooms = await roomService.listRooms([requestedRoomName]);
+        if (!activeRooms.length) {
+          // The database still has a live session, but LiveKit has already
+          // deleted the room (usually because the previous browser session
+          // dropped and the room was cleaned up). Mark the stale row closed
+          // so we can mint a fresh room instead of rejoining a dead one.
+          session.status = 'completed';
+          session.actualEnd = new Date();
+          await session.save();
+          session = null;
+        }
+      }
     }
 
     if (!session) {

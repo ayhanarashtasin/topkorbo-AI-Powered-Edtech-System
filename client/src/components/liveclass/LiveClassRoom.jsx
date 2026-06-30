@@ -242,7 +242,6 @@ export default function LiveClassRoom({
     dynacast: true,
     publishDefaults: {
       simulcast: true,
-      videoSimulcastLayers: [180, 360, 720],
       videoCodec: 'vp8',
       videoEncoding: {
         maxBitrate: 1_200_000,

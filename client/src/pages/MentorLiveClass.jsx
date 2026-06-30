@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import LiveClassRoom from '../components/liveclass/LiveClassRoom';
 import { endMentorLiveClass, fetchMentorLiveDashboard, startMentorLiveClass } from '../services/liveClassApi';
+import { DisconnectReason } from 'livekit-client';
 import './LiveClassPages.css';
 
 export default function MentorLiveClass() {
@@ -18,6 +19,21 @@ export default function MentorLiveClass() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
+
+  const formatDisconnectReason = (reason) => {
+    if (reason === undefined || reason === null) return '';
+    const name = DisconnectReason[reason] || String(reason);
+    if (name === 'DUPLICATE_IDENTITY') {
+      return 'LiveKit disconnected because another tab/device is already connected with the same mentor identity.';
+    }
+    if (name === 'ROOM_DELETED') {
+      return 'LiveKit disconnected because the room was deleted on the server.';
+    }
+    if (name === 'JOIN_FAILURE') {
+      return 'LiveKit disconnected while joining the room. Check the token and room permissions.';
+    }
+    return `Disconnect reason: ${name}.`;
+  };
 
   const loadDashboard = async () => {
     try {
@@ -134,10 +150,10 @@ export default function MentorLiveClass() {
                   setError(`LiveKit connection failed: ${msg}. Check that LIVEKIT_URL/HOST is the project WebSocket URL, and that API key/secret are correct.`);
                 }
               }}
-              onDisconnected={() => {
+              onDisconnected={(reason) => {
                 setConnected(false);
                 setConnection(null);
-                setError((prev) => prev || 'Live class disconnected. If this happens immediately, the LiveKit URL or token configuration is likely wrong.');
+                setError((prev) => prev || `Live class disconnected. ${formatDisconnectReason(reason)}`);
               }}
               onEndClass={handleEndClass}
             />
