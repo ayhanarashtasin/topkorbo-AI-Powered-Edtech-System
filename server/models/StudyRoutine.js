@@ -7,7 +7,6 @@ const SegmentSchema = new mongoose.Schema({
   chapter: { type: String, trim: true },
   task: { type: String, trim: true },
   completed: { type: Boolean, default: false },
-  // Phase 1 additions — date-aware planning
   startAt: { type: Date, default: null },
   endAt: { type: Date, default: null },
   priority: {
@@ -16,13 +15,11 @@ const SegmentSchema = new mongoose.Schema({
     default: 'medium'
   },
   estimatedMinutes: { type: Number, default: null, min: 0 },
-  // Phase 2 hook — server cron will flip this when reminder fires
   notified: { type: Boolean, default: false }
 });
 
 const DayRoutineSchema = new mongoose.Schema({
   day: { type: String, trim: true },
-  // Phase 1 addition — real calendar date for this day
   dayDate: { type: Date, default: null },
   segments: [SegmentSchema]
 });
@@ -50,17 +47,14 @@ const studyRoutineSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {}
     },
-    // Phase 1 additions — explicit plan horizon
     startDate: { type: Date, default: null },
     durationDays: { type: Number, default: 30, min: 1, max: 365 },
     routine: [DayRoutineSchema],
-    // Week-by-week generation — tracks the last date for which AI segments exist
     generatedUpTo: { type: Date, default: null }
   },
   { timestamps: true }
 );
 
-// Fast lookup of "today's day" for the current user
 studyRoutineSchema.index({ userId: 1, 'routine.dayDate': 1 });
 
 module.exports = mongoose.model('StudyRoutine', studyRoutineSchema);

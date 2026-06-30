@@ -1,16 +1,6 @@
 import React from 'react';
 import { HiFire, HiAcademicCap } from 'react-icons/hi';
 
-/**
- * Top stats strip for the Study Routine tracker.
- * Shows: streak chip, overall % ring, per-subject chips, exam countdown.
- *
- * Props:
- *  - stats: { streakDays, overallCompletionPct, bySubject }
- *  - routine: full routine doc
- *  - examDate: optional Date
- *  - isExpired: bool — routine is past its exam date
- */
 export default function StatsBar({ stats, routine, examDate, isExpired }) {
   const pct = stats?.overallCompletionPct ?? 0;
   const streak = stats?.streakDays ?? 0;

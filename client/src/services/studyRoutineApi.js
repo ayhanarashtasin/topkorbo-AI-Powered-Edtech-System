@@ -107,5 +107,3 @@ export const studyRoutineApi = {
   stopSession: stopFocusSession,
   generateNextWeek
 };
-
-export default studyRoutineApi;

@@ -76,7 +76,7 @@ async function request(path, init = {}) {
 
   if (!res.ok || (payload && payload.success === false)) {
     throw new ApiError(
-      (payload && payload.message) || res.statusText || 'Request failed',
+      (payload && (payload.message || payload.data?.message)) || res.statusText || 'Request failed',
       res.status,
       payload
     );

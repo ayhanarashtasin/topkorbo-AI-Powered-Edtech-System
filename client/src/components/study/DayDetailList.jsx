@@ -10,34 +10,44 @@ import {
 } from 'react-icons/hi';
 import { isToday, formatDayLong, isPast } from '../../utils/dateHelpers';
 
-/**
- * DayDetailList — renders the segments of a single routine day.
- *
- * Props:
- *  - day: routine day object with segments[]
- *  - dayKey: YYYY-MM-DD string for this day
- *  - onToggle: (dayId, segmentId, currentCompleted) => void
- *  - onEdit: (dayId, segment, fields) => Promise
- *  - onStartFocus: (dayId, segment) => void (Phase 2 hook; for now shows a toast)
- *  - isExpired: bool — routine is past its exam date (disables toggling)
- *  - generatedUpTo: ISO date string — last date with AI-generated segments
- */
 export default function DayDetailList({ day, dayKey, onToggle, onEdit, onStartFocus, isExpired, generatedUpTo }) {
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({});
 
-  // Determine if this day is a placeholder (not yet generated, not a rest day)
   const isNotYetGenerated = (() => {
     if (!generatedUpTo || !dayKey) return false;
-    const segs = Array.isArray(day.segments) ? day.segments : [];
+    if (day?.isRest) return false;
+    const segs = Array.isArray(day?.segments) ? day.segments : [];
     if (segs.length > 0) return false;
     return dayKey > generatedUpTo.slice(0, 10);
   })();
 
   if (!day) {
+    if (!dayKey) {
+      return (
+        <div className="routine-day-detail routine-day-detail--empty">
+          <p>Select a day from the calendar to view your plan.</p>
+        </div>
+      );
+    }
     return (
-      <div className="routine-day-detail routine-day-detail--empty">
-        <p>Select a day from the calendar to view your plan.</p>
+      <div className="routine-day-detail">
+        <div className="routine-day-detail__header">
+          <div>
+            <h4>{formatDayLong(dayKey)}</h4>
+          </div>
+        </div>
+        <div className="routine-day-detail__segments">
+          {isNotYetGenerated ? (
+            <div className="routine-day-detail__placeholder">
+              <p>🔒 Not yet generated — click <strong>Generate Next Week</strong> to plan this day.</p>
+            </div>
+          ) : (
+            <div className="routine-day-detail__empty">
+              <p>🌴 No tasks planned for this day.</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

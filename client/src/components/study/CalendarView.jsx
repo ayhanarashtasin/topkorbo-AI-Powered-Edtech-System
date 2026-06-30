@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -25,24 +25,18 @@ function colorForSubject(subject) {
   return SUBJECT_COLORS[subject] || '#1f7a6d';
 }
 
-/**
- * CalendarView — wraps react-big-calendar with routine events.
- *
- * Props:
- *  - routine: full routine doc (with .routine array of days)
- *  - selectedDayKey: YYYY-MM-DD currently selected
- *  - onSelectDay: (dayKey) => void
- *  - height: optional CSS height (default 560px)
- *  - generatedUpTo: ISO date string — last date with AI-generated segments
- */
 export default function CalendarView({ routine, selectedDayKey, onSelectDay, height = 560, generatedUpTo }) {
   const events = eventsFromRoutine(routine);
   const [view, setView] = useState('week');
+  const [internalDate, setInternalDate] = useState(
+    selectedDayKey ? new Date(selectedDayKey + 'T00:00:00') : new Date()
+  );
 
-  // Compute the date the calendar should be on — prefers selectedDayKey, else today.
-  const calendarDate = selectedDayKey ? new Date(selectedDayKey + 'T00:00:00') : new Date();
+  const calendarDate = useMemo(() => {
+    if (selectedDayKey) return new Date(selectedDayKey + 'T00:00:00');
+    return internalDate;
+  }, [selectedDayKey, internalDate]);
 
-  // Custom event renderer
   const EventComponent = ({ event }) => {
     const r = event.resource || {};
     const color = colorForSubject(event.title);
@@ -65,7 +59,10 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
   };
 
   const handleSelectSlot = ({ start }) => {
-    if (onSelectDay) onSelectDay(toISODate(start));
+    const y = start.getFullYear();
+    const m = String(start.getMonth() + 1).padStart(2, '0');
+    const d = String(start.getDate()).padStart(2, '0');
+    if (onSelectDay) onSelectDay(`${y}-${m}-${d}`);
   };
 
   const handleSelectEvent = (event) => {
@@ -80,6 +77,7 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
         date={calendarDate}
         view={view}
         onView={setView}
+        onNavigate={(date) => setInternalDate(date)}
         defaultView="week"
         views={['month', 'week', 'day', 'agenda']}
         startAccessor="start"
@@ -101,7 +99,7 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
             }
           };
         }}
-        dayPropGetter={(date) => {
+        dayPropGetter={useMemo(() => (date) => {
           const key = toISODate(date);
           const style = {};
           if (key === todayKey()) {
@@ -121,7 +119,7 @@ export default function CalendarView({ routine, selectedDayKey, onSelectDay, hei
             }
           }
           return Object.keys(style).length ? { style } : {};
-        }}
+        }, [selectedDayKey, generatedUpTo, events])}
       />
     </div>
   );

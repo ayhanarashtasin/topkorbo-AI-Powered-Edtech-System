@@ -21,6 +21,8 @@ import { todayKey, toISODate, findDayByKey, hasMoreWeeksToGenerate } from '../ut
 import './StudyRoutine.css';
 
 const STORAGE_KEY = 'topkorbo_study_routine_messages';
+const MAX_STORED_MESSAGES = 50;
+const STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const STARTERS = [
   'I need a 35-day study plan for Physics and Math, 6 days a week. Exam in about 2 months.',
@@ -31,19 +33,21 @@ const STARTERS = [
 function loadStoredMessages() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed)
-      ? parsed.filter((m) => m && m.role && m.content)
-      : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.messages)) return [];
+    if (parsed.timestamp && Date.now() - parsed.timestamp > STORAGE_TTL_MS) {
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
+    return parsed.messages
+      .filter((m) => m && m.role && m.content)
+      .slice(-MAX_STORED_MESSAGES);
   } catch {
     return [];
   }
 }
 
-/**
- * Map low-level Groq / network errors into a friendly user message.
- * Falls back to `fallback` for unknown errors.
- */
 function formatAiError(err, fallback = 'AI mentor unavailable.') {
   const status = err?.status || err?.statusCode || 0;
   const raw = String(err?.message || '');
@@ -85,16 +89,18 @@ export default function StudyRoutine() {
   const [selectedDayKey, setSelectedDayKey] = useState(null);
   const [calendarCursor, setCalendarCursor] = useState(todayKey());
 
-  // AI Modify panel
   const [showModifyPanel, setShowModifyPanel] = useState(false);
   const [modifyInput, setModifyInput] = useState('');
   const [isModifying, setIsModifying] = useState(false);
-
-  // Week-by-week generation
   const [isGeneratingWeek, setIsGeneratingWeek] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const activeRoutineRef = useRef(activeRoutine);
+  const debounceTimerRef = useRef(null);
   const activeTab = 'study-routine';
+
+  // Keep ref in sync for stable rollback in async callbacks
+  useEffect(() => { activeRoutineRef.current = activeRoutine; }, [activeRoutine]);
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
@@ -130,13 +136,16 @@ export default function StudyRoutine() {
 
         const [routineRes, statsRes] = await Promise.all([
           studyRoutineApi.get(),
-          studyRoutineApi.getStats().catch(() => null)
+          studyRoutineApi.getStats().catch((e) => {
+            console.error('Stats load error:', e);
+            return null;
+          })
         ]);
         if (routineRes?.routine) setActiveRoutine(routineRes.routine);
-        // httpClient auto-unwraps { success, data } → returns `data` directly.
         if (statsRes) setStats(statsRes);
       } catch (err) {
         console.error('Init error:', err);
+        toast.error('Failed to load your routine. Please refresh the page.');
       } finally {
         setIsFetching(false);
       }
@@ -152,7 +161,6 @@ export default function StudyRoutine() {
     return diff < 0;
   }, [activeRoutine]);
 
-  // Default selected day → today, falling back to first day in routine
   useEffect(() => {
     if (!activeRoutine?.routine?.length) return;
     const today = todayKey();
@@ -167,13 +175,19 @@ export default function StudyRoutine() {
         setSelectedDayKey(key);
         setCalendarCursor(key);
       } else {
-        setSelectedDayKey(activeRoutine.routine[0]._id);
+        const fallbackKey = todayKey();
+        setSelectedDayKey(fallbackKey);
       }
     }
   }, [activeRoutine, selectedDayKey]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      const capped = messages.slice(-MAX_STORED_MESSAGES);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages: capped, timestamp: Date.now() }));
+    }, 300);
+    return () => clearTimeout(debounceTimerRef.current);
   }, [messages]);
   useEffect(() => {
     if (!activeRoutine) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -181,7 +195,6 @@ export default function StudyRoutine() {
 
   const canSend = input.trim().length > 0 && !isLoading;
 
-  // --- Send chat message ---
   const sendMessage = async (overrideText) => {
     const text = (overrideText || input).trim();
     if (!text || isLoading) return;
@@ -199,7 +212,9 @@ export default function StudyRoutine() {
         { role: 'assistant', content: result.reply, routineReady: result.routineReady }
       ]);
 
-      if (result.routineReady && Array.isArray(result.routine) && result.routine.length > 0) {
+      if (result.generationFailed) {
+        toast.error('AI had trouble generating the schedule. Please try again.', { duration: 6000 });
+      } else if (result.routineReady && Array.isArray(result.routine) && result.routine.length > 0) {
         try {
           const startDate =
             result.studentProfile?.startDate ||
@@ -218,7 +233,7 @@ export default function StudyRoutine() {
               setCalendarCursor(today);
             } else {
               const firstWithDate = saveRes.routine.routine?.find((d) => d.dayDate) || saveRes.routine.routine?.[0];
-              const key = firstWithDate?.dayDate ? toISODate(firstWithDate.dayDate) : null;
+              const key = firstWithDate?.dayDate ? toISODate(firstWithDate.dayDate) : todayKey();
               if (key) {
                 setSelectedDayKey(key);
                 setCalendarCursor(key);
@@ -245,7 +260,6 @@ export default function StudyRoutine() {
     }
   };
 
-  // --- Reset ---
   const resetConversation = async () => {
     if (!window.confirm('Reset your study routine? This deletes your tracker and progress.')) return;
     try {
@@ -265,7 +279,6 @@ export default function StudyRoutine() {
     }
   };
 
-  // --- Toggle segment ---
   const toggleSegment = useCallback(async (dayId, segmentId, current) => {
     const newVal = !current;
     setActiveRoutine((prev) => {
@@ -275,54 +288,31 @@ export default function StudyRoutine() {
       if (seg) seg.completed = newVal;
       return u;
     });
-    // Optimistic stats update — recompute from actual counts
-    setStats((prev) => {
-      const totalSegments = activeRoutine?.routine?.reduce(
-        (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.length : 0), 0
-      ) || 1;
-      const doneSegments = activeRoutine?.routine?.reduce(
-        (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.filter((s) => s.completed).length : 0), 0
-      ) || 0;
-      const newDone = doneSegments + (newVal ? 1 : -1);
-      const newPct = Math.round(Math.max(0, newDone / totalSegments) * 100);
-      return { ...prev, overallCompletionPct: newPct };
-    });
     try {
       await studyRoutineApi.toggleSegment(dayId, segmentId, newVal);
-      // Refresh stats quietly after toggle
+      // Refresh stats from server (authoritative)
       try {
         const statsRes = await studyRoutineApi.getStats();
         if (statsRes) setStats(statsRes);
       } catch {}
     } catch {
       toast.error('Failed to update.');
+      // Rollback using ref for latest state
       setActiveRoutine((prev) => {
+        if (!prev) return prev;
         const u = JSON.parse(JSON.stringify(prev));
         const seg = u.routine.find((d) => d._id === dayId)?.segments.find((s) => s._id === segmentId);
         if (seg) seg.completed = current;
         return u;
       });
-      setStats((prev) => {
-        const totalSegments = activeRoutine?.routine?.reduce(
-          (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.length : 0), 0
-        ) || 1;
-        const doneSegments = activeRoutine?.routine?.reduce(
-          (acc, d) => acc + (Array.isArray(d.segments) ? d.segments.filter((s) => s.completed).length : 0), 0
-        ) || 0;
-        const newDone = doneSegments - (newVal ? 1 : -1);
-        const newPct = Math.round(Math.max(0, newDone / totalSegments) * 100);
-        return { ...prev, overallCompletionPct: newPct };
-      });
     }
   }, []);
 
-  // --- Inline edit ---
   const saveEdit = async (dayId, segment, fields) => {
     const res = await studyRoutineApi.updateSegment(dayId, segment._id, fields);
     if (res?.routine) setActiveRoutine(res.routine);
   };
 
-  // --- AI Modify ---
   const sendModification = async () => {
     if (!modifyInput.trim() || isModifying || !activeRoutine?.routine) return;
     setIsModifying(true);
@@ -347,11 +337,6 @@ export default function StudyRoutine() {
     }
   };
 
-  // --- Week-by-week generation ---
-  // The button only makes sense when there are days past `generatedUpTo` that
-  // don't yet have any segments. After `saveRoutine` (server side) we set
-  // `generatedUpTo = planEnd`, so for a complete plan the button stays hidden
-  // even when the final day is a rest day with empty segments.
   const hasMoreWeeks = useMemo(
     () => hasMoreWeeksToGenerate(activeRoutine),
     [activeRoutine]
@@ -401,28 +386,67 @@ export default function StudyRoutine() {
     }
   };
 
-  // --- Navigation helpers ---
+  const addDaysToKey = (key, delta) => {
+    if (!key) return null;
+    const [y, m, d] = key.slice(0, 10).split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    return toISODate(dt);
+  };
+
   const navigateDay = (direction) => {
     const days = activeRoutine?.routine || [];
     if (days.length === 0) return;
-    const current = selectedDayKey
-      ? findDayByKey(activeRoutine, selectedDayKey)
-      : null;
-    let idx;
-    if (!current) {
-      idx = 0;
-    } else {
-      idx = days.findIndex((d) => d._id === current._id);
-      idx = idx + direction;
+
+    // Anchor: the currently selected date key, falling back to the rendered day.
+    const baseKey =
+      (selectedDayKey && selectedDayKey.slice(0, 10)) ||
+      (currentDay?.dayDate ? toISODate(currentDay.dayDate) : null);
+
+    const dayKeys = days
+      .filter((d) => d.dayDate)
+      .map((d) => toISODate(d.dayDate))
+      .sort();
+
+    if (!baseKey) {
+      // No anchor — jump to the first/last materialized day.
+      const key = direction > 0 ? dayKeys[0] : dayKeys[dayKeys.length - 1];
+      if (key) {
+        setSelectedDayKey(key);
+        setCalendarCursor(key);
+      }
+      return;
     }
-    if (idx < 0) idx = 0;
-    if (idx >= days.length) idx = days.length - 1;
-    const target = days[idx];
-    if (target?.dayDate) {
-      const key = toISODate(target.dayDate);
-      setSelectedDayKey(key);
-      setCalendarCursor(key);
+
+    const targetKey = addDaysToKey(baseKey, direction);
+    if (!targetKey) return;
+
+    // Lower bound: plan start (or earliest materialized day).
+    let lower = dayKeys[0] || null;
+    if (activeRoutine?.startDate) {
+      const sk = toISODate(activeRoutine.startDate);
+      if (sk && (!lower || sk < lower)) lower = sk;
     }
+
+    // Upper bound: the plan horizon — widest of the last materialized day, the
+    // exam date, and startDate + durationDays - 1.
+    const upperCandidates = [dayKeys[dayKeys.length - 1] || null];
+    if (activeRoutine?.examInfo?.examDate) {
+      upperCandidates.push(toISODate(activeRoutine.examInfo.examDate));
+    }
+    if (activeRoutine?.startDate && activeRoutine?.durationDays) {
+      upperCandidates.push(
+        addDaysToKey(toISODate(activeRoutine.startDate), activeRoutine.durationDays - 1)
+      );
+    }
+    const upper = upperCandidates.filter(Boolean).sort().pop() || null;
+
+    if (lower && targetKey < lower) return;
+    if (upper && targetKey > upper) return;
+
+    setSelectedDayKey(targetKey);
+    setCalendarCursor(targetKey);
   };
 
   const goToToday = () => {
@@ -607,7 +631,13 @@ export default function StudyRoutine() {
                             month: 'long',
                             day: 'numeric'
                           })
-                        : 'No day selected'}
+                        : selectedDayKey
+                          ? new Date(selectedDayKey + 'T00:00:00').toLocaleDateString(undefined, {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric'
+                            })
+                          : 'No day selected'}
                     </span>
                     <button
                       type="button"

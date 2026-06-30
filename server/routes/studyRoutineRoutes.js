@@ -1,10 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const auth = require('../middleware/auth');
 const studyRoutineController = require('../controllers/studyRoutineController');
 const aiController = require('../controllers/aiController');
 
 router.use(auth);
+
+// Rate limiter for AI-powered endpoints: 10 requests per minute per user
+const aiRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => req.user?.id || req.user?._id || req.ip,
+  message: { success: false, message: 'Too many requests. Please slow down and try again in a minute.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 router.get('/', studyRoutineController.getRoutine);
 router.get('/stats', studyRoutineController.getStats);
@@ -12,11 +23,10 @@ router.post('/', studyRoutineController.saveRoutine);
 router.patch('/segment', studyRoutineController.toggleSegment);
 router.patch('/segment/edit', studyRoutineController.updateSegment);
 router.put('/replace', studyRoutineController.replaceRoutine);
-router.post('/modify', aiController.modifyStudyRoutine);
-router.post('/generate-week', aiController.generateNextWeek);
+router.post('/modify', aiRateLimiter, aiController.modifyStudyRoutine);
+router.post('/generate-week', aiRateLimiter, aiController.generateNextWeek);
 router.delete('/', studyRoutineController.deleteRoutine);
 
-// Phase 2 focus-mode session endpoints
 router.post('/session/start', studyRoutineController.startSession);
 router.post('/session/stop', studyRoutineController.stopSession);
 

@@ -3,6 +3,66 @@ const ChatMessage = require('../models/ChatMessage');
 const StudyRoutine = require('../models/StudyRoutine');
 const { toISODate } = require('../utils/recurrence');
 
+// ---------------------------------------------------------------------------
+// Routine-specific guards
+// ---------------------------------------------------------------------------
+const MAX_ROUTINE_DAYS = 365;
+const MAX_SEGMENTS_PER_DAY = 50;
+const MAX_SEGMENT_TEXT_LEN = 500;
+const MAX_ROUTINE_JSON_BYTES = 100_000; // 100 KB cap on routine JSON sent to LLM
+
+/** Strip control chars and cap length for user-authored text forwarded to the LLM. */
+function sanitizeSegmentText(text, maxLen = MAX_SEGMENT_TEXT_LEN) {
+  if (typeof text !== 'string') return '';
+  // Remove non-printable control characters except common whitespace
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim().slice(0, maxLen);
+}
+
+/** Validate & sanitize an AI-returned routine array. Returns { valid, routine, error }. */
+function validateRoutineSchema(routine) {
+  if (!Array.isArray(routine)) {
+    return { valid: false, routine: [], error: 'routine is not an array' };
+  }
+  if (routine.length > MAX_ROUTINE_DAYS) {
+    return { valid: false, routine: [], error: `routine exceeds ${MAX_ROUTINE_DAYS} days` };
+  }
+  const ALLOWED_DAY_KEYS = new Set(['day', 'dayDate', 'segments', 'isRest']);
+  const ALLOWED_SEG_KEYS = new Set([
+    'time', 'subject', 'paper', 'chapter', 'task', 'completed',
+    'startAt', 'endAt', 'priority', 'estimatedMinutes', 'notified', '_id'
+  ]);
+  const cleaned = routine.map((day) => {
+    const out = {};
+    for (const k of Object.keys(day)) {
+      if (ALLOWED_DAY_KEYS.has(k)) out[k] = day[k];
+    }
+    if (Array.isArray(out.segments)) {
+      if (out.segments.length > MAX_SEGMENTS_PER_DAY) {
+        out.segments = out.segments.slice(0, MAX_SEGMENTS_PER_DAY);
+      }
+      out.segments = out.segments.map((seg) => {
+        const s = {};
+        for (const k of Object.keys(seg)) {
+          if (ALLOWED_SEG_KEYS.has(k)) s[k] = seg[k];
+        }
+        // Sanitize text fields
+        if (typeof s.subject === 'string') s.subject = sanitizeSegmentText(s.subject);
+        if (typeof s.chapter === 'string') s.chapter = sanitizeSegmentText(s.chapter);
+        if (typeof s.task === 'string') s.task = sanitizeSegmentText(s.task);
+        if (typeof s.paper === 'string') s.paper = sanitizeSegmentText(s.paper);
+        return s;
+      });
+    } else {
+      out.segments = [];
+    }
+    return out;
+  });
+  return { valid: true, routine: cleaned, error: null };
+}
+
+// In-memory per-user lock for generateNextWeek to prevent race conditions.
+const _generateWeekLocks = new Map();
+
 /**
  * Lazily construct the Groq client. We instantiate per-request because the
  * constructor is cheap and avoids a stale-key issue if `LLM_API_KEY` is
@@ -138,7 +198,7 @@ exports.chat = async (req, res, next) => {
         model: DEFAULT_MODEL,
         messages,
         temperature: 0.4,
-        max_tokens: 900
+
       });
       reply = completion?.choices?.[0]?.message?.content?.trim();
     } catch (llmErr) {
@@ -359,7 +419,7 @@ const STUDY_ROUTINE_CHAT_PROMPT =
   '3. Subjects they need to study, with paper names (e.g. Physics 1st Paper, Physics 2nd Paper)\n' +
   '4. For each subject+paper: which chapters/topics they need to cover\n' +
   '5. Which subjects are weak / need extra attention\n' +
-  '6. College hours and any coaching/private tutor hours\n' +
+  '6. Unavailable/Tuition hours (e.g., college, coaching, private tutor)\n' +
   '7. Wake-up time and sleep time\n' +
   '8. Target GPA\n' +
   '9. Plan duration in days — must be ONE of: 30, 35, or 40 days\n' +
@@ -368,7 +428,7 @@ const STUDY_ROUTINE_CHAT_PROMPT =
   'You MUST have at minimum: year, stream, exam info, planDurationDays (30/35/40), studyDaysPerWeek (1-7), at least 2 subjects with chapters, wake/sleep time, and weak subjects.\n\n' +
   'Return ONLY a JSON object:\n' +
   '- While gathering: {"reply":"<message>","readyToGenerate":false}\n' +
-  '- When ready: {"reply":"<short closing message like: I have everything I need! Generating your 35-day routine now...>","readyToGenerate":true,"studentProfile":{"year":"1st","stream":"Science","collegeHours":"8AM-2PM","wakeUpTime":"7AM","sleepTime":"11PM","weakSubjects":["Biology"],"targetGpa":"5","dailyStudyHours":"5","planDurationDays":35,"studyDaysPerWeek":6,"startDate":"2026-06-26"},"examInfo":{"examName":"HSC 2026","examDate":"2026-08-25","subjects":[{"name":"Physics","paper":"1st Paper","chapters":["Motion","Force","Work & Energy"]},{"name":"Biology","paper":"1st Paper","chapters":["Cell Biology","Genetics"]}]}}\n\n' +
+  '- When ready: {"reply":"<short closing message like: I have everything I need! Generating your 35-day routine now...>","readyToGenerate":true,"studentProfile":{"year":"1st","stream":"Science","unavailableHours":"8AM-2PM","wakeUpTime":"7AM","sleepTime":"11PM","weakSubjects":["Biology"],"targetGpa":"5","dailyStudyHours":"5","planDurationDays":35,"studyDaysPerWeek":6,"startDate":"2026-06-26"},"examInfo":{"examName":"HSC 2026","examDate":"2026-08-25","subjects":[{"name":"Physics","paper":"1st Paper","chapters":["Motion","Force","Work & Energy"]},{"name":"Biology","paper":"1st Paper","chapters":["Cell Biology","Genetics"]}]}}\n\n' +
   'For examDate, calculate the approximate date based on what the student says (e.g. "2 months" = today + 60 days). Use ISO format YYYY-MM-DD.\n' +
   'planDurationDays MUST be exactly 30, 35, or 40. studyDaysPerWeek MUST be an integer between 1 and 7.\n' +
   'The studentProfile and examInfo must contain ALL the info you gathered.';
@@ -379,9 +439,9 @@ const STUDY_ROUTINE_GENERATE_PROMPT =
   'You will receive a student profile and exam information as JSON. Generate a COMPLETE, REALISTIC, DATE-AWARE study routine that covers all their chapters before the exam date.\n\n' +
   'RULES:\n' +
   '- Output ONLY a JSON object.\n' +
-  '- Respect wake/sleep times and college hours.\n' +
+  '- Respect wake/sleep times and unavailableHours.\n' +
+  '- CRITICAL: Do NOT schedule any study segments during the student\'s sleep time or unavailableHours.\n' +
   '- Include breaks (lunch, rest) as segments with subject "Break".\n' +
-  '- Include college time as segments with subject "College".\n' +
   '- Give EXTRA study time to weak subjects (mark those segments with "priority":"high").\n' +
   '- Use studentProfile.startDate (ISO YYYY-MM-DD) as the FIRST day of the routine.\n' +
   '- Generate ONLY the FIRST 7 day entries (the first week) by walking forward one calendar day at a time from startDate. If planDurationDays < 7, generate exactly planDurationDays entries instead. Do NOT generate the whole plan — the remaining weeks are generated later, one week at a time.\n' +
@@ -393,7 +453,7 @@ const STUDY_ROUTINE_GENERATE_PROMPT =
   '- Each study day should have 6-12 segments.\n' +
   '- Each study segment MUST include "subject", "paper", "chapter", and "task".\n' +
   '- Across these first 7 days, prioritise the most important chapters and the weak subjects first; the remaining chapters are scheduled in later weeks.\n' +
-  '- For non-study segments (Break, College, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
+  '- For non-study segments (Break, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
   '- The "task" field should be specific: "Solve exercises 3.1-3.5", "Read and take notes on section 2", "Practice MCQs from chapter 4", etc.\n\n' +
   'JSON shape:\n' +
   '{\n' +
@@ -433,7 +493,7 @@ const STUDY_ROUTINE_MODIFY_PROMPT =
 const STUDY_ROUTINE_WEEKLY_PROMPT =
   'You are a study routine generator for HSC students in Bangladesh.\n\n' +
   'You will receive:\n' +
-  '1. Student profile (wake/sleep times, college hours, weak subjects)\n' +
+  '1. Student profile (wake/sleep times, unavailableHours, weak subjects)\n' +
   '2. Exam info (exam date, subjects with chapters)\n' +
   '3. Previous week\'s progress summary (completion rates, which subjects were strong/weak)\n' +
   '4. The 7-day date range to generate\n\n' +
@@ -445,17 +505,17 @@ const STUDY_ROUTINE_WEEKLY_PROMPT =
   '- For EACH segment, set "startAt" and "endAt" as full ISO datetimes (with Z timezone) for that segment within dayDate. They MUST be ordered: earliest first.\n' +
   '- Each study day should have 6-12 segments.\n' +
   '- Include breaks (lunch, rest) as segments with subject "Break".\n' +
-  '- Include college time as segments with subject "College" if college hours are provided.\n' +
   '- Give EXTRA study time to weak subjects (mark those segments with "priority":"high").\n' +
   '- If a subject had LOW completion last week, increase its time this week or move it to a better time slot.\n' +
   '- If the student had a good streak, maintain the same study pattern.\n' +
   '- If the student struggled with a subject, add a review session before new material.\n' +
-  '- Respect the student\'s wake/sleep times and college hours.\n' +
+  '- Respect the student\'s wake/sleep times and unavailableHours.\n' +
+  '- CRITICAL: Do NOT schedule any study segments during the student\'s sleep time or unavailableHours.\n' +
   '- If studyDaysPerWeek < 7, skip the appropriate rest days.\n' +
   '- Each study segment MUST include "subject", "paper", "chapter", and "task".\n' +
   '- The "task" field should be specific: "Solve exercises 3.1-3.5", "Read and take notes on section 2", etc.\n' +
   '- Distribute chapters so that all remaining chapters are covered before the exam date.\n' +
-  '- For non-study segments (Break, College, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
+  '- For non-study segments (Break, Morning Routine, Rest), paper and chapter can be empty strings.\n' +
   '- For rest days, return an empty segments array.\n\n' +
   'JSON shape:\n' +
   '{"routine":[{"day":"Monday","dayDate":"2026-07-04","segments":[{"time":"7:00 AM - 7:30 AM","startAt":"2026-07-04T01:00:00.000Z","endAt":"2026-07-04T01:30:00.000Z","subject":"Morning Routine","paper":"","chapter":"","task":"Wake up, freshen up","priority":"low","estimatedMinutes":30,"completed":false}]}]}\n\n' +
@@ -524,10 +584,11 @@ exports.studyRoutine = async (req, res, next) => {
 
     // --- Phase 1: Chat ---
     const chatCompletion = await groqWithRetry(groq, {
-      model: DEFAULT_MODEL,
+      model: 'openai/gpt-oss-120b',
       response_format: { type: 'json_object' },
       temperature: 0.4,
-      max_tokens: 1000,
+      top_p: 1,
+      reasoning_effort: 'medium',
       messages: [
         { role: 'system', content: STUDY_ROUTINE_CHAT_PROMPT },
         ...conversation
@@ -542,7 +603,8 @@ exports.studyRoutine = async (req, res, next) => {
       });
     }
 
-    const readyToGenerate = chatParsed.readyToGenerate === true || String(chatParsed.readyToGenerate).toLowerCase() === 'true';
+    const rtg = chatParsed.readyToGenerate;
+    const readyToGenerate = rtg === true || rtg === 1 || /^(true|yes|1)$/i.test(String(rtg));
 
     if (!readyToGenerate) {
       return res.status(200).json({
@@ -565,10 +627,11 @@ exports.studyRoutine = async (req, res, next) => {
     let routine = [];
     try {
       const genCompletion = await groqWithRetry(groq, {
-        model: DEFAULT_MODEL,
+        model: 'openai/gpt-oss-120b',
         response_format: { type: 'json_object' },
-        temperature: 0.3,
-        max_tokens: 4096,
+        temperature: 0.4,
+        top_p: 1,
+        reasoning_effort: 'low',
         messages: [
           { role: 'system', content: STUDY_ROUTINE_GENERATE_PROMPT },
           { role: 'user', content: `Student & Exam Info:\n${profileAndExam}\n\nGenerate ONLY the first 7 days (the first week) of the study routine as JSON.` }
@@ -589,6 +652,7 @@ exports.studyRoutine = async (req, res, next) => {
         data: {
           reply: chatParsed.reply.trim() + '\n\n⚠️ I had trouble generating the schedule. Please send another message (e.g. "generate now") and I\'ll try again.',
           routineReady: false,
+          generationFailed: true,
           routine: [],
           examInfo: null,
           studentProfile: null
@@ -626,18 +690,38 @@ exports.modifyStudyRoutine = async (req, res, next) => {
     if (!currentRoutine || !Array.isArray(currentRoutine)) {
       return res.status(400).json({ success: false, message: 'Current routine is required.' });
     }
+    if (currentRoutine.length > MAX_ROUTINE_DAYS) {
+      return res.status(400).json({ success: false, message: `Routine exceeds ${MAX_ROUTINE_DAYS} days.` });
+    }
 
     const groq = getGroqClient();
-    const routineJson = JSON.stringify(currentRoutine, null, 2);
+    // Sanitize segment text before forwarding to LLM to prevent prompt injection
+    const sanitizedRoutine = currentRoutine.map((day) => ({
+      ...day,
+      segments: Array.isArray(day.segments)
+        ? day.segments.map((seg) => ({
+            ...seg,
+            subject: sanitizeSegmentText(seg.subject),
+            chapter: sanitizeSegmentText(seg.chapter),
+            task: sanitizeSegmentText(seg.task),
+            paper: sanitizeSegmentText(seg.paper)
+          }))
+        : []
+    }));
+    let routineJson = JSON.stringify(sanitizedRoutine, null, 2);
+    // Cap prompt size to avoid blowing context window
+    if (Buffer.byteLength(routineJson, 'utf8') > MAX_ROUTINE_JSON_BYTES) {
+      routineJson = routineJson.slice(0, MAX_ROUTINE_JSON_BYTES) + '\n... (truncated)';
+    }
 
     const completion = await groqWithRetry(groq, {
-      model: DEFAULT_MODEL,
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 4096,
+      model: 'openai/gpt-oss-120b',
+      temperature: 1,
+      top_p: 1,
+      reasoning_effort: 'medium',
       messages: [
         { role: 'system', content: STUDY_ROUTINE_MODIFY_PROMPT },
-        { role: 'user', content: `Current Routine:\n${routineJson}\n\nModification Request: ${message.trim()}` }
+        { role: 'user', content: `Current Routine:\n${routineJson}\n\nModification Request: ${sanitizeSegmentText(message.trim(), 2000)}` }
       ]
     });
 
@@ -648,10 +732,18 @@ exports.modifyStudyRoutine = async (req, res, next) => {
         message: 'AI could not modify the routine. Please try a different request.'
       });
     }
+    // Validate and sanitize the AI-returned routine
+    const { valid, routine: cleanedRoutine, error: schemaErr } = validateRoutineSchema(parsed.routine);
+    if (!valid) {
+      return res.status(502).json({
+        success: false,
+        message: `AI returned invalid routine: ${schemaErr}`
+      });
+    }
 
     res.status(200).json({
       success: true,
-      data: { routine: parsed.routine }
+      data: { routine: cleanedRoutine }
     });
   } catch (err) {
     next(err);
@@ -698,8 +790,6 @@ exports.extractQuestion = async (req, res, next) => {
       model: DEFAULT_MODEL,
       response_format: { type: 'json_object' },
       temperature: 0.2,
-      // 4–5 LaTeX options plus a worked solution can easily exceed 1500 tokens.
-      max_tokens: 2500,
       messages: [
         { role: 'system', content: EXTRACT_SYSTEM_PROMPT },
         { role: 'user', content: userContent }
@@ -796,9 +886,6 @@ exports.answerMcq = async (req, res, next) => {
         model: DEFAULT_MODEL,
         response_format: { type: 'json_object' },
         temperature: 0.1,
-        // Enough room for brief reasoning before the answer — chain-of-thought
-        // meaningfully improves MCQ accuracy over a bare index.
-        max_tokens: 500,
         messages: [
           { role: 'system', content: ANSWER_MCQ_SYSTEM_PROMPT },
           { role: 'user', content: buildAnswerMcqPrompt(questionText.trim(), optionTexts) }
@@ -827,8 +914,21 @@ exports.answerMcq = async (req, res, next) => {
  * Week-by-week AI generation. Generates 7 days based on previous week's progress.
  */
 exports.generateNextWeek = async (req, res, next) => {
+  const userId = req.user._id || req.user.id;
+  const userKey = String(userId);
+
+  // Per-user concurrency lock — prevents double-click race on generatedUpTo
+  if (_generateWeekLocks.has(userKey)) {
+    try {
+      await _generateWeekLocks.get(userKey);
+    } catch { /* previous call failed, proceed */ }
+  }
+
+  let resolveLock;
+  const lockPromise = new Promise((resolve) => { resolveLock = resolve; });
+  _generateWeekLocks.set(userKey, lockPromise);
+
   try {
-    const userId = req.user._id || req.user.id;
     const studyRoutine = await StudyRoutine.findOne({ userId });
     if (!studyRoutine) {
       return res.status(404).json({
@@ -841,8 +941,6 @@ exports.generateNextWeek = async (req, res, next) => {
     const startDate = studyRoutine.startDate;
     const durationDays = studyRoutine.durationDays || 30;
     if (!startDate) {
-      // Routine exists but is missing plan metadata. Treat the same as a
-      // 404 — the client should drop its stale view and start fresh.
       return res.status(404).json({
         success: false,
         code: 'NO_ROUTINE',
@@ -850,7 +948,11 @@ exports.generateNextWeek = async (req, res, next) => {
       });
     }
 
-    // Determine the date range for the next week
+    // Defensive: if generatedUpTo somehow drifted before startDate, reset it
+    if (studyRoutine.generatedUpTo && new Date(studyRoutine.generatedUpTo) < new Date(startDate)) {
+      studyRoutine.generatedUpTo = null;
+    }
+
     const planEnd = new Date(startDate);
     planEnd.setUTCDate(planEnd.getUTCDate() + durationDays - 1);
 
@@ -862,7 +964,6 @@ exports.generateNextWeek = async (req, res, next) => {
       weekStart = new Date(startDate);
     }
 
-    // Nothing left to generate
     if (weekStart > planEnd) {
       return res.status(200).json({
         success: true,
@@ -870,12 +971,11 @@ exports.generateNextWeek = async (req, res, next) => {
       });
     }
 
-    // Calculate week end (6 days later, or plan end — whichever is sooner)
     let weekEnd = new Date(weekStart);
     weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
     if (weekEnd > planEnd) weekEnd = new Date(planEnd);
 
-    // Extract previous week's completion data
+    // Extract previous week's completion data — sanitize text before forwarding to LLM
     const routine = studyRoutine.routine || [];
     const previousWeekDays = [];
     if (studyRoutine.generatedUpTo) {
@@ -889,7 +989,8 @@ exports.generateNextWeek = async (req, res, next) => {
           const done = segs.filter((s) => s.completed).length;
           const bySubject = {};
           for (const seg of segs) {
-            const subj = seg.subject || 'Other';
+            // Sanitize text going into the LLM prompt
+            const subj = sanitizeSegmentText(seg.subject) || 'Other';
             if (!bySubject[subj]) bySubject[subj] = { planned: 0, done: 0 };
             bySubject[subj].planned++;
             if (seg.completed) bySubject[subj].done++;
@@ -911,7 +1012,6 @@ exports.generateNextWeek = async (req, res, next) => {
       days: previousWeekDays
     } : null;
 
-    // Build the prompt context
     const groq = getGroqClient();
     const profileAndExam = JSON.stringify({
       studentProfile: studyRoutine.studentProfile || {},
@@ -924,14 +1024,17 @@ exports.generateNextWeek = async (req, res, next) => {
       previousWeekProgress: prevWeekSummary
     }, null, 2);
 
-    // Call AI
     let weekRoutine = [];
     try {
       const completion = await groqWithRetry(groq, {
-        model: DEFAULT_MODEL,
+        model: 'openai/gpt-oss-120b',
+        // A full 7-day week (6-12 segments/day, each with ISO startAt/endAt)
+        // overruns 4096 tokens and the JSON gets truncated mid-segment, which
+        // then fails to parse. Give it ample room and force JSON output.
         response_format: { type: 'json_object' },
-        temperature: 0.3,
-        max_tokens: 4096,
+        temperature: 1,
+        top_p: 1,
+        reasoning_effort: 'low',
         messages: [
           { role: 'system', content: STUDY_ROUTINE_WEEKLY_PROMPT },
           { role: 'user', content: `Student & Exam Info:\n${profileAndExam}\n\nWeek to Generate:\n${weekContext}\n\nGenerate the 7-day study routine as JSON.` }
@@ -953,8 +1056,13 @@ exports.generateNextWeek = async (req, res, next) => {
       });
     }
 
+    // Validate & sanitize AI output
+    const { valid, routine: cleanedWeek, error: schemaErr } = validateRoutineSchema(weekRoutine);
+    if (!valid) {
+      return res.status(502).json({ success: false, message: `AI returned invalid routine: ${schemaErr}` });
+    }
+
     // Merge AI-generated days into the existing routine
-    // Build a map of existing days by date key
     const existingByDate = {};
     for (const day of routine) {
       if (day.dayDate) {
@@ -963,15 +1071,17 @@ exports.generateNextWeek = async (req, res, next) => {
       }
     }
 
-    // Replace only the days that the AI generated
     let lastGeneratedDate = null;
-    for (const aiDay of weekRoutine) {
+    for (const aiDay of cleanedWeek) {
       if (!aiDay.dayDate) continue;
       const dateKey = typeof aiDay.dayDate === 'string' ? aiDay.dayDate.slice(0, 10) : toISODate(new Date(aiDay.dayDate));
 
-      // Find existing day or create new one
       const existing = existingByDate[dateKey];
       if (existing) {
+        // Guard: don't overwrite days that have any completed segments
+        const hasCompleted = Array.isArray(existing.segments) && existing.segments.some((s) => s.completed);
+        if (hasCompleted) continue;
+
         existing.segments = (aiDay.segments || []).map((seg) => ({
           ...seg,
           completed: false,
@@ -995,17 +1105,12 @@ exports.generateNextWeek = async (req, res, next) => {
       if (!lastGeneratedDate || d > lastGeneratedDate) lastGeneratedDate = d;
     }
 
-    // Sort routine by dayDate
     routine.sort((a, b) => {
       if (!a.dayDate) return 1;
       if (!b.dayDate) return -1;
       return new Date(a.dayDate) - new Date(b.dayDate);
     });
 
-    // Advance generatedUpTo to the intended week boundary (weekEnd), not just
-    // the last day the AI happened to emit. This guarantees forward progress so
-    // the "Generate Next Week" button keeps moving even if the model omits a
-    // trailing rest day in its output.
     studyRoutine.routine = routine;
     const advancedTo = lastGeneratedDate && lastGeneratedDate > weekEnd ? lastGeneratedDate : weekEnd;
     studyRoutine.generatedUpTo = advancedTo;
@@ -1021,5 +1126,8 @@ exports.generateNextWeek = async (req, res, next) => {
     });
   } catch (err) {
     next(err);
+  } finally {
+    resolveLock();
+    _generateWeekLocks.delete(userKey);
   }
 };
