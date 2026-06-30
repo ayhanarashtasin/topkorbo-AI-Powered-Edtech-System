@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎓 TopKorbo
+#  TopKorbo
 
 ### The Elite Academic Testing, Learning & Community Platform for Bangladeshi Students
 
