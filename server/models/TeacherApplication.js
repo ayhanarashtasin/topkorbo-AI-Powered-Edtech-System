@@ -31,6 +31,22 @@ const teacherApplicationSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  takeIeltsSpeaking: {
+    type: Boolean,
+    default: false
+  },
+  takeIeltsSpeakingDetails: {
+    type: String,
+    trim: true
+  },
+  createIeltsQSet: {
+    type: Boolean,
+    default: false
+  },
+  createIeltsQSetDetails: {
+    type: String,
+    trim: true
+  },
   aboutYou: {
     type: String,
     required: [true, 'A description about you is required'],

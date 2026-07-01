@@ -217,11 +217,18 @@ export default function MockTestExam() {
         } catch (_) { }
       }
 
+      const wasSubmitted =
+        sessionStorage.getItem("mock_exam_submitted") === "true";
+      const wasReview =
+        sessionStorage.getItem("mock_exam_review_mode") === "true";
+
       // ── Restore contest navigation state ─────────────────────────────────
       const savedSubmittedKeys = sessionStorage.getItem("mock_exam_submitted_keys");
+      let parsedSubmittedKeys = {};
       if (savedSubmittedKeys) {
         try {
-          setSubmittedQuestionKeys(JSON.parse(savedSubmittedKeys));
+          parsedSubmittedKeys = JSON.parse(savedSubmittedKeys);
+          setSubmittedQuestionKeys(parsedSubmittedKeys);
         } catch (_) { }
       }
       const savedVisitedIndexes = sessionStorage.getItem("mock_exam_visited_indexes");
@@ -232,14 +239,29 @@ export default function MockTestExam() {
       }
       const savedActiveIdx = sessionStorage.getItem("mock_exam_active_idx");
       if (savedActiveIdx) {
-        setActiveQuestionIndex(parseInt(savedActiveIdx, 10));
+        let restoredIdx = parseInt(savedActiveIdx, 10);
+        if (parsedConfig?.contestId && !wasReview) {
+          const key = parsedQuestions[restoredIdx] ? (parsedQuestions[restoredIdx]._id || `question-${restoredIdx}`) : `question-${restoredIdx}`;
+          if (parsedSubmittedKeys[key]) {
+            const firstUnsubmitted = parsedQuestions.findIndex((q, idx) => {
+              const k = q._id || `question-${idx}`;
+              return !parsedSubmittedKeys[k];
+            });
+            if (firstUnsubmitted !== -1) {
+              restoredIdx = firstUnsubmitted;
+            }
+          }
+        }
+        setActiveQuestionIndex(restoredIdx);
+      } else if (parsedConfig?.contestId && !wasReview) {
+        const firstUnsubmitted = parsedQuestions.findIndex((q, idx) => {
+          const k = q._id || `question-${idx}`;
+          return !parsedSubmittedKeys[k];
+        });
+        if (firstUnsubmitted !== -1) {
+          setActiveQuestionIndex(firstUnsubmitted);
+        }
       }
-
-      // ── Restore submitted / review state ────────────────────────────────
-      const wasSubmitted =
-        sessionStorage.getItem("mock_exam_submitted") === "true";
-      const wasReview =
-        sessionStorage.getItem("mock_exam_review_mode") === "true";
 
       if (wasSubmitted) {
         setIsSubmitted(true);
@@ -304,6 +326,42 @@ export default function MockTestExam() {
 
   const getQuestionKey = (question, index) =>
     question._id || `question-${index}`;
+
+  const findNextUnsubmittedIndex = (currentIndex, currentSubmittedKeys) => {
+    // 1. Search forward from currentIndex + 1
+    for (let i = currentIndex + 1; i < questions.length; i++) {
+      const key = getQuestionKey(questions[i], i);
+      if (!currentSubmittedKeys[key]) {
+        return i;
+      }
+    }
+    // 2. Search backward from 0 to currentIndex - 1
+    for (let i = 0; i < currentIndex; i++) {
+      const key = getQuestionKey(questions[i], i);
+      if (!currentSubmittedKeys[key]) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  const findPrevUnsubmittedIndex = (currentIndex, currentSubmittedKeys) => {
+    // 1. Search backward from currentIndex - 1 to 0
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      const key = getQuestionKey(questions[i], i);
+      if (!currentSubmittedKeys[key]) {
+        return i;
+      }
+    }
+    // 2. Search backward from questions.length - 1 to currentIndex + 1
+    for (let i = questions.length - 1; i > currentIndex; i--) {
+      const key = getQuestionKey(questions[i], i);
+      if (!currentSubmittedKeys[key]) {
+        return i;
+      }
+    }
+    return -1;
+  };
 
   const getCorrectOptionIndex = (question) => {
     if (!Array.isArray(question.options)) return -1;
@@ -460,18 +518,8 @@ export default function MockTestExam() {
     return Math.max(0, score);
   };
 
-  const getPreviousUnsubmittedIndex = () => {
-    for (let i = activeQuestionIndex - 1; i >= 0; i--) {
-      const key = getQuestionKey(questions[i], i);
-      if (!submittedQuestionKeys[key]) {
-        return i;
-      }
-    }
-    return -1;
-  };
-
   const handleContestQuestionBack = () => {
-    const prevIdx = getPreviousUnsubmittedIndex();
+    const prevIdx = findPrevUnsubmittedIndex(activeQuestionIndex, submittedQuestionKeys);
     if (prevIdx !== -1) {
       setActiveQuestionIndex(prevIdx);
       setVisitedQuestionIndexes((prev) => {
@@ -552,40 +600,29 @@ export default function MockTestExam() {
       return;
     }
 
-    // Go to next question
-    const nextIdx = index + 1;
-    if (nextIdx < questions.length) {
-      setActiveQuestionIndex(nextIdx);
+    // Go to next unsubmitted question
+    const nextUnsubmitted = findNextUnsubmittedIndex(index, updatedSubmittedKeys);
+    if (nextUnsubmitted !== -1) {
+      setActiveQuestionIndex(nextUnsubmitted);
       setVisitedQuestionIndexes((prev) => {
         const next = new Set(prev);
-        next.add(nextIdx);
+        next.add(nextUnsubmitted);
         return next;
       });
-    } else {
-      // If we are at the last question page, but there are unsubmitted questions, navigate to the first one
-      const prevIdx = questions.findIndex((q, idx) => !updatedSubmittedKeys[getQuestionKey(q, idx)]);
-      if (prevIdx !== -1) {
-        setActiveQuestionIndex(prevIdx);
-        setVisitedQuestionIndexes((prev) => {
-          const next = new Set(prev);
-          next.add(prevIdx);
-          return next;
-        });
-      }
     }
   };
 
   const handleContestQuestionNext = (index) => {
-    const nextIdx = index + 1;
-    if (nextIdx < questions.length) {
-      setActiveQuestionIndex(nextIdx);
+    const nextUnsubmitted = findNextUnsubmittedIndex(index, submittedQuestionKeys);
+    if (nextUnsubmitted !== -1) {
+      setActiveQuestionIndex(nextUnsubmitted);
       setVisitedQuestionIndexes((prev) => {
         const next = new Set(prev);
-        next.add(nextIdx);
+        next.add(nextUnsubmitted);
         return next;
       });
     } else {
-      toast.info(language === "en" ? "This is the last question." : "এটিই শেষ প্রশ্ন।");
+      toast.info(language === "en" ? "This is the last unsubmitted question." : "এটিই শেষ অসাবমিটকৃত প্রশ্ন।");
     }
   };
 
@@ -1321,15 +1358,15 @@ export default function MockTestExam() {
           <div className="exam-mini-boxes-grid">
             {questions.map((q, idx) => {
               const questionKey = getQuestionKey(q, idx);
-              const isCurrent = idx === activeQuestionIndex;
               const isSubmitted = !!submittedQuestionKeys[questionKey];
+              if (isSubmitted) return null;
+
+              const isCurrent = idx === activeQuestionIndex;
               const isUnsubmitted = !isSubmitted && visitedQuestionIndexes.has(idx);
 
               let boxClass = "mini-box--unvisited";
               if (isCurrent) {
                 boxClass = "mini-box--active";
-              } else if (isSubmitted) {
-                boxClass = "mini-box--submitted";
               } else if (isUnsubmitted) {
                 boxClass = "mini-box--unsubmitted";
               }
@@ -1722,7 +1759,7 @@ export default function MockTestExam() {
                     >
                       {language === "en" ? "Next" : "পরবর্তী"}
                     </button>
-                    {getPreviousUnsubmittedIndex() !== -1 && (
+                    {findPrevUnsubmittedIndex(activeQuestionIndex, submittedQuestionKeys) !== -1 && (
                       <button
                         type="button"
                         className="btn-contest-back"

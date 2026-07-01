@@ -46,7 +46,14 @@ const authController = {
       }
 
       // Check if the user has completed their profile
-      const isComplete = (user.role === 'tutor' || user.role === 'teacher') ? !!user.universityName : !!user.collegeName;
+      let isComplete = (user.role === 'tutor' || user.role === 'teacher') ? !!user.universityName : !!user.collegeName;
+      if (!isComplete && (user.role === 'tutor' || user.role === 'teacher')) {
+        const IeltsTeacher = require('../models/IeltsTeacher');
+        const ieltsRecord = await IeltsTeacher.findOne({ userId: user._id });
+        if (ieltsRecord && ieltsRecord.universityName) {
+          isComplete = true;
+        }
+      }
 
       // Generate a JWT token
       const token = jwt.sign(
@@ -71,12 +78,20 @@ const authController = {
   completeProfile: async (req, res, next) => {
     try {
       if (req.user.role === 'tutor' || req.user.role === 'teacher') {
+        const existingUser = await User.findById(req.user.id);
+        if (!existingUser) {
+          return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const {
           name,
           dob,
           gender,
           studentIdNumber,
           studentIdCardPhoto,
+          nidPhoto,
+          ieltsScore,
+          ieltsTrf,
           interestedToGuide,
           collegeName,
           hscBatch,
@@ -87,6 +102,13 @@ const authController = {
           avatar
         } = req.body;
 
+        const IeltsTeacher = require('../models/IeltsTeacher');
+        const existingIelts = await IeltsTeacher.findOne({ userId: req.user.id });
+
+        const finalStudentIdCardPhoto = studentIdCardPhoto || existingUser.studentIdCardPhoto || (existingIelts ? existingIelts.studentIdCardPhoto : '');
+        const finalNidPhoto = nidPhoto || existingUser.nidPhoto || (existingIelts ? existingIelts.nidPhoto : '');
+        const finalIeltsTrf = ieltsTrf || existingUser.ieltsTrf || (existingIelts ? existingIelts.ieltsTrf : '');
+
         // STRICT VALIDATION
         if (!name || !name.trim()) {
           return res.status(400).json({ success: false, message: 'Full Name is required.' });
@@ -94,12 +116,23 @@ const authController = {
         if (!studentIdNumber || !studentIdNumber.trim()) {
           return res.status(400).json({ success: false, message: 'Student ID Number is required.' });
         }
-        if (!studentIdCardPhoto || !studentIdCardPhoto.trim()) {
+        if (!finalStudentIdCardPhoto || !finalStudentIdCardPhoto.trim()) {
           return res.status(400).json({ success: false, message: 'Student ID Photo upload is required.' });
         }
         if (!interestedToGuide || !Array.isArray(interestedToGuide) || interestedToGuide.length === 0) {
           return res.status(400).json({ success: false, message: 'Interested to Guide selection is required.' });
         }
+
+        // Conditional validation for IELTS
+        if (interestedToGuide.includes('IELTS')) {
+          if (!ieltsScore || !ieltsScore.trim()) {
+            return res.status(400).json({ success: false, message: 'IELTS Score is required.' });
+          }
+          if (!finalIeltsTrf || !finalIeltsTrf.trim()) {
+            return res.status(400).json({ success: false, message: 'IELTS TRF PDF upload is required.' });
+          }
+        }
+
         if (!collegeName || !collegeName.trim()) {
           return res.status(400).json({ success: false, message: 'College Name is required.' });
         }
@@ -119,23 +152,82 @@ const authController = {
           return res.status(400).json({ success: false, message: 'Admission Achievement description is required.' });
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-          req.user.id,
-          {
-            name,
-            dob,
-            gender,
+        const hasIelts = interestedToGuide.includes('IELTS');
+        const hasOthers = interestedToGuide.some(area => area !== 'IELTS');
+
+        if (hasIelts) {
+          await IeltsTeacher.findOneAndUpdate(
+            { userId: req.user.id },
+            {
+              userId: req.user.id,
+              name,
+              email: req.user.email || existingUser.email,
+              studentIdNumber,
+              studentIdCardPhoto: finalStudentIdCardPhoto,
+              nidPhoto: finalNidPhoto,
+              ieltsScore,
+              ieltsTrf: finalIeltsTrf,
+              collegeName,
+              hscBatch,
+              universityName,
+              department,
+              currentYearSemester,
+              admissionAchievement,
+              avatar,
+              dob,
+              gender
+            },
+            { upsert: true, new: true }
+          );
+        } else {
+          await IeltsTeacher.deleteOne({ userId: req.user.id });
+        }
+
+        let userUpdatePayload = {
+          name,
+          dob,
+          gender,
+          avatar
+        };
+
+        if (hasOthers) {
+          userUpdatePayload = {
+            ...userUpdatePayload,
             studentIdNumber,
-            studentIdCardPhoto,
+            studentIdCardPhoto: finalStudentIdCardPhoto,
+            nidPhoto: finalNidPhoto,
+            ieltsScore: hasIelts ? ieltsScore : '',
+            ieltsTrf: hasIelts ? finalIeltsTrf : '',
             interestedToGuide,
             collegeName,
             hscBatch,
             universityName,
             department,
             currentYearSemester,
-            admissionAchievement,
-            avatar
-          },
+            admissionAchievement
+          };
+        } else {
+          // Clear tutor fields in User model so they are only stored in IeltsTeacher model
+          userUpdatePayload = {
+            ...userUpdatePayload,
+            studentIdNumber: '',
+            studentIdCardPhoto: '',
+            nidPhoto: '',
+            ieltsScore: '',
+            ieltsTrf: '',
+            interestedToGuide: ['IELTS'],
+            collegeName: '',
+            hscBatch: '',
+            universityName: '',
+            department: '',
+            currentYearSemester: '',
+            admissionAchievement: ''
+          };
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+          req.user.id,
+          userUpdatePayload,
           { new: true, runValidators: true }
         );
 
@@ -275,7 +367,7 @@ const authController = {
     try {
       // Exclude the large base64 studentIdCardPhoto field — it's ~200KB+ and the
       // frontend never needs it here.  This alone cuts query time from ~1s to ~40ms.
-      const userQuery = User.findById(req.user.id).select('-studentIdCardPhoto');
+      const userQuery = User.findById(req.user.id).select('-studentIdCardPhoto -nidPhoto -ieltsTrf');
       const isEligibleForTeacherApp = req.user.role === 'tutor' || req.user.role === 'teacher';
 
       // Run user + teacher-application queries in parallel instead of sequentially
@@ -296,7 +388,29 @@ const authController = {
         await user.save();
       }
 
-      const response = { success: true, data: user };
+      let userData = user.toObject();
+      if (user.role === 'tutor' || user.role === 'teacher') {
+        const IeltsTeacher = require('../models/IeltsTeacher');
+        const ieltsRecord = await IeltsTeacher.findOne({ userId: user._id }).select('-studentIdCardPhoto -nidPhoto -ieltsTrf').lean();
+        if (ieltsRecord) {
+          if (!user.universityName || (user.interestedToGuide.length === 1 && user.interestedToGuide[0] === 'IELTS')) {
+            userData = {
+              ...userData,
+              studentIdNumber: ieltsRecord.studentIdNumber,
+              collegeName: ieltsRecord.collegeName,
+              hscBatch: ieltsRecord.hscBatch,
+              universityName: ieltsRecord.universityName,
+              department: ieltsRecord.department,
+              currentYearSemester: ieltsRecord.currentYearSemester,
+              admissionAchievement: ieltsRecord.admissionAchievement,
+              interestedToGuide: ['IELTS'],
+              ieltsScore: ieltsRecord.ieltsScore
+            };
+          }
+        }
+      }
+
+      const response = { success: true, data: userData };
       if (teacherApplication) {
         response.teacherApplication = teacherApplication;
       }
@@ -341,6 +455,10 @@ const authController = {
         createQuestionBankSubjects,
         manageContest,
         manageContestDetails,
+        takeIeltsSpeaking,
+        takeIeltsSpeakingDetails,
+        createIeltsQSet,
+        createIeltsQSetDetails,
         aboutYou
       } = req.body;
 
@@ -360,6 +478,10 @@ const authController = {
           createQuestionBankSubjects: createQuestionBankSubjects || [],
           manageContest: !!manageContest,
           manageContestDetails: manageContestDetails || '',
+          takeIeltsSpeaking: !!takeIeltsSpeaking,
+          takeIeltsSpeakingDetails: takeIeltsSpeakingDetails || '',
+          createIeltsQSet: !!createIeltsQSet,
+          createIeltsQSetDetails: createIeltsQSetDetails || '',
           aboutYou: aboutYou.trim(),
           status: 'pending' // Reset to pending if resubmitted
         },

@@ -894,6 +894,16 @@
   background-color: rgba(192, 133, 82, 0.14);
 }
 
+.mc-btn--danger {
+  background-color: rgba(220, 38, 38, 0.08);
+  color: #DC2626;
+  border: 1.2px solid rgba(220, 38, 38, 0.22);
+}
+
+.mc-btn--danger:hover {
+  background-color: rgba(220, 38, 38, 0.15);
+}
+
 .mc-bottom-bar {
   display: flex;
   justify-content: flex-end;
