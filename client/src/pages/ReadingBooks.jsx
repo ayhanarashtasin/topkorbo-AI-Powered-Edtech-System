@@ -112,7 +112,7 @@ export default function ReadingBooks() {
   const activeTab = 'reading-books';
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  // Auth guard + fetch user data
+  // Load the current user from /auth/me and cache it for the rest of the app.
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) {
@@ -151,7 +151,7 @@ export default function ReadingBooks() {
     fetchUser();
   }, [apiBase]);
 
-  // Fetch taxonomy once
+  // Fetch the taxonomy (categories / groups / subjects / papers) once on mount.
   useEffect(() => {
     const fetchTaxonomy = async () => {
       try {
@@ -170,7 +170,7 @@ export default function ReadingBooks() {
     fetchTaxonomy();
   }, [apiBase]);
 
-  // Fetch books whenever filters change
+  // Re-fetch books whenever filters, the "my uploads" toggle, or the user changes.
   useEffect(() => {
     const fetchBooks = async () => {
       setLoading(true);
@@ -245,8 +245,9 @@ export default function ReadingBooks() {
       });
       list = all;
     }
-    
-    // Add legacy subjects if they are in taxonomy
+
+    // Merge in any legacy subjects returned by the taxonomy endpoint so older
+    // uploads remain discoverable in the subject filter.
     const seenIds = new Set(list.map((s) => s.id.toLowerCase()));
     const legacy = (taxonomy.subjects || [])
       .filter((s) => s && !seenIds.has(s.toLowerCase()))
@@ -386,7 +387,6 @@ export default function ReadingBooks() {
         </header>
 
         <div className="rb-workspace animate-fade-in">
-          {/* Filters */}
           <div className="rb-filters">
             <div className="rb-filter-group">
               <label className="rb-filter-label">{t('rb.filter.category')}</label>
@@ -525,7 +525,6 @@ export default function ReadingBooks() {
         </div>
       </main>
 
-      {/* Custom Confirmation Modal */}
       {confirmDeleteData.show && (
         <div className="rb-modal-overlay animate-fade-in" style={{
           position: 'fixed',

@@ -5,10 +5,8 @@ import LoadingSkeleton from './LoadingSkeleton';
 import EmptyState from './EmptyState';
 import forumApi from '../../services/forumApi';
 
-/**
- * InfiniteFeed — paginates a forumApi endpoint with cursor + auto-load on
- * intersection of a sentinel element. Re-fetches when `feedKey` changes.
- */
+// InfiniteFeed — cursor-paginates a forumApi endpoint and auto-loads more
+// when a sentinel scrolls into view. Resets whenever `feedKey` changes.
 export default function InfiniteFeed({ feedKey, emptyTitle, emptyMessage, fetchPage }) {
   const [items, setItems] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -16,7 +14,7 @@ export default function InfiniteFeed({ feedKey, emptyTitle, emptyMessage, fetchP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Reset on feedKey change
+  // Reset pagination state and fetch the first page whenever `feedKey` changes.
   useEffect(() => {
     let cancelled = false;
     setItems([]);

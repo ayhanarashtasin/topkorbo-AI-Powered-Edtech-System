@@ -41,12 +41,9 @@ export default function QuestionBank() {
   const [searchQuery, setSearchQuery] = useState("");
   const [boardSources, setBoardSources] = useState([]);
   const [collegeSources, setCollegeSources] = useState([]);
-  // Modal shown when a board/college card is clicked. Holds the source payload
-  // and which sub-screen is active: 'menu' (two CTAs) or 'preview' (list of Qs).
-  const [activeSourceModal, setActiveSourceModal] = useState(null); // { source }
+  const [activeSourceModal, setActiveSourceModal] = useState(null);
   const [sourcesLoading, setSourcesLoading] = useState(false);
 
-  // ── Admission Question Bank state ──
   const [varsityCards, setVarsityCards] = useState([]);
   const [varsityCardsLoading, setVarsityCardsLoading] = useState(false);
   const [user, setUser] = useState({
@@ -60,11 +57,8 @@ export default function QuestionBank() {
 
   const activeTab = "qbank";
 
-  // Fetch the latest user profile details from the backend to ensure absolute synchronization & verify session validity
   useEffect(() => {
     const token = localStorage.getItem("topkorbo_token");
-
-    // Client-side Auth Guard
     if (!token) {
       window.location.href = "/";
       return;
@@ -219,7 +213,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Newton's Cradle */}
           <line
             x1="25"
             y1="25"
@@ -229,7 +222,6 @@ export default function QuestionBank() {
             strokeWidth="4"
             strokeLinecap="round"
           />
-          {/* Threads */}
           <line
             x1="35"
             y1="25"
@@ -263,7 +255,6 @@ export default function QuestionBank() {
             strokeWidth="2"
           />
           <path d="M 66,25 L 76,50" stroke="currentColor" strokeWidth="2" />
-          {/* Spheres */}
           <circle cx="35" cy="64" r="4.5" fill="currentColor" />
           <circle cx="42" cy="64" r="4.5" fill="currentColor" />
           <circle cx="50" cy="64" r="4.5" fill="currentColor" />
@@ -280,7 +271,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Electromagnet / Multimeter */}
           <rect
             x="25"
             y="25"
@@ -330,7 +320,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Lab beaker and bubbles */}
           <path
             d="M 35,25 L 45,25 L 45,45 L 30,70 A 8,8 0 0,0 37,80 L 63,80 A 8,8 0 0,0 70,70 L 55,45 L 55,25 L 65,25"
             fill="none"
@@ -362,7 +351,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Test tubes */}
           <rect
             x="25"
             y="65"
@@ -397,7 +385,6 @@ export default function QuestionBank() {
             strokeWidth="4"
             strokeLinecap="round"
           />
-          {/* Tubes */}
           <rect
             x="38"
             y="25"
@@ -429,7 +416,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Notebook & Ruler */}
           <rect
             x="25"
             y="25"
@@ -467,7 +453,6 @@ export default function QuestionBank() {
             strokeWidth="2.5"
             strokeLinecap="round"
           />
-          {/* Set square ruler */}
           <path
             d="M 45,75 L 75,75 L 75,45 Z"
             fill="none"
@@ -491,7 +476,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Calculator */}
           <rect
             x="28"
             y="22"
@@ -533,7 +517,6 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Microscope */}
           <path
             d="M 30,78 L 70,78"
             stroke="currentColor"
@@ -561,7 +544,6 @@ export default function QuestionBank() {
             strokeLinecap="round"
           />
           <rect x="30" y="55" width="16" height="4" fill="currentColor" />
-          {/* Slide stage */}
           <line
             x1="35"
             y1="65"
@@ -581,14 +563,12 @@ export default function QuestionBank() {
       isCustomSvg: true,
       svg: (
         <svg viewBox="0 0 100 100" className="qbank-card__illustration-svg">
-          {/* Brain / Cell DNA illustration */}
           <path
             d="M 30,50 Q 30,25 50,25 Q 70,25 70,50 Q 70,75 50,75 Q 30,75 30,50 Z"
             fill="none"
             stroke="currentColor"
             strokeWidth="4"
           />
-          {/* Helix windings */}
           <path
             d="M 33,40 Q 50,30 67,40"
             fill="none"
@@ -813,9 +793,6 @@ export default function QuestionBank() {
     return academicSubjects.find((sub) => sub.id === subjectParam) || null;
   }, [subjectParam]);
 
-  // Academic flow: when the user picks a subject paper, they go straight to
-  // the MCQ/CQ chooser, then choose a format to drill into the source
-  // list (board + college). No other streams are supported from this page.
   const selectedSourceContext = useMemo(() => {
     if (!selectedSubject) return null;
     const subjectKeyMap = {
@@ -836,8 +813,6 @@ export default function QuestionBank() {
     };
   }, [selectedSubject]);
 
-  // When the user navigates to the source-list screen (subject + paper + questionType),
-  // fetch the available boards/colleges for that combination.
   useEffect(() => {
     if (!selectedSourceContext) return;
 
@@ -882,14 +857,12 @@ export default function QuestionBank() {
     return () => window.removeEventListener("reset-qbank", handleReset);
   }, [setSearchParams]);
 
-  // Sync activeSubTab when university query parameter is active
   useEffect(() => {
     if (varsityIdFromUrl) {
       setActiveSubTab("admission");
     }
   }, [varsityIdFromUrl]);
 
-  // Fetch admission cards when selectedVarsity or view changes
   useEffect(() => {
     if (selectedVarsity && varsityView === "cards") {
       fetchAdmissionCards(
@@ -915,13 +888,10 @@ export default function QuestionBank() {
     }
   };
 
-  // When the user clicks a board/college source card, open the two-option
-  // action modal (Start Exam vs Show Questions) instead of navigating away.
   const handleSourceCardClick = (source) => {
     setActiveSourceModal({ source });
   };
 
-  // "Start Exam" action – fetches questions for this source and starts mock exam immediately.
   const handleStartExam = async () => {
     if (!selectedSourceContext || !activeSourceModal) return;
     const { source } = activeSourceModal;
@@ -964,7 +934,6 @@ export default function QuestionBank() {
           "mock_exam_questions",
           JSON.stringify(fetchedQuestions),
         );
-        // Build a human-readable source label
         const sourceLabel =
           sourceType === "board"
             ? `${name} Board${year ? ` ${year}` : ""}`
@@ -983,7 +952,6 @@ export default function QuestionBank() {
         );
         sessionStorage.setItem("mock_exam_from_qbank", "true");
 
-        // Clear mock test wizard settings
         [
           "mock_test_step",
           "mock_test_subject_ids",
@@ -1017,14 +985,11 @@ export default function QuestionBank() {
     }
   };
 
-  // "Show Questions" action – open a dedicated page that lists EVERY question
-  // in the database for the selected board/college source (no sampling, no
-  // cap). The page receives the source via react-router `location.state`.
   const handleShowQuestions = () => {
     if (!selectedSourceContext || !activeSourceModal) return;
     const { source } = activeSourceModal;
 
-    const sourceType = source.sourceType; // 'board' | 'college'
+    const sourceType = source.sourceType;
     const name = sourceType === "board" ? source.board : source.college;
     const qType = source.type || source.questionType;
 
@@ -1093,14 +1058,12 @@ export default function QuestionBank() {
   };
 
   const handleVarsitySourceCardClick = async (card) => {
-    // Fetch the actual questions for this card and start exam / show questions
     try {
       setSourcesLoading(true);
       const token = localStorage.getItem("topkorbo_token");
       const backendBaseUrl =
         import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-      // Use the existing by-source-like approach but for admission questions
       const match = {
         "tags.category": "admission",
         "tags.university": card.university,
@@ -1109,7 +1072,6 @@ export default function QuestionBank() {
       if (card.year) match["tags.year"] = card.year;
       if (card.shift) match["tags.shift"] = card.shift;
 
-      // Build a pseudo-source for the modal
       setActiveSourceModal({
         source: {
           sourceType: "admission",
@@ -1127,7 +1089,6 @@ export default function QuestionBank() {
     }
   };
 
-  // Override handleStartExam to also support admission sources
   const handleStartAdmissionExam = async () => {
     if (
       !activeSourceModal ||
@@ -1142,7 +1103,6 @@ export default function QuestionBank() {
       const backendBaseUrl =
         import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-      // Fetch ALL questions matching this admission source
       const matchQuery = {
         "tags.category": "admission",
         "tags.university": source.university,
@@ -1151,7 +1111,6 @@ export default function QuestionBank() {
       if (source.shift) matchQuery["tags.shift"] = source.shift;
       if (source.questionType) matchQuery.type = source.questionType;
 
-      // Use a POST to pass complex filters
       const params = new URLSearchParams({
         subject: "Physics", // We need all subjects, use aggregation
         paper: "1st",
@@ -1161,7 +1120,6 @@ export default function QuestionBank() {
       if (source.year) params.append("year", source.year);
       if (source.questionType) params.append("type", source.questionType);
 
-      // Directly query using admission filter
       const response = await fetch(
         `${backendBaseUrl}/questions/by-source?sourceType=admission&name=${source.university}&year=${source.year || ""}&type=${source.questionType || ""}&shift=${source.shift || ""}`,
         {
@@ -1176,7 +1134,6 @@ export default function QuestionBank() {
           "mock_exam_questions",
           JSON.stringify(fetchedQuestions),
         );
-        // Build a human-readable source label for admission exams
         const admissionSourceLabel = [
           source.university,
           source.year,
@@ -1256,10 +1213,6 @@ export default function QuestionBank() {
     navigate("/qbank");
   };
 
-  // (Varsity/Engineering/Medical admission options were removed — the qbank
-  // now exposes only the Academic Prep card per subject.)
-
-  // Filter items based on active tab and search query
   const filteredAcademicSubjects = academicSubjects.filter((sub) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -1767,9 +1720,8 @@ export default function QuestionBank() {
               </div >
             </header >
 
-    {/* Question Bank Workspace Panel */ }
+    {/* Question Bank Workspace Panel */}
     < div className = "qbank-workspace animate-fade-in" >
-      {/* Navigation Control Bar: Tabs & Search */ }
       < div className = "qbank-controls" >
                 <div className="qbank-tabs-wrapper">
                   <button
@@ -1808,7 +1760,6 @@ export default function QuestionBank() {
                 </div>
               </div >
 
-    {/* Tab Description Title */ }
     < div className = "qbank-section-info" >
                 <h3>
                   {activeSubTab === "academic" && t("qbank.tab.academic")}
@@ -1820,7 +1771,6 @@ export default function QuestionBank() {
                 </p>
               </div >
 
-    {/* Gird Content Pane */ }
     < div className = "qbank-grid-container" >
       { activeSubTab === "academic" && (
         <div className="qbank-grid qbank-grid--academic">

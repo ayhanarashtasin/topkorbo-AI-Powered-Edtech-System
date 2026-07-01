@@ -19,10 +19,8 @@ function formatRelative(date) {
   return new Date(date).toLocaleDateString();
 }
 
-/**
- * CommentItem — a single comment with reply box, edit, delete, reactions.
- * Recursive: children are rendered inside `children` slot.
- */
+// CommentItem — single comment with reply, edit, delete, and reactions.
+// Recursive: descendant comments are passed in via the `children` slot.
 export default function CommentItem({
   comment,
   onReply,
@@ -172,7 +170,7 @@ export default function CommentItem({
         {replyingTo === comment._id && (
           <div className="forum-comment__reply-box">
             {onReply && onReply(comment, (html) => {
-              // Caller closes the box on success
+              // Reply success is handled by the parent (it closes the box).
             })}
           </div>
         )}

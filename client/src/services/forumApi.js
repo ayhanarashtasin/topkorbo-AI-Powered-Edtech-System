@@ -1,10 +1,7 @@
-/**
- * forumApi.js — thin fetch wrapper for the /api forum endpoints.
- *
- * Returns { success, data, nextCursor, unreadCount } envelopes as defined
- * by the backend controllers. Throws an Error with .status and .message
- * on non-2xx responses so callers can `try/catch` cleanly.
- */
+// Thin fetch wrapper for the /api forum endpoints. Returns the standard
+// `{ success, data, nextCursor, unreadCount }` envelope and throws an
+// Error (with `.status` and `.payload`) on non-2xx responses so callers
+// can `try/catch` cleanly.
 const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function token() {
@@ -25,7 +22,8 @@ async function request(path, { method = 'GET', body, headers = {}, isForm = fals
 
   if (body !== undefined) {
     if (isForm) {
-      init.body = body; // caller passed FormData
+      // Caller already built a FormData instance — pass it through verbatim.
+      init.body = body;
     } else if (body instanceof URLSearchParams) {
       init.body = body;
       init.headers['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
@@ -53,7 +51,6 @@ async function request(path, { method = 'GET', body, headers = {}, isForm = fals
 }
 
 const forumApi = {
-  // ---- Posts ----
   feed({ feed = 'latest', category, cursor, limit } = {}) {
     const qs = new URLSearchParams();
     qs.set('feed', feed);

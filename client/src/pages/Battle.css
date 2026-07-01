@@ -292,6 +292,57 @@
   box-shadow: 0 6px 16px rgba(192, 133, 82, 0.22);
 }
 
+.battle-number-input {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid rgba(75, 46, 43, 0.1);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.battle-number-input button {
+  width: 44px;
+  height: 40px;
+  background: #FFFBF7;
+  color: var(--deep-blue);
+  font-size: 1.4rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.battle-number-input button:hover {
+  background: var(--sky-blue);
+  color: var(--white);
+}
+
+.battle-number-input input {
+  width: 70px;
+  height: 40px;
+  border: none;
+  border-left: 1.5px solid rgba(75, 46, 43, 0.1);
+  border-right: 1.5px solid rgba(75, 46, 43, 0.1);
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.battle-number-input input::-webkit-outer-spin-button,
+.battle-number-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .battle-toggle-switch {
   position: relative;
   width: 54px;

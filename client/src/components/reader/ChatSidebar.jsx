@@ -11,13 +11,9 @@ import {
 } from 'react-icons/hi';
 import './ChatSidebar.css';
 
-/**
- * ChatSidebar — right-side drawer with the AI tutor conversation.
- *
- * Mirrors `HighlightSidebar` (no animation, just mounts when open). User
- * bubbles are plain text; assistant bubbles are rendered through
- * `react-markdown` so headings/lists/bold render properly.
- */
+// Right-side drawer with the AI tutor conversation. User bubbles are plain
+// text; assistant bubbles render through `react-markdown` so headings,
+// lists, bold etc. display correctly.
 export default function ChatSidebar({
   isOpen,
   onClose,
@@ -34,7 +30,7 @@ export default function ChatSidebar({
   const listRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Scroll to the newest message whenever the thread changes.
+  // Auto-scroll the message list to the newest message on each update.
   useEffect(() => {
     if (!isOpen) return;
     const el = listRef.current;
@@ -42,7 +38,7 @@ export default function ChatSidebar({
     el.scrollTop = el.scrollHeight;
   }, [isOpen, messages, sending]);
 
-  // Reset draft when the sidebar closes.
+  // Clear the draft when the sidebar closes so reopening starts fresh.
   useEffect(() => {
     if (!isOpen) setDraft('');
   }, [isOpen]);
@@ -70,7 +66,7 @@ export default function ChatSidebar({
 
   const handleTextareaInput = (e) => {
     setDraft(e.target.value);
-    // Auto-grow up to the CSS max-height.
+    // Auto-grow the textarea up to its CSS max-height.
     const el = e.target;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;

@@ -3,15 +3,12 @@ import forumApi from '../../services/forumApi';
 import UserAvatar from './UserAvatar';
 import useDebounce from '../../hooks/useDebounce';
 
-/**
- * MentionInput — wraps a contentEditable element with @-mention autocomplete.
- * The parent renders an editable surface and we provide an `attachTo(ref)` API.
- * On selection, we replace the `@partial` token with a sanitized
- *   <a class="mention" data-uid="..." href="/forum/u/...">@username</a>
- *
- * For simplicity, we manage a hidden contenteditable attached to `ref.current`.
- * We add an input event listener that detects the current `@token` being typed.
- */
+// MentionInput — @-mention autocomplete for a contentEditable.
+//
+// We attach input/keyup listeners to the parent's editable surface via
+// `containerRef` and watch for an `@token` being typed. On selection we
+// replace the partial token with
+//   <a class="mention" data-uid="..." href="/forum/u/...">@username</a>
 export default function MentionInput({
   containerRef,
   onSelect, // (user) => void — parent will insert the link HTML
@@ -25,7 +22,8 @@ export default function MentionInput({
   const popupRef = useRef(null);
   const lastRange = useRef(null);
 
-  // Detect @token while the user types in the attached editable
+  // Detect the `@token` currently being typed in the attached editable and
+// expose it as `query` for the search effect below.
   useEffect(() => {
     const el = containerRef?.current?.node || containerRef?.current;
     if (!el || typeof el.addEventListener !== 'function') return;
@@ -65,7 +63,7 @@ export default function MentionInput({
     };
   }, [containerRef]);
 
-  // Search users when query changes
+  // Search users whenever the debounced query changes.
   useEffect(() => {
     if (!active) return;
     if (debounced.length < minChars) {
@@ -95,7 +93,7 @@ export default function MentionInput({
       sel.removeAllRanges();
       sel.addRange(range);
     }
-    // Find the @token in the text and replace it
+    // Replace the in-progress `@token` with the chosen user's mention link.
     const node = range?.startContainer;
     if (node && node.nodeType === Node.TEXT_NODE) {
       const offset = range.startOffset;
@@ -105,7 +103,7 @@ export default function MentionInput({
       const username = user.username || user.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_');
       const link = `<a class="mention" data-uid="${user._id}" href="/forum/u/${user._id}">@${username}</a>&nbsp;`;
       node.textContent = replaced;
-      // Insert the link node after the text node
+      // Splice the rendered link in immediately after the typed text node.
       const linkNode = document.createElement('span');
       linkNode.innerHTML = link;
       const parent = node.parentNode;
@@ -117,7 +115,7 @@ export default function MentionInput({
     onSelect && onSelect(user);
   }
 
-  // Position popup near the caret
+  // Position the suggestion popup just below the caret.
   const [popupPos, setPopupPos] = useState(null);
   useEffect(() => {
     if (!active || !lastRange.current) return;

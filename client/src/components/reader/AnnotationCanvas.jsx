@@ -1,23 +1,15 @@
 /**
- * AnnotationCanvas.jsx
+ * AnnotationCanvas
  *
  * Transparent canvas overlay that owns all pen-stroke rendering for a
- * single PDF page.
+ * single PDF page. It uses a 3-canvas stack so committed strokes never
+ * flicker while an in-progress stroke is being redrawn every frame:
+ *   - committedCanvas (bottom): completed strokes, repainted on change.
+ *   - activeCanvas (middle): the in-progress stroke, repainted per frame.
+ *   - overlayCanvas (top): transient guides like the eraser ring.
  *
- * Architecture (3-canvas stack in DOM):
- *   1. committedCanvas — renders all committed/saved strokes. Only repaints
- *      when strokes, page dimensions, or zoom changes.
- *   2. activeCanvas — renders the in-progress stroke in real-time. Cleared
- *      and redrawn each frame during active drawing.
- *   3. overlayCanvas — renders transient visual guides (e.g. eraser ring).
- *
- * The visible stack has committedCanvas on the bottom (z-index 4), the active
- * canvas in the middle (z-index 5), and the overlay canvas on top (z-index 6).
- * During active drawing, only the active canvas is cleared and redrawn.
- * This guarantees completed strokes never flicker or disappear.
- *
- * Coordinate system: strokes store points in normalised [0, 1] space.
- * Multiplied by pageWidth / pageHeight to get CSS px before drawing.
+ * Strokes store points in normalised [0,1] space; multiplied by
+ * pageWidth/pageHeight to convert to CSS px before drawing.
  */
 
 import { useEffect, useImperativeHandle, useMemo, useRef, forwardRef, useCallback } from 'react';
@@ -39,12 +31,13 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
     onStrokeCommit
   } = props;
 
-  // --- Canvas refs ---
+  // Three stacked canvas refs (committed / active / overlay).
   const committedCanvasRef = useRef(null);
   const activeCanvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
 
-  // Cached state refs.
+  // Cached state refs — avoids re-rendering the canvas layers when
+// unrelated props change.
   const lastStrokesRef = useRef(strokes);
   const hoverRef = useRef(null);
 
@@ -52,7 +45,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
   const canvasWidth = Math.round(pageWidth * dpr);
   const canvasHeight = Math.round(pageHeight * dpr);
 
-  /** Re-render all committed strokes into the committed canvas layer. */
+  /** Repaint every committed stroke into the committed canvas layer. */
   const repaintCommitLayer = useCallback(() => {
     const canvas = committedCanvasRef.current;
     if (!canvas) return;
@@ -69,7 +62,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
     }
   }, [pageWidth, pageHeight]);
 
-  /** Draw eraser ring or other transient visual guides on the overlay canvas. */
+  /** Draw the eraser hover ring (and any other transient guides) on the overlay. */
   const repaintOverlay = useCallback(() => {
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
@@ -92,14 +85,14 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
     }
   }, [activeTool, pageWidth, pageHeight, eraserWidth, eraserType]);
 
-  // Re-paint committed layer when strokes change.
+  // Repaint both layers whenever the strokes list changes.
   useEffect(() => {
     lastStrokesRef.current = strokes;
     repaintCommitLayer();
     repaintOverlay();
   }, [strokes, repaintCommitLayer, repaintOverlay]);
 
-  // Re-paint on window resize (zoom, DPI changes).
+  // Repaint on window resize (handles zoom and DPR changes).
   useEffect(() => {
     let rafId = 0;
     const onResize = () => {
@@ -117,8 +110,9 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
     };
   }, [repaintCommitLayer, repaintOverlay]);
 
-  // --- Drawing hook ---
-  // useDrawing renders the active stroke directly onto activeCanvasRef.
+  // useDrawing renders the active stroke directly onto `activeCanvasRef`.
+// On commit we clear that canvas and forward the stroke up to the parent,
+// which triggers the `strokes` effect above to repaint the committed layer.
   const drawing = useDrawing({
     canvasRef: activeCanvasRef,
     pageWidth,
@@ -141,7 +135,8 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
     }
   });
 
-  // --- Imperative handle: eraser hover ---
+  // Expose an imperative API for the parent to push eraser-hover state
+// without going through React props (avoids per-frame re-renders).
   useImperativeHandle(ref, () => ({
     setEraserHover(hit) {
       hoverRef.current = hit;
@@ -149,7 +144,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
     }
   }), [repaintOverlay]);
 
-  // --- CSS class for tool ---
+  // CSS class — drives cursor + interaction behaviour per active tool.
   const className = useMemo(() => {
     const c = ['rb-annotation-canvas'];
     if (activeTool === 'pen') c.push('rb-annotation-canvas--pen');
@@ -160,7 +155,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
 
   return (
     <>
-      {/* Committed canvas: completed strokes, layered underneath the active canvas. */}
+      {/* Committed strokes live here so they aren't cleared while drawing. */}
       <canvas
         ref={committedCanvasRef}
         width={canvasWidth}
@@ -168,7 +163,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
         style={{ width: pageWidth, height: pageHeight }}
         className="rb-annotation-canvas rb-annotation-canvas--committed"
       />
-      {/* Active canvas: receives pointer events, draws the in-progress stroke. */}
+      {/* Active canvas: owns pointer events and renders the in-progress stroke. */}
       <canvas
         ref={activeCanvasRef}
         width={canvasWidth}
@@ -180,7 +175,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
         onPointerUp={drawing.handlers.onPointerUp}
         onPointerCancel={drawing.handlers.onPointerCancel}
       />
-      {/* Overlay canvas: eraser hover ring, pointer-events: none. */}
+      {/* Overlay canvas: transient guides like the eraser ring (pointer-events: none). */}
       <canvas
         ref={overlayCanvasRef}
         width={canvasWidth}
@@ -192,12 +187,8 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
   );
 });
 
-/* ---------- Helpers ---------- */
-
-/**
- * Render a single committed stroke.
- * Uses the tapered ribbon renderer for high-quality variable-width output.
- */
+// Render a single committed stroke using the tapered ribbon renderer
+// for high-quality variable-width output.
 function drawCommittedStroke(ctx, stroke, pageW, pageH) {
   if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) return;
   const col = stroke.color || '#111827';

@@ -7,7 +7,7 @@ const rooms = new Map();
 const ROOM_TTL_MS = 1000 * 60 * 60 * 4;
 const BATTLE_MODE_CONFIG = {
   duel: {
-    label: '1v1 Duel',
+    label: '1v1',
     maxPlayers: 2,
     minPlayers: 2,
     teamSize: 1
@@ -35,7 +35,7 @@ const BATTLE_MODE_CONFIG = {
 const getModeConfig = (mode, teamSize = null, maxPlayers = null) => {
   const baseConfig = BATTLE_MODE_CONFIG[mode] || BATTLE_MODE_CONFIG.duel;
   if (mode === 'raid') {
-    const raidMaxPlayers = Math.max(2, Math.min(30, Number(maxPlayers) || 20));
+    const raidMaxPlayers = Math.max(2, Math.min(200, Number(maxPlayers) || 20));
     return {
       ...baseConfig,
       maxPlayers: raidMaxPlayers,
@@ -45,7 +45,7 @@ const getModeConfig = (mode, teamSize = null, maxPlayers = null) => {
   }
   if (mode !== 'custom-squad') return baseConfig;
 
-  const size = Math.max(2, Math.min(10, Number(teamSize) || 5));
+  const size = Math.max(2, Math.min(50, Number(teamSize) || 5));
   return {
     ...baseConfig,
     label: `Custom Squad ${size}v${size}`,
@@ -322,12 +322,22 @@ exports.joinRoom = async (req, res, next) => {
     cleanExpiredRooms();
     const room = rooms.get(req.params.roomId);
     if (!room) return ApiResponse.error(res, 'Battle room not found', 404);
+
+    // Existing participants can always reconnect (e.g. after a page refresh),
+    // even once the battle has started or finished. Only brand-new joiners are
+    // gated by the "waiting" status below.
+    const alreadyJoined = room.players.some((player) => player.id === String(req.user.id));
+    if (alreadyJoined) {
+      ensureSquadTestPlayers(room);
+      advanceRoomIfNeeded(room);
+      return ApiResponse.success(res, sanitizeRoom(room, req.user.id), 'Joined battle room');
+    }
+
     if (room.status !== 'waiting') return ApiResponse.error(res, 'This battle has already started', 409);
 
     ensureSquadTestPlayers(room);
     const profile = await getUserProfile(req.user.id);
-    const alreadyJoined = room.players.some((player) => player.id === profile.id);
-      if (!alreadyJoined) {
+    {
       const modeConfig = getModeConfig(room.settings?.mode, room.settings?.teamSize, room.settings?.maxPlayers);
       const preferredTeam = room.preferredTeams?.[profile.id];
       const preferredTeamHasSpace = preferredTeam && room.players.filter((player) => player.team === preferredTeam).length < modeConfig.teamSize;

@@ -16,7 +16,7 @@ import {
 import { LuUndo2, LuRedo2, LuEraser, LuHighlighter } from 'react-icons/lu';
 import './ReaderToolbar.css';
 
-// Spec colours: red, blue, black, orange. Easy to extend.
+// Pen colors shown in the toolbar swatches.
 const PEN_COLORS = [
   { id: 'red',    value: '#EF4444' },
   { id: 'blue',   value: '#3B82F6' },
@@ -24,8 +24,7 @@ const PEN_COLORS = [
   { id: 'orange', value: '#F59E0B' }
 ];
 
-// Three pen sizes — small / medium / large — matching the spec.
-// Widths are in CSS px.
+// Pen stroke widths in CSS px — small / medium / large.
 const PEN_SIZES = [
   { id: 'small',  value: 1.5, labelKey: 'rb.reader.sizes.small' },
   { id: 'medium', value: 3,   labelKey: 'rb.reader.sizes.medium' },
@@ -69,7 +68,7 @@ export default function ReaderToolbar({
   onPageChange
 }) {
   const { t } = useLanguage();
-  const [openPopover, setOpenPopover] = useState(null); // 'eraserType' | 'eraserSettings' | null
+  const [openPopover, setOpenPopover] = useState(null);
   const eraserTypeRef = useRef(null);
   const eraserSettingsRef = useRef(null);
   const [pageInputVal, setPageInputVal] = useState(String(pageNumber));
@@ -331,9 +330,8 @@ export default function ReaderToolbar({
 
       <div className="rb-toolbar__divider" />
 
-      {/* Undo / Redo — only meaningful when there is history, but we
-          always render the buttons (disabled when empty) so the layout
-          doesn't jump when the user starts drawing. */}
+      {/* Undo / Redo — always rendered (disabled when empty) so the
+          toolbar layout doesn't shift when history becomes available. */}
       <div className="rb-toolbar__group">
         <button
           type="button"

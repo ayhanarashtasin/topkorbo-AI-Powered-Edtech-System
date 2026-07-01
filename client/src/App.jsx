@@ -28,6 +28,7 @@ import ReadingBooks from './pages/ReadingBooks';
 import UploadBook from './pages/UploadBook';
 import ReadingBookView from './pages/ReadingBookView';
 import PracticeHistory from './pages/PracticeHistory';
+import FindMentor from './pages/FindMentor';
 import MentorLiveClass from './pages/MentorLiveClass';
 import StudentLiveClass from './pages/StudentLiveClass';
 import IeltsPrep from './pages/IeltsPrep';
@@ -99,6 +100,7 @@ function AppContent() {
         <Route path="/mock-test/exam" element={<MockTestExam />} />
         <Route path="/study-routine" element={<StudyRoutine />} />
         <Route path="/practice-history" element={<PracticeHistory />} />
+        <Route path="/student/find-mentor" element={<FindMentor />} />
         <Route path="/battle" element={<Battle />} />
         <Route path="/battle-ai" element={<AIBattle />} />
         <Route path="/make-contest-question" element={<MakeContestQuestion />} />

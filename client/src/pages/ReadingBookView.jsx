@@ -54,18 +54,18 @@ export default function ReadingBookView() {
   const [penColor, setPenColor] = useState('#EF4444');
   const [penWidth, setPenWidth] = useState(3);
   const [pressureSimEnabled, setPressureSimEnabled] = useState(true);
-  const [allAnnotations, setAllAnnotations] = useState([]); // current chapter
+  const [allAnnotations, setAllAnnotations] = useState([]);
   const [readingState, setReadingState] = useState(null);
   const [isNavOpen, setIsNavOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [isHighlightSidebarOpen, setIsHighlightSidebarOpen] = useState(false);
   const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
-  // Page text is held in a ref because it's only read at send-time (via
-  // ChatSidebar → aiApi.send), never rendered by ReadingBookView itself.
-  // A small derived state flag drives the textarea's disabled state.
+  // Page text is held in a ref so it doesn't re-render this view; ChatSidebar
+// reads it at send time. The boolean flag below drives the chat composer's
+// disabled state.
   const pageTextRef = useRef('');
   const [pageTextReady, setPageTextReady] = useState(false);
-  const [eraserType, setEraserType] = useState('stroke'); // 'stroke' | 'standard'
-  const [eraserWidth, setEraserWidth] = useState(16); // 8 | 16 | 32
+  const [eraserType, setEraserType] = useState('stroke');
+  const [eraserWidth, setEraserWidth] = useState(16);
 
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const saveInProgressRef = useRef(false);
@@ -78,44 +78,36 @@ export default function ReadingBookView() {
     setPageTextReady(Boolean(text));
   }, []);
 
-  // Clear the "ready" flag while a new page is loading so the composer
-  // disables itself instead of sending the previous page's text.
+  // Reset the page-text state when the user navigates to a different page so
+// the chat composer never sends text from the previous page by accident.
   useEffect(() => {
     pageTextRef.current = '';
     setPageTextReady(false);
   }, [pageNumber, chapterId]);
 
-  /* ---------- Undo/Redo history (per-page, in-memory) ----------
-   * We use a command stack keyed by page: `present` is the list of
-   * annotations for the current page. The consumer (this file) pushes
-   * actions for "draw a stroke" and "erase a stroke" — the hook
-   * applies the action's `do` to `present`, and `undo` / `redo`
-   * re-apply `undo` / `do` respectively.
-   *
-   * `reset(...)` is called whenever the visible page changes, which
-   * clears both stacks (the spec's "per-page in-memory only" rule).
-   */
+  // Per-page in-memory undo/redo stack for pen strokes. `history.present`
+// is the current set of strokes; `history.push({do, undo})` adds an
+// action; `history.reset(list)` is called on page change so each page
+// starts with its own history (no cross-page undo).
   const history = useUndoRedo({ limit: 200 });
 
-  // The list of annotations the canvas should display. For pen
-  // strokes this is `history.present`; for text-anchored annotations
-  // we still use the server-fetched list (they aren't undoable in
-  // this iteration, to avoid scope creep).
+  // Server-fetched annotations for the current page (non-pen ones plus
+// committed pen strokes already on the server).
   const pageAnnotations = useMemo(
     () => allAnnotations.filter((a) => Number(a.pageNumber) === Number(pageNumber)),
     [allAnnotations, pageNumber]
   );
 
-  // Merge the undoable pen strokes (from history) with the non-undoable
-  // annotations (from the server fetch) into a single list.
+  // Merge in-memory undoable pen strokes with the server-fetched list
+// so the canvas sees one unified set of annotations.
   const visiblePageAnnotations = useMemo(() => {
     const pen = history.present;
     const others = pageAnnotations.filter((a) => a.type !== 'pen');
     return [...others, ...pen];
   }, [history.present, pageAnnotations]);
 
-  // When the user navigates to a different page, reset the history to
-  // the current set of server-known pen strokes.
+  // Reset the undo stack when the page changes so the user can't undo
+// a stroke from a different page.
   useEffect(() => {
     const serverPens = pageAnnotations.filter((a) => a.type === 'pen');
     history.reset(serverPens);
@@ -123,20 +115,11 @@ export default function ReadingBookView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageNumber, chapterId]);
 
-  /* ---------- Autosave (bulk POST every 5s) ----------
-   * The autosave hook owns a queue of pen strokes that need to be
-   * POSTed. On each enqueue it schedules a debounced flush; we
-   * additionally call `flush()` on page change and on
-   * `beforeunload` so nothing is lost.
-   *
-   * On a successful bulk POST the hook calls `onSaved(inserted)` with
-   * the server-returned documents. We use those to update the server
-   * list — but we DO NOT remove the local optimistic entry, because
-   * the local optimistic stroke is what `history.present` already
-   * contains, and the canvas renders from that. We just add the
-   * server `_id` to the corresponding stroke in `allAnnotations` so
-   * future operations (eraser, bulk-delete) can find it.
-   */
+  // Autosave bulk-POSTs queued pen strokes every ~5s. `onSaved` is invoked
+// with the server-returned documents; we use those to swap each
+// optimistic `local-...` ID for the real server `_id` so future erases
+// and bulk deletes can address them. The local stroke itself is kept
+// in `history.present`, which is what the canvas renders from.
   const autosave = useAnnotationAutosave({
     bookId,
     chapterId,
@@ -144,7 +127,7 @@ export default function ReadingBookView() {
     serverStrokes: pageAnnotations.filter((a) => a.type === 'pen'),
     delay: 5000,
     onSaved: (inserted) => {
-      // Reconcile optimistic local IDs with real server IDs in allAnnotations
+      // Swap optimistic local IDs for real server IDs in the server-fetched list.
       setAllAnnotations((prev) => {
         return prev.map((local) => {
           if (!local._id.startsWith('local-')) return local;
@@ -158,7 +141,7 @@ export default function ReadingBookView() {
         });
       });
 
-      // Reconcile optimistic local IDs with real server IDs in history.present
+      // Same ID swap, but in the in-memory history stack.
       history.setPresent((prev) => {
         return prev.map((local) => {
           if (!local._id.startsWith('local-')) return local;
@@ -179,7 +162,7 @@ export default function ReadingBookView() {
     }
   });
 
-  // Auth guard (unchanged)
+  // Validate the auth token and refresh the cached user profile.
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) {
@@ -217,7 +200,9 @@ export default function ReadingBookView() {
     fetchUser();
   }, [apiBase]);
 
-  // Fetch book + chapters + chapter meta + annotations + reading state
+  // Load everything needed to render a chapter: the chapter file, the book
+// (for the chapter list), existing annotations, and reading state. The
+// chapter request blocks rendering; the rest run in parallel.
   useEffect(() => {
     if (!bookId || !chapterId) return;
     let cancelled = false;
@@ -228,7 +213,7 @@ export default function ReadingBookView() {
     const token = localStorage.getItem('topkorbo_token');
     const headers = { Authorization: `Bearer ${token}` };
 
-    // 1. Fetch chapter metadata (CRITICAL blocker for rendering PDF canvas)
+    // Chapter metadata — gates the PDF canvas so we never render without a URL.
     (async () => {
       try {
         const res = await fetch(`${apiBase}/books/${bookId}/chapters/${chapterId}`, { headers });
@@ -236,7 +221,7 @@ export default function ReadingBookView() {
         if (cancelled) return;
         if (data.success && data.data?.chapter) {
           setChapter(data.data.chapter);
-          setLoadingMeta(false); // Render the reader interface and start loading the PDF!
+          setLoadingMeta(false);
         } else {
           throw new Error(data.message || 'Failed to load chapter');
         }
@@ -251,7 +236,7 @@ export default function ReadingBookView() {
       }
     })();
 
-    // 2. Fetch book details (non-blocking, sidebar/chapter list)
+    // Book details — populates the chapter sidebar.
     (async () => {
       try {
         const res = await fetch(`${apiBase}/books/${bookId}`, { headers });
@@ -267,7 +252,7 @@ export default function ReadingBookView() {
       }
     })();
 
-    // 3. Fetch annotations (non-blocking, overlays)
+    // Existing annotations — rendered as overlays once the canvas mounts.
     (async () => {
       try {
         const res = await fetch(`${apiBase}/books/annotations?chapterId=${chapterId}`, { headers });
@@ -284,7 +269,7 @@ export default function ReadingBookView() {
       }
     })();
 
-    // 4. Fetch reading state (non-blocking, page number progress / bookmarks)
+    // Reading state — last page and bookmarks; falls back to ?page= if absent.
     (async () => {
       try {
         const res = await fetch(`${apiBase}/books/reading-state?bookId=${bookId}&chapterId=${chapterId}`, { headers });
@@ -308,7 +293,7 @@ export default function ReadingBookView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, chapterId, apiBase]);
 
-  // Sync ?page= in URL when pageNumber changes
+  // Mirror the current page in the URL so the chapter is shareable / restorable.
   useEffect(() => {
     const current = searchParams.get('page');
     if (String(pageNumber) === current) return;
@@ -318,7 +303,8 @@ export default function ReadingBookView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageNumber]);
 
-  // ---- Autosave reading state (lastPage) ----
+  // Debounced autosave for the user's last-read page so reopening the book
+// resumes where they left off.
   const saveReadingState = useDebouncedAutoSave(async (nextPage) => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) return;
@@ -350,13 +336,9 @@ export default function ReadingBookView() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageNumber, loadingMeta]);
 
-  /* ---------- Flush pen autosave on page change ----------
-   * When the user navigates to a different page, we want any queued
-   * strokes to be POSTed against the OLD page, not the new one. The
-   * autosave hook's own effect clears its queue on `pageNumber` change,
-   * so we flush BEFORE updating `pageNumber`. The `handlePrevPage` /
-   * `handleNextPage` callbacks below call this in the right order.
-   */
+  // Flush any pending pen autosave BEFORE updating `pageNumber` so queued
+// strokes are POSTed against the old page, not the new one. The page-nav
+// callbacks below rely on this ordering.
   const pageNumberRef = useRef(pageNumber);
   useEffect(() => { pageNumberRef.current = pageNumber; }, [pageNumber]);
 
@@ -366,10 +348,10 @@ export default function ReadingBookView() {
     try { await autosave.flush(); } catch (_) { /* best-effort */ }
   }, [autosave]);
 
-  /* ---------- Annotation handlers ---------- */
+  // Handles a new pen stroke: assigns an optimistic local ID, pushes the
+// draw action onto the undo stack, and queues it for autosave.
   const handleAnnotate = useCallback(async (payload) => {
     if (payload.type === 'pen') {
-      // Push a draw action onto the undo stack and queue for autosave.
       const optimisticId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const newStroke = {
         _id: optimisticId,
@@ -397,15 +379,13 @@ export default function ReadingBookView() {
 
   }, [autosave, bookId, chapterId, history, pageNumber, apiBase, t]);
 
-  // Eraser click on a pen stroke. We:
-  //  1) Push an "erase" action onto the right undo stack (so Ctrl+Z restores it)
-  //  2) Issue an immediate DELETE so the server catches up
-  //  3) On 4xx/5xx, undo the optimistic removal
+  // Eraser click on a pen stroke: optimistically remove it, push an
+  // undoable erase action, and DELETE on the server. If the DELETE
+  // fails, undo the local removal.
   const handleAnnotationClick = useCallback(async (item) => {
     if (activeTool !== 'eraser') return;
     if (!item) return;
 
-    // Pen stroke eraser: optimistic + undoable.
     const id = item._id;
     if (!id) return;
     history.push({
@@ -416,21 +396,15 @@ export default function ReadingBookView() {
         return [...state, item];
       }
     });
-    // If the stroke is a local placeholder (no server _id yet), we
-    // don't need to DELETE — the autosave queue can be left alone and
-    // the next flush will skip it. The cleanest fix is to remove it
-    // from the queue too, but the autosave hook doesn't expose that
-    // here. The user-visible effect is the stroke disappearing from
-    // the canvas (history undo handles that) and the autosave
-    // attempting to POST a deleted stroke — which fails harmlessly
-    // because the bulk endpoint validates the entry.
+    // Local-only strokes (not yet POSTed) don't need a server DELETE;
+    // the autosave bulk endpoint will reject the dropped entry harmlessly.
     if (id.startsWith('local-')) return;
 
     try {
       await annotationApi.remove(id);
       setAllAnnotations((prev) => prev.filter((a) => a._id !== id));
     } catch (err) {
-      // Server rejected the delete. Roll back the local state.
+      // Server rejected the delete — undo the local removal.
       // eslint-disable-next-line no-console
       console.error('Failed to delete annotation:', err);
       history.undo();
@@ -442,7 +416,7 @@ export default function ReadingBookView() {
     const originalId = originalStroke._id;
     if (!originalId) return;
 
-    // Create optimistic segments with new IDs
+    // Build optimistic segments that replace the partially-erased stroke.
     const optimisticSegments = newSegments.map((points) => {
       const newId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       return {
@@ -455,7 +429,7 @@ export default function ReadingBookView() {
       };
     });
 
-    // Push action onto history stack
+    // Record the partial-erase as a single undoable action.
     history.push({
       label: 'partial-erase',
       do: (state) => {
@@ -469,7 +443,7 @@ export default function ReadingBookView() {
       }
     });
 
-    // Delete the original stroke from database/server list
+    // DELETE the original (server-known) stroke we're replacing.
     if (!originalId.startsWith('local-')) {
       try {
         await annotationApi.remove(originalId);
@@ -480,7 +454,7 @@ export default function ReadingBookView() {
       }
     }
 
-    // Enqueue all newly created segments to autosave
+    // Queue each new segment for autosave.
     optimisticSegments.forEach((seg) => {
       autosave.enqueue({
         type: 'pen',
@@ -493,7 +467,7 @@ export default function ReadingBookView() {
   }, [autosave, history, pageNumber]);
 
   const handleHighlightPartialEraseEnd = useCallback(async (modifications) => {
-    // modifications is a dictionary of { [id]: newRectsArray }
+    // Apply batched highlight modifications: empty rects mean delete.
     for (const [id, newRects] of Object.entries(modifications)) {
       if (newRects.length === 0) {
         deleteHighlight(id);
@@ -526,7 +500,8 @@ export default function ReadingBookView() {
     toast.success(t('rb.reader.clear_success') || 'Page cleared');
   }, [visiblePageAnnotations, pageNumber, history, t]);
 
-  /* ---------- Undo / Redo wrappers for the toolbar ---------- */
+  // Undo / redo wrappers that also kick the autosave scheduler so the
+// canvas and the server stay in sync.
   const undo = useCallback(() => {
     if (history.canUndo) {
       history.undo();
@@ -544,7 +519,7 @@ export default function ReadingBookView() {
   const toolbarCanUndo = history.canUndo;
   const toolbarCanRedo = history.canRedo;
 
-  /* ---------- Chapter navigation ---------- */
+  // Index of the active chapter in the chapter list — drives prev/next buttons.
   const currentChapterIndex = useMemo(
     () => chapters.findIndex((c) => String(c._id) === String(chapterId)),
     [chapters, chapterId]
@@ -565,7 +540,8 @@ export default function ReadingBookView() {
     navigate(`/reading-books/${bookId}/${next._id}?page=1`);
   };
 
-  /* ---------- Page nav (with autosave flush) ---------- */
+  // Page navigation — always flushes pending autosave before changing
+// `pageNumber` so queued strokes aren't attributed to the wrong page.
   const handlePrevPage = useCallback(() => {
     flushPenAutosave();
     setPageNumber((p) => Math.max(1, p - 1));
@@ -584,7 +560,8 @@ export default function ReadingBookView() {
   const handleZoomIn = () => setScale((s) => Math.min(MAX_SCALE, +(s + 0.15).toFixed(2)));
   const handleZoomOut = () => setScale((s) => Math.max(MIN_SCALE, +(s - 0.15).toFixed(2)));
 
-  /* ---------- Bookmarks ---------- */
+  // Bookmarks: toggle current page's bookmark, jump to a bookmark, or
+// delete one. All bookmark changes round-trip through the API.
   const isBookmarked = useMemo(() => {
     const bms = readingState?.bookmarks || [];
     return bms.some((bm) => Number(bm.pageNumber) === Number(pageNumber));
@@ -864,7 +841,7 @@ export default function ReadingBookView() {
           onClose={() => setIsHighlightSidebarOpen(false)}
           highlights={highlights}
           onHighlightClick={(h) => {
-            // Jump to page if it's on a different page
+            // Jump to the highlight's page if it's not the current one.
             if (h.pageNumber !== pageNumber) {
               setPageNumber(h.pageNumber);
             }

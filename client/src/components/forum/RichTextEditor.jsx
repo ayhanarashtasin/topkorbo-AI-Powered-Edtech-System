@@ -2,16 +2,13 @@ import { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardR
 import { HiCode, HiLink } from 'react-icons/hi';
 import { MdFormatBold, MdFormatItalic, MdFormatListBulleted, MdFormatQuote } from 'react-icons/md';
 
-/**
- * RichTextEditor — a controlled contentEditable wrapper.
- * - Toolbar: bold / italic / inline code / blockquote / link / lists
- * - Paste images → upload via forumApi /uploads ... or use parent onImagePaste
- * - Emits sanitized HTML via onChange(html).
- * - Exposes .focus() and .getText() through ref.
- *
- * NOTE: We're intentionally NOT using a third-party editor to keep the
- * bundle small. The content is sanitized again on the server with sanitize-html.
- */
+// RichTextEditor — controlled contentEditable wrapper.
+//
+// Toolbar: bold / italic / code block / blockquote / bulleted list / link.
+// Pasted images are forwarded to the parent via onImageFiles (the parent
+// uploads them). HTML is re-sanitized server-side with sanitize-html.
+//
+// No third-party editor is used to keep the bundle small.
 const RichTextEditor = forwardRef(function RichTextEditor(
   {
     initialHtml = '',
@@ -25,9 +22,9 @@ const RichTextEditor = forwardRef(function RichTextEditor(
   const editorRef = useRef(null);
   const [empty, setEmpty] = useState(!initialHtml);
 
-  // NOTE: define handleInput BEFORE useImperativeHandle so it's in scope
-  // when the imperative methods run (avoids TDZ ReferenceError that
-  // previously caused a blank-white crash on the compose page).
+  // NOTE: `handleInput` must be declared before the `useImperativeHandle`
+  // that captures it. Otherwise the imperative methods would reference a
+  // TDZ variable and crash the compose page with a blank render.
   const handleInput = useCallback(() => {
     const html = editorRef.current?.innerHTML || '';
     const text = (editorRef.current?.innerText || '').trim();

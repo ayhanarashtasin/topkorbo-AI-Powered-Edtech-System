@@ -22,8 +22,10 @@ function formatRelative(date) {
 }
 
 /**
- * PostCard — displays a single post in the feed.
- * Optimistic reactions + bookmark; subscribes to live `reaction:update` events.
+ * PostCard — single post in the feed.
+ *
+ * Optimistically updates reactions and the bookmark toggle, then subscribes
+ * to live `reaction:update` socket events to reconcile with the server.
  */
 export default function PostCard({ post, onDelete, detail = false }) {
   const navigate = useNavigate();
@@ -34,17 +36,19 @@ export default function PostCard({ post, onDelete, detail = false }) {
 
   const isOwner = user && String(user._id) === String(post.author?._id);
 
-  // Optimistic local state for reactions + bookmark
+  // Local state for the reaction counts / which one the current user picked
+  // and the bookmark flag — all updated optimistically for snappy UI.
   const [counts, setCounts] = useState(post.reactionsCount || { like: 0, love: 0 });
-  const [myReaction, setMyReaction] = useState(null); // 'like' | 'love' | null
+  const [myReaction, setMyReaction] = useState(null);
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked);
 
-  // Sync when post changes (e.g. after a real-time update arrives)
+  // Re-sync the counts whenever the server's authoritative counts change
+  // (e.g. another user's reaction arrived over the socket).
   useEffect(() => {
     setCounts(post.reactionsCount || { like: 0, love: 0 });
   }, [post.reactionsCount]);
 
-  // Subscribe to live reaction updates for this post
+  // Subscribe to live reaction updates for this post.
   const unsubRef = useRef(null);
   useEffect(() => {
     if (!post?._id) return;
@@ -58,9 +62,9 @@ export default function PostCard({ post, onDelete, detail = false }) {
     return () => off && off();
   }, [post?._id, subscribeReaction, user]);
 
-  // Load my own initial bookmark state for this post.
-  // NOTE: we use a direct fetch here so the bookmarked state stays in sync
-  // even when navigating from the bookmarks page.
+  // Fetch the current bookmark state for this post via a direct toggle call.
+  // We use a direct fetch (rather than `toggleBookmark`) so a sync from the
+  // bookmarks page also reflects here — the server is the source of truth.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -77,7 +81,7 @@ export default function PostCard({ post, onDelete, detail = false }) {
           setBookmarked(!!j.data?.bookmarked);
         }
       } catch {
-        // best-effort: ignore network errors during initial bookmark check
+        // Best-effort — network errors during the initial bookmark check are ignored.
       }
     })();
     return () => { cancelled = true; };
@@ -155,9 +159,9 @@ export default function PostCard({ post, onDelete, detail = false }) {
 
       {post.title && <h2 className="forum-post__title">{post.title}</h2>}
 
+      {/* `contentHtml` is sanitized server-side, so dangerouslySetInnerHTML is safe here. */}
       <div
         className="forum-post__body"
-        // post.contentHtml is sanitized server-side; rendering with dangerouslySetInnerHTML is safe.
         dangerouslySetInnerHTML={{ __html: post.contentHtml || '' }}
       />
 

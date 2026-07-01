@@ -1,16 +1,29 @@
 const mongoose = require('mongoose');
 const MentorConnection = require('../models/MentorConnection');
+const MentorReview = require('../models/MentorReview');
 const MockTestAttempt = require('../models/MockTestAttempt');
 const User = require('../models/User');
 
 const MENTOR_ROLES = ['tutor', 'teacher'];
+const FIND_MENTOR_ROLES = ['tutor'];
 const MAX_STUDENTS_PER_MENTOR = 30;
 
 function isMentorRole(role) {
   return MENTOR_ROLES.includes(role);
 }
 
-function toSafeMentor(user, connectionStatus) {
+function serializeAnonymousReview(review) {
+  return {
+    _id: review._id,
+    rating: review.rating,
+    comment: review.comment || '',
+    createdAt: review.createdAt,
+    reviewer: 'Anonymous student',
+    isAnonymous: true
+  };
+}
+
+function toSafeMentor(user, connectionStatus, reviewSummary = {}) {
   return {
     _id: user._id,
     name: user.name,
@@ -23,12 +36,98 @@ function toSafeMentor(user, connectionStatus) {
     interestedToGuide: Array.isArray(user.interestedToGuide) ? user.interestedToGuide : [],
     collegeName: user.collegeName || '',
     hscBatch: user.hscBatch || '',
-    connectionStatus: connectionStatus || 'none'
+    createdAt: user.createdAt,
+    connectionStatus: connectionStatus || 'none',
+    averageRating: reviewSummary.averageRating || 0,
+    reviewCount: reviewSummary.reviewCount || 0,
+    recentReviews: reviewSummary.recentReviews || [],
+    currentUserReview: reviewSummary.currentUserReview || null
   };
 }
 
 function round2(value) {
   return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+async function getMentorReviewSummaries(mentorIds, studentId = null) {
+  if (!mentorIds.length) {
+    return new Map();
+  }
+
+  const [stats, reviews, currentUserReviews] = await Promise.all([
+    MentorReview.aggregate([
+      { $match: { mentor: { $in: mentorIds } } },
+      {
+        $group: {
+          _id: '$mentor',
+          averageRating: { $avg: '$rating' },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]),
+    MentorReview.find({ mentor: { $in: mentorIds } })
+      .sort({ createdAt: -1 })
+      .select('mentor rating comment createdAt')
+      .lean(),
+    studentId
+      ? MentorReview.find({ mentor: { $in: mentorIds }, student: studentId })
+        .select('mentor rating comment createdAt updatedAt')
+        .lean()
+      : []
+  ]);
+
+  const summaryMap = new Map();
+  mentorIds.forEach((id) => {
+    summaryMap.set(String(id), {
+      averageRating: 0,
+      reviewCount: 0,
+      recentReviews: [],
+      currentUserReview: null
+    });
+  });
+
+  stats.forEach((item) => {
+    const summary = summaryMap.get(String(item._id));
+    if (summary) {
+      summary.averageRating = round2(item.averageRating);
+      summary.reviewCount = item.reviewCount;
+    }
+  });
+
+  reviews.forEach((review) => {
+    const summary = summaryMap.get(String(review.mentor));
+    if (summary && summary.recentReviews.length < 3) {
+      summary.recentReviews.push(serializeAnonymousReview(review));
+    }
+  });
+
+  currentUserReviews.forEach((review) => {
+    const summary = summaryMap.get(String(review.mentor));
+    if (summary) {
+      summary.currentUserReview = serializeAnonymousReview(review);
+    }
+  });
+
+  return summaryMap;
+}
+
+function sortMentorList(mentors, sort) {
+  const sorted = [...mentors];
+  if (sort === 'rating') {
+    sorted.sort((a, b) => {
+      if (b.averageRating !== a.averageRating) return b.averageRating - a.averageRating;
+      return b.reviewCount - a.reviewCount;
+    });
+    return sorted;
+  }
+
+  if (sort === 'name') {
+    sorted.sort((a, b) => a.name.localeCompare(b.name));
+    return sorted;
+  }
+
+  sorted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  return sorted;
 }
 
 function buildStudentAttemptSummary(attempts) {
@@ -162,13 +261,27 @@ function buildMentorOverview(students) {
 const mentorController = {
   async listMentors(req, res, next) {
     try {
-      const mentors = await User.find({
-        role: { $in: MENTOR_ROLES },
+      const { sort = 'newest', university = '' } = req.query;
+      const filter = {
+        role: { $in: FIND_MENTOR_ROLES },
         isBanned: { $ne: true }
-      })
-        .select('name avatar role universityName department currentYearSemester admissionAchievement interestedToGuide collegeName hscBatch')
+      };
+
+      const universityFilter = String(university || '').trim();
+      if (universityFilter) {
+        filter.universityName = { $regex: universityFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      }
+
+      const mentors = await User.find(filter)
+        .select('name avatar role universityName department currentYearSemester admissionAchievement interestedToGuide collegeName hscBatch createdAt')
         .sort({ createdAt: -1 })
         .lean();
+
+      const mentorIds = mentors.map((mentor) => mentor._id);
+      const reviewSummaryMap = await getMentorReviewSummaries(
+        mentorIds,
+        req.user.role === 'student' ? req.user.id : null
+      );
 
       let connectionMap = new Map();
       if (req.user.role === 'student') {
@@ -180,7 +293,113 @@ const mentorController = {
 
       return res.json({
         success: true,
-        data: mentors.map((mentor) => toSafeMentor(mentor, connectionMap.get(String(mentor._id))))
+        data: sortMentorList(
+          mentors.map((mentor) => toSafeMentor(
+            mentor,
+            connectionMap.get(String(mentor._id)),
+            reviewSummaryMap.get(String(mentor._id))
+          )),
+          sort
+        )
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getMentorProfile(req, res, next) {
+    try {
+      if (req.user.role !== 'student') {
+        return res.status(403).json({ success: false, message: 'Only students can view mentor profiles.' });
+      }
+
+      const { mentorId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(mentorId)) {
+        return res.status(400).json({ success: false, message: 'Invalid mentor selected.' });
+      }
+
+      const mentor = await User.findOne({
+        _id: mentorId,
+        role: { $in: FIND_MENTOR_ROLES },
+        isBanned: { $ne: true }
+      })
+        .select('name avatar role universityName department currentYearSemester admissionAchievement interestedToGuide collegeName hscBatch createdAt')
+        .lean();
+
+      if (!mentor) {
+        return res.status(404).json({ success: false, message: 'Mentor not found.' });
+      }
+
+      const [connection, reviewSummaryMap, reviews] = await Promise.all([
+        MentorConnection.findOne({ student: req.user.id, mentor: mentorId }).select('status').lean(),
+        getMentorReviewSummaries([mentor._id], req.user.id),
+        MentorReview.find({ mentor: mentorId })
+          .sort({ createdAt: -1 })
+          .select('rating comment createdAt')
+          .lean()
+      ]);
+
+      const summary = reviewSummaryMap.get(String(mentor._id)) || {};
+      return res.json({
+        success: true,
+        data: {
+          ...toSafeMentor(mentor, connection?.status || 'none', summary),
+          reviews: reviews.map(serializeAnonymousReview)
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async submitMentorReview(req, res, next) {
+    try {
+      if (req.user.role !== 'student') {
+        return res.status(403).json({ success: false, message: 'Only students can review mentors.' });
+      }
+
+      const { mentorId } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(mentorId)) {
+        return res.status(400).json({ success: false, message: 'Invalid mentor selected.' });
+      }
+
+      const rating = Number(req.body?.rating);
+      if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+        return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5.' });
+      }
+
+      const comment = String(req.body?.comment || '').trim().slice(0, 500);
+      const mentor = await User.findById(mentorId).select('role isBanned');
+      if (!mentor || mentor.isBanned || !isMentorRole(mentor.role)) {
+        return res.status(404).json({ success: false, message: 'Mentor not found.' });
+      }
+
+      const isConnected = await MentorConnection.exists({
+        student: req.user.id,
+        mentor: mentorId,
+        status: 'accepted'
+      });
+
+      if (!isConnected) {
+        return res.status(403).json({ success: false, message: 'Only accepted students can review this mentor.' });
+      }
+
+      const review = await MentorReview.findOneAndUpdate(
+        { mentor: mentorId, student: req.user.id },
+        {
+          $set: {
+            rating: Math.round(rating),
+            comment,
+            isAnonymous: true
+          }
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      ).lean();
+
+      return res.json({
+        success: true,
+        message: 'Anonymous review saved.',
+        data: serializeAnonymousReview(review)
       });
     } catch (err) {
       next(err);

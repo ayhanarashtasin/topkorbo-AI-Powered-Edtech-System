@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-// Vite's `?url` import gives us a direct URL to the pdf.js worker. This
-// avoids the CORS issues a CDN worker would have, and bypasses the broken
-// `workerSrc = 'pdf.worker.mjs'` that `react-pdf` sets on import (a relative
+// Vite's `?url` import bundles a real worker URL into the build, which avoids
+// both CDN CORS issues and react-pdf's broken default `workerSrc` (a relative
+// path that doesn't resolve in production).
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -12,14 +12,13 @@ import HighlightLayer from './HighlightLayer';
 import HighlightPopup from './HighlightPopup';
 import './PdfCanvas.css';
 
-// Configure the pdf.js worker. Override react-pdf's relative-path default
-// with a Vite-bundled URL pointing at the real worker.
+// Point pdfjs at the bundled worker; fall back to a version-matched CDN URL
+// if the bundled asset failed to load for any reason.
 try {
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
   // eslint-disable-next-line no-console
   console.info('[PdfCanvas] Worker URL set:', pdfWorkerUrl);
 } catch (err) {
-  // Fallback: CDN URL matching the installed pdfjs-dist version.
   try {
     pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
     // eslint-disable-next-line no-console
@@ -31,24 +30,16 @@ try {
 }
 
 /**
- * PdfCanvas
+ * PdfCanvas renders a single PDF page plus all interactive overlays
+ * (pen strokes, highlights, highlight popups). Responsibilities:
+ *  - Loads the file once via <Document> and reports the page count.
+ *  - Renders the current page with its text layer.
+ *  - Receives committed pen strokes from AnnotationCanvas and surfaces
+ *    them to the parent via `onAnnotate`.
+ *  - Hit-tests pen strokes in eraser mode.
  *
- * Renders a single page of the given PDF `fileUrl` (string or { url, withCredentials })
- * with the text layer and a transparent AnnotationCanvas overlay for pen strokes.
- *
- * This file is responsible for:
- *   - Loading the file once via <Document> and reporting page count
- *   - Rendering the current page with the text layer
- *   - Capturing pen strokes → emit onAnnotate({ type:'pen', points, color, strokeWidth })
- *     (the actual pen drawing is now in AnnotationCanvas)
- *   - Hit-testing pen strokes in eraser mode
- *
- * Coordinate handling for pen:
- *   - The AnnotationCanvas is sized to the page's CSS box (in CSS px) and
- *     resizes on zoom.
- *   - All stroke points are NORMALISED [0..1] x/y so they survive
- *     resize/zoom.
- *   - Per-point width `w` is in CSS px at the time of capture.
+ * All stroke points are stored in NORMALISED [0..1] space so they
+ * survive resize/zoom; per-point width `w` is in CSS px.
  */
 export default function PdfCanvas({
   fileUrl,
@@ -81,8 +72,9 @@ export default function PdfCanvas({
   const [selectionPopup, setSelectionPopup] = useState(null);
   const [activeNotePopup, setActiveNotePopup] = useState(null);
 
-  // Local state for highlights so we can update them at 60fps during eraser drag
-  // without spamming the backend API. The changes are flushed on pointerUp.
+  // Mirror of highlights used during drag-erase so we can update at 60fps
+// without spamming the backend; flushed on pointerUp via
+// `onHighlightPartialEraseEnd`.
   const [localHighlights, setLocalHighlights] = useState(highlights);
   const modifiedHighlightsRef = useRef({});
 
@@ -92,22 +84,16 @@ export default function PdfCanvas({
     }
   }, [highlights]);
 
-  // Filter the committed pen strokes for the AnnotationCanvas.
+  // Pen strokes the AnnotationCanvas needs to render.
   const penAnnotations = useMemo(
     () => (annotations || []).filter((a) => a.type === 'pen'),
     [annotations]
   );
 
-  /* ---------- Eraser hit-test on the wrapper ----------
-   * The AnnotationCanvas is `pointer-events: none` in eraser mode, so
-   * the wrapper receives the events. We do the same polyline distance
-   * test as before but route the hit through the canvas's imperative
-   * `setEraserHover` so the ring is drawn on top of the strokes.
-   *
-   * The hit-test is rAF-throttled because `findPenStrokeAt` is O(N)
-   * over the stroke list. Without throttling, a fast pointermove on
-   * a page with 200 strokes can fire the test 1000+ times per second.
-   */
+  // In eraser mode the AnnotationCanvas is `pointer-events: none` and the
+// wrapper receives the events. The hit-test is rAF-throttled because
+// `findPenStrokeAt` is O(N) — without throttling a fast pointermove on a
+// page with 200 strokes can fire it 1000+ times/sec.
   const eraserRafRef = useRef(0);
   const pendingPointerRef = useRef(null);
   const isErasingRef = useRef(false);
@@ -118,7 +104,9 @@ export default function PdfCanvas({
   const highlightRafRef = useRef(0);
   const pendingHighlightPointerRef = useRef(null);
 
-  // Global pointerup listener to prevent sticky drag state when mouse is released outside
+  // Global pointerup/pointerdown handlers — prevent sticky drag state when the
+// pointer is released outside the wrapper, and dismiss stray popups when
+// clicking elsewhere on the page.
   useEffect(() => {
     const handleGlobalPointerUp = () => {
       isErasingRef.current = false;
@@ -128,7 +116,6 @@ export default function PdfCanvas({
     };
     const handleGlobalPointerDown = (e) => {
       if (!e.target.closest('.rb-highlight-popup')) {
-        // If clicking outside the popup, close it
         setSelectionPopup(null);
       }
       if (!e.target.closest('.rb-highlight-note-viewer') && !e.target.closest('.rb-highlight-note-icon')) {
@@ -137,8 +124,9 @@ export default function PdfCanvas({
     };
     const handleSelectionChange = () => {
       if (activeTool === 'pen' || activeTool === 'eraser') return;
-      // We no longer automatically setSelectionPopup(null) here because focusing
-      // the note textarea collapses the selection and would destroy the popup.
+      // Note: don't auto-dismiss the selection popup on selectionchange —
+      // focusing the note textarea collapses the selection and would
+      // tear down the popup while the user is typing.
     };
     window.addEventListener('pointerup', handleGlobalPointerUp);
     window.addEventListener('pointerdown', handleGlobalPointerDown);
@@ -525,7 +513,7 @@ export default function PdfCanvas({
     [activeTool, penAnnotations, onAnnotationClick, eraserType, onAnnotationPartialErase, eraserWidth]
   );
 
-  // Cancel the pending rAF on unmount.
+  // Cancel any pending rAF callbacks when the component unmounts.
   useEffect(() => () => {
     if (eraserRafRef.current) cancelAnimationFrame(eraserRafRef.current);
     if (highlightRafRef.current) cancelAnimationFrame(highlightRafRef.current);
@@ -557,8 +545,8 @@ export default function PdfCanvas({
     [activeTool, penAnnotations, onAnnotationClick]
   );
 
-  // Track the (fileUrl, pageNumber) we've already extracted text for so
-  // that re-fires of `onLoadSuccess` (e.g. on zoom) don't re-extract.
+  // Memo key for the page-text extraction so zoom-driven re-fires of
+// `onLoadSuccess` don't re-extract the same text.
   const extractedForKeyRef = useRef(null);
 
   const onPageLoadSuccess = useCallback(
@@ -566,10 +554,9 @@ export default function PdfCanvas({
       const viewport = page.getViewport({ scale });
       setPageSize({ width: viewport.width, height: viewport.height });
 
-      // Hand the page's text content up to the parent so the AI tutor
-      // sidebar can use it as context. Skipped if we already extracted
-      // text for this exact (fileUrl, pageNumber) — `onLoadSuccess` re-fires
-      // on every zoom step, but text doesn't change with zoom.
+      // Hand the page's text content up to the parent so the AI tutor can use
+// it as context. Skipped on zoom because the text is identical for the
+// same `(fileUrl, pageNumber)` pair.
       if (typeof onPageTextReady !== 'function') return;
       if (!page || typeof page.getTextContent !== 'function') return;
 
@@ -598,7 +585,7 @@ export default function PdfCanvas({
     [scale, fileUrl, pageNumber, onPageTextReady]
   );
 
-  // When the user navigates to a different page, allow re-extraction.
+  // Allow re-extraction when the page or file actually changes.
   useEffect(() => {
     extractedForKeyRef.current = null;
   }, [fileUrl, pageNumber]);
@@ -615,7 +602,7 @@ export default function PdfCanvas({
     if (onDocumentError) onDocumentError(err);
   }, [fileUrl, onDocumentError]);
 
-  /* ---------- Cursor & interactivity based on tool ---------- */
+  // Wrapper class — drives cursor + overlay interactivity per active tool.
   const wrapperClass = useMemo(() => {
     const classes = ['rb-pdf-page-wrap'];
     if (activeTool === 'pen') classes.push('rb-pdf-page-wrap--pen');
@@ -640,8 +627,7 @@ export default function PdfCanvas({
 
 
 
-  // Forward pen strokes from AnnotationCanvas to the parent's onAnnotate.
-  // The shape matches what ReadingBookView's handleAnnotate expects.
+  // Forward committed pen strokes up to ReadingBookView's handleAnnotate.
   const handleStrokeCommit = useCallback((stroke) => {
     if (onAnnotate) {
       onAnnotate({
@@ -699,9 +685,7 @@ export default function PdfCanvas({
               }
               className="rb-pdf-page"
             />
-            {/* Pen overlay canvas — replaces the inline <canvas> that
-                used to live here. The AnnotationCanvas handles pointer
-                events, rAF rendering, and stroke smoothing. */}
+            {/* Pen overlay — owns pointer events, rAF rendering, and stroke smoothing. */}
             <AnnotationCanvas
               ref={annotationCanvasRef}
               pageWidth={pageSize.width}
@@ -772,9 +756,8 @@ function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }
 
-
-// Distance from point (px,py) to a line segment (ax,ay)->(bx,by), all in
-// normalised [0..1] coordinates. Returns Infinity if segment is degenerate.
+// Distance from point (px,py) to line segment (ax,ay)→(bx,by), all in
+// normalised [0..1] coordinates. Returns Infinity on degenerate segments.
 function pointToSegmentNorm(px, py, ax, ay, bx, by) {
   const dx = bx - ax;
   const dy = by - ay;
@@ -795,15 +778,14 @@ function pointToSegmentNorm(px, py, ax, ay, bx, by) {
 }
 
 // Hit-test pen strokes at normalised (x,y). Returns the first stroke whose
-// polyline comes within `tolerance`, or null.
+// polyline comes within `tolerance` (widened by stroke width for easier hits).
 function findPenStrokeAt(strokes, x, y, tolerance) {
   if (!Array.isArray(strokes)) return null;
   for (let s = 0; s < strokes.length; s += 1) {
     const stroke = strokes[s];
     const pts = stroke.points || [];
     if (pts.length < 1) continue;
-    // Use the stroke's strokeWidth (or 3) to widen the hit-test
-    // proportionally — a thicker stroke is easier to hit.
+    // Wider strokes get a proportionally wider hit-test so they're easier to target.
     const w = (stroke.strokeWidth || 3) / 1000;
     const tol = Math.max(tolerance, w * 4);
     if (pts.length === 1) {

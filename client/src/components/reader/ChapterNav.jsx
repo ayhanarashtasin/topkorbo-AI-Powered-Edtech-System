@@ -27,7 +27,7 @@ export default function ChapterNav({
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Click-to-dismiss backdrop shown only on mobile when the drawer is open. */}
       <div
         className={`rb-chapnav__backdrop ${isOpen ? 'rb-chapnav__backdrop--visible' : ''}`}
         onClick={onClose}

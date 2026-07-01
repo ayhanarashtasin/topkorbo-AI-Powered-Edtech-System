@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react';
 import forumApi from '../../services/forumApi';
 import { useForum } from '../../context/ForumContext';
 
-/**
- * Horizontal scrolling category chips used at the top of the feed.
- * Driven by /api/search/categories which returns each category's post count.
- */
+// CategoryPicker — horizontal category chips shown above the feed.
+// Driven by /api/search/categories which returns each category's post count.
 export default function CategoryPicker({ active, onChange }) {
   const { categories } = useForum();
   const [localCats, setLocalCats] = useState([]);

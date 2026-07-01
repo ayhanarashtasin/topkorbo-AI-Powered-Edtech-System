@@ -114,12 +114,8 @@ export default function Dashboard() {
       setDashboardError('');
 
       if (role === 'student') {
-        const [mentors, studentData] = await Promise.all([
-          fetchMentors(),
-          fetchStudentMentorDashboard()
-        ]);
-        setMentorCatalog(Array.isArray(mentors) ? mentors : []);
-        setStudentMentorData(studentData || { mentors: [], recentAttempts: [] });
+        setMentorCatalog([]);
+        setStudentMentorData({ mentors: [], recentAttempts: [] });
       } else if (role === 'tutor' || role === 'teacher') {
         const mentorData = await fetchMentorDashboard();
         setMentorDashboard(mentorData || {
@@ -213,7 +209,7 @@ export default function Dashboard() {
           localStorage.setItem('topkorbo_email', nextUser.email);
           localStorage.setItem('topkorbo_role', nextUser.role);
 
-          if (nextUser.role === 'teacher' || nextUser.role === 'student') {
+          if (nextUser.role === 'teacher') {
             fetchContests(token, nextUser.role);
           }
 
@@ -231,14 +227,15 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     const role = localStorage.getItem('topkorbo_role');
-    if (token && (role === 'teacher' || role === 'student')) {
+    if (token && role === 'teacher') {
       fetchContests(token, role);
     }
   }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
-    if (!token) return;
+    const role = localStorage.getItem('topkorbo_role');
+    if (!token || role === 'student') return;
 
     (async () => {
       try {
@@ -407,135 +404,7 @@ export default function Dashboard() {
     );
   };
 
-  const renderStudentWorkspace = () => (
-    <div className="dashboard-panels">
-      <section className="dashboard-panel dashboard-panel--catalog">
-        <div className="dashboard-panel__header">
-          <div>
-            <h3>Find mentors</h3>
-            <p>Send requests to tutors and mentors, then track who accepted your request.</p>
-          </div>
-          <span className="dashboard-stat-pill">
-            {(studentMentorData.mentors || []).filter((item) => item.status === 'accepted').length} connected
-          </span>
-        </div>
-
-        <div className="mentor-catalog">
-          {mentorCatalog.map((mentor) => {
-            const status = studentMentorStatusById.get(mentor._id) || mentor.connectionStatus || 'none';
-            const canRequest = status === 'none' || status === 'declined';
-
-            return (
-              <article key={mentor._id} className="mentor-card">
-                <div className="mentor-card__top">
-                  <div className="mentor-avatar">
-                    {mentor.avatar ? (
-                      <img src={mentor.avatar} alt={mentor.name} referrerPolicy="no-referrer" />
-                    ) : (
-                      mentor.name.charAt(0)
-                    )}
-                  </div>
-                  <div>
-                    <h4>{mentor.name}</h4>
-                    <p>{mentor.universityName || mentor.collegeName || 'Mentor profile'}</p>
-                  </div>
-                </div>
-                <div className="mentor-badges">
-                  {(mentor.interestedToGuide || []).map((item) => (
-                    <span key={item} className="dashboard-tag">{item}</span>
-                  ))}
-                </div>
-                <p className="mentor-meta">{mentor.department || mentor.currentYearSemester || 'Academic guide'}</p>
-                <p className="mentor-achievement">
-                  {mentor.admissionAchievement || 'Supports subject strategy, performance review, and study planning.'}
-                </p>
-                <button
-                  type="button"
-                  className={`btn ${canRequest ? 'btn-primary' : 'btn-secondary'} mentor-card__action`}
-                  disabled={!canRequest || requestingMentorId === mentor._id}
-                  onClick={() => handleMentorRequest(mentor._id)}
-                >
-                  {status === 'accepted' ? 'Connected' : status === 'pending' ? 'Pending' : status === 'declined' ? 'Request again' : 'Send request'}
-                </button>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {renderPracticeWidget()}
-
-      <section className="dashboard-panel">
-        <div className="dashboard-panel__header">
-          <div>
-            <h3>Your mentor requests</h3>
-            <p>Accepted mentors will be able to view your reports, subject-wise scores, and rankings.</p>
-          </div>
-        </div>
-
-        <div className="dashboard-list">
-          {(studentMentorData.mentors || []).length === 0 ? (
-            <div className="dashboard-empty">No mentor requests yet. Start by sending one from the list above.</div>
-          ) : (
-            studentMentorData.mentors.map((item) => (
-              <div key={item._id} className="dashboard-list__item">
-                <div>
-                  <strong>{item.mentor?.name}</strong>
-                  <p>{item.mentor?.department || item.mentor?.universityName || 'Mentor'}</p>
-                </div>
-                <div className={`status-badge status-badge--${item.status}`}>{item.status}</div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="dashboard-panel">
-        <div className="dashboard-panel__header">
-          <div>
-            <h3>Recent mock test analytics</h3>
-            <p>Your latest attempts are automatically shared with accepted mentors.</p>
-          </div>
-        </div>
-
-        <div className="dashboard-list">
-          {(studentMentorData.recentAttempts || []).length === 0 ? (
-            <div className="dashboard-empty">Take a mock test to start building mentor-facing analytics.</div>
-          ) : (
-            studentMentorData.recentAttempts.map((attempt) => (
-              <div key={attempt._id} className="attempt-card">
-                <div className="attempt-card__summary">
-                  <strong>Score {attempt.score}</strong>
-                  <span>{attempt.ranking?.overallPosition ? `Rank #${attempt.ranking.overallPosition}` : 'Ranking pending'}</span>
-                </div>
-                <div className="attempt-card__meta">
-                  <span>{attempt.correct}/{attempt.total} correct</span>
-                  <span>{formatDuration(attempt.timeTakenSeconds, language)}</span>
-                  <span>{formatDate(attempt.createdAt, language)}</span>
-                </div>
-                <div className="subject-bars">
-                  {(attempt.subjectBreakdown || []).slice(0, 4).map((subject) => {
-                    const width = subject.total ? Math.max(8, (subject.correct / subject.total) * 100) : 0;
-                    return (
-                      <div key={`${attempt._id}-${subject.subject}`} className="subject-bars__row">
-                        <span>{subject.subject}</span>
-                        <div className="subject-bars__track">
-                          <div className="subject-bars__fill" style={{ width: `${width}%` }} />
-                        </div>
-                        <strong>{subject.correct}/{subject.total}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      {renderStudentContests()}
-    </div>
-  );
+  const renderStudentWorkspace = () => <div className="dashboard-student-blank" aria-label="Student dashboard placeholder" />;
 
   const renderMentorWorkspace = () => (
     <div className="dashboard-panels">

@@ -7,11 +7,9 @@ import { useForum } from '../../context/ForumContext';
 import { useLanguage } from '../../hooks/useLanguage';
 import '../../styles/forum.css';
 
-/**
- * ForumLayout — chrome that wraps every /forum/* page.
- * Reuses the existing Sidebar for navigation and adds a forum header
- * (search, compose, notifications, profile shortcut).
- */
+// ForumLayout — chrome for every /forum/* page. Reuses the app Sidebar for
+// navigation and adds a forum-specific header (search, compose, notifications,
+// profile shortcut) above the route outlet.
 export default function ForumLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,7 +17,7 @@ export default function ForumLayout() {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
 
-  // Simple auth guard — bounce to landing if no token at all
+  // Auth guard — bounce unauthenticated visitors back to the landing page.
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) {

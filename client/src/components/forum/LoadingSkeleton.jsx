@@ -1,6 +1,4 @@
-/**
- * LoadingSkeleton — shimmers to indicate loading post cards.
- */
+// LoadingSkeleton — shimmer placeholders shown while post cards are loading.
 export default function LoadingSkeleton({ count = 3 }) {
   return (
     <div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import LiveClassRoom from '../components/liveclass/LiveClassRoom';
 import { endMentorLiveClass, fetchMentorLiveDashboard, startMentorLiveClass } from '../services/liveClassApi';
+import { fetchMentorDashboard } from '../services/mentorApi';
 import { DisconnectReason } from 'livekit-client';
 import './LiveClassPages.css';
 
@@ -14,6 +15,7 @@ export default function MentorLiveClass() {
   });
   const [title, setTitle] = useState('Weekly Live Class');
   const [dashboard, setDashboard] = useState({ sessionsThisWeek: 0, weeklyLimit: 4, activeSession: null });
+  const [acceptedStudents, setAcceptedStudents] = useState([]);
   const [connection, setConnection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -38,8 +40,12 @@ export default function MentorLiveClass() {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const data = await fetchMentorLiveDashboard();
-      setDashboard(data || { sessionsThisWeek: 0, weeklyLimit: 4, activeSession: null });
+      const [liveData, mentorData] = await Promise.all([
+        fetchMentorLiveDashboard(),
+        fetchMentorDashboard(),
+      ]);
+      setDashboard(liveData || { sessionsThisWeek: 0, weeklyLimit: 4, activeSession: null });
+      setAcceptedStudents(Array.isArray(mentorData?.students) ? mentorData.students : []);
     } catch (err) {
       setError(err.message || 'Failed to load live class dashboard.');
     } finally {
@@ -163,6 +169,38 @@ export default function MentorLiveClass() {
               Connecting to LiveKit at <strong>{connection.wsUrl}</strong>
             </div>
           ) : null}
+
+          <section className="live-page__students">
+            <div className="live-page__students-head">
+              <div>
+                <h2>Accepted Students</h2>
+                <p>Only these accepted students can see and join your live sessions.</p>
+              </div>
+              <span>{acceptedStudents.length} student{acceptedStudents.length === 1 ? '' : 's'}</span>
+            </div>
+
+            {acceptedStudents.length === 0 ? (
+              <div className="live-page__empty">No accepted students yet. Accept student requests from your dashboard first.</div>
+            ) : (
+              <div className="live-page__student-grid">
+                {acceptedStudents.map((entry) => (
+                  <article key={entry.connectionId} className="live-page__student-card">
+                    <div className="live-page__student-avatar">
+                      {entry.student?.avatar ? (
+                        <img src={entry.student.avatar} alt={entry.student.name} referrerPolicy="no-referrer" />
+                      ) : (
+                        (entry.student?.name || 'S').charAt(0)
+                      )}
+                    </div>
+                    <div>
+                      <h3>{entry.student?.name || 'Student'}</h3>
+                      <p>{entry.student?.collegeName || entry.student?.stream || entry.student?.academicStatus || 'Accepted student'}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </div>

@@ -5,10 +5,9 @@ import RichTextEditor from './RichTextEditor';
 import MentionInput from './MentionInput';
 import forumApi from '../../services/forumApi';
 
-/**
- * CommentTree — flattens a comment list into a tree, then recursively renders
- * CommentItem nodes. Subscribes to live comment:new / update / delete events.
- */
+// CommentTree — loads a post's comments, groups them by parent into a
+// tree, and renders them recursively. Also subscribes to live
+// `comment:new / update / delete` socket events for real-time updates.
 export default function CommentTree({ postId, onCountChange }) {
   const { user, createComment, subscribeComment } = useForum();
   const [allComments, setAllComments] = useState([]);
@@ -18,7 +17,7 @@ export default function CommentTree({ postId, onCountChange }) {
   const editorRef = useRef(null);
   const mentionRef = useRef(null);
 
-  // Initial load
+  // Initial load of the comment thread.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -30,7 +29,7 @@ export default function CommentTree({ postId, onCountChange }) {
     return () => { cancelled = true; };
   }, [postId]);
 
-  // Live updates
+  // Live updates from the socket: new / edited / deleted comments.
   useEffect(() => {
     const off = subscribeComment(postId, {
       onNew: (c) => {
@@ -50,7 +49,8 @@ export default function CommentTree({ postId, onCountChange }) {
     onCountChange && onCountChange(allComments.length);
   }, [allComments.length, onCountChange]);
 
-  // Build a map: parentId -> children
+  // Group comments by their parent ID so we can render them as a tree.
+  // `__root__` is the synthetic bucket for top-level comments.
   const tree = useMemo(() => {
     const byParent = new Map();
     for (const c of allComments) {
@@ -58,7 +58,6 @@ export default function CommentTree({ postId, onCountChange }) {
       if (!byParent.has(key)) byParent.set(key, []);
       byParent.get(key).push(c);
     }
-    // Sort each list by createdAt
     for (const arr of byParent.values()) {
       arr.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     }

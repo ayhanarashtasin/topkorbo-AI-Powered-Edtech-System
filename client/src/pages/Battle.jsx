@@ -95,9 +95,8 @@ const GENERAL_UNIVERSITIES = ['DU', 'CU', 'RU', 'JU', 'GST', 'BUP', 'IBA'];
 const BOARDS = ['Dhaka', 'Comilla', 'Rajshahi', 'Jessore', 'Chittagong', 'Sylhet', 'Barishal', 'Dinajpur', 'Mymensingh', 'Madrasa', 'Technical'];
 
 const BATTLE_MODES = [
-  { id: 'duel', label: '1v1 Duel', players: 2, accent: '#C08552' },
-  { id: 'ai-duel', label: '1v1 vs AI', players: 2, accent: '#8B5CF6', to: '/battle-ai' },
-  { id: 'squad', label: 'Squad 5v5', players: 10, accent: '#3B82F6' },
+  { id: 'duel', label: '1v1', players: 2, accent: '#C08552' },
+  { id: 'ai-duel', label: '1v1 AI', players: 2, accent: '#8B5CF6', to: '/battle-ai' },
   { id: 'custom-squad', label: 'Custom Squad', players: 10, accent: '#10B981' },
   { id: 'raid', label: 'Grand Raid', players: 30, accent: '#F97316' }
 ];
@@ -346,14 +345,17 @@ export default function Battle() {
 
   useEffect(() => {
     if (!roomIdParam || !user.id) return undefined;
+    // Skip the auto-join when we already have this room loaded (e.g. right
+    // after joining by code), so we don't fire a redundant join request.
+    if (inviteRoom?.id === roomIdParam || battleState?.roomId === roomIdParam) return undefined;
     const timeoutId = window.setTimeout(() => {
       syncRoom(roomIdParam, { join: true });
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [roomIdParam, syncRoom, user.id]);
+  }, [roomIdParam, syncRoom, user.id, inviteRoom?.id, battleState?.roomId]);
 
   useEffect(() => {
-    if (!inviteRoom?.id) return undefined;
+    if (!inviteRoom?.id || inviteRoom.status === 'finished') return undefined;
     const intervalId = window.setInterval(() => {
       syncRoom(inviteRoom.id);
     }, inviteRoom.status === 'active' ? 1000 : 2000);
@@ -846,6 +848,10 @@ export default function Battle() {
     const normalizedCode = joinCode.trim().toLowerCase();
     if (!normalizedCode) {
       toast.error('Enter a battle code first.');
+      return;
+    }
+    if (!/^[0-9a-f]{8}$/.test(normalizedCode)) {
+      toast.error('That does not look like a valid battle code.');
       return;
     }
     setIsRoomActionLoading(true);
@@ -1382,6 +1388,7 @@ export default function Battle() {
                     type="text"
                     value={joinCode}
                     onChange={(event) => setJoinCode(event.target.value)}
+                    onKeyDown={(event) => { if (event.key === 'Enter' && !isRoomActionLoading) joinRoomByCode(); }}
                     placeholder="Enter battle code"
                     aria-label="Battle code"
                   />
@@ -1608,10 +1615,10 @@ export default function Battle() {
                     <h4>Squad Size</h4>
                   </div>
                   <p className="mock-config-section-desc">Choose how many players each team should have.</p>
-                  <div className="battle-preset-row">
-                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((size) => (
-                      <button key={size} type="button" className={`battle-preset-chip ${customSquadSize === size ? 'battle-preset-chip--selected' : ''}`} onClick={() => setCustomSquadSize(size)}>{size}v{size}</button>
-                    ))}
+                  <div className="battle-number-input">
+                    <button type="button" onClick={() => setCustomSquadSize(Math.max(2, (Number(customSquadSize) || 2) - 1))}>-</button>
+                    <input type="number" min="2" max="50" value={customSquadSize} onChange={(e) => setCustomSquadSize(e.target.value === '' ? '' : Math.min(50, Math.max(2, parseInt(e.target.value) || 2)))} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 2) setCustomSquadSize(2); }} />
+                    <button type="button" onClick={() => setCustomSquadSize(Math.min(50, (Number(customSquadSize) || 2) + 1))}>+</button>
                   </div>
                 </div>
               )}
@@ -1623,10 +1630,10 @@ export default function Battle() {
                     <h4>Raid Room Limit</h4>
                   </div>
                   <p className="mock-config-section-desc">Choose how many students can join this solo leaderboard room.</p>
-                  <div className="battle-preset-row">
-                    {[5, 10, 15, 20, 25, 30].map((count) => (
-                      <button key={count} type="button" className={`battle-preset-chip ${raidMaxPlayers === count ? 'battle-preset-chip--selected' : ''}`} onClick={() => setRaidMaxPlayers(count)}>{count}</button>
-                    ))}
+                  <div className="battle-number-input">
+                    <button type="button" onClick={() => setRaidMaxPlayers(Math.max(3, (Number(raidMaxPlayers) || 3) - 1))}>-</button>
+                    <input type="number" min="3" max="200" value={raidMaxPlayers} onChange={(e) => setRaidMaxPlayers(e.target.value === '' ? '' : Math.min(200, Math.max(3, parseInt(e.target.value) || 3)))} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 3) setRaidMaxPlayers(3); }} />
+                    <button type="button" onClick={() => setRaidMaxPlayers(Math.min(200, (Number(raidMaxPlayers) || 3) + 1))}>+</button>
                   </div>
                 </div>
               )}

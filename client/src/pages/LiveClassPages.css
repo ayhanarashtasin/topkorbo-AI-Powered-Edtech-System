@@ -114,13 +114,97 @@
   color: var(--text-secondary);
 }
 
+.live-page__students {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 24px;
+}
+
+.live-page__students-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.live-page__students-head h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+}
+
+.live-page__students-head p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.live-page__students-head span {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(192, 133, 82, 0.1);
+  color: #8c5a3c;
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+
+.live-page__student-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.live-page__student-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 18px;
+  background: #fffaf5;
+}
+
+.live-page__student-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #c08552, #8c5a3c);
+  color: #fff;
+  font-weight: 900;
+}
+
+.live-page__student-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.live-page__student-card h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.live-page__student-card p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
 @media (max-width: 768px) {
   .live-page {
     padding: 20px;
   }
 
   .live-page__intro,
-  .live-page__card {
+  .live-page__card,
+  .live-page__students-head {
     flex-direction: column;
     align-items: flex-start;
   }

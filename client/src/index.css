@@ -15,6 +15,11 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* Render the whole app at 80% — matches the browser's own "80% zoom" look
+     while the user keeps the browser at 100%. Adjust this single value to taste
+     (0.85 = a bit larger, 0.75 = a bit smaller). */
+  zoom: 0.8;
+
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;

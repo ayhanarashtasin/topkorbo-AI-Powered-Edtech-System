@@ -27,13 +27,11 @@ router.get('/by-source', auth, questionController.getQuestionsBySource);
 // @route   GET /api/questions/admission-cards
 router.get('/admission-cards', auth, questionController.getAdmissionQuestionCards);
 
-// @desc    Get distinct university (varsity admission) sources for a given
-//          subject/paper/type (Question Bank Varsity Admission flow)
+// @desc    Get distinct university admission sources
 // @route   GET /api/questions/varsity-sources
 router.get('/varsity-sources', auth, questionController.getVarsityAdmissionSources);
 
-// @desc    Get every written question for a subject/paper inside the Varsity
-//          Admission stream (dedicated review page for written questions)
+// @desc    Get written questions for Varsity Admission stream
 // @route   GET /api/questions/varsity-written
 router.get('/varsity-written', auth, questionController.getVarsityWrittenQuestions);
 

@@ -87,7 +87,7 @@ export default function UploadBook() {
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const activeTab = 'reading-books';
 
-  // Auth + role check
+  // Verify the session and load the current user so we can gate teacher-only actions.
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) { window.location.href = '/'; return; }
@@ -121,7 +121,7 @@ export default function UploadBook() {
     fetchUser();
   }, [apiBase]);
 
-  // Load book details if in edit mode
+  // When editing an existing book, fetch its metadata and prefill the form.
   useEffect(() => {
     if (!bookId) return;
     const token = localStorage.getItem('topkorbo_token');
@@ -315,7 +315,7 @@ export default function UploadBook() {
                 </select>
               </div>
 
-              {/* Group */}
+              {/* Academic stream — drives the available subject list below. */}
               <div className="rb-form-field">
                 <label className="rb-form-label">{t('rb.upload.field.group')} *</label>
                 <select
@@ -323,7 +323,8 @@ export default function UploadBook() {
                   value={group}
                   onChange={(e) => {
                     setGroup(e.target.value);
-                    setSubject(''); // Reset subject when group changes
+                    // Clear the subject so it doesn't reference a group that no longer matches.
+                    setSubject('');
                   }}
                 >
                   <option value="">{language === 'en' ? 'Select…' : 'নির্বাচন করুন…'}</option>
@@ -335,7 +336,7 @@ export default function UploadBook() {
                 </select>
               </div>
 
-              {/* Subject */}
+              {/* Subject — disabled until a group is selected, since subjects are grouped. */}
               <div className="rb-form-field">
                 <label className="rb-form-label">{t('rb.upload.field.subject')} *</label>
                 <select
@@ -357,7 +358,7 @@ export default function UploadBook() {
                 </select>
               </div>
 
-              {/* Paper */}
+              {/* Paper (1st / 2nd / N/A) — only used for subjects split across papers. */}
               <div className="rb-form-field">
                 <label className="rb-form-label">{t('rb.upload.field.paper')} *</label>
                 <select className="rb-form-select" value={paper} onChange={(e) => setPaper(e.target.value)}>
@@ -370,7 +371,7 @@ export default function UploadBook() {
                 </select>
               </div>
 
-              {/* Chapter Number */}
+              {/* Chapter number — only shown while creating a brand-new book. */}
               {!bookId && (
                 <div className="rb-form-field">
                   <label className="rb-form-label">{t('rb.upload.field.chapter_number')} *</label>
@@ -384,7 +385,6 @@ export default function UploadBook() {
                 </div>
               )}
 
-              {/* Chapter Title */}
               {!bookId && (
                 <div className="rb-form-field">
                   <label className="rb-form-label">{t('rb.upload.field.chapter_title')} *</label>
@@ -398,7 +398,6 @@ export default function UploadBook() {
                 </div>
               )}
 
-              {/* PDF File Input */}
               {!bookId && (
                 <div className="rb-form-field rb-form-field--full">
                   <label className="rb-form-label">{t('rb.upload.field.first_pdf')} *</label>
@@ -411,7 +410,6 @@ export default function UploadBook() {
               )}
             </div>
 
-            {/* Actions */}
             <div className="rb-step-actions" style={{ borderTop: '1px solid var(--bg-accent-warm, #F7EBE1)', marginTop: 28 }}>
               <div style={{ flex: 1 }} />
               <button

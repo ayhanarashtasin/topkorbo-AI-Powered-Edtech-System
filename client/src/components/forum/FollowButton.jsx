@@ -3,9 +3,8 @@ import toast from 'react-hot-toast';
 import { HiUserAdd, HiUserRemove } from 'react-icons/hi';
 import forumApi from '../../services/forumApi';
 
-/**
- * FollowButton — toggles the current user's follow state of `userId`.
- */
+// FollowButton — toggles the current user's follow state of `userId`
+// with optimistic UI and a toast confirmation.
 export default function FollowButton({ userId, initialFollowing, onChange }) {
   const [following, setFollowing] = useState(!!initialFollowing);
   const [busy, setBusy] = useState(false);

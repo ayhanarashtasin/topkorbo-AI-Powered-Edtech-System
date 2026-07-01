@@ -1,6 +1,4 @@
-// Shared formatting for question source-tags (board / admission / college).
-// Mirrors the logic used in MockTestExam.jsx and the Choose-from-QBank page so
-// chips read consistently wherever questions are displayed.
+// Question source tag formatting utilities (board / admission / college).
 
 const BOARD_ABBRS = {
   Dhaka: 'DB', Comilla: 'CB', Rajshahi: 'RB', Jessore: 'JB', Chittagong: 'CtgB',
@@ -69,8 +67,7 @@ export function getTagTitle(tag) {
   return `${tag.university}${tag.unit ? ` (${tag.unit})` : ''}${tag.year ? ` - ${tag.year}` : ''}`;
 }
 
-// Group a flat list of question objects into qbank "selections" (the shape the
-// contest backend consumes: { subject, paper, questionIds, chapters }).
+// Groups a flat list of questions into qbank selections for the contest backend.
 export function buildSelectionsFromQuestions(questions) {
   const groupMap = {};
   (questions || []).forEach(q => {

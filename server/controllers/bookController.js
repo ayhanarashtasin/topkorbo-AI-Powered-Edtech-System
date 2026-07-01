@@ -1,5 +1,4 @@
-const fs = require('fs');
-const path = require('path');
+const { bucket } = require('../config/firebase');
 const mongoose = require('mongoose');
 const Book = require('../models/Book');
 const Annotation = require('../models/Annotation');
@@ -11,6 +10,52 @@ const VALID_CATEGORIES = ['Academic', 'Admission'];
 const VALID_GROUPS = ['Science', 'Arts', 'Commerce', 'HSC', 'Engineering', 'Medical', 'Varsity'];
 const VALID_PAPERS = ['1st', '2nd', 'N/A'];
 const VALID_ANNOTATION_TYPES = ['pen'];
+
+const uploadFileToFirebase = (file, userId) => {
+  return new Promise((resolve, reject) => {
+    const safeName = (file.originalname || 'file.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileName = `books/${userId}/${Date.now()}-${safeName}`;
+    const fileUpload = bucket.file(fileName);
+
+    const blobStream = fileUpload.createWriteStream({
+      metadata: { contentType: file.mimetype }
+    });
+
+    blobStream.on('error', (error) => reject(error));
+    blobStream.on('finish', async () => {
+      try {
+        await fileUpload.makePublic(); // Requires public read access on bucket
+        resolve(`https://storage.googleapis.com/${bucket.name}/${fileName}`);
+      } catch (err) {
+        // Fallback for uniform bucket-level access if makePublic is denied
+        resolve(`https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media`);
+      }
+    });
+    blobStream.end(file.buffer);
+  });
+};
+
+const deleteFileFromFirebase = async (fileUrl) => {
+  try {
+    if (!fileUrl) return;
+    let filePath = '';
+    const storagePrefix = `https://storage.googleapis.com/${bucket.name}/`;
+    const fbPrefix = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/`;
+    
+    if (fileUrl.startsWith(storagePrefix)) {
+      filePath = fileUrl.replace(storagePrefix, '');
+    } else if (fileUrl.startsWith(fbPrefix)) {
+      filePath = decodeURIComponent(fileUrl.replace(fbPrefix, '').split('?')[0]);
+    }
+
+    if (filePath) {
+      await bucket.file(filePath).delete();
+    }
+  } catch (err) {
+    console.error('Firebase delete error:', err);
+  }
+};
+
 
 /**
  * Returns true if the given string is a valid Mongo ObjectId (24 hex chars).
@@ -31,9 +76,7 @@ exports.createBook = async (req, res, next) => {
     const user = await User.findById(req.user.id);
     if (!user || user.role !== 'teacher') {
       // Clean up uploaded file if role rejected
-      if (req.file) {
-        try { fs.unlinkSync(req.file.path); } catch (_) {}
-      }
+      
       return ApiResponse.error(res, 'Only teachers can upload books', 403);
     }
 
@@ -43,23 +86,23 @@ exports.createBook = async (req, res, next) => {
     } = req.body;
 
     if (!title || !title.trim()) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Title is required', 400);
     }
     if (!VALID_CATEGORIES.includes(category)) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Invalid category', 400);
     }
     if (!VALID_GROUPS.includes(group)) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Invalid group', 400);
     }
     if (!subject || !subject.trim()) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Subject is required', 400);
     }
     if (!VALID_PAPERS.includes(paper)) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Invalid paper', 400);
     }
     if (!req.file) {
@@ -83,7 +126,7 @@ exports.createBook = async (req, res, next) => {
       chapters: [{
         title: chTitle,
         order: orderVal,
-        fileUrl: `/uploads/books/${user._id}/${req.file.filename}`,
+        fileUrl: await uploadFileToFirebase(req.file, user._id),
         fileSize: req.file.size,
         pageCount: 0
       }]
@@ -92,9 +135,7 @@ exports.createBook = async (req, res, next) => {
     return ApiResponse.success(res, book, 'Book created successfully', 201);
   } catch (err) {
     // Clean up uploaded file on error
-    if (req.file) {
-      try { fs.unlinkSync(req.file.path); } catch (_) {}
-    }
+    
     next(err);
   }
 };
@@ -107,28 +148,28 @@ exports.createBook = async (req, res, next) => {
 exports.addChapter = async (req, res, next) => {
   try {
     if (!isValidObjectId(req.params.id)) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Book not found', 404);
     }
     const user = await User.findById(req.user.id);
     if (!user || user.role !== 'teacher') {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Only teachers can add chapters', 403);
     }
 
     const book = await Book.findById(req.params.id);
     if (!book) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Book not found', 404);
     }
     if (book.uploadedBy.toString() !== user._id.toString()) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'You can only add chapters to your own books', 403);
     }
 
     const { title } = req.body;
     if (!title || !title.trim()) {
-      if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+      
       return ApiResponse.error(res, 'Chapter title is required', 400);
     }
     if (!req.file) {
@@ -138,7 +179,7 @@ exports.addChapter = async (req, res, next) => {
     const newChapter = {
       title: title.trim(),
       order: book.chapters.length,
-      fileUrl: `/uploads/books/${user._id}/${req.file.filename}`,
+      fileUrl: await uploadFileToFirebase(req.file, user._id),
       fileSize: req.file.size,
       pageCount: 0
     };
@@ -147,9 +188,7 @@ exports.addChapter = async (req, res, next) => {
 
     return ApiResponse.success(res, book, 'Chapter added successfully', 201);
   } catch (err) {
-    if (req.file) {
-      try { fs.unlinkSync(req.file.path); } catch (_) {}
-    }
+    
     next(err);
   }
 };
@@ -405,12 +444,9 @@ exports.deleteBook = async (req, res, next) => {
     if (book.uploadedBy.toString() !== user._id.toString()) {
       return ApiResponse.error(res, 'You can only delete your own books', 403);
     }
-    // Best-effort delete associated PDF files
+    // Best-effort delete associated PDF files from Firebase
     for (const ch of book.chapters || []) {
-      if (ch.fileUrl) {
-        const filePath = path.resolve(__dirname, '..', ch.fileUrl.replace(/^\//, ''));
-        try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
-      }
+      await deleteFileFromFirebase(ch.fileUrl);
     }
     await Book.deleteOne({ _id: book._id });
     return ApiResponse.success(res, { id: req.params.id }, 'Book deleted successfully');
@@ -445,10 +481,7 @@ exports.deleteChapter = async (req, res, next) => {
       return ApiResponse.error(res, 'Chapter not found', 404);
     }
     const removed = book.chapters[chIdx];
-    if (removed.fileUrl) {
-      const filePath = path.resolve(__dirname, '..', removed.fileUrl.replace(/^\//, ''));
-      try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
-    }
+    await deleteFileFromFirebase(removed.fileUrl);
     book.chapters.splice(chIdx, 1);
     // Re-sequence orders
     book.chapters.forEach((c, i) => { c.order = i; });

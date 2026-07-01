@@ -1,22 +1,8 @@
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 
-const UPLOAD_ROOT = path.resolve(__dirname, '..', 'uploads', 'books');
-if (!fs.existsSync(UPLOAD_ROOT)) fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const userId = req.user && req.user.id ? String(req.user.id) : 'anonymous';
-    const dir = path.join(UPLOAD_ROOT, userId);
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const safe = (file.originalname || 'file.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
-    cb(null, `${Date.now()}-${safe}`);
-  }
-});
+// Store files in memory so they can be immediately uploaded to Firebase Storage
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname || '').toLowerCase();

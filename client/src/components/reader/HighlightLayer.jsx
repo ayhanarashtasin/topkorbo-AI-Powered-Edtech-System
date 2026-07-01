@@ -2,10 +2,8 @@ import React from 'react';
 import { HiAnnotation } from 'react-icons/hi';
 import './HighlightLayer.css';
 
-/**
- * Renders highlights on top of the PDF.
- * Expects an array of highlight objects. Each highlight has `rects` (array of { x, y, width, height } in [0..1] space).
- */
+// Renders saved highlights on top of the PDF. Coordinates are normalised
+// [0..1] so highlights scale correctly with zoom and resize.
 export default function HighlightLayer({ highlights, activeTool, onHighlightClick }) {
   if (!highlights || highlights.length === 0) return null;
 

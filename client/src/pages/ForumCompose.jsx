@@ -47,7 +47,8 @@ export default function ForumCompose() {
     return () => { cancelled = true; };
   }, [editId]);
 
-  // Object URLs for previews
+  // Create object URLs for the image previews and revoke them on cleanup so
+  // we don't leak memory when files change or the component unmounts.
   useEffect(() => {
     const urls = imageFiles.map((f) => URL.createObjectURL(f));
     setImagePreviews(urls);

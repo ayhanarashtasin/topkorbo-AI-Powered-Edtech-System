@@ -70,7 +70,6 @@ const COLLEGE_ABBRS = {
   "Government Edward College": "GEC",
 };
 
-// Auto-generate abbreviation from college name if not in the lookup table
 const autoCollegeAbbr = (name) => {
   if (!name) return "";
   const skip = new Set(["and", "&", "of", "the", "al"]);
@@ -191,7 +190,6 @@ export default function MockTestExam() {
       setConfig(parsedConfig);
       setFromQbank(storedFromQbank);
 
-      // ── Restore saved answers ────────────────────────────────────────────
       const savedAnswers = sessionStorage.getItem("mock_exam_answers");
       if (savedAnswers) {
         try {
@@ -199,7 +197,6 @@ export default function MockTestExam() {
         } catch (_) { }
       }
 
-      // ── Restore saved written answers ────────────────────────────────────
       const savedWrittenAnswers = sessionStorage.getItem(
         "mock_exam_written_answers",
       );
@@ -209,7 +206,6 @@ export default function MockTestExam() {
         } catch (_) { }
       }
 
-      // ── Restore saved ai evals ──────────────────────────────────────────
       const savedAiEvals = sessionStorage.getItem("mock_exam_ai_evals");
       if (savedAiEvals) {
         try {
@@ -217,7 +213,6 @@ export default function MockTestExam() {
         } catch (_) { }
       }
 
-      // ── Restore submitted / review state ────────────────────────────────
       const wasSubmitted =
         sessionStorage.getItem("mock_exam_submitted") === "true";
       const wasReview =
@@ -225,21 +220,18 @@ export default function MockTestExam() {
 
       if (wasSubmitted) {
         setIsSubmitted(true);
-        setIsReviewMode(true); // skip the result modal on refresh — go straight to review
+        setIsReviewMode(true);
         const savedTimeLeft = sessionStorage.getItem("mock_exam_time_left");
         setTimeLeft(savedTimeLeft ? parseInt(savedTimeLeft, 10) : 0);
         return;
       }
 
-      // ── Restore / initialise the countdown using an absolute end-time ────
       const savedEndTime = sessionStorage.getItem("mock_exam_end_time");
       if (savedEndTime) {
-        // Page was refreshed mid-exam — recalculate how many seconds remain
         const remaining = Math.round(
           (parseInt(savedEndTime, 10) - Date.now()) / 1000,
         );
         if (remaining <= 0) {
-          // Time ran out while the page was closed/refreshing
           setTimeLeft(0);
           setIsSubmitted(true);
           setIsReviewMode(true);
@@ -250,7 +242,6 @@ export default function MockTestExam() {
           setTimeLeft(remaining);
         }
       } else {
-        // Very first load — stamp the absolute end-time
         const endTime = Date.now() + parsedConfig.duration * 60 * 1000;
         sessionStorage.setItem("mock_exam_end_time", endTime.toString());
         setTimeLeft(parsedConfig.duration * 60);
@@ -269,7 +260,6 @@ export default function MockTestExam() {
     };
   }, []);
 
-  // ── Persist answers on every change ─────────────────────────────────────
   useEffect(() => {
     if (Object.keys(answers).length > 0) {
       sessionStorage.setItem("mock_exam_answers", JSON.stringify(answers));
@@ -443,7 +433,6 @@ export default function MockTestExam() {
       setIsEvaluating(false);
     }
 
-    // ── Persist this full attempt to the practice history (best-effort) ──────
     try {
       const durationMinutes =
         (config && (config.duration || config.durationMinutes)) || 0;
@@ -478,7 +467,6 @@ export default function MockTestExam() {
 
       await savePracticeAttempt(attemptPayload);
     } catch (err) {
-      // Practice history is non-blocking — log and toast but don't fail submit
       console.warn("[practice] failed to persist attempt:", err);
       const reason =
         err?.message ||
@@ -509,7 +497,6 @@ export default function MockTestExam() {
       console.error("Failed to save mock test attempt", err);
     }
 
-    // Submit to contest backend if it is a contest
     if (config?.contestId) {
       let finalScore = 0;
       questions.forEach((question, index) => {
@@ -577,14 +564,12 @@ export default function MockTestExam() {
         "mock_exam_ai_evals",
       ].forEach((key) => sessionStorage.removeItem(key));
 
-      // Redirect directly to /contests
       navigate("/contests");
       return;
     }
 
     setIsSubmitted(true);
     setShowResultModal(true);
-    // Persist submitted state so a refresh lands in review mode
     sessionStorage.setItem("mock_exam_submitted", "true");
     sessionStorage.setItem("mock_exam_time_left", String(timeLeft));
   };
@@ -847,7 +832,6 @@ export default function MockTestExam() {
       }
     });
 
-    // 2. Extract and render inline math: $...$
     processed = processed.replace(/\$([^\$]+)\$/g, (match, p1) => {
       try {
         const rendered = katex.renderToString(p1.trim(), {
@@ -862,19 +846,13 @@ export default function MockTestExam() {
       }
     });
 
-    // 3. Apply markdown formatting to the remaining text (with placeholders)
     processed = processed
-      // Headings: ### Heading, ## Heading, # Heading
       .replace(/^### (.+)$/gm, '<div style="font-size:15px;font-weight:700;color:#4F46E5;margin:16px 0 6px;border-bottom:1px solid #E2E8F0;padding-bottom:4px;">$1</div>')
       .replace(/^## (.+)$/gm, '<div style="font-size:17px;font-weight:700;color:#1E293B;margin:20px 0 8px;border-bottom:2px solid #6366F1;padding-bottom:6px;">$1</div>')
       .replace(/^# (.+)$/gm, '<div style="font-size:19px;font-weight:800;color:#1E293B;margin:20px 0 10px;border-bottom:2px solid #6366F1;padding-bottom:6px;">$1</div>')
-      // Bold
       .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#1E293B;">$1</strong>')
-      // Numbered steps
       .replace(/^(\d+)\.\s/gm, '<span style="display:inline-block;background:#6366F1;color:#FFF;font-weight:700;font-size:13px;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;margin-right:8px;">$1</span>')
-      // Bullet points
       .replace(/^[-•]\s(.+)$/gm, '<div style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;"><span style="color:#6366F1;font-weight:bold;margin-top:2px;">•</span><span>$1</span></div>')
-      // Line breaks
       .replace(/\n\n/g, '<div style="margin:12px 0;"></div>')
       .replace(/\n/g, '<br/>');
 
@@ -901,13 +879,11 @@ export default function MockTestExam() {
       image: followUpImage || undefined
     };
 
-    // 2. Optimistically append user message to local state
     setAiChatThreads(prev => ({
       ...prev,
       [qId]: [...currentThread, userMessage]
     }));
 
-    // Clear follow-up input states
     setFollowUpText("");
     setFollowUpImage(null);
     setIsSendingFollowUp(true);
@@ -930,7 +906,6 @@ export default function MockTestExam() {
 
       if (res.ok) {
         const data = await res.json();
-        // Append AI response
         setAiChatThreads(prev => ({
           ...prev,
           [qId]: [
@@ -1183,8 +1158,6 @@ export default function MockTestExam() {
             return true;
           })
           .map((q, qIndex) => {
-            // Note: we use the original index to display the correct question number
-            // So we need to find its actual index in the `questions` array.
             const actualIndex = questions.findIndex(
               (origQ) => origQ._id === q._id || origQ === q,
             );

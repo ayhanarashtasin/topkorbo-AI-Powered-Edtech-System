@@ -9,7 +9,6 @@ const ApiResponse = require('../utils/apiResponse');
  */
 exports.createQuestion = async (req, res, next) => {
   try {
-    // Verify the user is a teacher
     const user = await User.findById(req.user.id);
     if (!user || user.role !== 'teacher') {
       return ApiResponse.error(res, 'Only teachers can upload questions', 403);
@@ -29,7 +28,6 @@ exports.createQuestion = async (req, res, next) => {
       solutionImageUrl
     } = req.body;
 
-    // Basic validation
     if (!questionText || !questionText.trim()) {
       return ApiResponse.error(res, 'Question text is required', 400);
     }
@@ -49,7 +47,6 @@ exports.createQuestion = async (req, res, next) => {
       return ApiResponse.error(res, 'Topic is required', 400);
     }
 
-    // Build the question document
     const questionData = {
       teacher: user._id,
       questionText: questionText.trim(),
@@ -126,7 +123,6 @@ exports.getTopicsForMockTest = async (req, res, next) => {
       return ApiResponse.error(res, 'subject, paper, and chapter are required query params', 400);
     }
 
-    // Query distinct topics along with question count matching the filter
     const topics = await Question.aggregate([
       {
         $match: {
@@ -161,13 +157,10 @@ exports.getTopicsForMockTest = async (req, res, next) => {
 
 /**
  * @desc    Get distinct available question sources (Board/College) for a given
- *          subject + paper + type combination. Each source contains a count
- *          of how many questions are available.
+ *          subject + paper + type combination.
  * @route   GET /api/questions/sources
  * @access  Private
- * @query   subject  – 'Physics' | 'Chemistry' | 'Higher Math' | 'Biology' | ...
- *          paper    – '1st' | '2nd'
- *          type     – 'mcq' | 'cq' | 'written'  (optional – returns all if missing)
+ * @query   subject, paper, type (optional)
  */
 exports.getQuestionSources = async (req, res, next) => {
   try {
@@ -182,7 +175,6 @@ exports.getQuestionSources = async (req, res, next) => {
       baseMatch.type = type;
     }
 
-    // Board sources: group by (board, year, type)
     const boardSources = await Question.aggregate([
       { $match: { ...baseMatch, 'tags.category': 'board' } },
       { $unwind: '$tags' },
@@ -212,7 +204,6 @@ exports.getQuestionSources = async (req, res, next) => {
       { $sort: { year: -1, board: 1 } }
     ]);
 
-    // College sources: group by (college, year, type)
     const collegeSources = await Question.aggregate([
       { $match: { ...baseMatch, 'tags.category': 'college' } },
       { $unwind: '$tags' },
@@ -253,18 +244,9 @@ exports.getQuestionSources = async (req, res, next) => {
 
 /**
  * @desc    Get all questions that belong to a specific board/college source
- *          (optionally filtered by year). Returns every question that exists
- *          in the database matching the tag — no random sampling, no limit
- *          other than a safety cap to keep responses sane.
  * @route   GET /api/questions/by-source
  * @access  Private
- * @query   subject    – 'Physics' | 'Chemistry' | 'Higher Math' | 'Biology'
- *          paper      – '1st' | '2nd'
- *          sourceType – 'board' | 'college' | 'admission'
- *          name       – board name (e.g. "Dinajpur"), college name, or university code (e.g. "RU")
- *          year       – optional (e.g. "2023")
- *          type       – optional 'mcq' | 'cq' | 'written'
- *          shift      – optional (e.g. "1st Shift") – only for admission
+ * @query   subject, paper, sourceType, name, year (optional), type (optional), shift (optional)
  */
 exports.getQuestionsBySource = async (req, res, next) => {
   try {
@@ -282,7 +264,6 @@ exports.getQuestionsBySource = async (req, res, next) => {
       return ApiResponse.error(res, "sourceType must be 'board', 'college', or 'admission'", 400);
     }
 
-    // For board/college, subject and paper are required
     if (sourceType !== 'admission' && (!subject || !paper)) {
       return ApiResponse.error(res, 'subject and paper are required for board/college sources', 400);
     }
@@ -321,15 +302,10 @@ exports.getQuestionsBySource = async (req, res, next) => {
 };
 
 /**
- * @desc    Get distinct university (varsity admission) sources for a given
- *          subject + paper + type combination. Mirrors `getQuestionSources`
- *          but groups by the `admission` tag's `university` field. Used by
- *          the Question Bank Varsity Admission flow.
+ * @desc    Get distinct university (varsity admission) sources
  * @route   GET /api/questions/varsity-sources
  * @access  Private
- * @query   subject – 'Physics' | 'Chemistry' | 'Higher Math' | 'Biology' | ...
- *          paper   – '1st' | '2nd'
- *          type    – 'mcq' | 'cq' | 'written'  (optional – returns all if missing)
+ * @query   subject, paper, type (optional)
  */
 exports.getVarsityAdmissionSources = async (req, res, next) => {
   try {
@@ -384,14 +360,10 @@ exports.getVarsityAdmissionSources = async (req, res, next) => {
 };
 
 /**
- * @desc    Get every written question tagged for a particular subject + paper
- *          inside the Varsity Admission stream. Powers the dedicated
- *          `VarsityWrittenView` page where students review written practice
- *          questions chapter-wise.
+ * @desc    Get written questions for Varsity Admission stream
  * @route   GET /api/questions/varsity-written
  * @access  Private
- * @query   subject – 'Physics' | 'Chemistry' | 'Higher Math' | 'Biology'
- *          paper   – '1st' | '2nd'
+ * @query   subject, paper, university (optional)
  */
 exports.getVarsityWrittenQuestions = async (req, res, next) => {
   try {
@@ -427,13 +399,10 @@ exports.getVarsityWrittenQuestions = async (req, res, next) => {
 };
 
 /**
- * @desc    Get admission question "cards" for a specific university. Groups
- *          questions by (year, shift, type) so the front-end can render a
- *          grid of source cards similar to the Academic MCQ board cards.
+ * @desc    Get admission question cards for a specific university
  * @route   GET /api/questions/admission-cards
  * @access  Private
- * @query   university – e.g. 'RU', 'DU', 'CU', 'GST', 'AGRI', …
- *          type       – optional 'mcq' | 'written' (filter by question type)
+ * @query   university, type (optional)
  */
 exports.getAdmissionQuestionCards = async (req, res, next) => {
   try {
@@ -498,7 +467,7 @@ exports.getAdmissionQuestionCards = async (req, res, next) => {
 exports.updateQuestion = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user || user.role !== 'teacher') {
+    if (!user) {
       return ApiResponse.error(res, 'Only teachers can update questions', 403);
     }
 

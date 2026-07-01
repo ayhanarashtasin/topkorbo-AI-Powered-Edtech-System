@@ -118,7 +118,6 @@ export default function QuestionBank() {
           <p className="section-subtitle">{t('questionbank.subtitle')}</p>
         </motion.div>
 
-        {/* Filter mockup */}
         <motion.div
           className="qbank__filter-bar"
           initial={{ opacity: 0, y: 20 }}

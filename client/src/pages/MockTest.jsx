@@ -6,7 +6,6 @@ import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import './MockTest.css';
 
-// ─── Thematic Mock Test Subjects Data ──────────────────────────────────────
 const MOCK_SUBJECTS = [
   { id: 'bangla', labelEn: 'Bangla', labelBn: 'বাংলা', letter: 'অ', color: '#C08552', bg: 'rgba(192, 133, 82, 0.08)', prefixType: 'letter' },
   { id: 'english', labelEn: 'English', labelBn: 'English', letter: 'Aa', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)', prefixType: 'letter' },
@@ -19,7 +18,6 @@ const MOCK_SUBJECTS = [
   { id: 'iba', labelEn: 'IBA', labelBn: 'IBA', icon: '🏢', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.08)', prefixType: 'icon' },
 ];
 
-// ─── University Tag Constants ──────────────────────────────────────────────
 const ENGINEERING_UNIVERSITIES = [
   'BUET', 'CUET', 'KUET', 'RUET', 'MIST', 'IUT', 'BUTEX'
 ];
@@ -41,7 +39,6 @@ const COLLEGES = [
   'Sylhet Cadet College', 'Faujdarhat Cadet College'
 ];
 
-// ─── HSC & Admission Standard Chapters Database ─────────────────────────────
 const MOCK_CHAPTERS = {
   bangla: {
     '1st': [
@@ -187,7 +184,6 @@ export default function MockTest() {
     streak: parseInt(localStorage.getItem('topkorbo_streak')) || 5 // Premium default streak
   });
 
-  // Step state: 1 = Subject Selection, 2 = Paper & Chapter Config, 3 = Exam Settings
   const [searchParams, setSearchParams] = useSearchParams();
   const stepParam = searchParams.get('step');
   const step = stepParam ? parseInt(stepParam) : 1;
@@ -196,7 +192,6 @@ export default function MockTest() {
     setSearchParams({ step: String(nextStep) });
   };
 
-  // Restore step from sessionStorage on load if searchParam is not present
   useEffect(() => {
     const savedStep = sessionStorage.getItem('mock_test_step');
     if (!stepParam && savedStep && savedStep !== '1') {
@@ -204,7 +199,6 @@ export default function MockTest() {
     }
   }, [stepParam, setSearchParams]);
 
-  // Step 3: Exam configuration states
   const [selectedStandards, setSelectedStandards] = useState(() => {
     const saved = sessionStorage.getItem('mock_selected_standards');
     return saved ? JSON.parse(saved) : [];
@@ -237,7 +231,6 @@ export default function MockTest() {
   const [showSelectedTopics, setShowSelectedTopics] = useState(false);
   const [errorModal, setErrorModal] = useState({ show: false, message: '' });
 
-  // Selections
   const [selectedSubjectIds, setSelectedSubjectIds] = useState(() => {
     const saved = sessionStorage.getItem('mock_test_subject_ids');
     return saved ? JSON.parse(saved) : [];
@@ -247,14 +240,12 @@ export default function MockTest() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Topic-level state
   const [topicsMap, setTopicsMap] = useState({});
   const [selectedTopics, setSelectedTopics] = useState(() => {
     const saved = sessionStorage.getItem('mock_test_selected_topics');
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Persist states to sessionStorage
   useEffect(() => {
     sessionStorage.setItem('mock_test_step', String(step));
   }, [step]);
@@ -271,7 +262,6 @@ export default function MockTest() {
     sessionStorage.setItem('mock_test_selected_topics', JSON.stringify(selectedTopics));
   }, [selectedTopics]);
 
-  // Persist Step 3 states
   useEffect(() => {
     sessionStorage.setItem('mock_selected_standards', JSON.stringify(selectedStandards));
     // Synchronize legacy examStandard with the first selection to preserve validation & backwards-compatibility logic
@@ -301,7 +291,6 @@ export default function MockTest() {
   useEffect(() => { sessionStorage.setItem('mock_exam_duration', String(examDuration)); }, [examDuration]);
   useEffect(() => { sessionStorage.setItem('mock_negative_marking', String(negativeMarking)); }, [negativeMarking]);
 
-  // Handle browser back button from active exam
   useEffect(() => {
     if (sessionStorage.getItem('mock_exam_questions')) {
       [
@@ -355,10 +344,9 @@ export default function MockTest() {
     iba: 'IBA'
   };
 
-  // Fetch topics from database for a selected chapter
   const fetchTopicsForChapter = async (subId, paper, chapter) => {
     const key = `${subId}__${paper}__${chapter}`;
-    if (topicsMap[key]) return; // already fetched
+    if (topicsMap[key]) return;
 
     try {
       const token = localStorage.getItem('topkorbo_token');
@@ -374,7 +362,6 @@ export default function MockTest() {
           ...prev,
           [key]: data.data
         }));
-        // Select all fetched topics by default if not already initialized
         setSelectedTopics(prev => {
           if (key in prev) return prev;
           return {
@@ -388,14 +375,12 @@ export default function MockTest() {
     }
   };
 
-  // Toggle selection handler for multiple subject selection
   const toggleSubjectSelection = (id) => {
     setSelectedSubjectIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
 
-  // Toggle chapter configuration selection
   const toggleChapterSelection = (subId, paper, chapter) => {
     setSelectedChapters(prev => {
       const subMap = prev[subId] || { '1st': [], '2nd': [] };
@@ -427,7 +412,6 @@ export default function MockTest() {
     });
   };
 
-  // Toggle "Select All / Deselect All" chapters for a subject's active paper
   const toggleAllChaptersForPaper = (subId, paper) => {
     const allChapters = MOCK_CHAPTERS[subId]?.[paper] || [];
     setSelectedChapters(prev => {
@@ -461,7 +445,6 @@ export default function MockTest() {
     });
   };
 
-  // Pre-fetch topics for all selected chapters when entering Step 2
   useEffect(() => {
     if (step === 2) {
       selectedSubjectIds.forEach(subId => {
@@ -475,7 +458,6 @@ export default function MockTest() {
     }
   }, [step]);
 
-  // Sync selected subjects with empty initial paper/chapter selections
   useEffect(() => {
     const updatedChapters = { ...selectedChapters };
     let changed = false;
@@ -490,7 +472,6 @@ export default function MockTest() {
       }
     });
 
-    // Cleanup unselected subjects
     Object.keys(updatedChapters).forEach(subId => {
       if (!selectedSubjectIds.includes(subId)) {
         delete updatedChapters[subId];
@@ -503,7 +484,6 @@ export default function MockTest() {
     }
   }, [selectedSubjectIds]);
 
-  // Session guard and fetch latest user info
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) {
@@ -544,7 +524,6 @@ export default function MockTest() {
     fetchUser();
   }, []);
 
-  // Build selections payload for the API
   const buildSelections = () => {
     const selections = [];
     selectedSubjectIds.forEach(subId => {
@@ -563,7 +542,6 @@ export default function MockTest() {
     return selections;
   };
 
-  // Get total selection summary counts
   const getSelectionSummary = () => {
     let subjectCount = selectedSubjectIds.length;
     let chapterCount = 0;
@@ -575,7 +553,6 @@ export default function MockTest() {
     return { subjectCount, chapterCount, topicCount };
   };
 
-  // Handle Start Exam
   const handleStartExam = async () => {
     if (isStartingExam) return;
 
@@ -664,13 +641,11 @@ export default function MockTest() {
 
         console.log('Mock test questions:', data.data);
 
-        // Derive standard string for config display
         const displayStds = selectedStandards.map(id => {
           const matched = QUESTION_STANDARDS.find(s => s.id === id);
           return matched ? (language === 'en' ? matched.labelEn : matched.labelBn) : id;
         }).join(', ');
 
-        // Store exam config for future exam page
         sessionStorage.setItem('mock_exam_questions', JSON.stringify(data.data.questions));
         sessionStorage.setItem('mock_exam_config', JSON.stringify({
           duration: examDuration,
@@ -693,7 +668,6 @@ export default function MockTest() {
     }
   };
 
-  // Step 3 data
   const QUESTION_STANDARDS = [
     { id: 'engineering', labelEn: 'Engineering', labelBn: 'ইঞ্জিনিয়ারিং', icon: <HiLightningBolt size={28} />, desc: language === 'en' ? 'BUET, CUET, KUET, RUET...' : 'বুয়েট, চুয়েট, কুয়েট...', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)' },
     { id: 'university', labelEn: 'University', labelBn: 'বিশ্ববিদ্যালয়', icon: <HiAcademicCap size={28} />, desc: language === 'en' ? 'DU, CU, RU, JU, GST...' : 'ঢাবি, চবি, রাবি, জাবি...', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)' },
@@ -712,7 +686,6 @@ export default function MockTest() {
 
   const summary = getSelectionSummary();
 
-  // Step labels for progress indicator
   const STEP_LABELS = [
     { num: 1, labelEn: 'Subjects', labelBn: 'বিষয়' },
     { num: 2, labelEn: 'Chapters', labelBn: 'অধ্যায়' },
@@ -724,7 +697,6 @@ export default function MockTest() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <main className="dashboard-main">
-        {/* Header Section */}
         <header className="dashboard-header">
           <div className="dashboard-header__welcome">
             <h2>{t('mock.title')}</h2>
@@ -742,7 +714,6 @@ export default function MockTest() {
         </header>
 
         <div className="mock-workspace animate-fade-in">
-          {/* ──── Step Progress Indicator ──── */}
           <div className="mock-step-indicator">
             {STEP_LABELS.map((s, idx) => (
               <div key={s.num} className="mock-step-indicator-item">
@@ -764,7 +735,7 @@ export default function MockTest() {
             ))}
           </div>
           {step === 1 ? (
-            /* ──────────────── STEP 1: SUBJECT LIST SELECTION VIEW ──────────────── */
+            /* STEP 1: SUBJECT LIST SELECTION VIEW */
             <div className="mock-subject-selection">
               <div className="mock-selection-info">
                 <h3>{t('mock.select_subject')}</h3>
@@ -781,7 +752,6 @@ export default function MockTest() {
                       style={{ '--hover-color': subject.color }}
                     >
                       <div className="mock-card-glow"></div>
-                      {/* Selected Check Badge */}
                       <div className="mock-card-select-badge">
                         <HiCheckCircle size={22} />
                       </div>
@@ -805,7 +775,6 @@ export default function MockTest() {
                 })}
               </div>
 
-              {/* Selection actions footer with Next Step button */}
               <div className="mock-selection-actions">
                 <button
                   type="button"
@@ -819,9 +788,8 @@ export default function MockTest() {
               </div>
             </div>
           ) : step === 2 ? (
-            /* ──────────────── STEP 2: PAPER & CHAPTER SELECTION VIEW ──────────────── */
+            /* STEP 2: PAPER & CHAPTER SELECTION VIEW */
             <div className="mock-config-selection animate-fade-in">
-              {/* Back Button */}
               <button
                 type="button"
                 onClick={() => setStep(1)}
@@ -843,12 +811,10 @@ export default function MockTest() {
                   const subject = MOCK_SUBJECTS.find(s => s.id === subId);
                   if (!subject) return null;
 
-                  // 1st Paper selection status
                   const all1stChapters = MOCK_CHAPTERS[subId]?.['1st'] || [];
                   const selected1st = selectedChapters[subId]?.['1st'] || [];
                   const is1stAllChecked = all1stChapters.length > 0 && selected1st.length === all1stChapters.length;
 
-                  // 2nd Paper selection status
                   const all2ndChapters = MOCK_CHAPTERS[subId]?.['2nd'] || [];
                   const selected2nd = selectedChapters[subId]?.['2nd'] || [];
                   const is2ndAllChecked = all2ndChapters.length > 0 && selected2nd.length === all2ndChapters.length;
@@ -859,7 +825,6 @@ export default function MockTest() {
                       className="mock-config-card animate-scale-up"
                       style={{ '--hover-color': subject.color }}
                     >
-                      {/* Card Subject Header */}
                       <div className="mock-config-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
                         <div className="mock-config-subject-info">
                           <div
@@ -874,10 +839,8 @@ export default function MockTest() {
                         </div>
                       </div>
 
-                      {/* Side-by-Side Dual Column Grids */}
                       <div className="mock-papers-side-by-side-grid">
 
-                        {/* 1st Paper Column */}
                         <div className="mock-paper-column">
                           <button
                             type="button"
@@ -914,7 +877,6 @@ export default function MockTest() {
                                     <span className="mock-chapter-pill-name">{chapter}</span>
                                   </button>
 
-                                  {/* Sub-topics list (expanded when chapter is selected) */}
                                   {isSelected && topics.length > 0 && (
                                     <div className="mock-chapter-topics-sublist animate-slide-down">
                                       <span className="mock-topics-label">
@@ -958,10 +920,8 @@ export default function MockTest() {
                           </div>
                         </div>
 
-                        {/* 2nd Paper Column */}
                         <div className="mock-paper-column">
                           {all2ndChapters.length === 0 ? (
-                            /* Symmetrical notice for single-paper subjects like ICT */
                             <div className="mock-empty-paper-notice animate-fade-in">
                               <span style={{ fontSize: '1.25rem', marginBottom: '8px' }}>ℹ️</span>
                               <span>
@@ -1059,7 +1019,6 @@ export default function MockTest() {
                 })}
               </div>
 
-              {/* Action Footer for Step 2 */}
               <div className="mock-selection-actions">
                 <button
                   type="button"
@@ -1075,9 +1034,8 @@ export default function MockTest() {
               </div>
             </div>
           ) : step === 3 ? (
-            /* ──────────────── STEP 3: EXAM CONFIGURATION ──────────────── */
+            /* STEP 3: EXAM CONFIGURATION */
             <div className="mock-exam-config animate-fade-in">
-              {/* Back Button */}
               <button
                 type="button"
                 onClick={() => setStep(2)}

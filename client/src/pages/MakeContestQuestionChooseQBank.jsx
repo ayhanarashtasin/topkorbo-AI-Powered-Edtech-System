@@ -24,7 +24,6 @@ function renderLatex(text) {
   }
 }
 
-// ─── Thematic Mock Test Subjects Data (Matches MockTest.jsx) ────────────────
 const MOCK_SUBJECTS = [
   { id: 'bangla', labelEn: 'Bangla', labelBn: 'বাংলা', letter: 'অ', color: '#C08552', bg: 'rgba(192, 133, 82, 0.08)', prefixType: 'letter' },
   { id: 'english', labelEn: 'English', labelBn: 'English', letter: 'Aa', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)', prefixType: 'letter' },
@@ -37,7 +36,6 @@ const MOCK_SUBJECTS = [
   { id: 'iba', labelEn: 'IBA', labelBn: 'IBA', icon: '🏢', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.08)', prefixType: 'icon' },
 ];
 
-// ─── HSC & Admission Standard Chapters Database (Matches MockTest.jsx) ─────
 const MOCK_CHAPTERS = {
   bangla: {
     '1st': [
@@ -183,7 +181,6 @@ const SUBJECT_DB_MAP = {
   iba: 'IBA'
 };
 
-// Maps Create Contest subject names → MOCK_SUBJECTS IDs
 const CONTEST_TO_MOCK_MAP = {
   'Physics': 'physics',
   'Chemistry': 'chemistry',
@@ -212,13 +209,11 @@ export default function MakeContestQuestionChooseQBank() {
     role: localStorage.getItem('topkorbo_role') || 'student'
   });
 
-  // Step state: 1 = Subjects, 2 = Chapters, 3 = Settings
   const [step, setStep] = useState(() => {
     const saved = sessionStorage.getItem('cc_qbank_step');
     return saved ? parseInt(saved) : 1;
   });
 
-  // Selections (restored from sessionStorage)
   const [selectedSubjectIds, setSelectedSubjectIds] = useState(() => {
     const saved = sessionStorage.getItem('cc_qbank_selectedSubjectIds');
     return saved ? JSON.parse(saved) : [];
@@ -243,7 +238,6 @@ export default function MakeContestQuestionChooseQBank() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Persist qbank selections to sessionStorage
   useEffect(() => { sessionStorage.setItem('cc_qbank_step', String(step)); }, [step]);
   useEffect(() => { sessionStorage.setItem('cc_qbank_selectedSubjectIds', JSON.stringify(selectedSubjectIds)); }, [selectedSubjectIds]);
   useEffect(() => { sessionStorage.setItem('cc_qbank_selectedChapters', JSON.stringify(selectedChapters)); }, [selectedChapters]);
@@ -287,7 +281,6 @@ export default function MakeContestQuestionChooseQBank() {
     }
   }, [step]);
 
-  // Filter subjects based on what was selected on the Create Contest page
   const filteredSubjects = (() => {
     if (!contestData) return MOCK_SUBJECTS;
 
@@ -327,7 +320,6 @@ export default function MakeContestQuestionChooseQBank() {
     return MOCK_SUBJECTS;
   })();
 
-  // Auth Guard
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) { navigate('/'); return; }
@@ -336,7 +328,6 @@ export default function MakeContestQuestionChooseQBank() {
     if (!contestData) { navigate('/make-contest-question'); return; }
   }, [navigate, contestData]);
 
-  // Fetch topics from database for a selected chapter (matching MockTest.jsx)
   const fetchTopicsForChapter = async (subId, paper, chapter) => {
     const key = `${subId}__${paper}__${chapter}`;
     if (topicsMap[key]) return; // already fetched
@@ -368,14 +359,12 @@ export default function MakeContestQuestionChooseQBank() {
     }
   };
 
-  // Toggle subject selection
   const toggleSubjectSelection = (id) => {
     setSelectedSubjectIds(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
 
-  // Toggle chapter selection
   const toggleChapterSelection = (subId, paper, chapter) => {
     setSelectedChapters(prev => {
       const subMap = prev[subId] || { '1st': [], '2nd': [] };
@@ -407,7 +396,6 @@ export default function MakeContestQuestionChooseQBank() {
     });
   };
 
-  // Toggle "Select All / Deselect All" chapters for a subject's active paper
   const toggleAllChaptersForPaper = (subId, paper) => {
     const allChapters = MOCK_CHAPTERS[subId]?.[paper] || [];
     setSelectedChapters(prev => {
@@ -441,7 +429,6 @@ export default function MakeContestQuestionChooseQBank() {
     });
   };
 
-  // Pre-fetch topics when entering step 2
   useEffect(() => {
     if (step === 2) {
       selectedSubjectIds.forEach(subId => {
@@ -455,7 +442,6 @@ export default function MakeContestQuestionChooseQBank() {
     }
   }, [step]);
 
-  // Sync selected subjects with chapter structure
   useEffect(() => {
     const updatedChapters = { ...selectedChapters };
     let changed = false;
@@ -482,7 +468,6 @@ export default function MakeContestQuestionChooseQBank() {
     }
   }, [selectedSubjectIds]);
 
-  // Build selections payload
   const buildSelections = () => {
     const selections = [];
     selectedSubjectIds.forEach(subId => {
@@ -501,7 +486,6 @@ export default function MakeContestQuestionChooseQBank() {
     return selections;
   };
 
-  // Select all currently-loaded questions (or deselect them if all are already selected)
   const allVisibleSelected = fetchedQuestions.length > 0 &&
     fetchedQuestions.every(q => selectedQuestionIds.includes(q._id));
 
@@ -522,8 +506,6 @@ export default function MakeContestQuestionChooseQBank() {
       return;
     }
 
-    // Keep the full question objects for the selected ids so the next page can
-    // display & individually remove them. Order follows the on-screen list.
     const selectedSet = new Set(selectedQuestionIds);
     const newQuestions = fetchedQuestions.filter(q => selectedSet.has(q._id));
 
@@ -537,23 +519,17 @@ export default function MakeContestQuestionChooseQBank() {
       finalQuestions = newQuestions;
     }
 
-    // Selections carry questionIds (consumed by the backend) + subject/paper/
-    // chapters (for the summary), grouped by subject + paper.
     const finalSelections = buildSelectionsFromQuestions(finalQuestions);
 
-    // Preserve any selected ids that weren't in the current fetch (e.g. picked
-    // before re-navigating chapters) so the backend still receives them.
     const accountedFor = new Set(newQuestions.map(q => q._id));
     const leftover = selectedQuestionIds.filter(id => !accountedFor.has(id));
     if (leftover.length > 0) {
       finalSelections.push({ questionIds: leftover, numberOfQuestions: leftover.length, chapters: [] });
     }
 
-    // Update the full set of selected IDs in session storage
     const allSelectedIds = finalQuestions.map(q => q._id);
     sessionStorage.setItem('cc_qbank_selectedQuestionIds', JSON.stringify(allSelectedIds));
 
-    // Save to sessionStorage so subsequent pages survive reloads
     sessionStorage.setItem('cc_qbankSelections', JSON.stringify(finalSelections));
     sessionStorage.setItem('cc_qbankQuestions', JSON.stringify(finalQuestions));
 
@@ -595,7 +571,6 @@ export default function MakeContestQuestionChooseQBank() {
         </header>
 
         <div className="mock-workspace animate-fade-in">
-          {/* ──── Step Progress Indicator ──── */}
           <div className="mock-step-indicator">
             {STEP_LABELS.map((s, idx) => (
               <div key={s.num} className="mock-step-indicator-item">
@@ -618,7 +593,7 @@ export default function MakeContestQuestionChooseQBank() {
           </div>
 
           {step === 1 ? (
-            /* ──────────────── STEP 1: SUBJECT LIST SELECTION VIEW ──────────────── */
+            /* STEP 1: SUBJECT LIST SELECTION VIEW */
             <div className="mock-subject-selection">
               <div className="mock-selection-info">
                 <h3>{language === 'en' ? 'Select Subject(s)' : 'বিষয় নির্বাচন করুন'}</h3>
@@ -681,7 +656,7 @@ export default function MakeContestQuestionChooseQBank() {
               </div>
             </div>
           ) : step === 2 ? (
-            /* ──────────────── STEP 2: PAPER & CHAPTER SELECTION VIEW ──────────────── */
+            /* STEP 2: PAPER & CHAPTER SELECTION VIEW */
             <div className="mock-config-selection animate-fade-in">
               <button 
                 type="button" 
@@ -733,7 +708,6 @@ export default function MakeContestQuestionChooseQBank() {
                       </div>
 
                       <div className="mock-papers-side-by-side-grid">
-                        {/* 1st Paper Column */}
                         <div className="mock-paper-column">
                           <button
                             type="button"
@@ -813,7 +787,6 @@ export default function MakeContestQuestionChooseQBank() {
                           </div>
                         </div>
 
-                        {/* 2nd Paper Column */}
                         <div className="mock-paper-column">
                           {all2ndChapters.length === 0 ? (
                             <div className="mock-empty-paper-notice animate-fade-in">
@@ -926,7 +899,7 @@ export default function MakeContestQuestionChooseQBank() {
               </div>
             </div>
           ) : step === 3 ? (
-            /* ──────────────── STEP 3: SELECT QUESTIONS ──────────────── */
+            /* STEP 3: SELECT QUESTIONS */
             <div className="qsel animate-fade-in">
               <div className="qsel-toolbar">
                 <button
@@ -1009,7 +982,6 @@ export default function MakeContestQuestionChooseQBank() {
                           {isSelected ? <HiCheckCircle size={24} /> : <div className="qsel-card__check-empty"></div>}
                         </div>
                         <div className="qsel-card__body">
-                          {/* Subject / Paper / Chapter / Topic meta-tags */}
                           <div className="qsel-meta">
                             <span className="qsel-meta-tag qsel-meta-tag--subject">{q.subject}</span>
                             <span className="qsel-meta-tag qsel-meta-tag--paper">{paperLabel}</span>
@@ -1036,7 +1008,6 @@ export default function MakeContestQuestionChooseQBank() {
                             <img src={q.imageUrl} alt="Question" className="qsel-img" />
                           )}
 
-                          {/* Options if MCQ */}
                           {q.type === 'mcq' && q.options && (
                             <div className="qsel-options">
                               {q.options.map((opt, oIdx) => (
@@ -1048,7 +1019,6 @@ export default function MakeContestQuestionChooseQBank() {
                             </div>
                           )}
 
-                          {/* All source tags this question carries in the database */}
                           {q.tags && q.tags.length > 0 && (
                             <div className="qsel-tags">
                               <HiTag size={14} className="qsel-tags__icon" />

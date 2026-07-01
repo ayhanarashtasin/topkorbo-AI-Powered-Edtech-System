@@ -3,18 +3,14 @@ import forumApi from '../services/forumApi';
 import useSocket from '../hooks/useSocket';
 
 /**
- * ForumContext
- * ----------------------------------------------------------------------------
- * Central store for the entire Community feature.
- * Mirrors the ergonomics of an RTK Query slice:
- *   - posts[], notifications[], unreadCount, user, categories
- *   - refreshFeed(), refreshNotifications()
- *   - toggleReaction({ targetType, target, type })
- *   - addComment({ postId, ... }), updateComment, deleteComment
- *   - createPost(payload), updatePost, deletePost
- *   - markNotificationRead(id), markAllNotificationsRead()
- *   - follow(id), unfollow(id)
- * Socket.IO events keep the state fresh across tabs in real time.
+ * ForumContext — central store for the entire Community feature.
+ *
+ * Mirrors the ergonomics of an RTK Query slice: it owns the user,
+ * categories, notifications and unread-count state, exposes action
+ * helpers (createPost, toggleReaction, follow, …) and accepts
+ * `subscribeReaction` / `subscribeComment` callbacks for components that
+ * need live updates. Socket.IO events keep state fresh across tabs in
+ * real time.
  */
 
 const ForumContext = createContext(null);
@@ -47,7 +43,7 @@ export function ForumProvider({ children }) {
       const json = await forumApi.categories();
       setCategories(json.data || []);
     } catch (e) {
-      // non-fatal
+      // Categories failing to load is non-fatal — the rest of the app still works.
     }
   }, []);
 
@@ -57,7 +53,7 @@ export function ForumProvider({ children }) {
       setNotifications(json.data || []);
       setUnreadCount(json.unreadCount || 0);
     } catch (e) {
-      // non-fatal
+      // Notifications failing to load is non-fatal.
     }
   }, []);
 
@@ -98,7 +94,7 @@ export function ForumProvider({ children }) {
   const toggleReaction = useCallback(async ({ targetType, target, type }) => {
     try {
       const json = await forumApi.toggleReaction({ targetType, target, type });
-      // Notify any listeners that have registered a per-target handler
+      // Fan the result out to any per-target subscriber registered via `subscribeReaction`.
       const key = `${targetType}:${target}`;
       const h = handlersRef.current[`reaction:${key}`];
       if (h) h(json.data);
@@ -108,10 +104,8 @@ export function ForumProvider({ children }) {
     }
   }, []);
 
-  /**
-   * Subscribe to live reaction updates for a specific post or comment.
-   * Returns an unsubscribe function.
-   */
+  // Subscribe to live reaction updates for a specific post or comment.
+  // Returns an unsubscribe function.
   const subscribeReaction = useCallback(
     (targetType, target, callback) => {
       if (!socket) return () => {};
@@ -195,7 +189,7 @@ export function ForumProvider({ children }) {
       setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch (e) {
-      // best-effort
+      // Best-effort — we still mark the notification read locally even if the API call fails.
     }
   }, []);
 
@@ -205,7 +199,7 @@ export function ForumProvider({ children }) {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (e) {
-      // best-effort
+      // Best-effort — local optimistic state is the source of truth on failure.
     }
   }, []);
 
