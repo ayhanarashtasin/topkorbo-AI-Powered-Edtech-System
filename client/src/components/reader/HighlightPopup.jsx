@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './HighlightPopup.css';
 
 const COLORS = [
@@ -8,7 +8,7 @@ const COLORS = [
   { label: 'Pink', value: '#E91E63' },
 ];
 
-export default function HighlightPopup({ position, onHighlight, onCancel }) {
+export default function HighlightPopup({ position, onHighlight, onSummarize }) {
   const [note, setNote] = useState('');
   const [isAddingNote, setIsAddingNote] = useState(false);
 
@@ -35,6 +35,17 @@ export default function HighlightPopup({ position, onHighlight, onCancel }) {
               />
             ))}
           </div>
+          {onSummarize && (
+            <button
+              className="rb-action-btn rb-action-btn--primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSummarize(note);
+              }}
+            >
+              Summarize highlighted text
+            </button>
+          )}
           <button 
             className="rb-action-btn"
             onClick={(e) => {

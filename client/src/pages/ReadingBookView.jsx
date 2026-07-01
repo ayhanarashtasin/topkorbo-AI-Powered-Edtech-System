@@ -11,6 +11,7 @@ import ReaderToolbar from '../components/reader/ReaderToolbar';
 import PdfCanvas from '../components/reader/PdfCanvas';
 import HighlightSidebar from '../components/reader/HighlightSidebar';
 import ChatSidebar from '../components/reader/ChatSidebar';
+import bookApi from '../services/bookApi';
 import { useHighlights } from '../hooks/useHighlights';
 import { useChat } from '../hooks/useChat';
 import ErrorBoundary from '../components/layout/ErrorBoundary';
@@ -22,7 +23,6 @@ import {
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import './ReadingBookView.css';
-
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.5;
 
@@ -59,6 +59,9 @@ export default function ReadingBookView() {
   const [isNavOpen, setIsNavOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [isHighlightSidebarOpen, setIsHighlightSidebarOpen] = useState(false);
   const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
+  const [knowledgeLoading, setKnowledgeLoading] = useState(true);
+  const [knowledgeStatus, setKnowledgeStatus] = useState('pending');
+  const [tutorScope, setTutorScope] = useState('page');
   // Page text is held in a ref so it doesn't re-render this view; ChatSidebar
 // reads it at send time. The boolean flag below drives the chat composer's
 // disabled state.
@@ -71,18 +74,30 @@ export default function ReadingBookView() {
   const saveInProgressRef = useRef(false);
 
   const { highlights, addHighlight, deleteHighlight, updateHighlight } = useHighlights({ bookId, chapterId, apiBase });
-  const chat = useChat({ bookId, chapterId, pageNumber });
+  const chat = useChat({
+    bookId,
+    chapterId: chapterId,
+    topicId: '',
+    nodeId: '',
+    pageNumber,
+    scope: tutorScope,
+    selectedTopicTitle: '',
+    selectedChapterTitle: chapter?.title || '',
+    selectedNodeTitle: ''
+  });
 
   const handlePageTextReady = useCallback((text) => {
     pageTextRef.current = text || '';
     setPageTextReady(Boolean(text));
   }, []);
 
-  // Reset the page-text state when the user navigates to a different page so
-// the chat composer never sends text from the previous page by accident.
   useEffect(() => {
-    pageTextRef.current = '';
-    setPageTextReady(false);
+    const timer = window.setTimeout(() => {
+      pageTextRef.current = '';
+      setPageTextReady(false);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [pageNumber, chapterId]);
 
   // Per-page in-memory undo/redo stack for pen strokes. `history.present`
@@ -156,7 +171,6 @@ export default function ReadingBookView() {
       });
     },
     onError: (err) => {
-      // eslint-disable-next-line no-console
       console.error('Annotation autosave failed:', err);
       toast.error(t('rb.reader.error.save') || 'Failed to save annotations');
     }
@@ -193,7 +207,6 @@ export default function ReadingBookView() {
           localStorage.setItem('topkorbo_role', data.data.role);
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Error fetching user data:', err);
       }
     };
@@ -206,9 +219,12 @@ export default function ReadingBookView() {
   useEffect(() => {
     if (!bookId || !chapterId) return;
     let cancelled = false;
-    setLoadingMeta(true);
-    setPdfError(false);
-    setNumPages(0);
+    const resetTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      setLoadingMeta(true);
+      setPdfError(false);
+      setNumPages(0);
+    }, 0);
 
     const token = localStorage.getItem('topkorbo_token');
     const headers = { Authorization: `Bearer ${token}` };
@@ -226,7 +242,6 @@ export default function ReadingBookView() {
           throw new Error(data.message || 'Failed to load chapter');
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Error loading chapter:', err);
         if (!cancelled) {
           setPdfError(true);
@@ -247,7 +262,6 @@ export default function ReadingBookView() {
           setChapters(data.data.chapters || []);
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Error loading book details:', err);
       }
     })();
@@ -264,7 +278,6 @@ export default function ReadingBookView() {
           setAllAnnotations([]);
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Error loading annotations:', err);
       }
     })();
@@ -284,14 +297,50 @@ export default function ReadingBookView() {
           setReadingState(null);
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Error loading reading state:', err);
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(resetTimer);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, chapterId, apiBase]);
+
+  // Poll the book-level AI status while the background processor is still working.
+  useEffect(() => {
+    if (!bookId) return undefined;
+    let cancelled = false;
+    let pollTimer = null;
+
+    const loadKnowledge = async () => {
+      try {
+        setKnowledgeLoading(true);
+        const data = await bookApi.getKnowledge(bookId);
+        if (cancelled || !data) return;
+        setKnowledgeStatus(data.status || 'pending');
+        if (data.status === 'completed') {
+          setKnowledgeLoading(false);
+          return;
+        }
+        setKnowledgeLoading(false);
+        pollTimer = window.setTimeout(loadKnowledge, 8000);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load book knowledge:', err);
+        setKnowledgeStatus('failed');
+        setKnowledgeLoading(false);
+        pollTimer = window.setTimeout(loadKnowledge, 12000);
+      }
+    };
+
+    loadKnowledge();
+    return () => {
+      cancelled = true;
+      if (pollTimer) window.clearTimeout(pollTimer);
+    };
+  }, [bookId]);
 
   // Mirror the current page in the URL so the chapter is shareable / restorable.
   useEffect(() => {
@@ -323,7 +372,6 @@ export default function ReadingBookView() {
         })
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to save reading state:', err);
     } finally {
       saveInProgressRef.current = false;
@@ -345,7 +393,7 @@ export default function ReadingBookView() {
 
 
   const flushPenAutosave = useCallback(async () => {
-    try { await autosave.flush(); } catch (_) { /* best-effort */ }
+    try { await autosave.flush(); } catch { /* best-effort */ }
   }, [autosave]);
 
   // Handles a new pen stroke: assigns an optimistic local ID, pushes the
@@ -377,7 +425,7 @@ export default function ReadingBookView() {
     }
 
 
-  }, [autosave, bookId, chapterId, history, pageNumber, apiBase, t]);
+  }, [autosave, history, pageNumber]);
 
   // Eraser click on a pen stroke: optimistically remove it, push an
   // undoable erase action, and DELETE on the server. If the DELETE
@@ -405,8 +453,7 @@ export default function ReadingBookView() {
       setAllAnnotations((prev) => prev.filter((a) => a._id !== id));
     } catch (err) {
       // Server rejected the delete — undo the local removal.
-      // eslint-disable-next-line no-console
-      console.error('Failed to delete annotation:', err);
+        console.error('Failed to delete annotation:', err);
       history.undo();
       toast.error(t('rb.reader.error.network'));
     }
@@ -449,8 +496,7 @@ export default function ReadingBookView() {
         await annotationApi.remove(originalId);
         setAllAnnotations((prev) => prev.filter((a) => a._id !== originalId));
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to delete original stroke for partial erase:', err);
+      console.error('Failed to delete original stroke for partial erase:', err);
       }
     }
 
@@ -492,7 +538,6 @@ export default function ReadingBookView() {
       try {
         await annotationApi.bulkDelete(serverIds);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Failed to clear page annotations from server:', err);
         toast.error(t('rb.reader.error.network'));
       }
@@ -539,6 +584,33 @@ export default function ReadingBookView() {
     const next = chapters[currentChapterIndex + 1];
     navigate(`/reading-books/${bookId}/${next._id}?page=1`);
   };
+
+  const handleSelectChapter = useCallback((cid) => {
+    flushPenAutosave();
+    setTutorScope('page');
+    navigate(`/reading-books/${bookId}/${cid}?page=1`);
+  }, [bookId, flushPenAutosave, navigate]);
+
+  const handleAskBookAI = useCallback(() => {
+    setTutorScope('book');
+    setIsChatSidebarOpen(true);
+  }, []);
+
+  const handleAskHighlightAI = useCallback((highlight, mode = 'summary') => {
+    if (!highlight) return;
+    setTutorScope('page');
+    setIsChatSidebarOpen(true);
+    const question = mode === 'notes'
+      ? 'Give good notes from this highlighted passage.'
+      : 'Summarize this highlighted passage.';
+    void chat.send(question, '', {
+      requestedAction: mode === 'notes' ? 'notes' : 'summary',
+      scopeOverride: 'page',
+      focusText: highlight.text || '',
+      focusLabel: highlight.note || `Page ${highlight.pageNumber || ''}`,
+      focusPageNumber: highlight.pageNumber || null
+    });
+  }, [chat]);
 
   // Page navigation — always flushes pending autosave before changing
 // `pageNumber` so queued strokes aren't attributed to the wrong page.
@@ -591,7 +663,6 @@ export default function ReadingBookView() {
           );
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('Failed to remove bookmark:', err);
       }
       return;
@@ -615,7 +686,6 @@ export default function ReadingBookView() {
         toast.success(t('rb.reader.bookmark') + ' ✓');
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to add bookmark:', err);
     }
   }, [apiBase, bookId, chapterId, isBookmarked, pageNumber, readingState, t]);
@@ -645,7 +715,6 @@ export default function ReadingBookView() {
         );
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to remove bookmark:', err);
     }
   };
@@ -659,13 +728,12 @@ export default function ReadingBookView() {
   const pdfRequestHeaders = useMemo(() => {
     const token = localStorage.getItem('topkorbo_token');
     return token ? { Authorization: `Bearer ${token}` } : undefined;
-  }, [bookId, chapterId]);
+  }, []);
 
   const onDocumentLoadSuccess = ({ numPages: n }) => {
     setNumPages(n);
   };
   const onDocumentLoadError = (err) => {
-    // eslint-disable-next-line no-console
     console.error('PDF load error:', err);
     setPdfError(true);
   };
@@ -674,7 +742,10 @@ export default function ReadingBookView() {
     return (
       <div className="dashboard-container">
         <Sidebar activeTab="reading-books" user={user} />
-        <main className="dashboard-main rb-reader">
+        <main
+          className="dashboard-main rb-reader"
+          style={{ '--rb-chat-width': isChatSidebarOpen ? '380px' : '0px' }}
+        >
           <div className="rb-reader__loading">
             <p>{t('rb.reader.loading')}</p>
           </div>
@@ -687,7 +758,10 @@ export default function ReadingBookView() {
     return (
       <div className="dashboard-container">
         <Sidebar activeTab="reading-books" user={user} />
-        <main className="dashboard-main rb-reader">
+        <main
+          className="dashboard-main rb-reader"
+          style={{ '--rb-chat-width': isChatSidebarOpen ? '380px' : '0px' }}
+        >
           <div className="rb-reader__error">
             <HiOutlineLightBulb size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
             <p>{t('rb.reader.pdf_error')}</p>
@@ -710,12 +784,18 @@ export default function ReadingBookView() {
   return (
     <div className="dashboard-container">
       <Sidebar activeTab="reading-books" user={user} />
-      <main className="dashboard-main rb-reader">
+      <main
+        className="dashboard-main rb-reader"
+        style={{ '--rb-chat-width': isChatSidebarOpen ? '380px' : '0px' }}
+      >
         <ChapterNav
+          key={`${bookId}-${chapterId}`}
           book={book}
           chapters={chapters}
           activeChapterId={chapterId}
-          onSelectChapter={(cid) => { flushPenAutosave(); navigate(`/reading-books/${bookId}/${cid}?page=1`); }}
+          pageNumber={pageNumber}
+          onSelectChapter={handleSelectChapter}
+          onAskBookAI={handleAskBookAI}
           isOpen={isNavOpen}
           onClose={() => setIsNavOpen(false)}
           bookmarks={readingState?.bookmarks || []}
@@ -749,7 +829,10 @@ export default function ReadingBookView() {
             <button
               type="button"
               className="rb-reader__menu-btn"
-              onClick={() => setIsChatSidebarOpen(true)}
+              onClick={() => {
+                setTutorScope('page');
+                setIsChatSidebarOpen(true);
+              }}
               title="Ask AI Tutor"
               style={{ marginLeft: 8 }}
             >
@@ -776,6 +859,19 @@ export default function ReadingBookView() {
               </div>
             </div>
           </header>
+
+          {(knowledgeLoading || knowledgeStatus !== 'completed') && (
+            <div className="rb-reader__knowledge-banner">
+              <strong>
+                {knowledgeStatus === 'failed' ? 'AI tutor is still warming up' : 'AI is preparing this book'}
+              </strong>
+              <span>
+                {knowledgeStatus === 'failed'
+                  ? 'The tutor is not ready yet, but you can still read the PDF.'
+                  : 'You can keep reading while the AI finishes preparing answers.'}
+              </span>
+            </div>
+          )}
 
           <ReaderToolbar
             activeTool={activeTool}
@@ -836,6 +932,7 @@ export default function ReadingBookView() {
                   onDocumentLoad={onDocumentLoadSuccess}
                   onDocumentError={onDocumentLoadError}
                   onPageTextReady={handlePageTextReady}
+                  onSummarizeSelection={handleAskHighlightAI}
                 />
               </ErrorBoundary>
             )}
@@ -853,6 +950,7 @@ export default function ReadingBookView() {
             }
           }}
           onDeleteHighlight={deleteHighlight}
+          onAskHighlightAI={handleAskHighlightAI}
         />
         <ChatSidebar
           isOpen={isChatSidebarOpen}
@@ -861,10 +959,17 @@ export default function ReadingBookView() {
           loading={chat.loading}
           sending={chat.sending}
           pageNumber={pageNumber}
+          scope={tutorScope}
+          onScopeChange={setTutorScope}
           pageTextReady={pageTextReady}
           getPageText={() => pageTextRef.current}
           onSend={chat.send}
           onClear={chat.clear}
+          onSourceClick={(targetPage) => {
+            if (Number.isFinite(Number(targetPage)) && Number(targetPage) >= 1) {
+              setPageNumber(Number(targetPage));
+            }
+          }}
         />
       </main>
     </div>

@@ -12,19 +12,18 @@ import HighlightLayer from './HighlightLayer';
 import HighlightPopup from './HighlightPopup';
 import './PdfCanvas.css';
 
+/* eslint-disable react-hooks/immutability */
+
 // Point pdfjs at the bundled worker; fall back to a version-matched CDN URL
 // if the bundled asset failed to load for any reason.
 try {
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-  // eslint-disable-next-line no-console
   console.info('[PdfCanvas] Worker URL set:', pdfWorkerUrl);
 } catch (err) {
   try {
     pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-    // eslint-disable-next-line no-console
     console.warn('[PdfCanvas] Worker fallback to CDN', err);
   } catch (err2) {
-    // eslint-disable-next-line no-console
     console.error('pdfjs worker setup failed:', err2);
   }
 }
@@ -62,14 +61,14 @@ export default function PdfCanvas({
   onDeleteHighlight,
   onDocumentLoad,
   onDocumentError,
-  onPageTextReady
+  onPageTextReady,
+  onSummarizeSelection
 }) {
   const { t } = useLanguage();
   const pageRef = useRef(null);
   const annotationCanvasRef = useRef(null);
   const wrapperRef = useRef(null);
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
-  const [loadError, setLoadError] = useState(null);
   const [selectionPopup, setSelectionPopup] = useState(null);
   const [activeNotePopup, setActiveNotePopup] = useState(null);
   const documentFile = useMemo(
@@ -383,11 +382,11 @@ export default function PdfCanvas({
               try {
                 newRange.setStart(highlightStartNodeRef.current, highlightStartOffsetRef.current);
                 newRange.setEnd(range.startContainer, range.startOffset);
-              } catch (err) {
+              } catch {
                 try {
                   newRange.setStart(range.startContainer, range.startOffset);
                   newRange.setEnd(highlightStartNodeRef.current, highlightStartOffsetRef.current);
-                } catch (e) {
+                } catch {
                   // Ignore if direction fails
                 }
               }
@@ -580,12 +579,11 @@ export default function PdfCanvas({
             .join(' ');
           onPageTextReady(text);
         })
-        .catch((err) => {
-          if (cancelled) return;
-          // eslint-disable-next-line no-console
-          console.warn('[PdfCanvas] getTextContent failed:', err?.message);
-          onPageTextReady('');
-        });
+      .catch(() => {
+        if (cancelled) return;
+        console.warn('[PdfCanvas] getTextContent failed');
+        onPageTextReady('');
+      });
     },
     [scale, fileUrl, pageNumber, onPageTextReady]
   );
@@ -596,14 +594,12 @@ export default function PdfCanvas({
   }, [fileUrl, pageNumber]);
 
   const handleDocumentError = useCallback((err) => {
-    // eslint-disable-next-line no-console
     console.error('[PdfCanvas] Document load error', {
       fileUrl,
       message: err?.message,
       name: err?.name,
       stack: err?.stack
     });
-    setLoadError(err);
     if (onDocumentError) onDocumentError(err);
   }, [fileUrl, onDocumentError]);
 
@@ -659,7 +655,6 @@ export default function PdfCanvas({
         <Document
           file={documentFile}
           onLoadSuccess={(data) => {
-            setLoadError(null);
             if (onDocumentLoad) onDocumentLoad(data);
           }}
           onLoadError={handleDocumentError}
@@ -722,9 +717,14 @@ export default function PdfCanvas({
               <HighlightPopup
                 position={selectionPopup.position}
                 onHighlight={handleCreateHighlight}
-                onCancel={() => {
-                  setSelectionPopup(null);
-                  window.getSelection()?.removeAllRanges();
+                onSummarize={() => {
+                  if (onSummarizeSelection) {
+                    onSummarizeSelection({
+                      text: selectionPopup.text,
+                      pageNumber,
+                      note: ''
+                    });
+                  }
                 }}
               />
             )}

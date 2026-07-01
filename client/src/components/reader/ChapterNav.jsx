@@ -1,10 +1,12 @@
+import { useMemo } from 'react';
 import { useLanguage } from '../../hooks/useLanguage';
 import {
   HiX,
   HiBookOpen,
   HiChevronLeft,
   HiChevronRight,
-  HiDocumentText
+  HiDocumentText,
+  HiOutlineSparkles
 } from 'react-icons/hi';
 import './ChapterNav.css';
 
@@ -21,13 +23,17 @@ export default function ChapterNav({
   onPrevChapter,
   onNextChapter,
   hasPrev,
-  hasNext
+  hasNext,
+  onAskBookAI
 }) {
   const { t } = useLanguage();
 
+  const sortedChapters = useMemo(() => {
+    return [...(chapters || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [chapters]);
+
   return (
     <>
-      {/* Click-to-dismiss backdrop shown only on mobile when the drawer is open. */}
       <div
         className={`rb-chapnav__backdrop ${isOpen ? 'rb-chapnav__backdrop--visible' : ''}`}
         onClick={onClose}
@@ -49,6 +55,9 @@ export default function ChapterNav({
                   {book.paper && book.paper !== 'N/A' ? ` · ${book.paper}` : ''}
                 </span>
               )}
+              <span className="rb-chapnav__status rb-chapnav__status--ready">
+                Ready
+              </span>
             </div>
           </div>
           <button
@@ -62,23 +71,28 @@ export default function ChapterNav({
         </header>
 
         <div className="rb-chapnav__chapters">
-          <h4 className="rb-chapnav__section-title">
-            {t('rb.reader.chapters')}
-          </h4>
-          {(!chapters || chapters.length === 0) ? (
-            <p className="rb-chapnav__empty">
-              {t('rb.reader.no_chapters')}
-            </p>
+          <div className="rb-chapnav__section-head">
+            <h4 className="rb-chapnav__section-title">{t('rb.reader.chapters')}</h4>
+            <button
+              type="button"
+              className="rb-chapnav__book-ai-btn"
+              onClick={onAskBookAI}
+            >
+              <HiOutlineSparkles size={14} />
+              <span>Ask about book</span>
+            </button>
+          </div>
+
+          {sortedChapters.length === 0 ? (
+            <p className="rb-chapnav__empty">{t('rb.reader.no_chapters')}</p>
           ) : (
             <ul className="rb-chapnav__list">
-              {chapters.map((c, idx) => (
+              {sortedChapters.map((c, idx) => (
                 <li key={c._id}>
                   <button
                     type="button"
                     onClick={() => onSelectChapter(c._id)}
-                    className={`rb-chapnav__item ${
-                      c._id === activeChapterId ? 'rb-chapnav__item--active' : ''
-                    }`}
+                    className={`rb-chapnav__item ${c._id === activeChapterId ? 'rb-chapnav__item--active' : ''}`}
                   >
                     <span className="rb-chapnav__num">{idx + 1}</span>
                     <span className="rb-chapnav__title">{c.title}</span>
@@ -113,9 +127,7 @@ export default function ChapterNav({
         </div>
 
         <div className="rb-chapnav__bookmarks">
-          <h4 className="rb-chapnav__section-title">
-            {t('rb.reader.bookmarks')}
-          </h4>
+          <h4 className="rb-chapnav__section-title">{t('rb.reader.bookmarks')}</h4>
           {(!bookmarks || bookmarks.length === 0) ? (
             <p className="rb-chapnav__empty">{t('rb.reader.no_bookmarks')}</p>
           ) : (
@@ -128,9 +140,7 @@ export default function ChapterNav({
                     onClick={() => onSelectBookmark(bm)}
                   >
                     <HiDocumentText size={14} />
-                    <span>
-                      {t('rb.reader.page_label').replace('{n}', bm.pageNumber)}
-                    </span>
+                    <span>{t('rb.reader.page_label').replace('{n}', bm.pageNumber)}</span>
                   </button>
                   {onClearBookmark && (
                     <button

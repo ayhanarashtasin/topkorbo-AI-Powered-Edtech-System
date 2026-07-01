@@ -5,8 +5,10 @@ const path = require('path');
 const Book = require('../models/Book');
 const Annotation = require('../models/Annotation');
 const ReadingState = require('../models/ReadingState');
+const BookKnowledge = require('../models/BookKnowledge');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
+const { queueBookKnowledge, getBookKnowledgeSnapshot } = require('../services/bookRagService');
 
 const VALID_CATEGORIES = ['Academic', 'Admission'];
 const VALID_GROUPS = ['Science', 'Arts', 'Commerce', 'HSC', 'Engineering', 'Medical', 'Varsity'];
@@ -208,6 +210,10 @@ exports.createBook = async (req, res, next) => {
       }]
     });
 
+    queueBookKnowledge(book._id).catch((err) => {
+      console.error('[bookController] Failed to queue book knowledge:', err.message);
+    });
+
     return ApiResponse.success(res, book, 'Book created successfully', 201);
   } catch (err) {
     // Clean up uploaded file on error
@@ -262,6 +268,10 @@ exports.addChapter = async (req, res, next) => {
     book.chapters.push(newChapter);
     await book.save();
 
+    queueBookKnowledge(book._id, { force: true }).catch((err) => {
+      console.error('[bookController] Failed to requeue book knowledge:', err.message);
+    });
+
     return ApiResponse.success(res, book, 'Chapter added successfully', 201);
   } catch (err) {
     
@@ -311,6 +321,15 @@ exports.listBooks = async (req, res, next) => {
       }))
     }));
 
+    const knowledgeDocs = await BookKnowledge.find({ bookId: { $in: result.map((book) => book._id) } })
+      .select('bookId status')
+      .lean();
+    const knowledgeStatuses = knowledgeDocs.map((doc) => [String(doc.bookId), doc.status || 'pending']);
+    const knowledgeStatusMap = Object.fromEntries(knowledgeStatuses);
+    result.forEach((book) => {
+      book.knowledgeStatus = knowledgeStatusMap[String(book._id)] || 'pending';
+    });
+
     return ApiResponse.success(res, { books: result, total: result.length }, 'Books fetched successfully');
   } catch (err) {
     next(err);
@@ -333,6 +352,7 @@ exports.getBookDetail = async (req, res, next) => {
     if (!book) {
       return ApiResponse.error(res, 'Book not found', 404);
     }
+    const knowledge = await getBookKnowledgeSnapshot(book._id).catch(() => null);
     // Strip fileUrl from chapter list returned here
     const safeChapters = (book.chapters || []).map((c) => ({
       _id: c._id,
@@ -342,7 +362,59 @@ exports.getBookDetail = async (req, res, next) => {
       fileSize: c.fileSize,
       createdAt: c.createdAt
     }));
-    return ApiResponse.success(res, { ...book, chapters: safeChapters }, 'Book detail fetched');
+    return ApiResponse.success(res, {
+      ...book,
+      chapters: safeChapters,
+      knowledgeStatus: knowledge?.status || 'pending',
+      knowledgeMessage: knowledge?.message || ''
+    }, 'Book detail fetched');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Get the processed knowledge structure for a book
+ * @route   GET /api/books/:id/knowledge
+ * @access  Private
+ */
+exports.getKnowledge = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return ApiResponse.error(res, 'Book not found', 404);
+    }
+    const book = await Book.findById(req.params.id).select('_id title chapters').lean();
+    if (!book) {
+      return ApiResponse.error(res, 'Book not found', 404);
+    }
+    const knowledge = await getBookKnowledgeSnapshot(book._id);
+    if (!knowledge || ['pending', 'not_started', 'failed'].includes(knowledge.status)) {
+      queueBookKnowledge(book._id).catch((err) => {
+        console.error('[bookController] Failed to queue knowledge load:', err.message);
+      });
+    }
+
+    return ApiResponse.success(res, {
+      bookId: book._id,
+      bookTitle: book.title,
+      status: knowledge?.status || 'pending',
+      message: knowledge?.message || 'Processing has been queued',
+      documentType: knowledge?.documentType || 'unknown',
+      tree: knowledge?.tree || null,
+      nodes: knowledge?.nodes || [],
+      chapters: knowledge?.chapters || [],
+      completedAt: knowledge?.completedAt || null,
+      startedAt: knowledge?.startedAt || null,
+      sourcePages: knowledge?.sourcePages || 0,
+      totalPages: knowledge?.totalPages || 0,
+      extractedPages: knowledge?.extractedPages || 0,
+      emptyPages: knowledge?.emptyPages || 0,
+      totalChunks: knowledge?.totalChunks || 0,
+      embeddedChunks: knowledge?.embeddedChunks || 0,
+      vectorIndexStatus: knowledge?.vectorIndexStatus || 'not_started',
+      lastProcessingError: knowledge?.lastProcessingError || '',
+      currentBookId: book._id
+    }, 'Book knowledge fetched');
   } catch (err) {
     next(err);
   }

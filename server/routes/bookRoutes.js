@@ -11,6 +11,7 @@ const c = require('../controllers/bookController');
 
 // ── Taxonomy (any auth user) ──
 router.get('/taxonomy',                    auth, c.getTaxonomy);
+router.get('/:id/knowledge',               auth, c.getKnowledge);
 
 // ── Annotations (user-scoped) — declare before /:id routes ──
 router.post('/annotations',                auth, c.createAnnotation);

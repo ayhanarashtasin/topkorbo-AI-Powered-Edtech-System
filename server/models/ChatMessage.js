@@ -22,13 +22,39 @@ const chatMessageSchema = new mongoose.Schema({
   },
   chapterId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    default: null,
+    index: true
+  },
+  topicId: {
+    type: String,
+    default: '',
+    index: true
+  },
+  nodeId: {
+    type: String,
+    default: '',
+    index: true
+  },
+  contextType: {
+    type: String,
+    enum: ['page', 'topic', 'chapter', 'book', 'node', 'legacy'],
+    default: 'legacy',
+    index: true
+  },
+  contextKey: {
+    type: String,
+    default: '',
     index: true
   },
   pageNumber: {
     type: Number,
-    required: true,
-    min: 1
+    default: null,
+    validate: {
+      validator(value) {
+        return value === null || value === undefined || (Number.isInteger(value) && value >= 1);
+      },
+      message: 'pageNumber must be null or a positive integer'
+    }
   },
   role: {
     type: String,
@@ -39,6 +65,10 @@ const chatMessageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  sources: {
+    type: [mongoose.Schema.Types.Mixed],
+    default: []
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -47,5 +77,6 @@ const chatMessageSchema = new mongoose.Schema({
 
 // Compound index used by the hot path: history for (user, chapter, page).
 chatMessageSchema.index({ userId: 1, chapterId: 1, pageNumber: 1, createdAt: 1 });
+chatMessageSchema.index({ userId: 1, contextKey: 1, createdAt: 1 });
 
 module.exports = mongoose.model('ChatMessage', chatMessageSchema);
