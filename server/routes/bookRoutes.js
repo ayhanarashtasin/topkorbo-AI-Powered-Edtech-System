@@ -28,6 +28,7 @@ router.delete('/reading-state/bookmark/:id', auth, c.removeBookmark);
 router.get('/',                            auth, c.listBooks);
 router.get('/:id',                         auth, c.getBookDetail);
 router.get('/:id/chapters',                auth, c.listChapters);
+router.get('/:id/chapters/:cid/pdf',       auth, c.streamChapterPdf);
 router.get('/:id/chapters/:cid',           auth, c.getChapterMeta);
 
 // ── Teacher only ──

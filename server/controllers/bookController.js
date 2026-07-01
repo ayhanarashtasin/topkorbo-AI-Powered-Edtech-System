@@ -1,5 +1,7 @@
 const { bucket } = require('../config/firebase');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 const Book = require('../models/Book');
 const Annotation = require('../models/Annotation');
 const ReadingState = require('../models/ReadingState');
@@ -10,6 +12,80 @@ const VALID_CATEGORIES = ['Academic', 'Admission'];
 const VALID_GROUPS = ['Science', 'Arts', 'Commerce', 'HSC', 'Engineering', 'Medical', 'Varsity'];
 const VALID_PAPERS = ['1st', '2nd', 'N/A'];
 const VALID_ANNOTATION_TYPES = ['pen'];
+
+function storagePathFromUrl(fileUrl) {
+  if (!fileUrl) return '';
+
+  const storagePrefix = `https://storage.googleapis.com/${bucket.name}/`;
+  const fbPrefix = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/`;
+  const gsPrefix = `gs://${bucket.name}/`;
+
+  if (fileUrl.startsWith(storagePrefix)) {
+    return fileUrl.slice(storagePrefix.length);
+  }
+  if (fileUrl.startsWith(fbPrefix)) {
+    return decodeURIComponent(fileUrl.slice(fbPrefix.length).split('?')[0]);
+  }
+  if (fileUrl.startsWith(gsPrefix)) {
+    return fileUrl.slice(gsPrefix.length);
+  }
+  return '';
+}
+
+function parseRange(rangeHeader, size) {
+  if (!rangeHeader) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+  if (!match) return false;
+
+  let start = match[1] ? Number(match[1]) : null;
+  let end = match[2] ? Number(match[2]) : null;
+
+  if (start === null && end === null) return false;
+  if (start === null) {
+    start = Math.max(size - end, 0);
+    end = size - 1;
+  } else if (end === null || end >= size) {
+    end = size - 1;
+  }
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || start >= size) {
+    return false;
+  }
+  return { start, end };
+}
+
+function streamLocalPdf(fileUrl, req, res) {
+  const uploadsRoot = path.resolve(__dirname, '..', 'uploads');
+  const relativePath = fileUrl.replace(/^\/uploads\//, '');
+  const filePath = path.resolve(uploadsRoot, relativePath);
+
+  if (!filePath.startsWith(uploadsRoot + path.sep) || !fs.existsSync(filePath)) {
+    return ApiResponse.error(res, 'PDF file not found', 404);
+  }
+
+  const size = fs.statSync(filePath).size;
+  const range = parseRange(req.headers.range, size);
+  res.set({
+    'Accept-Ranges': 'bytes',
+    'Content-Type': 'application/pdf',
+    'Cache-Control': 'private, max-age=300'
+  });
+
+  if (range === false) {
+    res.set('Content-Range', `bytes */${size}`);
+    return res.sendStatus(416);
+  }
+  if (range) {
+    res.status(206).set({
+      'Content-Range': `bytes ${range.start}-${range.end}/${size}`,
+      'Content-Length': String(range.end - range.start + 1)
+    });
+    return fs.createReadStream(filePath, range).pipe(res);
+  }
+
+  res.set('Content-Length', String(size));
+  return fs.createReadStream(filePath).pipe(res);
+}
 
 const uploadFileToFirebase = (file, userId) => {
   return new Promise((resolve, reject) => {
@@ -326,8 +402,80 @@ exports.getChapterMeta = async (req, res, next) => {
     if (!book || !book.chapters || book.chapters.length === 0) {
       return ApiResponse.error(res, 'Book or Chapter not found', 404);
     }
-    const chapter = book.chapters[0];
+    const chapter = {
+      ...book.chapters[0],
+      fileUrl: `/api/books/${req.params.id}/chapters/${req.params.cid}/pdf`
+    };
     return ApiResponse.success(res, { chapter }, 'Chapter metadata fetched');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Stream a chapter PDF through the API so the reader does not depend
+ *          on public Firebase Storage URLs or bucket CORS settings.
+ * @route   GET /api/books/:id/chapters/:cid/pdf
+ * @access  Private
+ */
+exports.streamChapterPdf = async (req, res, next) => {
+  try {
+    if (!isValidObjectId(req.params.id) || !isValidObjectId(req.params.cid)) {
+      return ApiResponse.error(res, 'Invalid book or chapter id', 400);
+    }
+
+    const book = await Book.findOne(
+      { _id: req.params.id, 'chapters._id': req.params.cid },
+      { 'chapters.$': 1 }
+    ).lean();
+    if (!book || !book.chapters || book.chapters.length === 0) {
+      return ApiResponse.error(res, 'Book or Chapter not found', 404);
+    }
+
+    const fileUrl = book.chapters[0].fileUrl;
+    if (fileUrl && fileUrl.startsWith('/uploads/')) {
+      return streamLocalPdf(fileUrl, req, res);
+    }
+
+    const filePath = storagePathFromUrl(fileUrl);
+    if (!filePath) {
+      return ApiResponse.error(res, 'PDF file not found', 404);
+    }
+
+    const file = bucket.file(filePath);
+    const [exists] = await file.exists();
+    if (!exists) {
+      return ApiResponse.error(res, 'PDF file not found', 404);
+    }
+
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size || 0);
+    const range = parseRange(req.headers.range, size);
+
+    res.set({
+      'Accept-Ranges': 'bytes',
+      'Content-Type': metadata.contentType || 'application/pdf',
+      'Cache-Control': 'private, max-age=300'
+    });
+
+    if (range === false) {
+      res.set('Content-Range', `bytes */${size}`);
+      return res.sendStatus(416);
+    }
+    if (range) {
+      res.status(206).set({
+        'Content-Range': `bytes ${range.start}-${range.end}/${size}`,
+        'Content-Length': String(range.end - range.start + 1)
+      });
+      return file.createReadStream({ start: range.start, end: range.end })
+        .on('error', next)
+        .pipe(res);
+    }
+
+    res.set('Content-Length', String(size));
+    return file.createReadStream()
+      .on('error', next)
+      .pipe(res);
   } catch (err) {
     next(err);
   }

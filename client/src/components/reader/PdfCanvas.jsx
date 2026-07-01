@@ -43,6 +43,7 @@ try {
  */
 export default function PdfCanvas({
   fileUrl,
+  fileHeaders,
   pageNumber,
   scale,
   annotations,
@@ -71,6 +72,10 @@ export default function PdfCanvas({
   const [loadError, setLoadError] = useState(null);
   const [selectionPopup, setSelectionPopup] = useState(null);
   const [activeNotePopup, setActiveNotePopup] = useState(null);
+  const documentFile = useMemo(
+    () => fileHeaders ? { url: fileUrl, httpHeaders: fileHeaders } : fileUrl,
+    [fileUrl, fileHeaders]
+  );
 
   // Mirror of highlights used during drag-erase so we can update at 60fps
 // without spamming the backend; flushed on pointerUp via
@@ -652,7 +657,7 @@ export default function PdfCanvas({
     >
       <div className="rb-pdf-page-inner">
         <Document
-          file={fileUrl}
+          file={documentFile}
           onLoadSuccess={(data) => {
             setLoadError(null);
             if (onDocumentLoad) onDocumentLoad(data);

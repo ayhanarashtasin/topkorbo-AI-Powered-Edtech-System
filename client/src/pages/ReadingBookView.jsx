@@ -656,6 +656,11 @@ export default function ReadingBookView() {
         : `${apiBase.replace(/\/api$/, '')}${chapter.fileUrl}`)
     : null;
 
+  const pdfRequestHeaders = useMemo(() => {
+    const token = localStorage.getItem('topkorbo_token');
+    return token ? { Authorization: `Bearer ${token}` } : undefined;
+  }, [bookId, chapterId]);
+
   const onDocumentLoadSuccess = ({ numPages: n }) => {
     setNumPages(n);
   };
@@ -811,6 +816,7 @@ export default function ReadingBookView() {
               <ErrorBoundary>
                 <PdfCanvas
                   fileUrl={fileUrl}
+                  fileHeaders={pdfRequestHeaders}
                   pageNumber={pageNumber}
                   scale={scale}
                   annotations={visiblePageAnnotations}
