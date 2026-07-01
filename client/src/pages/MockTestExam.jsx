@@ -164,6 +164,10 @@ export default function MockTestExam() {
   const aiExplainFileRef = useRef(null);
   const followUpFileRef = useRef(null);
 
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [submittedQuestionKeys, setSubmittedQuestionKeys] = useState({});
+  const [visitedQuestionIndexes, setVisitedQuestionIndexes] = useState(new Set([0]));
+
   useEffect(() => {
     const storedQuestions = sessionStorage.getItem("mock_exam_questions");
     const storedConfig = sessionStorage.getItem("mock_exam_config");
@@ -213,6 +217,25 @@ export default function MockTestExam() {
         } catch (_) { }
       }
 
+      // ── Restore contest navigation state ─────────────────────────────────
+      const savedSubmittedKeys = sessionStorage.getItem("mock_exam_submitted_keys");
+      if (savedSubmittedKeys) {
+        try {
+          setSubmittedQuestionKeys(JSON.parse(savedSubmittedKeys));
+        } catch (_) { }
+      }
+      const savedVisitedIndexes = sessionStorage.getItem("mock_exam_visited_indexes");
+      if (savedVisitedIndexes) {
+        try {
+          setVisitedQuestionIndexes(new Set(JSON.parse(savedVisitedIndexes)));
+        } catch (_) { }
+      }
+      const savedActiveIdx = sessionStorage.getItem("mock_exam_active_idx");
+      if (savedActiveIdx) {
+        setActiveQuestionIndex(parseInt(savedActiveIdx, 10));
+      }
+
+      // ── Restore submitted / review state ────────────────────────────────
       const wasSubmitted =
         sessionStorage.getItem("mock_exam_submitted") === "true";
       const wasReview =
@@ -265,6 +288,19 @@ export default function MockTestExam() {
       sessionStorage.setItem("mock_exam_answers", JSON.stringify(answers));
     }
   }, [answers]);
+
+  // ── Persist contest navigation state on changes ─────────────────────────
+  useEffect(() => {
+    sessionStorage.setItem("mock_exam_submitted_keys", JSON.stringify(submittedQuestionKeys));
+  }, [submittedQuestionKeys]);
+
+  useEffect(() => {
+    sessionStorage.setItem("mock_exam_visited_indexes", JSON.stringify(Array.from(visitedQuestionIndexes)));
+  }, [visitedQuestionIndexes]);
+
+  useEffect(() => {
+    sessionStorage.setItem("mock_exam_active_idx", String(activeQuestionIndex));
+  }, [activeQuestionIndex]);
 
   const getQuestionKey = (question, index) =>
     question._id || `question-${index}`;
@@ -400,6 +436,159 @@ export default function MockTestExam() {
     return () => clearInterval(timer);
   }, [isSubmitted, timeLeft]);
 
+  const calculateCurrentContestScore = (updatedSubmittedKeys) => {
+    let score = 0;
+    questions.forEach((q, idx) => {
+      const k = getQuestionKey(q, idx);
+      if (updatedSubmittedKeys[k]) {
+        const selectedIndex = answers[k];
+        const correctIndex = getCorrectOptionIndex(q);
+        if (q.type === "mcq") {
+          if (selectedIndex !== undefined && selectedIndex !== null) {
+            if (selectedIndex === correctIndex) {
+              score += 1;
+            } else {
+              if (config?.negativeMarking) score -= 0.25;
+            }
+          }
+        } else if (q.type === "written" || q.type === "cq") {
+          const scoreVal = aiEvaluations[k] ? parseFloat(aiEvaluations[k].score) || 0 : 0;
+          score += scoreVal;
+        }
+      }
+    });
+    return Math.max(0, score);
+  };
+
+  const getPreviousUnsubmittedIndex = () => {
+    for (let i = activeQuestionIndex - 1; i >= 0; i--) {
+      const key = getQuestionKey(questions[i], i);
+      if (!submittedQuestionKeys[key]) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  const handleContestQuestionBack = () => {
+    const prevIdx = getPreviousUnsubmittedIndex();
+    if (prevIdx !== -1) {
+      setActiveQuestionIndex(prevIdx);
+      setVisitedQuestionIndexes((prev) => {
+        const next = new Set(prev);
+        next.add(prevIdx);
+        return next;
+      });
+    }
+  };
+
+  const handleContestQuestionSubmit = async (index) => {
+    const key = getQuestionKey(questions[index], index);
+    if (answers[key] === undefined) {
+      toast.error(language === "en" ? "Please select an option first." : "দয়া করে প্রথমে একটি উত্তর নির্বাচন করুন।");
+      return;
+    }
+
+    const updatedSubmittedKeys = { ...submittedQuestionKeys, [key]: true };
+    setSubmittedQuestionKeys(updatedSubmittedKeys);
+
+    // Calculate score
+    const currentScore = calculateCurrentContestScore(updatedSubmittedKeys);
+    const countSubmitted = Object.keys(updatedSubmittedKeys).length;
+
+    // Call submit endpoint instantly to update the database
+    try {
+      const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
+      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          score: currentScore,
+          totalQuestions: questions.length,
+          timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+          answersSubmitted: countSubmitted,
+          answers: answers
+        }),
+      });
+      toast.success(language === "en" ? `Question ${index + 1} Submitted & Saved!` : `প্রশ্ন ${index + 1} সাবমিট এবং সেভ হয়েছে!`, { duration: 1500 });
+    } catch (err) {
+      console.error("Error saving intermediate progress:", err);
+    }
+
+    // Check if ALL answers are now submitted
+    if (countSubmitted === questions.length) {
+      // Clear session storage for this exam
+      [
+        "mock_test_step",
+        "mock_test_subject_ids",
+        "mock_test_chapters",
+        "mock_test_selected_topics",
+        "mock_exam_standard",
+        "mock_question_type",
+        "mock_total_questions",
+        "mock_exam_duration",
+        "mock_negative_marking",
+        "mock_exam_questions",
+        "mock_exam_config",
+        "mock_exam_from_qbank",
+        "mock_exam_answers",
+        "mock_exam_end_time",
+        "mock_exam_submitted",
+        "mock_exam_review_mode",
+        "mock_exam_time_left",
+        "mock_exam_written_answers",
+        "mock_exam_ai_evals",
+        "mock_exam_submitted_keys",
+        "mock_exam_visited_indexes",
+        "mock_exam_active_idx",
+      ].forEach((key) => sessionStorage.removeItem(key));
+
+      // Redirect directly to /contests
+      navigate("/contests");
+      return;
+    }
+
+    // Go to next question
+    const nextIdx = index + 1;
+    if (nextIdx < questions.length) {
+      setActiveQuestionIndex(nextIdx);
+      setVisitedQuestionIndexes((prev) => {
+        const next = new Set(prev);
+        next.add(nextIdx);
+        return next;
+      });
+    } else {
+      // If we are at the last question page, but there are unsubmitted questions, navigate to the first one
+      const prevIdx = questions.findIndex((q, idx) => !updatedSubmittedKeys[getQuestionKey(q, idx)]);
+      if (prevIdx !== -1) {
+        setActiveQuestionIndex(prevIdx);
+        setVisitedQuestionIndexes((prev) => {
+          const next = new Set(prev);
+          next.add(prevIdx);
+          return next;
+        });
+      }
+    }
+  };
+
+  const handleContestQuestionNext = (index) => {
+    const nextIdx = index + 1;
+    if (nextIdx < questions.length) {
+      setActiveQuestionIndex(nextIdx);
+      setVisitedQuestionIndexes((prev) => {
+        const next = new Set(prev);
+        next.add(nextIdx);
+        return next;
+      });
+    } else {
+      toast.info(language === "en" ? "This is the last question." : "এটিই শেষ প্রশ্ন।");
+    }
+  };
+
   const handleSubmit = async () => {
     if (isSubmitted || isEvaluating) return;
 
@@ -501,6 +690,7 @@ export default function MockTestExam() {
       let finalScore = 0;
       questions.forEach((question, index) => {
         const key = getQuestionKey(question, index);
+        if (!submittedQuestionKeys[key]) return; // Only score submitted answers
         const selectedIndex = answers[key];
         const correctIndex = getCorrectOptionIndex(question);
 
@@ -535,6 +725,8 @@ export default function MockTestExam() {
             score: finalScore,
             totalQuestions: questions.length,
             timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+            answersSubmitted: Object.keys(submittedQuestionKeys).length,
+            answers: answers
           }),
         });
       } catch (err) {
@@ -562,6 +754,9 @@ export default function MockTestExam() {
         "mock_exam_time_left",
         "mock_exam_written_answers",
         "mock_exam_ai_evals",
+        "mock_exam_submitted_keys",
+        "mock_exam_visited_indexes",
+        "mock_exam_active_idx",
       ].forEach((key) => sessionStorage.removeItem(key));
 
       navigate("/contests");
@@ -959,7 +1154,7 @@ export default function MockTestExam() {
     return <div className="exam-loading">Loading...</div>;
   }
 
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = config?.contestId ? Object.keys(submittedQuestionKeys).length : Object.keys(answers).length;
   const totalCount = questions.length;
   const timeLabel =
     language === "en"
@@ -1118,9 +1313,55 @@ export default function MockTestExam() {
         )}
       </header>
 
+      {config?.contestId && !isReviewMode && (
+        <div className="exam-contest-navigation-box">
+          <div className="exam-mini-boxes-title">
+            {language === "en" ? "Contest Questions Navigator" : "কনটেস্ট প্রশ্ন নেভিগেটর"}
+          </div>
+          <div className="exam-mini-boxes-grid">
+            {questions.map((q, idx) => {
+              const questionKey = getQuestionKey(q, idx);
+              const isCurrent = idx === activeQuestionIndex;
+              const isSubmitted = !!submittedQuestionKeys[questionKey];
+              const isUnsubmitted = !isSubmitted && visitedQuestionIndexes.has(idx);
+
+              let boxClass = "mini-box--unvisited";
+              if (isCurrent) {
+                boxClass = "mini-box--active";
+              } else if (isSubmitted) {
+                boxClass = "mini-box--submitted";
+              } else if (isUnsubmitted) {
+                boxClass = "mini-box--unsubmitted";
+              }
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`exam-mini-box ${boxClass}`}
+                  onClick={() => {
+                    setActiveQuestionIndex(idx);
+                    setVisitedQuestionIndexes((prev) => {
+                      const next = new Set(prev);
+                      next.add(idx);
+                      return next;
+                    });
+                  }}
+                >
+                  {language === "en" ? idx + 1 : toBnNum(idx + 1)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="exam-questions-list">
         {questions
           .filter((q, qIndex) => {
+            if (config?.contestId && !isReviewMode) {
+              return qIndex === activeQuestionIndex;
+            }
             if (!isReviewMode || filterType === "all") return true;
             const questionKey = getQuestionKey(q, qIndex);
 
@@ -1460,6 +1701,35 @@ export default function MockTestExam() {
                           </div>
                         </div>
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {config?.contestId && !isReviewMode && (
+                  <div className="exam-contest-actions">
+                    <button
+                      type="button"
+                      className="btn-contest-submit"
+                      onClick={() => handleContestQuestionSubmit(actualIndex)}
+                      disabled={answers[questionKey] === undefined}
+                    >
+                      {language === "en" ? "Submit" : "সাবমিট"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-contest-next"
+                      onClick={() => handleContestQuestionNext(actualIndex)}
+                    >
+                      {language === "en" ? "Next" : "পরবর্তী"}
+                    </button>
+                    {getPreviousUnsubmittedIndex() !== -1 && (
+                      <button
+                        type="button"
+                        className="btn-contest-back"
+                        onClick={() => handleContestQuestionBack()}
+                      >
+                        {language === "en" ? "Back" : "পূর্ববর্তী অসাবমিটকৃত"}
+                      </button>
                     )}
                   </div>
                 )}

@@ -25,6 +25,14 @@ const contestResultSchema = new mongoose.Schema(
     timeTakenSeconds: {
       type: Number,
       required: true
+    },
+    answersSubmitted: {
+      type: Number,
+      default: 0
+    },
+    answers: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
     }
   },
   { timestamps: { createdAt: 'submittedAt', updatedAt: 'updatedAt' } }

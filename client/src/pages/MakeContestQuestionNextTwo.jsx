@@ -2349,7 +2349,7 @@ export default function MakeContestQuestionNextTwo() {
                 if (activeOption === 'new') {
                   handleBackToOptions();
                 } else {
-                  navigate('/make-contest-question', { state: { contestData } });
+                  navigate('/make-contest-question/next', { state: { contestData } });
                 }
               }}
               className="cc-submit-btn"

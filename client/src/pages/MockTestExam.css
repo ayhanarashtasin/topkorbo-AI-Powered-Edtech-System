@@ -1407,3 +1407,157 @@
         max-height: 200px;
     }
 }
+
+/* Contest Navigation & Mini-boxes Styles */
+.exam-contest-navigation-box {
+    max-width: 900px;
+    margin: 0 auto 20px auto;
+    background: #fffdf7;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(120, 80, 20, 0.06);
+    border: 1.5px solid rgba(180, 130, 60, 0.14);
+}
+
+.exam-mini-boxes-title {
+    font-family: var(--font-heading), sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #5c3a1e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.exam-mini-boxes-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.exam-mini-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    font-family: var(--font-body), sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.exam-mini-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Mini box states */
+.mini-box--active {
+    border: 2px solid #3b82f6;
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.mini-box--submitted {
+    border-color: #10b981;
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.mini-box--unsubmitted {
+    border-color: #f59e0b;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.mini-box--unvisited {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+}
+
+/* Bottom Contest Actions */
+.exam-contest-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1.5px solid rgba(180, 130, 60, 0.1);
+}
+
+.btn-contest-submit,
+.btn-contest-next,
+.btn-contest-back {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: var(--font-heading), sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-contest-submit {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 3px 0 #059669;
+}
+
+.btn-contest-submit:hover {
+    background: #059669;
+}
+
+.btn-contest-submit:disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-contest-submit:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #059669;
+}
+
+.btn-contest-next {
+    background: #3b82f6;
+    color: #fff;
+    box-shadow: 0 3px 0 #2563eb;
+}
+
+.btn-contest-next:hover {
+    background: #2563eb;
+}
+
+.btn-contest-next:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #2563eb;
+}
+
+.btn-contest-back {
+    background: #64748b;
+    color: #fff;
+    box-shadow: 0 3px 0 #475569;
+}
+
+.btn-contest-back:hover {
+    background: #475569;
+}
+
+.btn-contest-back:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #475569;
+}

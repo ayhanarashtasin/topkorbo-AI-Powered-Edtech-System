@@ -253,24 +253,45 @@ export default function MakeContestQuestion() {
 
   // ── Action Handlers ──
 
+  const hasDraft = () => {
+    return !!(
+      sessionStorage.getItem('cc_contestName') ||
+      sessionStorage.getItem('cc_level') ||
+      sessionStorage.getItem('cc_confirmedQuestions') ||
+      sessionStorage.getItem('cc_qbank_selectedQuestionIds')
+    );
+  };
+
   const handleCreateNewClick = () => {
     // Clear storage for fresh contest creation
-    sessionStorage.removeItem('cc_contestName');
-    sessionStorage.removeItem('cc_contestDate');
-    sessionStorage.removeItem('cc_durationHours');
-    sessionStorage.removeItem('cc_durationMinutes');
-    sessionStorage.removeItem('cc_startHour');
-    sessionStorage.removeItem('cc_startMinute');
-    sessionStorage.removeItem('cc_startPeriod');
-    sessionStorage.removeItem('cc_timezone');
-    sessionStorage.removeItem('cc_level');
-    sessionStorage.removeItem('cc_selectedSubjects');
-    sessionStorage.removeItem('cc_selectedAdmission');
-    sessionStorage.removeItem('cc_varsitySubtype');
-    sessionStorage.removeItem('cc_questionType');
-    sessionStorage.removeItem('cc_contestData');
-    sessionStorage.removeItem('cc_qbankSelections');
-    sessionStorage.removeItem('cc_confirmedQuestions');
+    const keysToClear = [
+      'cc_contestName',
+      'cc_contestDate',
+      'cc_durationHours',
+      'cc_durationMinutes',
+      'cc_startHour',
+      'cc_startMinute',
+      'cc_startPeriod',
+      'cc_timezone',
+      'cc_level',
+      'cc_selectedSubjects',
+      'cc_selectedAdmission',
+      'cc_varsitySubtype',
+      'cc_questionType',
+      'cc_contestData',
+      'cc_qbankSelections',
+      'cc_confirmedQuestions',
+      'cc_qbank_step',
+      'cc_qbank_selectedSubjectIds',
+      'cc_qbank_selectedChapters',
+      'cc_qbank_topicsMap',
+      'cc_qbank_selectedTopics',
+      'cc_qbank_selectedQuestionIds',
+      'cc_qbankQuestions',
+      'cc_isEditing',
+      'cc_editingContestId'
+    ];
+    keysToClear.forEach(key => sessionStorage.removeItem(key));
 
     setContestName('');
     setContestDate('');
@@ -286,7 +307,6 @@ export default function MakeContestQuestion() {
     setVarsitySubtype('');
     setQuestionType('mcq');
 
-    sessionStorage.setItem('cc_isEditing', 'false');
     setViewMode('create');
   };
 
@@ -491,13 +511,6 @@ export default function MakeContestQuestion() {
 
     sessionStorage.setItem('cc_contestData', JSON.stringify(contestData));
 
-    // Preserve cc_confirmedQuestions and cc_qbankSelections if isEditing is true
-    const isEditing = sessionStorage.getItem('cc_isEditing') === 'true';
-    if (!isEditing) {
-      sessionStorage.removeItem('cc_confirmedQuestions');
-      sessionStorage.removeItem('cc_qbankSelections');
-    }
-
     navigate('/make-contest-question/next-two', { state: { contestData } });
   };
 
@@ -665,7 +678,44 @@ export default function MakeContestQuestion() {
               </div>
             )}
 
-            <div className="mc-bottom-bar">
+            <div className="mc-bottom-bar" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              {hasDraft() && (
+                <button
+                  type="button"
+                  className="cc-submit-btn"
+                  onClick={() => {
+                    setContestName(sessionStorage.getItem('cc_contestName') || '');
+                    setContestDate(sessionStorage.getItem('cc_contestDate') || '');
+                    setDurationHours(sessionStorage.getItem('cc_durationHours') || '1');
+                    setDurationMinutes(sessionStorage.getItem('cc_durationMinutes') || '0');
+                    setStartHour(sessionStorage.getItem('cc_startHour') || '10');
+                    setStartMinute(sessionStorage.getItem('cc_startMinute') || '00');
+                    setStartPeriod(sessionStorage.getItem('cc_startPeriod') || 'AM');
+                    setTimezone(sessionStorage.getItem('cc_timezone') || 'Asia/Dhaka');
+                    setLevel(sessionStorage.getItem('cc_level') || '');
+                    
+                    const savedSubjects = sessionStorage.getItem('cc_selectedSubjects');
+                    setSelectedSubjects(savedSubjects ? JSON.parse(savedSubjects) : []);
+                    
+                    setSelectedAdmission(sessionStorage.getItem('cc_selectedAdmission') || '');
+                    setVarsitySubtype(sessionStorage.getItem('cc_varsitySubtype') || '');
+                    setQuestionType(sessionStorage.getItem('cc_questionType') || 'mcq');
+
+                    setViewMode('create');
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '2px solid rgba(16, 185, 129, 0.4)',
+                    color: '#059669',
+                    boxShadow: 'none',
+                    width: 'auto'
+                  }}
+                >
+                  <HiCheckCircle size={18} />
+                  <span>{language === 'en' ? 'Resume Unsaved Draft' : 'অসম্পূর্ণ ড্রাফট পুনরায় শুরু করুন'}</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 className="cc-submit-btn"
