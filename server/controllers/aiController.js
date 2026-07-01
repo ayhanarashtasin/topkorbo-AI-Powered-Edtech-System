@@ -2,6 +2,7 @@ const Groq = require('groq-sdk');
 const ChatMessage = require('../models/ChatMessage');
 const StudyRoutine = require('../models/StudyRoutine');
 const { toISODate } = require('../utils/recurrence');
+const { answerBookTutorRequest } = require('../services/bookRagService');
 
 // ---------------------------------------------------------------------------
 // Routine-specific guards
@@ -94,6 +95,44 @@ function clampText(text, max = MAX_PAGE_CHARS) {
   if (!text) return '';
   const t = String(text).replace(/\s+/g, ' ').trim();
   return t.length > max ? `${t.slice(0, max)}…` : t;
+}
+
+function buildTutorContextKey({ scope = 'page', bookId, chapterId, topicId, nodeId, pageNumber }) {
+  const safeBookId = String(bookId || '');
+  const safeChapterId = String(chapterId || '');
+  const safeTopicId = String(topicId || '');
+  const safeNodeId = String(nodeId || '');
+  const safePage = Number.isFinite(Number(pageNumber)) ? Number(pageNumber) : null;
+
+  if (scope === 'node') {
+    if (safeNodeId) return `node:${safeBookId}:${safeChapterId}:${safeNodeId}`;
+    if (safeChapterId) return `chapter:${safeBookId}:${safeChapterId}`;
+    return `book:${safeBookId}`;
+  }
+  if (scope === 'topic') return `topic:${safeBookId}:${safeChapterId}:${safeTopicId}`;
+  if (scope === 'chapter') return `chapter:${safeBookId}:${safeChapterId}`;
+  if (scope === 'book') return `book:${safeBookId}`;
+  if (scope === 'page' && safePage) return `page:${safeBookId}:${safeChapterId}:${safePage}`;
+  if (safePage) return `page:${safeBookId}:${safeChapterId}:${safePage}`;
+  if (safeTopicId) return `topic:${safeBookId}:${safeChapterId}:${safeTopicId}`;
+  if (safeChapterId) return `chapter:${safeBookId}:${safeChapterId}`;
+  return `book:${safeBookId}`;
+}
+
+function buildLegacyChatFilter({ userId, chapterId, pageNumber, contextKey }) {
+  const filter = { userId };
+  if (contextKey) {
+    filter.contextKey = contextKey;
+    return filter;
+  }
+  if (chapterId) filter.chapterId = chapterId;
+  if (pageNumber) filter.pageNumber = Number(pageNumber);
+  return filter;
+}
+
+function normalizePageNumber(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
 }
 
 const SYSTEM_PROMPT =
@@ -290,6 +329,181 @@ exports.clearHistory = async (req, res, next) => {
 
     const result = await ChatMessage.deleteMany(filter);
     res.status(200).json({
+      success: true,
+      data: { deletedCount: result.deletedCount || 0 }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/ai/book-chat
+ * Body: { bookId, chapterId?, topicId?, nodeId?, pageNumber?, scope?, question, requestedAction? }
+ * Uses the topic/chapter/book RAG pipeline and stores history per context.
+ */
+exports.bookChat = async (req, res, next) => {
+  try {
+    const body = req.body || {};
+    const {
+      bookId,
+      chapterId,
+      topicId,
+      nodeId,
+      pageNumber,
+      scope,
+      question,
+      requestedAction,
+      focusText,
+      focusLabel,
+      focusPageNumber,
+      selectedTopicTitle,
+      selectedChapterTitle,
+      selectedNodeTitle
+    } = body;
+
+    if (!bookId || !question) {
+      return res.status(400).json({ success: false, message: 'bookId and question are required' });
+    }
+
+    const cleanQuestion = String(question).trim();
+    if (!cleanQuestion) {
+      return res.status(400).json({ success: false, message: 'question cannot be empty' });
+    }
+
+    const numericPage = normalizePageNumber(pageNumber);
+    const resolvedScope = scope || (nodeId ? 'node' : (topicId ? 'topic' : (numericPage ? 'page' : 'book')));
+    const contextKey = buildTutorContextKey({ scope: resolvedScope, bookId, chapterId, topicId, nodeId, pageNumber: numericPage });
+    const userId = req.user._id || req.user.id;
+    const cleanFocusText = String(focusText || '').trim();
+    const cleanFocusLabel = String(focusLabel || '').trim();
+    const numericFocusPage = normalizePageNumber(focusPageNumber);
+
+    const userMessage = await ChatMessage.create({
+      userId,
+      bookId,
+      chapterId: chapterId || null,
+      topicId: topicId || '',
+      nodeId: nodeId || '',
+      contextType: resolvedScope,
+      contextKey,
+      pageNumber: numericPage,
+      role: 'user',
+      content: cleanQuestion
+    });
+
+    let reply = '';
+    let action = requestedAction || 'answer';
+    let sources = [];
+    let contextLabel = '';
+    try {
+      const result = await answerBookTutorRequest({
+        bookId,
+        chapterId,
+        topicId,
+        nodeId,
+        pageNumber: numericPage,
+        question: cleanQuestion,
+        scope: resolvedScope,
+        selectedTopicTitle,
+        selectedChapterTitle,
+        selectedNodeTitle,
+        focusText: cleanFocusText,
+        focusLabel: cleanFocusLabel,
+        focusPageNumber: numericFocusPage,
+        forceAction: requestedAction || undefined
+      });
+      reply = result.reply;
+      action = result.action;
+      sources = result.sources || [];
+      contextLabel = result.contextLabel || '';
+    } catch (ragErr) {
+      console.error('[aiController] bookChat failed:', ragErr?.message);
+      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => {});
+      return res.status(ragErr?.statusCode || 502).json({
+        success: false,
+        message: ragErr?.message || 'AI tutor is unavailable right now. Please try again.'
+      });
+    }
+
+    const assistantMessage = await ChatMessage.create({
+      userId,
+      bookId,
+      chapterId: chapterId || null,
+      topicId: topicId || '',
+      nodeId: nodeId || '',
+      contextType: resolvedScope,
+      contextKey,
+      pageNumber: numericPage,
+      role: 'assistant',
+      content: reply,
+      sources
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        reply,
+        action,
+        contextLabel,
+        sources,
+        userMessage,
+        assistantMessage
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/ai/book-history
+ * Returns ordered book-scoped history for the current context.
+ */
+exports.bookHistory = async (req, res, next) => {
+  try {
+    const { bookId, chapterId, topicId, nodeId, pageNumber, scope } = req.query;
+    if (!bookId) {
+      return res.status(400).json({ success: false, message: 'bookId is required' });
+    }
+    const numericPage = normalizePageNumber(pageNumber);
+    const resolvedScope = scope || (nodeId ? 'node' : (topicId ? 'topic' : (numericPage ? 'page' : 'book')));
+    const contextKey = buildTutorContextKey({ scope: resolvedScope, bookId, chapterId, topicId, nodeId, pageNumber });
+
+    const filter = {
+      userId: req.user._id || req.user.id,
+      contextKey
+    };
+
+    const messages = await ChatMessage.find(filter).sort({ createdAt: 1 }).lean();
+    return res.status(200).json({
+      success: true,
+      data: { messages }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/ai/book-history
+ * Deletes the current user's book-scoped history for the active context.
+ */
+exports.bookHistoryClear = async (req, res, next) => {
+  try {
+    const { bookId, chapterId, topicId, nodeId, pageNumber, scope } = req.query;
+    if (!bookId) {
+      return res.status(400).json({ success: false, message: 'bookId is required' });
+    }
+    const numericPage = normalizePageNumber(pageNumber);
+    const resolvedScope = scope || (nodeId ? 'node' : (topicId ? 'topic' : (numericPage ? 'page' : 'book')));
+    const contextKey = buildTutorContextKey({ scope: resolvedScope, bookId, chapterId, topicId, nodeId, pageNumber });
+
+    const result = await ChatMessage.deleteMany({
+      userId: req.user._id || req.user.id,
+      contextKey
+    });
+    return res.status(200).json({
       success: true,
       data: { deletedCount: result.deletedCount || 0 }
     });

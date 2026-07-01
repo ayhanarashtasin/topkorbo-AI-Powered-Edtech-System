@@ -26,6 +26,19 @@ export function sendMessage(payload) {
 }
 
 /**
+ * Ask the book-scoped RAG tutor a question.
+ *
+ * @param {{ bookId: string, chapterId?: string, topicId?: string, nodeId?: string, pageNumber?: number, scope?: 'page'|'topic'|'chapter'|'book'|'node', question: string, requestedAction?: string, selectedTopicTitle?: string, selectedChapterTitle?: string, selectedNodeTitle?: string }} payload
+ */
+export function sendBookMessage(payload) {
+  return request('/ai/book-chat', {
+    method: 'POST',
+    headers: buildHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
  * Load chat history for a chapter, optionally filtered to a single page.
  *
  * @param {{ chapterId: string, pageNumber?: number }} params
@@ -37,6 +50,23 @@ export function getHistory({ chapterId, pageNumber } = {}) {
   if (pageNumber) qs.set('pageNumber', String(pageNumber));
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   return request(`/ai/history${suffix}`, {
+    headers: buildHeaders()
+  });
+}
+
+/**
+ * Load book-scoped chat history.
+ */
+export function getBookHistory({ bookId, chapterId, topicId, nodeId, pageNumber, scope } = {}) {
+  const qs = new URLSearchParams();
+  if (bookId) qs.set('bookId', bookId);
+  if (chapterId) qs.set('chapterId', chapterId);
+  if (topicId) qs.set('topicId', topicId);
+  if (nodeId) qs.set('nodeId', nodeId);
+  if (pageNumber) qs.set('pageNumber', String(pageNumber));
+  if (scope) qs.set('scope', scope);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return request(`/ai/book-history${suffix}`, {
     headers: buildHeaders()
   });
 }
@@ -54,6 +84,24 @@ export function clearHistory({ chapterId, pageNumber } = {}) {
   if (pageNumber) qs.set('pageNumber', String(pageNumber));
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   return request(`/ai/history${suffix}`, {
+    method: 'DELETE',
+    headers: buildHeaders()
+  });
+}
+
+/**
+ * Clear book-scoped chat history.
+ */
+export function clearBookHistory({ bookId, chapterId, topicId, nodeId, pageNumber, scope } = {}) {
+  const qs = new URLSearchParams();
+  if (bookId) qs.set('bookId', bookId);
+  if (chapterId) qs.set('chapterId', chapterId);
+  if (topicId) qs.set('topicId', topicId);
+  if (nodeId) qs.set('nodeId', nodeId);
+  if (pageNumber) qs.set('pageNumber', String(pageNumber));
+  if (scope) qs.set('scope', scope);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return request(`/ai/book-history${suffix}`, {
     method: 'DELETE',
     headers: buildHeaders()
   });
@@ -109,8 +157,11 @@ export function answerMcq(payload) {
 
 export const aiApi = {
   send: sendMessage,
+  sendBook: sendBookMessage,
   history: getHistory,
+  bookHistory: getBookHistory,
   clear: clearHistory,
+  clearBook: clearBookHistory,
   extract: extractQuestion,
   studyRoutine: generateStudyRoutine,
   answerMcq

@@ -7,10 +7,13 @@ const aiController = require('../controllers/aiController');
 router.use(auth);
 
 router.post('/chat', aiController.chat);
+router.post('/book-chat', aiController.bookChat);
 router.post('/study-routine', aiController.studyRoutine);
 router.post('/extract-question', aiController.extractQuestion);
 router.post('/answer-mcq', aiController.answerMcq);
 router.get('/history', aiController.getHistory);
 router.delete('/history', aiController.clearHistory);
+router.get('/book-history', aiController.bookHistory);
+router.delete('/book-history', aiController.bookHistoryClear);
 
 module.exports = router;

@@ -27,6 +27,29 @@
   flex-shrink: 0;
 }
 
+.rb-reader__knowledge-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 18px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(192, 133, 82, 0.22);
+  background: linear-gradient(180deg, rgba(250, 244, 238, 0.96), rgba(255, 255, 255, 0.96));
+  color: var(--text-secondary, #5c4d4c);
+}
+
+.rb-reader__knowledge-banner strong {
+  color: #8C5A3C;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rb-reader__knowledge-banner span {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .rb-reader__menu-btn,
 .rb-reader__back-btn {
   display: inline-flex;
@@ -93,6 +116,8 @@
   display: flex;
   flex-direction: column;
   background: #FAF4EE;
+  padding-right: var(--rb-chat-width, 0px);
+  box-sizing: border-box;
 }
 
 .rb-reader__loading,
@@ -132,10 +157,17 @@
   .rb-reader__topbar {
     padding: 8px 12px;
   }
+  .rb-reader__knowledge-banner {
+    margin: 10px 12px 0;
+    flex-direction: column;
+  }
   .rb-reader__progress {
     min-width: 100px;
   }
   .rb-reader__progress-bar {
     width: 100px;
+  }
+  .rb-reader__viewport {
+    padding-right: 0;
   }
 }

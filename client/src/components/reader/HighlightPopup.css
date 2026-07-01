@@ -58,6 +58,17 @@
   color: #000;
 }
 
+.rb-action-btn--primary {
+  background: linear-gradient(135deg, #c08552, #8c5a3c);
+  color: white;
+  font-weight: 700;
+}
+
+.rb-action-btn--primary:hover {
+  background: linear-gradient(135deg, #b97541, #7d4f33);
+  color: white;
+}
+
 .rb-highlight-note-input {
   display: flex;
   flex-direction: column;

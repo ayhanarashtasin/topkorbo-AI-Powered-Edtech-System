@@ -229,22 +229,21 @@ export default function ReadingBooks() {
   }, [books, searchQuery, myUploadsOnly, user]);
 
   const availableSubjects = useMemo(() => {
-    let list = [];
-    if (filters.group && SUBJECT_OPTIONS_BY_GROUP[filters.group]) {
-      list = SUBJECT_OPTIONS_BY_GROUP[filters.group];
-    } else {
-      const all = [];
-      const seen = new Set();
-      Object.values(SUBJECT_OPTIONS_BY_GROUP).forEach((subList) => {
-        subList.forEach((s) => {
-          if (!seen.has(s.id)) {
-            seen.add(s.id);
-            all.push(s);
-          }
-        });
-      });
-      list = all;
-    }
+    const list = filters.group && SUBJECT_OPTIONS_BY_GROUP[filters.group]
+      ? SUBJECT_OPTIONS_BY_GROUP[filters.group]
+      : (() => {
+          const all = [];
+          const seen = new Set();
+          Object.values(SUBJECT_OPTIONS_BY_GROUP).forEach((subList) => {
+            subList.forEach((s) => {
+              if (!seen.has(s.id)) {
+                seen.add(s.id);
+                all.push(s);
+              }
+            });
+          });
+          return all;
+        })();
 
     // Merge in any legacy subjects returned by the taxonomy endpoint so older
     // uploads remain discoverable in the subject filter.
@@ -670,6 +669,15 @@ function BookCard({ book, language, isOwner, expanded, onExpand, onOpenChapter, 
               {book.chapterCount || (book.chapters && book.chapters.length) || 0} {t('rb.chapters')}
             </span>
           </div>
+          {book.knowledgeStatus && book.knowledgeStatus !== 'completed' && (
+            <span className={`rb-book-card__status rb-book-card__status--${book.knowledgeStatus}`}>
+              {book.knowledgeStatus === 'failed'
+                ? 'Retrying'
+                : ['extracting_text', 'chunking', 'embedding', 'indexing'].includes(book.knowledgeStatus)
+                  ? 'Processing'
+                  : 'Queued'}
+            </span>
+          )}
           {book.uploadedBy && (
             <div className="rb-book-card__author">
               {book.uploadedBy.avatar ? (
