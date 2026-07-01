@@ -677,6 +677,13 @@
   cursor: not-allowed;
 }
 
+.contest-table-cta--participated {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  color: #6366F1 !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  cursor: not-allowed !important;
+}
+
 /* Result View Button Style */
 .contest-table-cta--result {
   background-color: rgba(16, 185, 129, 0.08);

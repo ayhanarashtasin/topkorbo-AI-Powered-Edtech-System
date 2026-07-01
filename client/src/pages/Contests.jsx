@@ -394,6 +394,18 @@ export default function Contests() {
   };
 
   const handleParticipate = async (contestId) => {
+    const contestObj = contests.find((c) => c._id === contestId);
+    if (contestObj && contestObj.hasParticipated) {
+      const timeInfo = getContestTimeInfo(contestObj);
+      if (timeInfo.status === 'running') {
+        toast.error(
+          language === 'en'
+            ? 'You have already participated in this contest.'
+            : 'আপনি ইতিমধ্যে এই কনটেস্টে অংশ নিয়েছেন।'
+        );
+        return;
+      }
+    }
     try {
       const token = localStorage.getItem('topkorbo_token');
       const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -553,6 +565,14 @@ export default function Contests() {
 
     // Running contests
     if (isRunning) {
+      if (contest.hasParticipated) {
+        return (
+          <button className="contest-table-cta contest-table-cta--participated" disabled>
+            <HiCheckCircle size={14} />
+            <span>{language === 'en' ? 'Participated' : 'অংশগ্রহণ করেছেন'}</span>
+          </button>
+        );
+      }
       if (contest.hasRegistered) {
         return (
           <button

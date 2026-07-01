@@ -535,7 +535,7 @@ exports.getContestById = async (req, res, next) => {
  */
 exports.submitContestResult = async (req, res, next) => {
   try {
-    const { score, totalQuestions, timeTakenSeconds } = req.body;
+    const { score, totalQuestions, timeTakenSeconds, answersSubmitted, answers } = req.body;
     const contestId = req.params.id;
     const studentId = req.user.id;
 
@@ -556,6 +556,8 @@ exports.submitContestResult = async (req, res, next) => {
         score,
         totalQuestions,
         timeTakenSeconds,
+        answersSubmitted: answersSubmitted || 0,
+        answers: answers || {},
         submittedAt: new Date()
       },
       { upsert: true, new: true, runValidators: true }
