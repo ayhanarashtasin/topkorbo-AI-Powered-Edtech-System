@@ -43,6 +43,9 @@ export default function Setting() {
     // Tutor specific fields
     studentIdNumber: '',
     studentIdCardPhoto: '',
+    nidPhoto: '',
+    ieltsScore: '',
+    ieltsTrf: '',
     interestedToGuide: [],
     universityName: '',
     department: '',
@@ -117,6 +120,9 @@ export default function Setting() {
             // Tutor specific fields
             studentIdNumber: resData.data.studentIdNumber || '',
             studentIdCardPhoto: resData.data.studentIdCardPhoto || '',
+            nidPhoto: resData.data.nidPhoto || '',
+            ieltsScore: resData.data.ieltsScore || '',
+            ieltsTrf: resData.data.ieltsTrf || '',
             interestedToGuide: resData.data.interestedToGuide || [],
             universityName: resData.data.universityName || '',
             department: resData.data.department || '',
@@ -159,6 +165,32 @@ export default function Setting() {
     }
   };
 
+  const handleSettingsNidUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettingsForm(prev => ({ ...prev, nidPhoto: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSettingsTrfUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('Please upload a PDF file for IELTS TRF.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettingsForm(prev => ({ ...prev, ieltsTrf: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSettingsGuideCheckboxChange = (guideArea) => {
     setSettingsForm(prev => {
       const exists = prev.interestedToGuide.includes(guideArea);
@@ -186,6 +218,9 @@ export default function Setting() {
           gender: settingsForm.gender,
           studentIdNumber: settingsForm.studentIdNumber,
           studentIdCardPhoto: settingsForm.studentIdCardPhoto,
+          nidPhoto: settingsForm.nidPhoto,
+          ieltsScore: settingsForm.interestedToGuide.includes('IELTS') ? settingsForm.ieltsScore : '',
+          ieltsTrf: settingsForm.interestedToGuide.includes('IELTS') ? settingsForm.ieltsTrf : '',
           interestedToGuide: settingsForm.interestedToGuide,
           collegeName: settingsForm.collegeName,
           hscBatch: settingsForm.hscBatch,
@@ -448,6 +483,36 @@ export default function Setting() {
 
                       <div className="settings-field-row">
                         <div className="settings-field-group">
+                          <label className="settings-field-label">NID Photo</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <label htmlFor="settings-nid-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
+                              {settingsForm.nidPhoto ? 'Change NID' : 'Upload NID Photo'}
+                            </label>
+                            <input
+                              type="file"
+                              id="settings-nid-upload"
+                              accept="image/*"
+                              onChange={handleSettingsNidUpload}
+                              style={{ display: 'none' }}
+                            />
+                            {settingsForm.nidPhoto && (
+                              <span style={{ fontSize: '1.2rem', color: '#10B981' }}>✅</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {settingsForm.nidPhoto && (
+                        <div className="settings-field-group" style={{ marginTop: '10px', marginBottom: '16px' }}>
+                          <label className="settings-field-label" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>NID Photo Preview</label>
+                          <div style={{ width: '100%', height: '140px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid rgba(230, 204, 178, 0.3)', background: '#fcf8f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <img src={settingsForm.nidPhoto} alt="NID Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="settings-field-row">
+                        <div className="settings-field-group">
                           <label className="settings-field-label">Student ID Number</label>
                           <input
                             type="text"
@@ -654,7 +719,7 @@ export default function Setting() {
                       <div className="settings-field-group" style={{ marginBottom: '16px' }}>
                         <label className="settings-field-label">Interested to Guide</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '6px' }}>
-                          {['Medical', 'Buet', 'University', 'HSC Academic'].map((guideArea) => (
+                          {['Medical', 'Engineering', 'University', 'Academic', 'IELTS'].map((guideArea) => (
                             <label key={guideArea} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 248, 240, 0.6)', border: '1px solid rgba(230, 204, 178, 0.3)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '600' }}>
                               <input
                                 type="checkbox"
@@ -668,8 +733,45 @@ export default function Setting() {
                         </div>
                       </div>
 
+                      {settingsForm.interestedToGuide.includes('IELTS') && (
+                        <div className="settings-field-row" style={{ background: 'rgba(56, 189, 248, 0.04)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px dashed rgba(56, 189, 248, 0.3)', marginBottom: '16px', marginTop: '16px' }}>
+                          <div className="settings-field-group">
+                            <label className="settings-field-label" style={{ color: 'var(--sky-blue)' }}>IELTS Score</label>
+                            <input
+                              type="text"
+                              name="ieltsScore"
+                              placeholder="e.g. 7.5"
+                              value={settingsForm.ieltsScore}
+                              onChange={handleSettingsInputChange}
+                              className="settings-field-input"
+                            />
+                          </div>
+
+                          <div className="settings-field-group">
+                            <label className="settings-field-label" style={{ color: 'var(--sky-blue)' }}>IELTS Test Report Form (TRF) PDF</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px' }}>
+                              <label htmlFor="settings-trf-pdf-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
+                                {settingsForm.ieltsTrf ? 'Change PDF' : 'Upload TRF PDF'}
+                              </label>
+                              <input
+                                type="file"
+                                id="settings-trf-pdf-upload"
+                                accept="application/pdf"
+                                onChange={handleSettingsTrfUpload}
+                                style={{ display: 'none' }}
+                              />
+                              {settingsForm.ieltsTrf && (
+                                <span style={{ fontSize: '0.85rem', color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <span>✅ Loaded</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="settings-field-group">
-                        <label className="settings-field-label">Admission Achievements description (BIO)</label>
+                        <label className="settings-field-label">Academic or Admission Achievements description (BIO)</label>
                         <textarea
                           name="admissionAchievement"
                           value={settingsForm.admissionAchievement}

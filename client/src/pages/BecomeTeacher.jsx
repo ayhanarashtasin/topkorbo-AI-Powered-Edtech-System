@@ -76,7 +76,8 @@ export default function BecomeTeacher() {
     name: localStorage.getItem('topkorbo_name') || 'Ayhan Arash Tasin',
     avatar: localStorage.getItem('topkorbo_avatar') || '',
     email: localStorage.getItem('topkorbo_email') || 'ayhan.arash.tasin@g.bracu.ac.bd',
-    role: localStorage.getItem('topkorbo_role') || 'tutor'
+    role: localStorage.getItem('topkorbo_role') || 'tutor',
+    interestedToGuide: JSON.parse(localStorage.getItem('topkorbo_interestedToGuide') || '[]')
   });
 
   const [teacherApp, setTeacherApp] = useState({
@@ -86,6 +87,10 @@ export default function BecomeTeacher() {
     createQuestionBankSubjects: [],
     manageContest: false,
     manageContestDetails: '',
+    takeIeltsSpeaking: false,
+    takeIeltsSpeakingDetails: '',
+    createIeltsQSet: false,
+    createIeltsQSetDetails: '',
     aboutYou: ''
   });
 
@@ -118,6 +123,7 @@ export default function BecomeTeacher() {
           localStorage.removeItem('topkorbo_avatar');
           localStorage.removeItem('topkorbo_email');
           localStorage.removeItem('topkorbo_role');
+          localStorage.removeItem('topkorbo_interestedToGuide');
           window.location.href = '/';
           return;
         }
@@ -128,12 +134,14 @@ export default function BecomeTeacher() {
             name: resData.data.name,
             avatar: resData.data.avatar || '',
             email: resData.data.email,
-            role: resData.data.role
+            role: resData.data.role,
+            interestedToGuide: resData.data.interestedToGuide || []
           });
           localStorage.setItem('topkorbo_name', resData.data.name);
           localStorage.setItem('topkorbo_avatar', resData.data.avatar || '');
           localStorage.setItem('topkorbo_email', resData.data.email);
           localStorage.setItem('topkorbo_role', resData.data.role);
+          localStorage.setItem('topkorbo_interestedToGuide', JSON.stringify(resData.data.interestedToGuide || []));
 
           // Teacher application data is now included in the /auth/me response
           if (resData.teacherApplication) {
@@ -145,6 +153,10 @@ export default function BecomeTeacher() {
               createQuestionBankSubjects: app.createQuestionBankSubjects || [],
               manageContest: app.manageContest || false,
               manageContestDetails: app.manageContestDetails || '',
+              takeIeltsSpeaking: app.takeIeltsSpeaking || false,
+              takeIeltsSpeakingDetails: app.takeIeltsSpeakingDetails || '',
+              createIeltsQSet: app.createIeltsQSet || false,
+              createIeltsQSetDetails: app.createIeltsQSetDetails || '',
               aboutYou: app.aboutYou || ''
             });
             setTeacherAppStatus(app.status);
@@ -173,19 +185,32 @@ export default function BecomeTeacher() {
     });
   };
 
+  const guidesIelts = user.interestedToGuide && user.interestedToGuide.some(g => g.toUpperCase() === 'IELTS');
+  const guidesOthers = user.interestedToGuide && user.interestedToGuide.some(g => g.toUpperCase() !== 'IELTS');
+  const onlyIelts = guidesIelts && !guidesOthers;
+
+  const toBnNum = (num) => {
+    const bnNums = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/[0-9]/g, (digit) => bnNums[digit]);
+  };
+
   const handleTeacherSubmit = async (e) => {
     e.preventDefault();
 
     const isEnglish = language === 'en';
     
     // 1. Verify at least one educator competency is checked
-    const hasCompetency = teacherApp.checkScript || teacherApp.createQuestionBank || teacherApp.manageContest;
+    const hasCompetency = teacherApp.checkScript || 
+                          (!onlyIelts && teacherApp.createQuestionBank) || 
+                          (!onlyIelts && teacherApp.manageContest) ||
+                          (guidesIelts && teacherApp.takeIeltsSpeaking) ||
+                          (guidesIelts && teacherApp.createIeltsQSet);
     if (!hasCompetency) {
       setTeacherAppMsg({
         type: 'error',
         text: isEnglish 
-          ? 'Please enable and describe at least one competency (Script Evaluation, Question Bank, or Contests).'
-          : 'অনুগ্রহ করে অন্তত একটি শিক্ষাদান সংক্রান্ত যোগ্যতা সক্রিয় এবং পূরণ করুন (পরীক্ষার খাতা মূল্যায়ন, প্রশ্ন ব্যাংক, বা কন্টেস্ট)।'
+          ? 'Please enable and describe at least one competency.'
+          : 'অনুগ্রহ করে অন্তত একটি শিক্ষাদান সংক্রান্ত যোগ্যতা সক্রিয় এবং বিবরণ পূরণ করুন।'
       });
       return;
     }
@@ -202,7 +227,7 @@ export default function BecomeTeacher() {
     }
 
     // 3. Question bank subjects selection validation
-    if (teacherApp.createQuestionBank && teacherApp.createQuestionBankSubjects.length === 0) {
+    if (!onlyIelts && teacherApp.createQuestionBank && teacherApp.createQuestionBankSubjects.length === 0) {
       setTeacherAppMsg({
         type: 'error',
         text: isEnglish 
@@ -213,7 +238,7 @@ export default function BecomeTeacher() {
     }
 
     // 4. Contest management details validation
-    if (teacherApp.manageContest && (!teacherApp.manageContestDetails || teacherApp.manageContestDetails.trim().length < 15)) {
+    if (!onlyIelts && teacherApp.manageContest && (!teacherApp.manageContestDetails || teacherApp.manageContestDetails.trim().length < 15)) {
       setTeacherAppMsg({
         type: 'error',
         text: isEnglish 
@@ -223,7 +248,29 @@ export default function BecomeTeacher() {
       return;
     }
 
-    // 5. About You biography validation
+    // 5. IELTS Speaking details validation
+    if (guidesIelts && teacherApp.takeIeltsSpeaking && (!teacherApp.takeIeltsSpeakingDetails || teacherApp.takeIeltsSpeakingDetails.trim().length < 15)) {
+      setTeacherAppMsg({
+        type: 'error',
+        text: isEnglish
+          ? 'Please write at least 15 characters describing your IELTS speaking mock test conducting experience.'
+          : 'অনুগ্রহ করে আপনার আইইএলটিএস স্পিকিং মক টেস্ট নেওয়ার অভিজ্ঞতা সম্পর্কে কমপক্ষে ১৫টি অক্ষর লিখুন।'
+      });
+      return;
+    }
+
+    // 6. IELTS Question Set details validation
+    if (guidesIelts && teacherApp.createIeltsQSet && (!teacherApp.createIeltsQSetDetails || teacherApp.createIeltsQSetDetails.trim().length < 15)) {
+      setTeacherAppMsg({
+        type: 'error',
+        text: isEnglish
+          ? 'Please write at least 15 characters describing your IELTS question creation experience.'
+          : 'অনুগ্রহ করে আপনার আইইএলটিএস প্রশ্ন তৈরি করার অভিজ্ঞতা সম্পর্কে কমপক্ষে ১৫টি অক্ষর লিখুন।'
+      });
+      return;
+    }
+
+    // 7. About You biography validation
     if (!teacherApp.aboutYou || teacherApp.aboutYou.trim().length < 20) {
       setTeacherAppMsg({
         type: 'error',
@@ -269,6 +316,207 @@ export default function BecomeTeacher() {
       setTeacherAppLoading(false);
     }
   };
+
+  const cardSections = [];
+
+  // 1. Script Check (Always)
+  cardSections.push({
+    id: 'checkScript',
+    type: 'toggle',
+    titleEn: 'Can you grade or check student scripts?',
+    titleBn: 'আপনি কি শিক্ষার্থীদের পরীক্ষার স্ক্রিপ্ট বা খাতা মূল্যায়ন করতে পারবেন?',
+    descEn: 'Evaluating exams, writing helpful corrections, and giving suggestions.',
+    descBn: 'পরীক্ষার খাতা মূল্যায়ন করা, প্রয়োজনীয় সমাধান ও মতামত প্রদান।',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    ),
+    colorClass: 'card-section-icon-wrapper--peach',
+    checked: teacherApp.checkScript,
+    onChange: (val) => setTeacherApp(prev => ({ ...prev, checkScript: val })),
+    body: (
+      <textarea
+        className="teacher-field-textarea"
+        placeholder={language === 'en' ? 'Describe your script checking/grading experience...' : 'আপনার স্ক্রিপ্ট দেখার অভিজ্ঞতা বর্ণনা করুন...'}
+        value={teacherApp.checkScriptDetails}
+        onChange={(e) => setTeacherApp(prev => ({ ...prev, checkScriptDetails: e.target.value }))}
+        rows={3}
+      />
+    )
+  });
+
+  // 2. Question Bank (Only if not only IELTS)
+  if (!onlyIelts) {
+    cardSections.push({
+      id: 'createQuestionBank',
+      type: 'toggle',
+      titleEn: 'Can you create a Question bank?',
+      titleBn: 'আপনি কি প্রশ্ন ব্যাংক তৈরি করতে পারবেন?',
+      descEn: 'Drafting standardized mock questions, subject-wise quizzes, and detailed feedback.',
+      descBn: 'মানসম্মত মক পরীক্ষার প্রশ্ন তৈরি করা, বিষয়ভিত্তিক কুইজ এবং বিস্তারিত ফিডব্যাক প্রদান।',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+      ),
+      colorClass: 'card-section-icon-wrapper--ice-blue',
+      checked: teacherApp.createQuestionBank,
+      onChange: (val) => setTeacherApp(prev => ({ ...prev, createQuestionBank: val })),
+      body: (
+        <>
+          <label className="teacher-field-label">
+            {language === 'en' ? 'Select Specialized Subjects:' : 'বিশেষজ্ঞ বিষয়গুলো নির্বাচন করুন:'}
+          </label>
+          <div className="subjects-grid">
+            {['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'ICT'].map(subj => (
+              <label key={subj} className={`subject-tag-checkbox ${teacherApp.createQuestionBankSubjects.includes(subj) ? 'active' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={teacherApp.createQuestionBankSubjects.includes(subj)}
+                  onChange={() => handleSubjectCheckbox(subj)}
+                  style={{ display: 'none' }}
+                />
+                <span>{subj}</span>
+              </label>
+            ))}
+          </div>
+        </>
+      )
+    });
+  }
+
+  // 3. Manage Contest (Only if not only IELTS)
+  if (!onlyIelts) {
+    cardSections.push({
+      id: 'manageContest',
+      type: 'toggle',
+      titleEn: 'Can you organize and manage academic contests?',
+      titleBn: 'আপনি কি অ্যাকাডেমিক প্রতিযোগিতা বা কন্টেস্ট আয়োজন করতে পারবেন?',
+      descEn: 'Creating rules, curating problem sets, setting time-to-solve pacing, and monitoring live Elo leaderboards.',
+      descBn: 'নিয়ম তৈরি করা, সমস্যা নির্বাচন, সময় নির্ধারণ এবং লাইভ লিডারবোর্ড মনিটর করা।',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      ),
+      colorClass: 'card-section-icon-wrapper--gold',
+      checked: teacherApp.manageContest,
+      onChange: (val) => setTeacherApp(prev => ({ ...prev, manageContest: val })),
+      body: (
+        <textarea
+          className="teacher-field-textarea"
+          placeholder={language === 'en' ? 'Describe your contest management/quiz experience...' : 'আপনার কন্টেস্ট বা কুইজ পরিচালনার অভিজ্ঞতা বর্ণনা করুন...'}
+          value={teacherApp.manageContestDetails}
+          onChange={(e) => setTeacherApp(prev => ({ ...prev, manageContestDetails: e.target.value }))}
+          rows={3}
+        />
+      )
+    });
+  }
+
+  // 4. IELTS Speaking (If IELTS is chosen)
+  if (guidesIelts) {
+    cardSections.push({
+      id: 'takeIeltsSpeaking',
+      type: 'toggle',
+      titleEn: 'Can you take IELTS speaking test?',
+      titleBn: 'আপনি কি আইইএলটিএস স্পিকিং পরীক্ষা নিতে পারবেন?',
+      descEn: 'Conducting online speaking mock tests, evaluation, and providing detailed band score feedback.',
+      descBn: 'অনলাইনে স্পিকিং মক টেস্ট নেওয়া, মূল্যায়ন করা এবং ব্যান্ড স্কোরের ফিডব্যাক দেওয়া।',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      ),
+      colorClass: 'card-section-icon-wrapper--gold',
+      checked: teacherApp.takeIeltsSpeaking,
+      onChange: (val) => setTeacherApp(prev => ({ ...prev, takeIeltsSpeaking: val })),
+      body: (
+        <textarea
+          className="teacher-field-textarea"
+          placeholder={language === 'en' ? 'Describe your experience conducting IELTS speaking mock tests or interviews...' : 'আইইএলটিএস স্পিকিং মক টেস্ট বা ইন্টারভিউ নেওয়ার অভিজ্ঞতা বিস্তারিত লিখুন...'}
+          value={teacherApp.takeIeltsSpeakingDetails}
+          onChange={(e) => setTeacherApp(prev => ({ ...prev, takeIeltsSpeakingDetails: e.target.value }))}
+          rows={3}
+        />
+      )
+    });
+  }
+
+  // 5. IELTS Question Set (If IELTS is chosen)
+  if (guidesIelts) {
+    cardSections.push({
+      id: 'createIeltsQSet',
+      type: 'toggle',
+      titleEn: 'Can you create a IELTS Question set and detailed solutions?',
+      titleBn: 'আপনি কি আইইএলটিএস প্রশ্ন সেট এবং বিস্তারিত সমাধান তৈরি করতে পারবেন?',
+      descEn: 'Formulating IELTS Reading, Listening, Writing, or Speaking sets with model answers.',
+      descBn: 'মডেল উত্তর সহ আইইএলটিএস রিডিং, লিসেনিং, রাইটিং বা স্পিকিং সেট তৈরি করা।',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      ),
+      colorClass: 'card-section-icon-wrapper--purple',
+      checked: teacherApp.createIeltsQSet,
+      onChange: (val) => setTeacherApp(prev => ({ ...prev, createIeltsQSet: val })),
+      body: (
+        <textarea
+          className="teacher-field-textarea"
+          placeholder={language === 'en' ? 'Describe your experience in creating IELTS question sets (Reading, Listening, Writing, Speaking) and drafting model answers...' : 'আইইএলটিএস প্রশ্ন সেট তৈরি এবং মডেল উত্তর লেখার অভিজ্ঞতা বিস্তারিত লিখুন...'}
+          value={teacherApp.createIeltsQSetDetails}
+          onChange={(e) => setTeacherApp(prev => ({ ...prev, createIeltsQSetDetails: e.target.value }))}
+          rows={3}
+        />
+      )
+    });
+  }
+
+  // 6. About You (Educator BIO) (Always)
+  cardSections.push({
+    id: 'aboutYou',
+    type: 'direct',
+    titleEn: 'About You (Educator BIO)',
+    titleBn: 'আপনার সম্পর্কে (শিক্ষক পরিচিতি)',
+    descEn: 'Tell our administrators about your teaching style, achievements, student guide experience, or anything that makes you the best candidate.',
+    descBn: 'আপনার শিক্ষাদান পদ্ধতি, অর্জন, শিক্ষার্থীদের গাইড করার অভিজ্ঞতা বা এমন কিছু যা আপনাকে সেরা প্রার্থী করে তোলে তা লিখুন।',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v-2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    ),
+    colorClass: 'card-section-icon-wrapper--purple',
+    body: (
+      <>
+        <textarea
+          className="teacher-field-textarea"
+          placeholder={language === 'en' ? 'Write a compelling bio (minimum 20 characters) showcasing why we should select you...' : 'কমপক্ষে ২০টি অক্ষরে শিক্ষক হিসেবে আপনার যোগ্যতা উপস্থাপন করে একটি পরিচিতি লিখুন...'}
+          value={teacherApp.aboutYou}
+          onChange={(e) => setTeacherApp(prev => ({ ...prev, aboutYou: e.target.value }))}
+          rows={4}
+          style={{ minHeight: '100px', flex: 1 }}
+        />
+        <div className="char-counter">
+          <span>{teacherApp.aboutYou.length}</span> / 500 characters
+        </div>
+      </>
+    )
+  });
 
   return (
     <div className="dashboard-container">
@@ -333,42 +581,122 @@ export default function BecomeTeacher() {
                     <h4>{language === 'en' ? 'Submitted Application Summary' : 'জমা দেওয়া আবেদনের বিবরণ'}</h4>
                   </div>
                   
-                  <div className="preview-row">
-                    <span className="preview-label">{language === 'en' ? '1. Grading Scripts' : '১. খাতা মূল্যায়ন'}</span>
-                    <span className={`preview-value ${teacherApp.checkScript ? 'yes' : 'no'}`}>
-                      {teacherApp.checkScript ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
-                    </span>
-                  </div>
-                  {teacherApp.checkScript && teacherApp.checkScriptDetails && (
-                    <div className="preview-details">{teacherApp.checkScriptDetails}</div>
-                  )}
+                  {(() => {
+                    let previewIdx = 1;
+                    const rows = [];
 
-                  <div className="preview-row">
-                    <span className="preview-label">{language === 'en' ? '2. Question Bank Creation' : '২. প্রশ্ন ব্যাংক তৈরি'}</span>
-                    <span className={`preview-value ${teacherApp.createQuestionBank ? 'yes' : 'no'}`}>
-                      {teacherApp.createQuestionBank ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
-                    </span>
-                  </div>
-                  {teacherApp.createQuestionBank && teacherApp.createQuestionBankSubjects.length > 0 && (
-                    <div className="preview-subjects">
-                      {teacherApp.createQuestionBankSubjects.map(s => <span key={s} className="subj-badge">{s}</span>)}
-                    </div>
-                  )}
+                    // 1. Script check
+                    rows.push(
+                      <div key="checkScript" className="preview-group" style={{ marginBottom: '16px' }}>
+                        <div className="preview-row" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '6px' }}>
+                          <span className="preview-label" style={{ fontWeight: '600' }}>
+                            {language === 'en' ? `${previewIdx}. Grading Scripts` : `${toBnNum(previewIdx)}. খাতা মূল্যায়ন`}
+                          </span>
+                          <span className={`preview-value ${teacherApp.checkScript ? 'yes' : 'no'}`}>
+                            {teacherApp.checkScript ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
+                          </span>
+                        </div>
+                        {teacherApp.checkScript && teacherApp.checkScriptDetails && (
+                          <div className="preview-details" style={{ marginTop: '6px', fontSize: '14px', color: '#666', background: '#fcf8f5', padding: '8px 12px', borderRadius: '8px' }}>{teacherApp.checkScriptDetails}</div>
+                        )}
+                      </div>
+                    );
+                    previewIdx++;
 
-                  <div className="preview-row">
-                    <span className="preview-label">{language === 'en' ? '3. Contest Organizing' : '৩. প্রতিযোগিতা পরিচালনা'}</span>
-                    <span className={`preview-value ${teacherApp.manageContest ? 'yes' : 'no'}`}>
-                      {teacherApp.manageContest ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
-                    </span>
-                  </div>
-                  {teacherApp.manageContest && teacherApp.manageContestDetails && (
-                    <div className="preview-details">{teacherApp.manageContestDetails}</div>
-                  )}
+                    // 2. Question Bank (Only if not only IELTS)
+                    if (!onlyIelts) {
+                      rows.push(
+                        <div key="createQuestionBank" className="preview-group" style={{ marginBottom: '16px' }}>
+                          <div className="preview-row" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '6px' }}>
+                            <span className="preview-label" style={{ fontWeight: '600' }}>
+                              {language === 'en' ? `${previewIdx}. Question Bank Creation` : `${toBnNum(previewIdx)}. প্রশ্ন ব্যাংক তৈরি`}
+                            </span>
+                            <span className={`preview-value ${teacherApp.createQuestionBank ? 'yes' : 'no'}`}>
+                              {teacherApp.createQuestionBank ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
+                            </span>
+                          </div>
+                          {teacherApp.createQuestionBank && teacherApp.createQuestionBankSubjects.length > 0 && (
+                            <div className="preview-subjects" style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              {teacherApp.createQuestionBankSubjects.map(s => <span key={s} className="subj-badge" style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '12px', background: '#e0f2fe', color: '#0369a1' }}>{s}</span>)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                      previewIdx++;
+                    }
 
-                  <div className="preview-bio-block">
-                    <div className="preview-bio-label">{language === 'en' ? '4. About You (Educator BIO)' : '৪. আপনার সম্পর্কে বিস্তারিত'}</div>
-                    <div className="preview-bio-text">{teacherApp.aboutYou}</div>
-                  </div>
+                    // 3. Manage Contest (Only if not only IELTS)
+                    if (!onlyIelts) {
+                      rows.push(
+                        <div key="manageContest" className="preview-group" style={{ marginBottom: '16px' }}>
+                          <div className="preview-row" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '6px' }}>
+                            <span className="preview-label" style={{ fontWeight: '600' }}>
+                              {language === 'en' ? `${previewIdx}. Contest Organizing` : `${toBnNum(previewIdx)}. প্রতিযোগিতা পরিচালনা`}
+                            </span>
+                            <span className={`preview-value ${teacherApp.manageContest ? 'yes' : 'no'}`}>
+                              {teacherApp.manageContest ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
+                            </span>
+                          </div>
+                          {teacherApp.manageContest && teacherApp.manageContestDetails && (
+                            <div className="preview-details" style={{ marginTop: '6px', fontSize: '14px', color: '#666', background: '#fcf8f5', padding: '8px 12px', borderRadius: '8px' }}>{teacherApp.manageContestDetails}</div>
+                          )}
+                        </div>
+                      );
+                      previewIdx++;
+                    }
+
+                    // 4. IELTS Speaking (If IELTS is chosen)
+                    if (guidesIelts) {
+                      rows.push(
+                        <div key="takeIeltsSpeaking" className="preview-group" style={{ marginBottom: '16px' }}>
+                          <div className="preview-row" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '6px' }}>
+                            <span className="preview-label" style={{ fontWeight: '600' }}>
+                              {language === 'en' ? `${previewIdx}. IELTS Speaking Test` : `${toBnNum(previewIdx)}. আইইএলটিএস স্পিকিং পরীক্ষা`}
+                            </span>
+                            <span className={`preview-value ${teacherApp.takeIeltsSpeaking ? 'yes' : 'no'}`}>
+                              {teacherApp.takeIeltsSpeaking ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
+                            </span>
+                          </div>
+                          {teacherApp.takeIeltsSpeaking && teacherApp.takeIeltsSpeakingDetails && (
+                            <div className="preview-details" style={{ marginTop: '6px', fontSize: '14px', color: '#666', background: '#fcf8f5', padding: '8px 12px', borderRadius: '8px' }}>{teacherApp.takeIeltsSpeakingDetails}</div>
+                          )}
+                        </div>
+                      );
+                      previewIdx++;
+                    }
+
+                    // 5. IELTS Question Set (If IELTS is chosen)
+                    if (guidesIelts) {
+                      rows.push(
+                        <div key="createIeltsQSet" className="preview-group" style={{ marginBottom: '16px' }}>
+                          <div className="preview-row" style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '6px' }}>
+                            <span className="preview-label" style={{ fontWeight: '600' }}>
+                              {language === 'en' ? `${previewIdx}. IELTS Question Set & Solutions` : `${toBnNum(previewIdx)}. আইইএলটিএস প্রশ্ন ও সমাধান`}
+                            </span>
+                            <span className={`preview-value ${teacherApp.createIeltsQSet ? 'yes' : 'no'}`}>
+                              {teacherApp.createIeltsQSet ? (language === 'en' ? 'Enabled' : 'হ্যাঁ') : (language === 'en' ? 'Disabled' : 'না')}
+                            </span>
+                          </div>
+                          {teacherApp.createIeltsQSet && teacherApp.createIeltsQSetDetails && (
+                            <div className="preview-details" style={{ marginTop: '6px', fontSize: '14px', color: '#666', background: '#fcf8f5', padding: '8px 12px', borderRadius: '8px' }}>{teacherApp.createIeltsQSetDetails}</div>
+                          )}
+                        </div>
+                      );
+                      previewIdx++;
+                    }
+
+                    // 6. Bio
+                    rows.push(
+                      <div key="aboutYou" className="preview-bio-block" style={{ marginTop: '20px', paddingTop: '16px', borderTop: '2px dashed rgba(0,0,0,0.08)' }}>
+                        <div className="preview-bio-label" style={{ fontWeight: '700', fontSize: '15px', color: '#c08552', marginBottom: '8px' }}>
+                          {language === 'en' ? `${previewIdx}. About You (Educator BIO)` : `${toBnNum(previewIdx)}. আপনার সম্পর্কে বিস্তারিত`}
+                        </div>
+                        <div className="preview-bio-text" style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>{teacherApp.aboutYou}</div>
+                      </div>
+                    );
+
+                    return rows;
+                  })()}
                 </div>
 
                 <button
@@ -436,155 +764,63 @@ export default function BecomeTeacher() {
                 )}
 
                 <div className="teacher-form-grid">
-                  {/* Section 1: Check Script */}
-                  <div className={`teacher-card-section ${teacherApp.checkScript ? 'is-active' : ''}`}>
-                    <div className="card-section-header">
-                      <div className="card-section-icon-wrapper card-section-icon-wrapper--peach">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                          <polyline points="14 2 14 8 20 8"></polyline>
-                          <line x1="16" y1="13" x2="8" y2="13"></line>
-                          <line x1="16" y1="17" x2="8" y2="17"></line>
-                          <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
-                      </div>
-                      <div className="card-section-title-group">
-                        <h4>{t('teacher.script.label')}</h4>
-                        <p>{t('teacher.script.desc')}</p>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={teacherApp.checkScript}
-                          onChange={(e) => setTeacherApp(prev => ({ ...prev, checkScript: e.target.checked }))}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-                    
-                    <div className={`card-section-body-wrapper ${teacherApp.checkScript ? 'is-expanded' : ''}`}>
-                      <div className="card-section-body-inner">
-                        <textarea
-                          className="teacher-field-textarea"
-                          placeholder={t('teacher.script.placeholder')}
-                          value={teacherApp.checkScriptDetails}
-                          onChange={(e) => setTeacherApp(prev => ({ ...prev, checkScriptDetails: e.target.value }))}
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  {cardSections.map((section, sectionIdx) => {
+                    const numberLabel = language === 'en' 
+                      ? `${sectionIdx + 1}. ` 
+                      : `${toBnNum(sectionIdx + 1)}. `;
 
-                  {/* Section 2: Question Bank */}
-                  <div className={`teacher-card-section ${teacherApp.createQuestionBank ? 'is-active' : ''}`}>
-                    <div className="card-section-header">
-                      <div className="card-section-icon-wrapper card-section-icon-wrapper--ice-blue">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                        </svg>
-                      </div>
-                      <div className="card-section-title-group">
-                        <h4>{t('teacher.qbank.label')}</h4>
-                        <p>{t('teacher.qbank.desc')}</p>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={teacherApp.createQuestionBank}
-                          onChange={(e) => setTeacherApp(prev => ({ ...prev, createQuestionBank: e.target.checked }))}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
+                    const titleText = language === 'en' ? section.titleEn : section.titleBn;
+                    const descText = language === 'en' ? section.descEn : section.descBn;
 
-                    <div className={`card-section-body-wrapper ${teacherApp.createQuestionBank ? 'is-expanded' : ''}`}>
-                      <div className="card-section-body-inner">
-                        <label className="teacher-field-label">
-                          {t('teacher.qbank.select_subjects')}
-                        </label>
-                        <div className="subjects-grid">
-                          {['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'ICT'].map(subj => (
-                            <label key={subj} className={`subject-tag-checkbox ${teacherApp.createQuestionBankSubjects.includes(subj) ? 'active' : ''}`}>
+                    if (section.type === 'toggle') {
+                      return (
+                        <div key={section.id} className={`teacher-card-section ${section.checked ? 'is-active' : ''}`}>
+                          <div className="card-section-header">
+                            <div className={`card-section-icon-wrapper ${section.colorClass}`}>
+                              {section.icon}
+                            </div>
+                            <div className="card-section-title-group">
+                              <h4>{numberLabel}{titleText}</h4>
+                              <p>{descText}</p>
+                            </div>
+                            <label className="toggle-switch">
                               <input
                                 type="checkbox"
-                                checked={teacherApp.createQuestionBankSubjects.includes(subj)}
-                                onChange={() => handleSubjectCheckbox(subj)}
-                                style={{ display: 'none' }}
+                                checked={section.checked}
+                                onChange={(e) => section.onChange(e.target.checked)}
                               />
-                              <span>{subj}</span>
+                              <span className="toggle-slider"></span>
                             </label>
-                          ))}
+                          </div>
+                          
+                          <div className={`card-section-body-wrapper ${section.checked ? 'is-expanded' : ''}`}>
+                            <div className="card-section-body-inner">
+                              {section.body}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
+                      );
+                    } else {
+                      // section.type === 'direct'
+                      return (
+                        <div key={section.id} className="teacher-card-section teacher-card-section--always-active">
+                          <div className="card-section-header">
+                            <div className={`card-section-icon-wrapper ${section.colorClass}`}>
+                              {section.icon}
+                            </div>
+                            <div className="card-section-title-group">
+                              <h4>{numberLabel}{titleText}</h4>
+                              <p>{descText}</p>
+                            </div>
+                          </div>
 
-                  {/* Section 3: Manage Contest */}
-                  <div className={`teacher-card-section ${teacherApp.manageContest ? 'is-active' : ''}`}>
-                    <div className="card-section-header">
-                      <div className="card-section-icon-wrapper card-section-icon-wrapper--gold">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                      </div>
-                      <div className="card-section-title-group">
-                        <h4>{t('teacher.contest.label')}</h4>
-                        <p>{t('teacher.contest.desc')}</p>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={teacherApp.manageContest}
-                          onChange={(e) => setTeacherApp(prev => ({ ...prev, manageContest: e.target.checked }))}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                    </div>
-
-                    <div className={`card-section-body-wrapper ${teacherApp.manageContest ? 'is-expanded' : ''}`}>
-                      <div className="card-section-body-inner">
-                        <textarea
-                          className="teacher-field-textarea"
-                          placeholder={t('teacher.contest.placeholder')}
-                          value={teacherApp.manageContestDetails}
-                          onChange={(e) => setTeacherApp(prev => ({ ...prev, manageContestDetails: e.target.value }))}
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 4: About You (Direct Input, always visible/symmetrical) */}
-                  <div className="teacher-card-section teacher-card-section--always-active">
-                    <div className="card-section-header">
-                      <div className="card-section-icon-wrapper card-section-icon-wrapper--purple">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v-2"></path>
-                          <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                      </div>
-                      <div className="card-section-title-group">
-                        <h4>{t('teacher.about.label')}</h4>
-                        <p>{t('teacher.about.desc')}</p>
-                      </div>
-                    </div>
-
-                    <div className="card-section-body-direct">
-                      <textarea
-                        className="teacher-field-textarea"
-                        placeholder={t('teacher.about.placeholder')}
-                        value={teacherApp.aboutYou}
-                        onChange={(e) => setTeacherApp(prev => ({ ...prev, aboutYou: e.target.value }))}
-                        rows={4}
-                        style={{ minHeight: '100px', flex: 1 }}
-                      />
-                      <div className="char-counter">
-                        <span>{teacherApp.aboutYou.length}</span> / 500 characters
-                      </div>
-                    </div>
-                  </div>
+                          <div className="card-section-body-direct">
+                            {section.body}
+                          </div>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
 
                 {/* Submit Action Row */}

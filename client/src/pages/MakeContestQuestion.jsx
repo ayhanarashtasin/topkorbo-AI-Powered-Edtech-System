@@ -22,7 +22,8 @@ import {
   HiPlus,
   HiEye,
   HiPencil,
-  HiOutlineClipboardList
+  HiOutlineClipboardList,
+  HiTrash
 } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
@@ -252,6 +253,40 @@ export default function MakeContestQuestion() {
   }, [user.role]);
 
   // ── Action Handlers ──
+
+  const handleDeleteContest = async (contestId, contestName) => {
+    const confirmMessage = language === 'en'
+      ? `Are you sure you want to delete the contest "${contestName}"? This action is permanent and cannot be undone.`
+      : `আপনি কি নিশ্চিত যে আপনি "${contestName}" কনটেস্টটি মুছে ফেলতে চান? এই অ্যাকশনটি স্থায়ী এবং আর ফেরত আনা যাবে না।`;
+      
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${API_BASE}/contests/${contestId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData.success) {
+          toast.success(language === 'en' ? 'Contest deleted successfully' : 'কনটেস্টটি সফলভাবে মুছে ফেলা হয়েছে');
+          fetchMyContests();
+        } else {
+          toast.error(resData.message || (language === 'en' ? 'Failed to delete contest' : 'কনটেস্ট মুছতে ব্যর্থ হয়েছে'));
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.message || (language === 'en' ? 'Failed to delete contest' : 'কনটেস্ট মুছতে ব্যর্থ হয়েছে'));
+      }
+    } catch (err) {
+      console.error('Error deleting contest:', err);
+      toast.error(language === 'en' ? 'Network error occurred' : 'নেটওয়ার্ক ত্রুটি ঘটেছে');
+    }
+  };
 
   const hasDraft = () => {
     return !!(
@@ -639,33 +674,59 @@ export default function MakeContestQuestion() {
                             <td>
                               <div className="mc-action-cell">
                                 {ended ? (
-                                  <button
-                                    type="button"
-                                    className="mc-btn mc-btn--secondary"
-                                    onClick={() => handleViewQuestions(c._id)}
-                                    disabled={fetchingQuestionsContestId === c._id}
-                                  >
-                                    <HiEye size={14} />
-                                    <span>
-                                      {fetchingQuestionsContestId === c._id
-                                        ? (language === 'en' ? 'Loading...' : 'লোড হচ্ছে...')
-                                        : (language === 'en' ? 'View Questions' : 'প্রশ্ন দেখুন')}
-                                    </span>
-                                  </button>
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="mc-btn mc-btn--secondary"
+                                      onClick={() => handleViewQuestions(c._id)}
+                                      disabled={fetchingQuestionsContestId === c._id}
+                                    >
+                                      <HiEye size={14} />
+                                      <span>
+                                        {fetchingQuestionsContestId === c._id
+                                          ? (language === 'en' ? 'Loading...' : 'লোড হচ্ছে...')
+                                          : (language === 'en' ? 'View Questions' : 'প্রশ্ন দেখুন')}
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="mc-btn mc-btn--danger"
+                                      onClick={() => handleDeleteContest(c._id, c.name)}
+                                      disabled={fetchingQuestionsContestId === c._id}
+                                    >
+                                      <HiTrash size={14} />
+                                      <span>
+                                        {language === 'en' ? 'Delete' : 'মুছে ফেলুন'}
+                                      </span>
+                                    </button>
+                                  </>
                                 ) : (
-                                  <button
-                                    type="button"
-                                    className="mc-btn mc-btn--primary"
-                                    onClick={() => handleEditQuestions(c._id)}
-                                    disabled={fetchingQuestionsContestId === c._id}
-                                  >
-                                    <HiPencil size={14} />
-                                    <span>
-                                      {fetchingQuestionsContestId === c._id
-                                        ? (language === 'en' ? 'Loading...' : 'লোড হচ্ছে...')
-                                        : (language === 'en' ? 'Edit Questions' : 'প্রশ্ন এডিট করুন')}
-                                    </span>
-                                  </button>
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="mc-btn mc-btn--primary"
+                                      onClick={() => handleEditQuestions(c._id)}
+                                      disabled={fetchingQuestionsContestId === c._id}
+                                    >
+                                      <HiPencil size={14} />
+                                      <span>
+                                        {fetchingQuestionsContestId === c._id
+                                          ? (language === 'en' ? 'Loading...' : 'লোড হচ্ছে...')
+                                          : (language === 'en' ? 'Edit Questions' : 'প্রশ্ন এডিট করুন')}
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="mc-btn mc-btn--danger"
+                                      onClick={() => handleDeleteContest(c._id, c.name)}
+                                      disabled={fetchingQuestionsContestId === c._id}
+                                    >
+                                      <HiTrash size={14} />
+                                      <span>
+                                        {language === 'en' ? 'Delete' : 'মুছে ফেলুন'}
+                                      </span>
+                                    </button>
+                                  </>
                                 )}
                               </div>
                             </td>

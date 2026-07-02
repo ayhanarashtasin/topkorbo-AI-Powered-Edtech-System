@@ -98,9 +98,18 @@ const userSchema = new mongoose.Schema({
   studentIdCardPhoto: {
     type: String
   },
+  nidPhoto: {
+    type: String
+  },
+  ieltsScore: {
+    type: String
+  },
+  ieltsTrf: {
+    type: String
+  },
   interestedToGuide: {
     type: [String],
-    enum: ['Medical', 'Buet', 'University', 'HSC Academic']
+    enum: ['Medical', 'Engineering', 'University', 'Academic', 'IELTS']
   },
   universityName: {
     type: String

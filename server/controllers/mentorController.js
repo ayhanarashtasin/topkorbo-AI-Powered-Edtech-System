@@ -268,16 +268,43 @@ const mentorController = {
       };
 
       const universityFilter = String(university || '').trim();
-      if (universityFilter) {
-        filter.universityName = { $regex: universityFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
-      }
 
       const mentors = await User.find(filter)
         .select('name avatar role universityName department currentYearSemester admissionAchievement interestedToGuide collegeName hscBatch createdAt')
         .sort({ createdAt: -1 })
         .lean();
 
-      const mentorIds = mentors.map((mentor) => mentor._id);
+      // Fetch IELTS teachers to merge details
+      const IeltsTeacher = require('../models/IeltsTeacher');
+      const ieltsTutors = await IeltsTeacher.find().lean();
+      const ieltsMap = new Map(ieltsTutors.map(t => [String(t.userId), t]));
+
+      const mergedMentors = mentors.map((mentor) => {
+        const ieltsRecord = ieltsMap.get(String(mentor._id));
+        if (ieltsRecord && (!mentor.universityName || (mentor.interestedToGuide.length === 1 && mentor.interestedToGuide[0] === 'IELTS'))) {
+          return {
+            ...mentor,
+            studentIdNumber: ieltsRecord.studentIdNumber,
+            collegeName: ieltsRecord.collegeName,
+            hscBatch: ieltsRecord.hscBatch,
+            universityName: ieltsRecord.universityName,
+            department: ieltsRecord.department,
+            currentYearSemester: ieltsRecord.currentYearSemester,
+            admissionAchievement: ieltsRecord.admissionAchievement,
+            interestedToGuide: ['IELTS'],
+            ieltsScore: ieltsRecord.ieltsScore
+          };
+        }
+        return mentor;
+      });
+
+      let finalMentors = mergedMentors;
+      if (universityFilter) {
+        const regex = new RegExp(universityFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        finalMentors = mergedMentors.filter(m => regex.test(m.universityName || ''));
+      }
+
+      const mentorIds = finalMentors.map((mentor) => mentor._id);
       const reviewSummaryMap = await getMentorReviewSummaries(
         mentorIds,
         req.user.role === 'student' ? req.user.id : null
@@ -294,7 +321,7 @@ const mentorController = {
       return res.json({
         success: true,
         data: sortMentorList(
-          mentors.map((mentor) => toSafeMentor(
+          finalMentors.map((mentor) => toSafeMentor(
             mentor,
             connectionMap.get(String(mentor._id)),
             reviewSummaryMap.get(String(mentor._id))
@@ -328,6 +355,20 @@ const mentorController = {
 
       if (!mentor) {
         return res.status(404).json({ success: false, message: 'Mentor not found.' });
+      }
+
+      const IeltsTeacher = require('../models/IeltsTeacher');
+      const ieltsRecord = await IeltsTeacher.findOne({ userId: mentor._id }).lean();
+      if (ieltsRecord && (!mentor.universityName || (mentor.interestedToGuide.length === 1 && mentor.interestedToGuide[0] === 'IELTS'))) {
+        mentor.studentIdNumber = ieltsRecord.studentIdNumber;
+        mentor.collegeName = ieltsRecord.collegeName;
+        mentor.hscBatch = ieltsRecord.hscBatch;
+        mentor.universityName = ieltsRecord.universityName;
+        mentor.department = ieltsRecord.department;
+        mentor.currentYearSemester = ieltsRecord.currentYearSemester;
+        mentor.admissionAchievement = ieltsRecord.admissionAchievement;
+        mentor.interestedToGuide = ['IELTS'];
+        mentor.ieltsScore = ieltsRecord.ieltsScore;
       }
 
       const [connection, reviewSummaryMap, reviews] = await Promise.all([

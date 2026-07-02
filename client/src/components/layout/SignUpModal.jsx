@@ -37,6 +37,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     // Tutor specific fields
     studentIdNumber: '',
     studentIdCardPhoto: '',
+    nidPhoto: '',
+    ieltsScore: '',
+    ieltsTrf: '',
     interestedToGuide: [],
     universityName: '',
     department: '',
@@ -48,6 +51,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [profileSubStep, setProfileSubStep] = useState(1);
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       document.body.style.height = '';
       document.documentElement.style.overflow = '';
       document.documentElement.style.height = '';
+      setProfileSubStep(1);
     }
     return () => {
       document.body.style.overflow = '';
@@ -164,6 +169,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         // Tutor specific fields
         studentIdNumber: '',
         studentIdCardPhoto: '',
+        nidPhoto: '',
+        ieltsScore: '',
+        ieltsTrf: '',
         interestedToGuide: [],
         universityName: '',
         currentYearSemester: '',
@@ -228,6 +236,32 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     }
   };
 
+  const handleNidUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, nidPhoto: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTrfUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        setErrorMsg('Please upload a PDF file for IELTS TRF.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, ieltsTrf: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleGuideCheckboxChange = (guideArea) => {
     setFormData(prev => {
       const exists = prev.interestedToGuide.includes(guideArea);
@@ -246,7 +280,34 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     let requestBody = {};
 
     if (role === 'tutor') {
-      // STRICT VALIDATION: Mentor Signup Form options
+      if (profileSubStep === 1) {
+        // STRICT VALIDATION: Step 1
+        if (!formData.fullName.trim()) {
+          setErrorMsg('Full Name is required.');
+          setLoading(false);
+          return;
+        }
+        if (!formData.studentIdNumber.trim()) {
+          setErrorMsg('Student ID Number is required.');
+          setLoading(false);
+          return;
+        }
+        if (!formData.studentIdCardPhoto) {
+          setErrorMsg('Student ID Photo upload is required.');
+          setLoading(false);
+          return;
+        }
+        if (formData.interestedToGuide.length === 0) {
+          setErrorMsg('Please select at least one Guide Area (Interested to Guide).');
+          setLoading(false);
+          return;
+        }
+        setProfileSubStep(2);
+        setLoading(false);
+        return;
+      }
+
+      // STRICT VALIDATION: Step 2 (and full check)
       if (!formData.fullName.trim()) {
         setErrorMsg('Full Name is required.');
         setLoading(false);
@@ -267,6 +328,21 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         setLoading(false);
         return;
       }
+
+      // Conditionally validate IELTS
+      if (formData.interestedToGuide.includes('IELTS')) {
+        if (!formData.ieltsScore.trim()) {
+          setErrorMsg('IELTS Score is required.');
+          setLoading(false);
+          return;
+        }
+        if (!formData.ieltsTrf) {
+          setErrorMsg('IELTS Test Report Form (TRF) PDF upload is required.');
+          setLoading(false);
+          return;
+        }
+      }
+
       if (!formData.collegeName.trim()) {
         setErrorMsg('College Name is required.');
         setLoading(false);
@@ -304,6 +380,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         gender: formData.gender || undefined,
         studentIdNumber: formData.studentIdNumber,
         studentIdCardPhoto: formData.studentIdCardPhoto,
+        nidPhoto: formData.nidPhoto,
+        ieltsScore: formData.interestedToGuide.includes('IELTS') ? formData.ieltsScore : '',
+        ieltsTrf: formData.interestedToGuide.includes('IELTS') ? formData.ieltsTrf : '',
         interestedToGuide: formData.interestedToGuide,
         collegeName: formData.collegeName,
         hscBatch: formData.hscBatch,
@@ -699,255 +778,327 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                 <form className="signup-modal__form" onSubmit={handleFormSubmit}>
                   {role === 'tutor' ? (
-                    <>
-                      {/* Left Column: Basic Information & Identity */}
-                      <div className="signup-modal__form-left">
-                        <h4 className="signup-modal__form-section-title">1. Basic Information</h4>
+                    profileSubStep === 1 ? (
+                      <>
+                        {/* Page 1 Left Column: Basic Information */}
+                        <div className="signup-modal__form-left">
+                          <h4 className="signup-modal__form-section-title">1. Basic Information</h4>
 
-                        <div className="signup-modal__avatar-preview-container">
-                          <div className="signup-modal__avatar-circle-wrapper">
-                            <div className="signup-modal__avatar-circle">
-                              {formData.avatar ? (
-                                <img src={formData.avatar} referrerPolicy="no-referrer" alt="Profile" className="signup-modal__avatar-img" />
-                              ) : (
-                                <span>👨‍🏫</span>
-                              )}
-                            </div>
-                            <label htmlFor="profile-pic-upload" className="signup-modal__avatar-upload-overlay">
-                              <span>Upload</span>
-                            </label>
-                            <input
-                              type="file"
-                              id="profile-pic-upload"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              style={{ display: 'none' }}
-                            />
-                          </div>
-                          <div className="signup-modal__avatar-info">
-                            <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Full Name</label>
-                            <input
-                              type="text"
-                              name="fullName"
-                              value={formData.fullName}
-                              onChange={handleInputChange}
-                              className="signup-modal__input"
-                              required
-                              placeholder="Your Name"
-                              style={{ marginBottom: '12px' }}
-                            />
-                            <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Email Address</label>
-                            <input
-                              type="text"
-                              name="email"
-                              value={formData.email}
-                              className="signup-modal__input signup-modal__input--readonly"
-                              readOnly
-                            />
-                          </div>
-                        </div>
-
-                        <div className="signup-modal__form-group">
-                          <label className="signup-modal__label">Gender (optional)</label>
-                          <select
-                            name="gender"
-                            value={formData.gender}
-                            onChange={handleInputChange}
-                            className="signup-modal__select"
-                          >
-                            <option value="">Select Gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                          </select>
-                        </div>
-
-                        <div className="signup-modal__form-group">
-                          <label className="signup-modal__label">Date of Birth (optional)</label>
-                          <input
-                            type="date"
-                            name="dob"
-                            value={formData.dob}
-                            onChange={handleInputChange}
-                            className="signup-modal__input"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Right Column: Identity Verification, Academic & Achievements */}
-                      <div className="signup-modal__form-right-fields">
-                        <h4 className="signup-modal__form-section-title">2. Identity Verification</h4>
-
-                        <div className="signup-modal__input-row">
-                          <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">Student ID Number</label>
-                            <input
-                              type="text"
-                              name="studentIdNumber"
-                              placeholder="e.g. 21101424"
-                              value={formData.studentIdNumber}
-                              onChange={handleInputChange}
-                              className="signup-modal__input"
-                              required
-                            />
-                          </div>
-
-                          <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">Student ID Photo</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px' }}>
-                              <label htmlFor="id-card-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
-                                {formData.studentIdCardPhoto ? 'Change Photo' : 'Upload ID Photo'}
+                          <div className="signup-modal__avatar-preview-container">
+                            <div className="signup-modal__avatar-circle-wrapper">
+                              <div className="signup-modal__avatar-circle">
+                                {formData.avatar ? (
+                                  <img src={formData.avatar} referrerPolicy="no-referrer" alt="Profile" className="signup-modal__avatar-img" />
+                                ) : (
+                                  <span>👨‍🏫</span>
+                                )}
+                              </div>
+                              <label htmlFor="profile-pic-upload" className="signup-modal__avatar-upload-overlay">
+                                <span>Upload</span>
                               </label>
                               <input
                                 type="file"
-                                id="id-card-upload"
+                                id="profile-pic-upload"
                                 accept="image/*"
-                                onChange={handleIdCardUpload}
+                                onChange={handleImageUpload}
                                 style={{ display: 'none' }}
                               />
-                              {formData.studentIdCardPhoto && (
-                                <span style={{ fontSize: '1.2rem', color: '#10B981' }}>✅</span>
-                              )}
                             </div>
-                          </div>
-                        </div>
-
-                        {formData.studentIdCardPhoto && (
-                          <div className="signup-modal__form-group" style={{ marginBottom: '16px', width: '100%' }}>
-                            <label className="signup-modal__label" style={{ fontSize: '0.80rem', color: 'var(--text-muted)', display: 'block', textAlign: 'left', marginBottom: '4px' }}>ID Photo Preview</label>
-                            <div style={{ width: '100%', height: '180px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid rgba(230, 204, 178, 0.5)', background: '#fcf8f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <img src={formData.studentIdCardPhoto} alt="Student ID Card Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            <div className="signup-modal__avatar-info">
+                              <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Full Name</label>
+                              <input
+                                type="text"
+                                name="fullName"
+                                value={formData.fullName}
+                                onChange={handleInputChange}
+                                className="signup-modal__input"
+                                required
+                                placeholder="Your Name"
+                                style={{ marginBottom: '12px' }}
+                              />
+                              <label className="signup-modal__label signup-modal__avatar-label" style={{ display: 'block', textAlign: 'left', marginBottom: '4px', fontSize: '0.85rem' }}>Email Address</label>
+                              <input
+                                type="text"
+                                name="email"
+                                value={formData.email}
+                                className="signup-modal__input signup-modal__input--readonly"
+                                readOnly
+                              />
                             </div>
-                          </div>
-                        )}
-
-                        <div className="signup-modal__form-group" style={{ marginBottom: '16px' }}>
-                          <label className="signup-modal__label">Interested to Guide</label>
-                          <div className="signup-modal__checkbox-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                            {['Medical', 'Buet', 'University', 'HSC Academic'].map((guideArea) => (
-                              <label className="signup-modal__checkbox-label" key={guideArea}>
-                                <input
-                                  type="checkbox"
-                                  checked={formData.interestedToGuide.includes(guideArea)}
-                                  onChange={() => handleGuideCheckboxChange(guideArea)}
-                                  className="signup-modal__checkbox"
-                                />
-                                <span>{guideArea}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-
-                        <h4 className="signup-modal__form-section-title">3. Academic Information</h4>
-
-                        <div className="signup-modal__input-row">
-                          <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">College Name</label>
-                            <input
-                              type="text"
-                              name="collegeName"
-                              placeholder="e.g. Notre Dame College"
-                              value={formData.collegeName}
-                              onChange={handleInputChange}
-                              className="signup-modal__input"
-                              required
-                            />
                           </div>
 
                           <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">HSC Batch</label>
+                            <label className="signup-modal__label">Gender (optional)</label>
                             <select
-                              name="hscBatch"
-                              value={formData.hscBatch}
+                              name="gender"
+                              value={formData.gender}
                               onChange={handleInputChange}
                               className="signup-modal__select"
                             >
-                              <option value="2020">HSC 2020</option>
-                              <option value="2021">HSC 2021</option>
-                              <option value="2022">HSC 2022</option>
-                              <option value="2023">HSC 2023</option>
-                              <option value="2024">HSC 2024</option>
-                              <option value="2025">HSC 2025</option>
+                              <option value="">Select Gender</option>
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
                             </select>
                           </div>
-                        </div>
-
-                        <div className="signup-modal__input-row">
-                          <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">University Name</label>
-                            <input
-                              type="text"
-                              name="universityName"
-                              placeholder="e.g. BUET"
-                              value={formData.universityName}
-                              onChange={handleInputChange}
-                              className="signup-modal__input"
-                              required
-                            />
-                          </div>
 
                           <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">Department</label>
+                            <label className="signup-modal__label">Date of Birth (optional)</label>
                             <input
-                              type="text"
-                              name="department"
-                              placeholder="e.g. CSE"
-                              value={formData.department}
+                              type="date"
+                              name="dob"
+                              value={formData.dob}
                               onChange={handleInputChange}
                               className="signup-modal__input"
-                              required
                             />
                           </div>
                         </div>
 
-                        <div className="signup-modal__input-row">
-                          <div className="signup-modal__form-group">
-                            <label className="signup-modal__label">Current Year / Semester</label>
-                            <input
-                              type="text"
-                              name="currentYearSemester"
-                              placeholder="e.g. 3rd Year 2nd Semester"
-                              value={formData.currentYearSemester}
+                        {/* Page 1 Right Column: Identity Verification & Interested to Guide */}
+                        <div className="signup-modal__form-right-fields">
+                          <h4 className="signup-modal__form-section-title">2. Identity Verification</h4>
+
+                          <div className="signup-modal__input-row">
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">Student ID Number</label>
+                              <input
+                                type="text"
+                                name="studentIdNumber"
+                                placeholder="e.g. 21101424"
+                                value={formData.studentIdNumber}
+                                onChange={handleInputChange}
+                                className="signup-modal__input"
+                                required
+                              />
+                            </div>
+
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">Student ID Photo</label>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px' }}>
+                                <label htmlFor="id-card-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
+                                  {formData.studentIdCardPhoto ? 'Change Photo' : 'Upload ID Photo'}
+                                </label>
+                                <input
+                                  type="file"
+                                  id="id-card-upload"
+                                  accept="image/*"
+                                  onChange={handleIdCardUpload}
+                                  style={{ display: 'none' }}
+                                />
+                                {formData.studentIdCardPhoto && (
+                                  <span style={{ fontSize: '1.2rem', color: '#10B981' }}>✅</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {formData.studentIdCardPhoto && (
+                            <div className="signup-modal__form-group" style={{ marginBottom: '16px', width: '100%' }}>
+                              <label className="signup-modal__label" style={{ fontSize: '0.80rem', color: 'var(--text-muted)', display: 'block', textAlign: 'left', marginBottom: '4px' }}>ID Photo Preview</label>
+                              <div style={{ width: '100%', height: '140px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid rgba(230, 204, 178, 0.5)', background: '#fcf8f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <img src={formData.studentIdCardPhoto} alt="Student ID Card Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                              </div>
+                            </div>
+                          )}
+
+                          <h4 className="signup-modal__form-section-title">3. Interested to Guide</h4>
+                          <div className="signup-modal__form-group" style={{ marginBottom: '16px' }}>
+                            <div className="signup-modal__checkbox-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                              {['Medical', 'Engineering', 'University', 'Academic', 'IELTS'].map((guideArea) => (
+                                <label className="signup-modal__checkbox-label" key={guideArea}>
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.interestedToGuide.includes(guideArea)}
+                                    onChange={() => handleGuideCheckboxChange(guideArea)}
+                                    className="signup-modal__checkbox"
+                                  />
+                                  <span>{guideArea}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          {errorMsg && <p className="signup-modal__error-text">{errorMsg}</p>}
+
+                          <div className="signup-modal__form-actions" style={{ marginTop: '24px' }}>
+                            <button
+                              type="submit"
+                              className="btn btn-primary btn-lg signup-modal__submit-btn"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Page 2 Left Column: Academic Information */}
+                      <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* Section 4: Academic Information */}
+                        <div>
+                          <h4 className="signup-modal__form-section-title">4. Academic Information</h4>
+
+                          <div className="signup-modal__input-row">
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">College Name</label>
+                              <input
+                                type="text"
+                                name="collegeName"
+                                placeholder="e.g. Notre Dame College"
+                                value={formData.collegeName}
+                                onChange={handleInputChange}
+                                className="signup-modal__input"
+                                required
+                              />
+                            </div>
+
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">HSC Batch</label>
+                              <select
+                                name="hscBatch"
+                                value={formData.hscBatch}
+                                onChange={handleInputChange}
+                                className="signup-modal__select"
+                              >
+                                <option value="2020">HSC 2020</option>
+                                <option value="2021">HSC 2021</option>
+                                <option value="2022">HSC 2022</option>
+                                <option value="2023">HSC 2023</option>
+                                <option value="2024">HSC 2024</option>
+                                <option value="2025">HSC 2025</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="signup-modal__input-row">
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">University Name</label>
+                              <input
+                                type="text"
+                                name="universityName"
+                                placeholder="e.g. BUET"
+                                value={formData.universityName}
+                                onChange={handleInputChange}
+                                className="signup-modal__input"
+                                required
+                              />
+                            </div>
+
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">Department</label>
+                              <input
+                                type="text"
+                                name="department"
+                                placeholder="e.g. CSE"
+                                value={formData.department}
+                                onChange={handleInputChange}
+                                className="signup-modal__input"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="signup-modal__input-row">
+                            <div className="signup-modal__form-group">
+                              <label className="signup-modal__label">Current Year / Semester</label>
+                              <input
+                                type="text"
+                                name="currentYearSemester"
+                                placeholder="e.g. 3rd Year 2nd Semester"
+                                value={formData.currentYearSemester}
+                                onChange={handleInputChange}
+                                className="signup-modal__input"
+                                required
+                              />
+                            </div>
+
+                            <div className="signup-modal__form-group" style={{ opacity: 0, pointerEvents: 'none' }}>
+                              <label className="signup-modal__label">Placeholder</label>
+                              <input type="text" className="signup-modal__input" readOnly />
+                            </div>
+                          </div>
+
+                          {/* Conditional IELTS verification fields */}
+                          {formData.interestedToGuide.includes('IELTS') && (
+                            <div className="signup-modal__input-row" style={{ background: 'rgba(56, 189, 248, 0.04)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px dashed rgba(56, 189, 248, 0.3)', marginBottom: '20px' }}>
+                              <div className="signup-modal__form-group">
+                                <label className="signup-modal__label" style={{ color: 'var(--sky-blue)' }}>IELTS Score</label>
+                                <input
+                                  type="text"
+                                  name="ieltsScore"
+                                  placeholder="e.g. 7.5"
+                                  value={formData.ieltsScore}
+                                  onChange={handleInputChange}
+                                  className="signup-modal__input"
+                                  required
+                                />
+                              </div>
+
+                              <div className="signup-modal__form-group">
+                                <label className="signup-modal__label" style={{ color: 'var(--sky-blue)' }}>IELTS Test Report Form (TRF) PDF</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px' }}>
+                                  <label htmlFor="trf-pdf-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
+                                    {formData.ieltsTrf ? 'Change PDF' : 'Upload TRF PDF'}
+                                  </label>
+                                  <input
+                                    type="file"
+                                    id="trf-pdf-upload"
+                                    accept="application/pdf"
+                                    onChange={handleTrfUpload}
+                                    style={{ display: 'none' }}
+                                  />
+                                  {formData.ieltsTrf && (
+                                    <span style={{ fontSize: '0.85rem', color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <span>✅ Loaded</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section 5: Academic or Admission Achievements */}
+                        <div>
+                          <h4 className="signup-modal__form-section-title">5. Academic or Admission Achievements</h4>
+
+                          <div className="signup-modal__form-group" style={{ marginBottom: '16px' }}>
+                            <label className="signup-modal__label">Academic or Admission Achievement Section Description (BIO)</label>
+                            <textarea
+                              name="admissionAchievement"
+                              placeholder="Describe your achievements (e.g. BUET 45th merit position, IELTS 8.0, Medical Admission score 78.5). This will be showcased on your mentor public BIO profile."
+                              value={formData.admissionAchievement}
                               onChange={handleInputChange}
                               className="signup-modal__input"
+                              rows={4}
                               required
+                              style={{ resize: 'vertical', minHeight: '100px', lineHeight: '1.4', padding: '10px 14px' }}
                             />
                           </div>
-
-                          <div className="signup-modal__form-group" style={{ opacity: 0, pointerEvents: 'none' }}>
-                            <label className="signup-modal__label">Placeholder</label>
-                            <input type="text" className="signup-modal__input" readOnly />
-                          </div>
                         </div>
 
-                        <h4 className="signup-modal__form-section-title">4. Admission Achievements</h4>
+                        {errorMsg && <p className="signup-modal__error-text" style={{ marginTop: '0' }}>{errorMsg}</p>}
 
-                        <div className="signup-modal__form-group" style={{ marginBottom: '16px' }}>
-                          <label className="signup-modal__label">Admission Achievement Section Description (BIO)</label>
-                          <textarea
-                            name="admissionAchievement"
-                            placeholder="Describe your admission achievements (e.g. BUET 45th merit position, Medical Admission score 78.5). This will be showcased on your mentor public BIO profile."
-                            value={formData.admissionAchievement}
-                            onChange={handleInputChange}
-                            className="signup-modal__input"
-                            rows={3}
-                            required
-                            style={{ resize: 'vertical', minHeight: '80px', lineHeight: '1.4', padding: '10px 14px' }}
-                          />
-                        </div>
-
-                        {errorMsg && <p className="signup-modal__error-text">{errorMsg}</p>}
-
-                        <div className="signup-modal__form-actions">
+                        <div className="signup-modal__form-actions" style={{ display: 'flex', gap: '15px', marginTop: '12px', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={() => { setProfileSubStep(1); setErrorMsg(''); }}
+                            className="btn btn-secondary btn-lg"
+                            style={{ width: '150px', cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', fontWeight: '600' }}
+                          >
+                            Back
+                          </button>
                           <button
                             type="submit"
                             disabled={loading}
                             className="btn btn-primary btn-lg signup-modal__submit-btn"
+                            style={{ width: '200px' }}
                           >
                             {loading ? 'Saving...' : 'Next'}
                           </button>
                         </div>
                       </div>
-                    </>
+                      </>
+                    )
                   ) : (
                     <>
                       {/* Left Column: Basic Information */}

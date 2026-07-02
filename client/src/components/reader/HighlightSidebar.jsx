@@ -1,4 +1,3 @@
-import React from 'react';
 import { HiX, HiTrash } from 'react-icons/hi';
 import './HighlightSidebar.css';
 
@@ -7,7 +6,8 @@ export default function HighlightSidebar({
   onClose, 
   highlights, 
   onHighlightClick,
-  onDeleteHighlight 
+  onDeleteHighlight,
+  onAskHighlightAI
 }) {
   if (!isOpen) return null;
 
@@ -32,6 +32,30 @@ export default function HighlightSidebar({
                 <p>"{h.text}"</p>
                 {h.note && <p className="rb-highlight-note">{h.note}</p>}
                 <span className="rb-highlight-meta">Page {h.pageNumber}</span>
+                {onAskHighlightAI && (
+                  <div className="rb-highlight-actions">
+                    <button
+                      type="button"
+                      className="rb-highlight-ai-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAskHighlightAI(h, 'summary');
+                      }}
+                    >
+                      Summarize
+                    </button>
+                    <button
+                      type="button"
+                      className="rb-highlight-ai-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAskHighlightAI(h, 'notes');
+                      }}
+                    >
+                      Notes
+                    </button>
+                  </div>
+                )}
               </div>
               <button 
                 className="rb-highlight-delete"

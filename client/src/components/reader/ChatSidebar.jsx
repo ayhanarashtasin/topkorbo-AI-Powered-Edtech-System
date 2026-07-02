@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
@@ -7,13 +7,31 @@ import {
   HiX,
   HiOutlineTrash,
   HiOutlinePaperAirplane,
-  HiOutlineSparkles
+  HiOutlineSparkles,
+  HiOutlineBookOpen,
+  HiOutlineClipboardList,
+  HiOutlineQuestionMarkCircle,
+  HiOutlineAcademicCap,
+  HiOutlineLightBulb,
+  HiOutlineCursorClick
 } from 'react-icons/hi';
 import './ChatSidebar.css';
 
-// Right-side drawer with the AI tutor conversation. User bubbles are plain
-// text; assistant bubbles render through `react-markdown` so headings,
-// lists, bold etc. display correctly.
+const MODE_LABELS = {
+  page: 'Current Page',
+  book: 'Full Book'
+};
+
+const QUICK_ACTIONS = [
+  { id: 'summary-page', label: 'Summarize Page', scope: 'page', requestedAction: 'summary', question: 'Summarize this page', icon: HiOutlineClipboardList },
+  { id: 'summary-book', label: 'Summarize Book', scope: 'book', requestedAction: 'summary', question: 'Summarize the whole book', icon: HiOutlineBookOpen },
+  { id: 'simple', label: 'Explain Simply', scope: 'book', requestedAction: 'simple', question: 'Explain this simply', icon: HiOutlineAcademicCap },
+  { id: 'key-points', label: 'Key Points', scope: 'book', requestedAction: 'notes', question: 'Give key points from this book', icon: HiOutlineLightBulb },
+  { id: 'quiz', label: 'Generate Quiz', scope: 'book', requestedAction: 'quiz', question: 'Generate a quiz from this book', icon: HiOutlineQuestionMarkCircle },
+  { id: 'ask-page', label: 'Ask from Current Page', scope: 'page', requestedAction: 'answer', question: 'Ask about this page', icon: HiOutlineCursorClick },
+  { id: 'ask-book', label: 'Ask from Full Book', scope: 'book', requestedAction: 'answer', question: 'Ask about the whole book', icon: HiOutlineSparkles }
+];
+
 export default function ChatSidebar({
   isOpen,
   onClose,
@@ -21,16 +39,19 @@ export default function ChatSidebar({
   loading = false,
   sending = false,
   pageNumber,
+  scope = 'page',
+  onScopeChange,
   pageTextReady = false,
   getPageText = () => '',
   onSend,
-  onClear
+  onClear,
+  onQuickAction,
+  onSourceClick
 }) {
   const [draft, setDraft] = useState('');
   const listRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Auto-scroll the message list to the newest message on each update.
   useEffect(() => {
     if (!isOpen) return;
     const el = listRef.current;
@@ -38,14 +59,10 @@ export default function ChatSidebar({
     el.scrollTop = el.scrollHeight;
   }, [isOpen, messages, sending]);
 
-  // Clear the draft when the sidebar closes so reopening starts fresh.
-  useEffect(() => {
-    if (!isOpen) setDraft('');
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
-  const canSend = pageTextReady && !sending && draft.trim().length > 0;
+  const canSend = !sending && draft.trim().length > 0 && (scope !== 'page' || pageTextReady);
+  const contextLabel = MODE_LABELS[scope] || 'Current Page';
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -53,7 +70,7 @@ export default function ChatSidebar({
     setDraft('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     if (onSend) {
-      await onSend(text, getPageText());
+      await onSend(text, scope === 'page' ? getPageText() : '');
     }
   };
 
@@ -66,120 +83,244 @@ export default function ChatSidebar({
 
   const handleTextareaInput = (e) => {
     setDraft(e.target.value);
-    // Auto-grow the textarea up to its CSS max-height.
     const el = e.target;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
+
+  const handleQuickAction = async (action) => {
+    if (!action) return;
+    if (onQuickAction) {
+      onQuickAction(action);
+      return;
+    }
+    await onSend?.(
+      action.question,
+      action.scope === 'page' ? getPageText() : '',
+      {
+        requestedAction: action.requestedAction,
+        scopeOverride: action.scope
+      }
+    );
+  };
+
+  const getSourceLabel = (message) => {
+    const pages = Array.isArray(message?.sources) ? message.sources : [];
+    if (pages.length) return pages.map((item) => item.label || `Page ${item.pageNumber}`).join(', ');
+    const match = String(message?.content || '').match(/Sources:\s*([\s\S]*)$/i);
+    if (!match) return '';
+    return match[1].split('\n').map((line) => line.replace(/^[-*]\s*/, '').trim()).filter(Boolean).join(', ');
+  };
+
+  const getCardTitle = (message) => {
+    const action = String(message?.action || '').toLowerCase();
+    if (action === 'summary') return 'AI Summary';
+    if (action === 'quiz') return 'AI Quiz';
+    return 'AI Answer';
+  };
+
+  const getContextUsed = (message) => {
+    const context = String(message?.contextLabel || '').trim();
+    if (context) return context;
+    const type = String(message?.contextType || '').toLowerCase();
+    if (type === 'page') return 'Current Page';
+    if (type === 'chapter') return 'Chapter';
+    if (type === 'topic') return 'Selected Topic';
+    if (type === 'node') return 'Selected Node';
+    return scope === 'page' ? 'Current Page' : 'Full Book';
+  };
+
+  const renderMessageContent = (message) => {
+    const text = String(message?.content || '');
+    const quizMatch = text.match(/(?:^|\n)quiz(?: questions)?[:\s-]*([\s\S]*)/i);
+    if (quizMatch && /1\./.test(quizMatch[1])) {
+      const items = quizMatch[1]
+        .split(/\n(?=\d+\.)/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      return (
+        <div className="rb-chat-quiz">
+          {items.map((item, index) => (
+            <div key={`${message._id || 'quiz'}-${index}`} className="rb-chat-quiz-card">
+              <div className="rb-chat-quiz-title">Question {index + 1}</div>
+              <div className="rb-chat-quiz-body">{item}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeKatex]}>
+        {text}
+      </ReactMarkdown>
+    );
   };
 
   return (
     <aside className="rb-chat-sidebar" aria-label="AI tutor chat">
-      <div className="rb-chat-sidebar-header">
-        <div>
-          <h3>
+      <div className="rb-chat-shell">
+        <div className="rb-chat-header">
+          <div className="rb-chat-header__title">
             <HiOutlineSparkles className="rb-chat-icon" size={18} />
-            AI Tutor
-          </h3>
-          <div className="rb-chat-sidebar-context">
-            {pageNumber ? `Page ${pageNumber} · answers use this page's text` : 'Pick a page to start'}
+            <div>
+              <h3>AI Tutor</h3>
+              <p>Ask from current page or full book</p>
+            </div>
+          </div>
+          <div className="rb-chat-sidebar-actions">
+            <button
+              type="button"
+              onClick={onClear}
+              disabled={messages.length === 0 || sending}
+              title="Clear this chat"
+              aria-label="Clear chat"
+            >
+              <HiOutlineTrash size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              title="Close chat"
+              aria-label="Close chat"
+            >
+              <HiX size={18} />
+            </button>
           </div>
         </div>
-        <div className="rb-chat-sidebar-actions">
-          <button
-            type="button"
-            onClick={onClear}
-            disabled={messages.length === 0 || sending}
-            title="Clear this page's chat"
-            aria-label="Clear chat"
-          >
-            <HiOutlineTrash size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            title="Close chat"
-            aria-label="Close chat"
-          >
-            <HiX size={18} />
-          </button>
-        </div>
-      </div>
 
-      <div className="rb-chat-sidebar-content" ref={listRef}>
-        {loading && messages.length === 0 ? (
-          <div className="rb-chat-empty">Loading conversation…</div>
-        ) : messages.length === 0 ? (
-          <div className="rb-chat-empty">
-            <strong>Ask anything about this page.</strong>
-            <br />
-            The tutor will read the page you're on and answer your question.
-          </div>
-        ) : (
-          messages.map((m) =>
-            m.role === 'assistant' ? (
-              <div
-                key={m._id || `${m.role}-${m.createdAt}`}
-                className="rb-chat-message rb-chat-message--assistant rb-chat-markdown"
+        <div className="rb-chat-mode-row" role="tablist" aria-label="AI tutor mode">
+          {Object.entries(MODE_LABELS).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`rb-chat-mode-pill ${scope === key ? 'rb-chat-mode-pill--active' : ''}`}
+              onClick={() => onScopeChange?.(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="rb-chat-action-grid">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            const active = scope === action.scope && (
+              action.scope === 'page'
+                ? action.id === 'summary-page' || action.id === 'ask-page'
+                : action.id === 'summary-book' || action.id === 'ask-book'
+            );
+            return (
+              <button
+                key={action.id}
+                type="button"
+                className={`rb-chat-action-card ${active ? 'rb-chat-action-card--active' : ''}`}
+                onClick={() => handleQuickAction(action)}
               >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeKatex]}
+                <Icon size={16} />
+                <span>{action.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="rb-chat-content" ref={listRef}>
+          {loading && messages.length === 0 ? (
+            <div className="rb-chat-empty">
+              <div className="rb-chat-spinner" />
+              <p>Preparing your answer...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="rb-chat-empty">
+              <strong>Ask anything from this page or the full book.</strong>
+              <p>The tutor will answer using the selected reading context and show sources.</p>
+            </div>
+          ) : (
+            messages.map((m) =>
+              m.role === 'assistant' ? (
+                <div
+                  key={m._id || `${m.role}-${m.createdAt}`}
+                  className="rb-chat-answer-card"
+                >
+                  <div className="rb-chat-answer-card__head">
+                    <div className="rb-chat-answer-card__head-main">
+                      <span>{getCardTitle(m)}</span>
+                      <small>Context used: {getContextUsed(m)}</small>
+                    </div>
+                    {m.action === 'quiz' && <small className="rb-chat-answer-card__badge">Quiz</small>}
+                  </div>
+                  <div className="rb-chat-answer-card__body rb-chat-markdown">
+                    {renderMessageContent(m)}
+                  </div>
+                  {getSourceLabel(m) && (
+                    <div className="rb-chat-answer-card__footer">
+                      <span>Sources:</span>{' '}
+                      {Array.isArray(m.sources) && m.sources.length > 0 ? (
+                        m.sources.map((source, index) => (
+                          <button
+                            key={`${source.pageNumber}-${index}`}
+                            type="button"
+                            className="rb-chat-source-btn"
+                            onClick={() => onSourceClick?.(source.pageNumber)}
+                          >
+                            {source.label || `Page ${source.pageNumber}`}
+                          </button>
+                        ))
+                      ) : (
+                        getSourceLabel(m)
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  key={m._id || `${m.role}-${m.createdAt}`}
+                  className={`rb-chat-message rb-chat-message--${m.role}`}
                 >
                   {m.content}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <div
-                key={m._id || `${m.role}-${m.createdAt}`}
-                className={`rb-chat-message rb-chat-message--${m.role}`}
-              >
-                {m.content}
-              </div>
+                </div>
+              )
             )
-          )
-        )}
-        {sending && (
-          <div className="rb-chat-typing" aria-label="AI tutor is typing">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        )}
-      </div>
+          )}
+          {sending && (
+            <div className="rb-chat-typing" aria-label="AI tutor is typing">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
+        </div>
 
-      <div className="rb-chat-sidebar-footer">
-        <textarea
-          ref={textareaRef}
-          value={draft}
-          onChange={handleTextareaInput}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            pageTextReady
-              ? `Ask a question about page ${pageNumber}…`
-              : 'Waiting for the page text to load…'
-          }
-          rows={2}
-          disabled={!pageTextReady || sending}
-          aria-label="Type your question"
-        />
-        <div className="rb-chat-footer-row">
-          <span
-            className={`rb-chat-page-hint ${pageTextReady ? '' : 'rb-chat-page-hint--missing'}`}
-          >
-            {pageTextReady
-              ? 'Context: current page'
-              : 'Page text not ready yet'}
-          </span>
-          <button
-            type="button"
-            className="rb-chat-send-btn"
-            onClick={handleSend}
-            disabled={!canSend}
-            aria-label="Send question"
-          >
-            <HiOutlinePaperAirplane size={14} />
-            Send
-          </button>
+        <div className="rb-chat-footer">
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={handleTextareaInput}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              scope === 'page'
+                ? (pageTextReady ? `Ask a question about page ${pageNumber}...` : 'Waiting for the page text to load...')
+                : 'Ask a question about the full book...'
+            }
+            rows={2}
+            disabled={sending || (scope === 'page' && !pageTextReady)}
+            aria-label="Type your question"
+          />
+          <div className="rb-chat-footer-row">
+            <span className={`rb-chat-footer-context ${scope === 'page' && !pageTextReady ? 'rb-chat-footer-context--missing' : ''}`}>
+              Context: {contextLabel}
+            </span>
+            <button
+              type="button"
+              className="rb-chat-send-btn"
+              onClick={handleSend}
+              disabled={!canSend}
+              aria-label="Send question"
+            >
+              <HiOutlinePaperAirplane size={14} />
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </aside>

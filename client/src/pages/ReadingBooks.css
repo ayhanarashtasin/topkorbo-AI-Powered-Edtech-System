@@ -273,6 +273,37 @@
   color: var(--text-secondary, #5c4d4c);
 }
 
+.rb-book-card__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.rb-book-card__status--pending,
+.rb-book-card__status--processing {
+  background: rgba(245, 158, 11, 0.14);
+  color: #B45309;
+}
+
+.rb-book-card__status--not_started,
+.rb-book-card__status--extracting_text,
+.rb-book-card__status--chunking,
+.rb-book-card__status--embedding,
+.rb-book-card__status--indexing {
+  background: rgba(245, 158, 11, 0.14);
+  color: #B45309;
+}
+
+.rb-book-card__status--failed {
+  background: rgba(239, 68, 68, 0.14);
+  color: #B91C1C;
+}
+
 .rb-book-card__author {
   display: inline-flex;
   align-items: center;
