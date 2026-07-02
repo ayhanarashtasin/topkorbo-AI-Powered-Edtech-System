@@ -35,63 +35,104 @@ The project is a monorepo with two independent packages:
 
 ##  Features
 
-###  Question Bank & Practice
-- **Smart filtering** by Subject, Paper, Chapter, and Topic.
-- **Dual track:** Board Exam questions and Top College / Varsity questions.
-- **Multi-format:** Creative Questions (CQ), MCQs, and Written/Descriptive questions.
-- **LaTeX rendering** with KaTeX for clean math and formulas.
-- **Practice history** tracking with attempt review.
+### 1. Question Bank & Guided Practice
+- **Structured academic taxonomy:** Questions are organized by Subject, Paper, Chapter, Topic, and source so students can practice exactly what they need.
+- **Multiple question sources:** Supports Board Exam questions, college questions, varsity/admission questions, and teacher-created custom questions.
+- **Multiple question formats:** Handles MCQ, Written/Descriptive, and Creative Question (CQ) formats, including CQ stems and four-part sub-questions.
+- **Rich question content:** Supports images, detailed solutions, solution images, and KaTeX/LaTeX rendering for mathematical expressions.
+- **Smart browsing flows:** Separate views for source questions, varsity written questions, admission question cards, and filtered Question Bank practice.
+- **Practice attempt tracking:** Saves per-question snapshots, selected answers, written uploads, scores, time spent, skipped/flagged states, and post-practice notes.
+- **Performance summaries:** Practice history includes attempt review, subject/chapter/topic breakdowns, accuracy, score trends, and retry-friendly records.
 
-###  Mock Tests
-- Timed exam environment with live countdown.
-- Instant grading with a performance mascot and confetti celebration.
-- Interactive solutions and explanations for every question after submission.
+### 2. Mock Tests & Exam Simulation
+- **Configurable test generation:** Students can build mock tests from selected subjects, papers, chapters, topics, and question counts.
+- **Timed exam mode:** Provides a focused exam screen with countdown, answer selection, submission flow, and final result handling.
+- **Automatic MCQ grading:** Calculates correct, wrong, skipped, obtained marks, percentages, and negative-marking aware scores where configured.
+- **Written answer evaluation:** Supports handwritten/written answer uploads and AI-assisted evaluation with partial marks and feedback.
+- **Attempt persistence:** Stores immutable question snapshots so historical results remain valid even if source questions are edited later.
 
-###  Contests & AI Battle
-- **Contests:** Codeforces-style timed academic contests with leaderboards and results.
-- **AI Battle:** Head-to-head, real-time question battles powered by Socket.io.
+### 3. Contests & Competitive Learning
+- **Codeforces-style contests:** Teachers can create scheduled academic contests with title, timing, questions, registration, and result tracking.
+- **Question sourcing options:** Contest creators can add questions manually or select existing questions from the Question Bank.
+- **Participant registration:** Students can register for upcoming contests and access contest details before participating.
+- **Submission and results:** Stores contest submissions, scores, time taken, correct answers, wrong answers, skipped answers, and leaderboard-ready result data.
+- **Creator dashboard:** Teachers can view, update, delete, and manage their own contests.
 
-###  AI Tutor
-- Built-in question helper powered by **Groq** (OpenAI-compatible LLM API).
-- Context-aware explanations and study assistance.
+### 4. Real-Time AI Battle Arena
+- **Room-based battles:** Students can create and join battle rooms with shareable room IDs.
+- **Multiple battle modes:** Supports duel, squad/custom squad, and raid-style configurations with player limits and team assignment logic.
+- **Live round progression:** Tracks current question, round timer, readiness, answers, scores, and player state in real time through Socket.io.
+- **Custom game settings:** Battle hosts can configure question time, total questions, question type, team names, and negative marking.
+- **Rematch support:** Finished rooms can generate rematch rooms while preserving battle context and team preferences.
+- **AI battle coaching:** Includes a Groq-powered coach endpoint for generating feedback and learning guidance after battles.
 
-###  IELTS Preparation
-- Dedicated IELTS prep hub with **Listening sets**.
-- Teacher tools to upload and manage IELTS listening content.
+### 5. AI Tutor & Academic Assistance
+- **Groq-powered tutoring:** Uses an OpenAI-compatible Groq LLM backend for explanations, chat, grading, and study assistance.
+- **Question explanation:** Generates step-by-step solutions for MCQ, written, and CQ questions with LaTeX-friendly formatting.
+- **Mistake analysis:** Can compare a student's uploaded handwritten solution with the reference solution and explain where the answer went wrong.
+- **MCQ answer helper:** Provides AI support for answering and explaining MCQ-style problems.
+- **AI question extraction:** Extracts structured question data from uploaded or pasted content to speed up question creation.
+- **Persistent chat history:** Stores user and assistant messages for general book/page chat and context-specific tutoring sessions.
 
-###  Live Classes
-- Real-time video classrooms powered by **LiveKit**.
-- Separate mentor (host) and student (participant) experiences.
-- Attendance tracking and live session management.
+### 6. Smart Reading Library
+- **Teacher book uploads:** Teachers can upload PDF books with title, description, category, group, subject, paper, and chapter metadata.
+- **In-app PDF reader:** Students can read books inside the platform with `react-pdf`, chapter navigation, page controls, and streaming-friendly PDF delivery.
+- **Reading progress:** Saves last-read position, bookmarks, and user-specific reading state.
+- **Highlights and annotations:** Supports persistent highlights, pen annotations, bulk annotation operations, and deletion.
+- **AI book understanding:** Generates and stores book knowledge snapshots, topic trees, summaries, key points, definitions, examples, quizzes, and source-linked context.
+- **Contextual book chat:** Students can ask AI questions scoped to a page, topic, chapter, node, or entire book with saved conversation history.
+- **Knowledge visualization:** Includes a knowledge tree graph for exploring generated book structure and concepts.
 
-###  Mentorship
-- Student ↔ mentor connection system.
-- Live class hosting and mentor-led sessions.
+### 7. Study Routine Planner
+- **Personalized routine generation:** Builds study plans from exam information, weak subjects, target goals, available hours, wake/sleep time, duration, and study days per week.
+- **Calendar-based planning:** Uses a calendar view to show daily sessions, rest days, tasks, priorities, and estimated study time.
+- **Routine editing and persistence:** Students can save, update, mark segments complete, and continue from stored routines.
+- **Session analytics:** Tracks total sessions, completed work, upcoming tasks, subject distribution, and progress summaries.
+- **AI routine modification:** Supports AI-assisted changes and next-week routine generation based on the current plan.
 
-###  Reading Library
-- In-app **PDF reader** (react-pdf) for uploaded books.
-- **Highlights & annotations** with persistent reading state.
-- Teacher book upload portal.
+### 8. IELTS Preparation Hub
+- **Skill-based IELTS sections:** Provides dedicated areas for Listening, Reading, Writing, and Speaking preparation.
+- **Practice flows:** Includes student-facing practice pages for each IELTS skill area.
+- **Listening set management:** Teachers can upload complete listening sets with all four sections, each containing audio and PDF files.
+- **Teacher IELTS studio:** Provides upload screens for Listening, Reading, Writing, and Speaking materials.
+- **Secure file validation:** Restricts IELTS uploads to supported PDF and audio formats with file-size limits.
 
-###  Study Routine
-- Personalized study planner with calendar view (react-big-calendar).
-- Track study sessions and stay organized.
+### 9. Live Classes & Mentorship
+- **LiveKit video classrooms:** Mentors/teachers can start live sessions and students can join through generated LiveKit access tokens.
+- **Separate role experiences:** Includes mentor dashboard/host flow and student session discovery/join flow.
+- **Attendance tracking:** Records join/leave activity and class attendance data for live sessions.
+- **Mentor discovery:** Students can browse mentors by profile details, guidance interests, university, department, admission achievement, and ratings.
+- **Connection workflow:** Students can request mentors, and mentors can accept or reject connection requests.
+- **Mentor dashboards:** Mentors can view connected students, recent mock-test performance, subject summaries, and student progress signals.
+- **Reviews and ratings:** Students can submit mentor reviews; mentor listings include average rating, review count, and recent anonymous reviews.
 
-###  Community Forum
-- Posts, threaded comments, reactions, and bookmarks.
-- User profiles, full-text search, and notifications.
-- Moderation tools and role-based admin controls.
+### 10. Community Forum
+- **Rich post creation:** Users can create text or question posts with rich HTML content, tags, categories, mentions, and up to eight images.
+- **Personalized feeds:** Supports latest, trending, most-discussed, following, and category-filtered feeds with cursor pagination.
+- **Threaded discussions:** Includes nested comments, comment editing/deletion, replies, and per-comment reactions.
+- **Reactions and bookmarks:** Users can react with like/love and save posts to personal bookmarks.
+- **User profiles and follows:** Forum profiles include username, bio, avatar, reputation, followers, following, and user post history.
+- **Real-time updates:** Socket.io broadcasts new posts, post updates, comments, and notification events.
+- **Search and discovery:** Full-text search covers posts, tags, categories, and user-facing forum discovery flows.
+- **Moderation system:** Users can report content; moderators/admins can review reports, hide content, warn users, or ban accounts.
 
-###  Teacher Studio
-- Application & verification flow to become a teacher.
-- Interactive question uploader (custom options, LaTeX, board/college tags, solutions).
-- Step-by-step contest creation (build from scratch or pick from the Question Bank).
+### 11. Teacher Studio & Content Management
+- **Teacher application flow:** Users can apply to become teachers/tutors with academic, identity, and guidance-related profile details.
+- **Question uploader:** Teachers can create MCQ, written, and CQ questions with options, solutions, images, source tags, and chapter/topic metadata.
+- **My questions management:** Teachers can view, edit, and delete their own uploaded questions.
+- **Contest builder:** Step-by-step contest creation supports manual question entry, Question Bank selection, confirmation, and publishing.
+- **Book management:** Teachers can upload, update, publish/unpublish, and delete their own reading-library books.
+- **IELTS content tools:** Teachers can upload IELTS preparation resources, including structured listening sets.
 
-###  Platform
-- **Bilingual UI** — toggle between Bengali (বাংলা) and English.
-- **Secure auth** — JWT + Google OAuth 2.0 (Passport.js).
-- **Image uploads** via Cloudinary with local-disk fallback.
-- **Polished UX** — Framer Motion animations and React Hot Toast feedback.
+### 12. Authentication, Profiles & Platform Foundation
+- **Google OAuth login:** Uses Passport.js Google OAuth 2.0 for account creation and login.
+- **JWT-protected APIs:** Secures private REST routes and Socket.io connections with signed JWT authentication.
+- **Profile completion:** Collects role-specific student, tutor, and teacher profile information after login.
+- **Role-based access control:** Separates student, tutor, teacher, moderator, and admin capabilities across APIs and UI flows.
+- **Bilingual interface:** Provides Bengali and English language context support for the frontend.
+- **Media storage:** Uses Cloudinary for forum images, Firebase Storage for uploaded books, and local disk storage for IELTS uploads.
+- **Security-minded backend:** Includes HTML sanitization, upload validation, rate limiting, strong JWT secret enforcement, and centralized error handling.
+- **Responsive polished UI:** Uses React 19, Vite, Framer Motion, React Hot Toast, React Icons, and mobile-friendly layouts.
 
 ---
 
