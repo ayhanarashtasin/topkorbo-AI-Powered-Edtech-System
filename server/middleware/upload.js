@@ -1,8 +1,22 @@
 const path = require('path');
+const fs = require('fs');
 const multer = require('multer');
 
-// Store files in memory so they can be immediately uploaded to Firebase Storage
-const storage = multer.memoryStorage();
+const MAX_PDF_UPLOAD_MB = 500;
+const MAX_PDF_UPLOAD_BYTES = MAX_PDF_UPLOAD_MB * 1024 * 1024;
+const uploadTempDir = path.resolve(__dirname, '..', 'tmp', 'uploads', 'books');
+
+// Store large PDFs on disk temporarily so uploads don't require huge memory buffers.
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    fs.mkdirSync(uploadTempDir, { recursive: true });
+    cb(null, uploadTempDir);
+  },
+  filename: (req, file, cb) => {
+    const safeName = (file.originalname || 'file.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeName}`);
+  }
+});
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname || '').toLowerCase();
@@ -10,8 +24,12 @@ const fileFilter = (req, file, cb) => {
   cb(new Error('Only PDF files are allowed'));
 };
 
-module.exports = multer({
+const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 30 * 1024 * 1024 } // 30 MB
+  limits: { fileSize: MAX_PDF_UPLOAD_BYTES }
 });
+
+upload.MAX_PDF_UPLOAD_MB = MAX_PDF_UPLOAD_MB;
+
+module.exports = upload;

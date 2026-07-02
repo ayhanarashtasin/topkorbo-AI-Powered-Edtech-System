@@ -1,4 +1,5 @@
 const ApiResponse = require('../utils/apiResponse');
+const upload = require('./upload');
 
 /**
  * Global error handler middleware
@@ -32,7 +33,7 @@ const errorHandler = (err, req, res, next) => {
 
   // Multer errors (file upload)
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return ApiResponse.error(res, 'File too large. Max size is 30MB', 413);
+    return ApiResponse.error(res, `File too large. Max size is ${upload.MAX_PDF_UPLOAD_MB}MB`, 413);
   }
   if (err.code === 'LIMIT_UNEXPECTED_FILE') {
     return ApiResponse.error(res, 'Unexpected file field', 400);

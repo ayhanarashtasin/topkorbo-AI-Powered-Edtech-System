@@ -13,6 +13,17 @@ const VALID_GROUPS = ['Science', 'Arts', 'Commerce', 'HSC', 'Engineering', 'Medi
 const VALID_PAPERS = ['1st', '2nd', 'N/A'];
 const VALID_ANNOTATION_TYPES = ['pen'];
 
+async function cleanupUploadedFile(file) {
+  if (!file?.path) return;
+  try {
+    await fs.promises.unlink(file.path);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.error('Temporary upload cleanup error:', err);
+    }
+  }
+}
+
 function storagePathFromUrl(fileUrl) {
   if (!fileUrl) return '';
 
@@ -107,7 +118,17 @@ const uploadFileToFirebase = (file, userId) => {
         resolve(`https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media`);
       }
     });
-    blobStream.end(file.buffer);
+    if (file.buffer) {
+      blobStream.end(file.buffer);
+      return;
+    }
+    if (file.path) {
+      fs.createReadStream(file.path)
+        .on('error', (error) => reject(error))
+        .pipe(blobStream);
+      return;
+    }
+    reject(new Error('No PDF file data found'));
   });
 };
 
@@ -152,7 +173,7 @@ exports.createBook = async (req, res, next) => {
     const user = await User.findById(req.user.id);
     if (!user || user.role !== 'teacher') {
       // Clean up uploaded file if role rejected
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Only teachers can upload books', 403);
     }
 
@@ -162,23 +183,23 @@ exports.createBook = async (req, res, next) => {
     } = req.body;
 
     if (!title || !title.trim()) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Title is required', 400);
     }
     if (!VALID_CATEGORIES.includes(category)) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Invalid category', 400);
     }
     if (!VALID_GROUPS.includes(group)) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Invalid group', 400);
     }
     if (!subject || !subject.trim()) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Subject is required', 400);
     }
     if (!VALID_PAPERS.includes(paper)) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Invalid paper', 400);
     }
     if (!req.file) {
@@ -189,6 +210,9 @@ exports.createBook = async (req, res, next) => {
     const chNum = parseInt(numRaw, 10);
     const orderVal = !isNaN(chNum) ? chNum - 1 : 0;
     const chTitle = (chapterTitle || firstChapterTitle || '').trim() || 'Chapter 1';
+
+    const fileUrl = await uploadFileToFirebase(req.file, user._id);
+    await cleanupUploadedFile(req.file);
 
     const book = await Book.create({
       title: title.trim(),
@@ -202,7 +226,7 @@ exports.createBook = async (req, res, next) => {
       chapters: [{
         title: chTitle,
         order: orderVal,
-        fileUrl: await uploadFileToFirebase(req.file, user._id),
+        fileUrl,
         fileSize: req.file.size,
         pageCount: 0
       }]
@@ -211,7 +235,7 @@ exports.createBook = async (req, res, next) => {
     return ApiResponse.success(res, book, 'Book created successfully', 201);
   } catch (err) {
     // Clean up uploaded file on error
-    
+    await cleanupUploadedFile(req.file);
     next(err);
   }
 };
@@ -229,33 +253,36 @@ exports.addChapter = async (req, res, next) => {
     }
     const user = await User.findById(req.user.id);
     if (!user || user.role !== 'teacher') {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Only teachers can add chapters', 403);
     }
 
     const book = await Book.findById(req.params.id);
     if (!book) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Book not found', 404);
     }
     if (book.uploadedBy.toString() !== user._id.toString()) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'You can only add chapters to your own books', 403);
     }
 
     const { title } = req.body;
     if (!title || !title.trim()) {
-      
+      await cleanupUploadedFile(req.file);
       return ApiResponse.error(res, 'Chapter title is required', 400);
     }
     if (!req.file) {
       return ApiResponse.error(res, 'PDF file is required', 400);
     }
 
+    const fileUrl = await uploadFileToFirebase(req.file, user._id);
+    await cleanupUploadedFile(req.file);
+
     const newChapter = {
       title: title.trim(),
       order: book.chapters.length,
-      fileUrl: await uploadFileToFirebase(req.file, user._id),
+      fileUrl,
       fileSize: req.file.size,
       pageCount: 0
     };
@@ -264,7 +291,7 @@ exports.addChapter = async (req, res, next) => {
 
     return ApiResponse.success(res, book, 'Chapter added successfully', 201);
   } catch (err) {
-    
+    await cleanupUploadedFile(req.file);
     next(err);
   }
 };
