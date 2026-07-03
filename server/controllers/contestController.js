@@ -563,6 +563,22 @@ exports.submitContestResult = async (req, res, next) => {
       { upsert: true, new: true, runValidators: true }
     );
 
+    // Fetch top 3 and emit live updates to the contest room
+    try {
+      const top3 = await ContestResult.find({ contest: contestId })
+        .sort({ answersSubmitted: -1, updatedAt: 1 })
+        .limit(3)
+        .populate('student', 'name')
+        .lean();
+      
+      console.log(`[Controller] Broadcasting updated leaderboard for contest ${contestId}:`, JSON.stringify(top3));
+      const { getIO } = require('../socket');
+      const io = getIO();
+      io.to(`contest:${contestId}`).emit('contest:leaderboard', top3);
+    } catch (err) {
+      console.error('Error broadcasting contest leaderboard update:', err);
+    }
+
     return ApiResponse.success(res, result, 'Contest result submitted successfully');
   } catch (err) {
     console.error('Submit contest result error:', err);

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiChatAlt2, HiArrowLeft } from 'react-icons/hi';
+import { HiChatAlt2, HiArrowLeft, HiClipboardCheck } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import './IeltsSpeakingUpload.css';
 
 export default function IeltsSpeakingUpload() {
@@ -15,6 +17,10 @@ export default function IeltsSpeakingUpload() {
     email: localStorage.getItem('topkorbo_email') || '',
     role: localStorage.getItem('topkorbo_role') || 'teacher',
   });
+
+  const [activeSubOption, setActiveSubOption] = useState(null); // null (menu), 'questions', 'requests'
+  const [requests, setRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   // Auth Guard
   useEffect(() => {
@@ -30,6 +36,72 @@ export default function IeltsSpeakingUpload() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (activeSubOption === 'requests') {
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+      const fetchRequests = async () => {
+        try {
+          setLoadingRequests(true);
+          const res = await fetch(`${backendBaseUrl}/ielts/appointments`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const resData = await res.json();
+          if (resData.success) {
+            setRequests(resData.data);
+          }
+        } catch (err) {
+          console.error('Error fetching speaking test requests:', err);
+          toast.error(language === 'en' ? 'Failed to fetch test requests.' : 'টেস্ট অনুরোধসমূহ লোড করতে ব্যর্থ হয়েছে।');
+        } finally {
+          setLoadingRequests(false);
+        }
+      };
+
+      fetchRequests();
+    }
+  }, [activeSubOption, language]);
+
+  const handleUpdateStatus = async (appointmentId, status) => {
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+      const res = await fetch(`${backendBaseUrl}/ielts/appointments/${appointmentId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const resData = await res.json();
+      if (resData.success) {
+        toast.success(
+          status === 'accepted'
+            ? (language === 'en' ? 'Appointment approved!' : 'অ্যাপয়েন্টমেন্ট অনুমোদিত হয়েছে!')
+            : (language === 'en' ? 'Appointment declined!' : 'অ্যাপয়েন্টমেন্ট প্রত্যাখ্যাত হয়েছে!')
+        );
+        
+        // Update state locally
+        setRequests(prev => 
+          prev.map(app => app._id === appointmentId ? { ...app, status } : app)
+        );
+      } else {
+        toast.error(resData.message || (language === 'en' ? 'Failed to update request.' : 'অনুরোধ আপডেট করতে ব্যর্থ হয়েছে।'));
+      }
+    } catch (err) {
+      console.error('Error updating appointment status:', err);
+      toast.error(language === 'en' ? 'An error occurred.' : 'একটি ত্রুটি ঘটেছে।');
+    }
+  };
+
+  const handleBackToMenu = () => {
+    setActiveSubOption(null);
+  };
+
   return (
     <div className="ielts-speaking-upload-page">
       <Sidebar activeTab="ielts-teacher" user={user} />
@@ -37,41 +109,264 @@ export default function IeltsSpeakingUpload() {
       <main className="ielts-speaking-upload-content">
         {/* Header */}
         <header className="ielts-speaking-upload-header">
-          <button 
-            onClick={() => navigate('/ielts-teacher')} 
-            className="ielts-speaking-upload-back-btn" 
+          <button
+            onClick={() => {
+              if (activeSubOption) {
+                handleBackToMenu();
+              } else {
+                navigate('/ielts-teacher');
+              }
+            }}
+            className="ielts-speaking-upload-back-btn"
             title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
           >
             <HiArrowLeft size={20} />
           </button>
           <div className="ielts-speaking-upload-header-text">
-            <h2>{language === 'en' ? 'Upload Speaking Question' : 'স্পিকিং প্রশ্ন আপলোড করুন'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Create custom Speaking prompts, cue cards, and mock interviews'
-                : 'কাস্টম স্পিকিং প্রম্পট, কিউ কার্ড এবং মক ইন্টারভিউ তৈরি করুন'}
-            </p>
+            {activeSubOption === 'questions' ? (
+              <>
+                <h2>{language === 'en' ? 'Speaking Test Questions' : 'স্পিকিং টেস্ট প্রশ্নাবলী'}</h2>
+                <p>
+                  {language === 'en'
+                    ? 'Design and manage mock interview question sheets'
+                    : 'মক ইন্টারভিউ প্রশ্নপত্র ডিজাইন ও পরিচালনা করুন'}
+                </p>
+              </>
+            ) : activeSubOption === 'requests' ? (
+              <>
+                <h2>{language === 'en' ? 'Test Requests' : 'টেস্ট অনুরোধসমূহ'}</h2>
+                <p>
+                  {language === 'en'
+                    ? 'View and manage student speaking appointment requests'
+                    : 'শিক্ষার্থীদের স্পিকিং অ্যাপয়েন্টমেন্টের অনুরোধগুলো দেখুন ও পরিচালনা করুন'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2>{language === 'en' ? 'Speaking Module Management' : 'স্পিকিং মডিউল ব্যবস্থাপনা'}</h2>
+                <p>
+                  {language === 'en'
+                    ? 'Choose an option to manage speaking questions or student requests'
+                    : 'স্পিকিং প্রশ্ন অথবা শিক্ষার্থীর অনুরোধসমূহ পরিচালনা করতে একটি বিকল্প বেছে নিন'}
+                </p>
+              </>
+            )}
           </div>
         </header>
 
         {/* Workspace */}
         <div className="ielts-speaking-upload-workspace">
           <div className="ielts-speaking-upload-container">
-            <div className="ielts-speaking-upload-card">
-              <div className="ielts-speaking-placeholder-icon">
-                <HiChatAlt2 />
-              </div>
-              <h3>
-                {language === 'en' 
-                  ? 'Speaking Question Designer' 
-                  : 'স্পিকিং প্রশ্ন ডিজাইনার'}
-              </h3>
-              <p>
-                {language === 'en'
-                  ? 'This new page is ready to be customized! Please provide the details of what should appear here, and I will build it according to your specifications.'
-                  : 'এই নতুন পেজটি কাস্টমাইজেশনের জন্য প্রস্তুত! অনুগ্রহ করে এখানে কী কী থাকবে তা জানান, আমি আপনার নির্দেশাবলি অনুযায়ী তা তৈরি করে দেব।'}
-              </p>
-            </div>
+
+            {activeSubOption === null && (
+              /* Selection Menu */
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="ielts-speaking-options-grid"
+              >
+                {/* Option 1: Speaking test questions */}
+                <div
+                  className="ielts-speaking-option-card"
+                  onClick={() => setActiveSubOption('questions')}
+                >
+                  <div className="ielts-speaking-option-icon">
+                    <HiChatAlt2 />
+                  </div>
+                  <h3>
+                    {language === 'en' ? 'Speaking test questions' : 'স্পিকিং টেস্ট প্রশ্নাবলী'}
+                  </h3>
+                  <p>
+                    {language === 'en'
+                      ? 'Upload mock speaking topics, cue cards, and part 1/3 questions.'
+                      : 'মক স্পিকিং টপিক, কিউ কার্ড এবং পার্ট ১/৩ এর প্রশ্ন যোগ করুন।'}
+                  </p>
+                  <button className="ielts-speaking-select-btn">
+                    {language === 'en' ? 'Manage Questions' : 'প্রশ্নাবলী পরিচালনা করুন'}
+                  </button>
+                </div>
+
+                {/* Option 2: Test requests */}
+                <div
+                  className="ielts-speaking-option-card"
+                  onClick={() => setActiveSubOption('requests')}
+                >
+                  <div className="ielts-speaking-option-icon">
+                    <HiClipboardCheck />
+                  </div>
+                  <h3>
+                    {language === 'en' ? 'Test requests' : 'টেস্ট অনুরোধসমূহ'}
+                  </h3>
+                  <p>
+                    {language === 'en'
+                      ? 'Review booked appointments and mock test evaluation requests.'
+                      : 'বুক করা অ্যাপয়েন্টমেন্ট এবং মক টেস্ট মূল্যায়নের অনুরোধগুলো দেখুন।'}
+                  </p>
+                  <button className="ielts-speaking-select-btn">
+                    {language === 'en' ? 'View Requests' : 'অনুরোধসমূহ দেখুন'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {activeSubOption === 'questions' && (
+              /* Speaking test questions view placeholder */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="ielts-speaking-subview-card"
+              >
+                <div className="ielts-speaking-placeholder-icon">
+                  <HiChatAlt2 />
+                </div>
+                <h3>
+                  {language === 'en' ? 'Speaking test questions' : 'স্পিকিং টেস্ট প্রশ্নাবলী'}
+                </h3>
+                <p>
+                  {language === 'en'
+                    ? 'Speaking questions manager is coming soon! Content details will be loaded here.'
+                    : 'স্পিকিং প্রশ্ন ম্যানেজার শীঘ্রই আসছে! কন্টেন্ট বিবরণ এখানে লোড করা হবে।'}
+                </p>
+              </motion.div>
+            )}
+
+            {activeSubOption === 'requests' && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="ielts-teacher-requests-view"
+              >
+                {loadingRequests ? (
+                  <div className="ielts-teacher-loading">
+                    <p>{language === 'en' ? 'Loading speaking test requests...' : 'টেস্ট অনুরোধসমূহ লোড হচ্ছে...'}</p>
+                  </div>
+                ) : requests.length === 0 ? (
+                  <div className="ielts-teacher-empty-state">
+                    <HiClipboardCheck size={48} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                    <p>{language === 'en' ? 'No speaking test requests found.' : 'কোনো স্পিকিং টেস্টের অনুরোধ পাওয়া যায়নি।'}</p>
+                  </div>
+                ) : (
+                  <div className="ielts-teacher-requests-container">
+                    
+                    {/* Pending Section */}
+                    <div className="ielts-requests-section">
+                      <h4 className="ielts-requests-section-title">
+                        {language === 'en' ? 'Pending Requests' : 'নতুন অনুরোধসমূহ'}
+                      </h4>
+                      
+                      {requests.filter(r => r.status === 'pending').length === 0 ? (
+                        <p className="ielts-no-requests-msg">
+                          {language === 'en' ? 'No pending requests.' : 'কোনো নতুন অনুরোধ নেই।'}
+                        </p>
+                      ) : (
+                        <div className="ielts-requests-grid">
+                          {requests.filter(r => r.status === 'pending').map(req => (
+                            <div key={req._id} className="ielts-request-card animate-fade-in">
+                              <div className="ielts-request-card__header">
+                                <span className="ielts-request-badge pending">
+                                  {language === 'en' ? 'Pending' : 'অপেক্ষমান'}
+                                </span>
+                                <span className="ielts-request-date">
+                                  📅 {req.date} &nbsp;|&nbsp; ⏰ {req.timeSlot}
+                                </span>
+                              </div>
+                              
+                              <div className="ielts-request-student">
+                                <div className="ielts-request-student-avatar">
+                                  {req.student?.avatar ? (
+                                    <img src={req.student.avatar} alt={req.student.name} />
+                                  ) : (
+                                    req.student?.name?.charAt(0).toUpperCase() || 'S'
+                                  )}
+                                </div>
+                                <div className="ielts-request-student-details">
+                                  <h5>{req.student?.name || 'Unknown Student'}</h5>
+                                  <p>📧 {req.student?.email || 'N/A'}</p>
+                                </div>
+                              </div>
+                              
+                              {req.message && (
+                                <p className="ielts-request-message">
+                                  <strong>{language === 'en' ? 'Message:' : 'বার্তা:'}</strong> {req.message}
+                                </p>
+                              )}
+                              
+                              <div className="ielts-request-actions">
+                                <button 
+                                  className="ielts-btn-decline"
+                                  onClick={() => handleUpdateStatus(req._id, 'rejected')}
+                                >
+                                  {language === 'en' ? 'Decline' : 'প্রত্যাখ্যান'}
+                                </button>
+                                <button 
+                                  className="ielts-btn-approve"
+                                  onClick={() => handleUpdateStatus(req._id, 'accepted')}
+                                >
+                                  {language === 'en' ? 'Accept' : 'অনুমোদন'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Request History Section */}
+                    <div className="ielts-requests-section" style={{ marginTop: '2.5rem' }}>
+                      <h4 className="ielts-requests-section-title">
+                        {language === 'en' ? 'Request History' : 'পূর্ববর্তী অনুরোধসমূহ'}
+                      </h4>
+                      
+                      {requests.filter(r => r.status !== 'pending').length === 0 ? (
+                        <p className="ielts-no-requests-msg">
+                          {language === 'en' ? 'No previous requests in history.' : 'কোনো পূর্ববর্তী অনুরোধের ইতিহাস নেই।'}
+                        </p>
+                      ) : (
+                        <div className="ielts-requests-grid">
+                          {requests.filter(r => r.status !== 'pending').map(req => (
+                            <div key={req._id} className="ielts-request-card historical">
+                              <div className="ielts-request-card__header">
+                                <span className={`ielts-request-badge ${req.status}`}>
+                                  {req.status === 'accepted' ? (language === 'en' ? 'Accepted' : 'গৃহীত') : (language === 'en' ? 'Declined' : 'প্রত্যাখ্যাত')}
+                                </span>
+                                <span className="ielts-request-date">
+                                  📅 {req.date} &nbsp;|&nbsp; ⏰ {req.timeSlot}
+                                </span>
+                              </div>
+                              
+                              <div className="ielts-request-student">
+                                <div className="ielts-request-student-avatar">
+                                  {req.student?.avatar ? (
+                                    <img src={req.student.avatar} alt={req.student.name} />
+                                  ) : (
+                                    req.student?.name?.charAt(0).toUpperCase() || 'S'
+                                  )}
+                                </div>
+                                <div className="ielts-request-student-details">
+                                  <h5>{req.student?.name || 'Unknown Student'}</h5>
+                                  <p>📧 {req.student?.email || 'N/A'}</p>
+                                </div>
+                              </div>
+                              
+                              {req.message && (
+                                <p className="ielts-request-message">
+                                  <strong>{language === 'en' ? 'Message:' : 'বার্তা:'}</strong> {req.message}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+              </motion.div>
+            )}
+
           </div>
         </div>
       </main>

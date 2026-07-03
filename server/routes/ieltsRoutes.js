@@ -152,4 +152,188 @@ router.get('/listening/sets', auth, async (req, res) => {
   }
 });
 
+// GET Fetch all approved IELTS teachers
+router.get('/teachers', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const IeltsTeacher = require('../models/IeltsTeacher');
+
+    const teachers = await User.find({
+      role: 'teacher',
+      interestedToGuide: 'IELTS',
+      isBanned: { $ne: true }
+    })
+    .select('name avatar email interestedToGuide universityName department currentYearSemester admissionAchievement collegeName hscBatch')
+    .lean();
+
+    const teacherIds = teachers.map(t => t._id);
+    const ieltsRecords = await IeltsTeacher.find({ userId: { $in: teacherIds } }).lean();
+    const ieltsMap = new Map(ieltsRecords.map(r => [String(r.userId), r]));
+
+    const result = teachers.map(t => {
+      const record = ieltsMap.get(String(t._id));
+      if (record) {
+        return {
+          ...t,
+          ieltsScore: record.ieltsScore || 'N/A',
+          universityName: record.universityName || t.universityName || 'N/A',
+          department: record.department || t.department || 'N/A',
+          currentYearSemester: record.currentYearSemester || t.currentYearSemester || 'N/A',
+          admissionAchievement: record.admissionAchievement || t.admissionAchievement || 'N/A',
+          collegeName: record.collegeName || t.collegeName || 'N/A',
+          hscBatch: record.hscBatch || t.hscBatch || 'N/A'
+        };
+      }
+      return {
+        ...t,
+        ieltsScore: 'N/A',
+        universityName: t.universityName || 'N/A',
+        department: t.department || 'N/A',
+        currentYearSemester: t.currentYearSemester || 'N/A',
+        admissionAchievement: t.admissionAchievement || 'N/A',
+        collegeName: t.collegeName || 'N/A',
+        hscBatch: t.hscBatch || 'N/A'
+      };
+    });
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// POST Request a speaking test appointment
+router.post('/appointments', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const Appointment = require('../models/Appointment');
+
+    if (req.user.role !== 'student') {
+      return errorResponse(res, 'Access denied. Only students can request speaking test appointments.', 403);
+    }
+
+    const { teacherId, date, timeSlot, message } = req.body;
+    if (!teacherId || !date || !timeSlot) {
+      return errorResponse(res, 'Teacher ID, date, and time slot are required fields.');
+    }
+
+    // Verify teacher exists and is an IELTS teacher
+    const teacher = await User.findOne({
+      _id: teacherId,
+      role: 'teacher',
+      interestedToGuide: 'IELTS',
+      isBanned: { $ne: true }
+    });
+
+    if (!teacher) {
+      return errorResponse(res, 'The selected teacher was not found or is not a qualified IELTS teacher.', 404);
+    }
+
+    const appointment = new Appointment({
+      student: req.user.id,
+      teacher: teacherId,
+      date,
+      timeSlot,
+      message: message || ''
+    });
+
+    await appointment.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Speaking test appointment requested successfully.',
+      data: appointment
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// GET Fetch speaking test appointments
+router.get('/appointments', auth, async (req, res) => {
+  try {
+    const Appointment = require('../models/Appointment');
+    const IeltsTeacher = require('../models/IeltsTeacher');
+
+    let appointments;
+    if (req.user.role === 'student') {
+      appointments = await Appointment.find({ student: req.user.id })
+        .populate('teacher', 'name email avatar')
+        .sort({ createdAt: -1 })
+        .lean();
+      
+      // Also populate teacher ieltsScore
+      const teacherIds = appointments.map(app => app.teacher?._id).filter(Boolean);
+      const ieltsRecords = await IeltsTeacher.find({ userId: { $in: teacherIds } }).select('userId ieltsScore universityName department').lean();
+      const ieltsMap = new Map(ieltsRecords.map(r => [String(r.userId), r]));
+
+      appointments = appointments.map(app => {
+        if (app.teacher) {
+          const record = ieltsMap.get(String(app.teacher._id));
+          return {
+            ...app,
+            teacher: {
+              ...app.teacher,
+              ieltsScore: record?.ieltsScore || 'N/A',
+              universityName: record?.universityName || '',
+              department: record?.department || ''
+            }
+          };
+        }
+        return app;
+      });
+
+    } else if (req.user.role === 'teacher') {
+      appointments = await Appointment.find({ teacher: req.user.id })
+        .populate('student', 'name email avatar')
+        .sort({ createdAt: -1 })
+        .lean();
+    } else {
+      return errorResponse(res, 'Access denied.', 403);
+    }
+
+    res.json({ success: true, data: appointments });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// PATCH Update speaking test appointment status
+router.patch('/appointments/:appointmentId/status', auth, async (req, res) => {
+  try {
+    const Appointment = require('../models/Appointment');
+
+    if (req.user.role !== 'teacher') {
+      return errorResponse(res, 'Access denied. Only teachers can update appointment status.', 403);
+    }
+
+    const { appointmentId } = req.params;
+    const { status } = req.body;
+
+    if (!['accepted', 'rejected'].includes(status)) {
+      return errorResponse(res, 'Invalid status update value.');
+    }
+
+    const appointment = await Appointment.findOne({
+      _id: appointmentId,
+      teacher: req.user.id
+    });
+
+    if (!appointment) {
+      return errorResponse(res, 'Appointment not found or you are not authorized to manage it.', 404);
+    }
+
+    appointment.status = status;
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: `Appointment ${status} successfully.`,
+      data: appointment
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
 module.exports = router;

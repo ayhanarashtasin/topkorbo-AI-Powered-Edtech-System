@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../hooks/useLanguage";
+import useSocket from "../hooks/useSocket";
 import {
   HiArrowLeft,
   HiBookmark,
@@ -167,6 +168,28 @@ export default function MockTestExam() {
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [submittedQuestionKeys, setSubmittedQuestionKeys] = useState({});
   const [visitedQuestionIndexes, setVisitedQuestionIndexes] = useState(new Set([0]));
+
+  const { socket, connected, on, emit } = useSocket();
+  const [leaderboard, setLeaderboard] = useState([]);
+
+  useEffect(() => {
+    console.log("[Client Socket] Connection status:", connected, "Socket:", !!socket);
+    if (!socket || !connected || !config?.contestId || config?.isPractice || isReviewMode) return;
+
+    console.log("[Client Socket] Joining contest:", config.contestId);
+    emit("join:contest", config.contestId);
+
+    const offLeaderboard = on("contest:leaderboard", (data) => {
+      console.log("[Client Socket] Received leaderboard:", data);
+      setLeaderboard(data || []);
+    });
+
+    return () => {
+      console.log("[Client Socket] Leaving contest:", config.contestId);
+      emit("leave:contest", config.contestId);
+      offLeaderboard && offLeaderboard();
+    };
+  }, [socket, connected, config?.contestId, isReviewMode, emit, on]);
 
   useEffect(() => {
     const storedQuestions = sessionStorage.getItem("mock_exam_questions");
@@ -545,58 +568,66 @@ export default function MockTestExam() {
     const countSubmitted = Object.keys(updatedSubmittedKeys).length;
 
     // Call submit endpoint instantly to update the database
-    try {
-      const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
-      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-      await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          score: currentScore,
-          totalQuestions: questions.length,
-          timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
-          answersSubmitted: countSubmitted,
-          answers: answers
-        }),
-      });
-      toast.success(language === "en" ? `Question ${index + 1} Submitted & Saved!` : `প্রশ্ন ${index + 1} সাবমিট এবং সেভ হয়েছে!`, { duration: 1500 });
-    } catch (err) {
-      console.error("Error saving intermediate progress:", err);
+    if (!config?.isPractice) {
+      try {
+        const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
+        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            score: currentScore,
+            totalQuestions: questions.length,
+            timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+            answersSubmitted: countSubmitted,
+            answers: answers
+          }),
+        });
+        toast.success(language === "en" ? `Question ${index + 1} Submitted & Saved!` : `প্রশ্ন ${index + 1} সাবমিট এবং সেভ হয়েছে!`, { duration: 1500 });
+      } catch (err) {
+        console.error("Error saving intermediate progress:", err);
+      }
+    } else {
+      toast.success(language === "en" ? `Question ${index + 1} Saved!` : `প্রশ্ন ${index + 1} সেভ হয়েছে!`, { duration: 1500 });
     }
 
     // Check if ALL answers are now submitted
     if (countSubmitted === questions.length) {
-      // Clear session storage for this exam
-      [
-        "mock_test_step",
-        "mock_test_subject_ids",
-        "mock_test_chapters",
-        "mock_test_selected_topics",
-        "mock_exam_standard",
-        "mock_question_type",
-        "mock_total_questions",
-        "mock_exam_duration",
-        "mock_negative_marking",
-        "mock_exam_questions",
-        "mock_exam_config",
-        "mock_exam_from_qbank",
-        "mock_exam_answers",
-        "mock_exam_end_time",
-        "mock_exam_submitted",
-        "mock_exam_review_mode",
-        "mock_exam_time_left",
-        "mock_exam_written_answers",
-        "mock_exam_ai_evals",
-        "mock_exam_submitted_keys",
-        "mock_exam_visited_indexes",
-        "mock_exam_active_idx",
-      ].forEach((key) => sessionStorage.removeItem(key));
+      if (config?.isPractice) {
+        handleSubmit();
+      } else {
+        // Clear session storage for this exam
+        [
+          "mock_test_step",
+          "mock_test_subject_ids",
+          "mock_test_chapters",
+          "mock_test_selected_topics",
+          "mock_exam_standard",
+          "mock_question_type",
+          "mock_total_questions",
+          "mock_exam_duration",
+          "mock_negative_marking",
+          "mock_exam_questions",
+          "mock_exam_config",
+          "mock_exam_from_qbank",
+          "mock_exam_answers",
+          "mock_exam_end_time",
+          "mock_exam_submitted",
+          "mock_exam_review_mode",
+          "mock_exam_time_left",
+          "mock_exam_written_answers",
+          "mock_exam_ai_evals",
+          "mock_exam_submitted_keys",
+          "mock_exam_visited_indexes",
+          "mock_exam_active_idx",
+        ].forEach((key) => sessionStorage.removeItem(key));
 
-      // Redirect directly to /contests
-      navigate("/contests");
+        // Redirect directly to /contests
+        navigate("/contests");
+      }
       return;
     }
 
@@ -723,7 +754,7 @@ export default function MockTestExam() {
       console.error("Failed to save mock test attempt", err);
     }
 
-    if (config?.contestId) {
+    if (config?.contestId && !config?.isPractice) {
       let finalScore = 0;
       questions.forEach((question, index) => {
         const key = getQuestionKey(question, index);
@@ -1202,7 +1233,9 @@ export default function MockTestExam() {
     <div
       className={`exam-room-container ${showResultModal ? "exam-room-container--dimmed" : ""}`}
     >
-      <header
+      <div className="exam-layout-wrapper">
+        <div className="exam-main-content">
+          <header
         className={`exam-header-card ${isReviewMode ? "exam-header-card--review" : ""}`}
       >
         {isReviewMode && (
@@ -1773,6 +1806,91 @@ export default function MockTestExam() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+        {config?.contestId && !config?.isPractice && !isReviewMode && (
+          <aside className="exam-sidebar-leaderboard">
+            <div className="leaderboard-header">
+              <div className="leaderboard-title-row">
+                <h3 className="leaderboard-title">
+                  {language === "en" ? "Live Leaderboard" : "লাইভ লিডারবোর্ড"}
+                </h3>
+                <span className="live-indicator">
+                  <span className="live-dot"></span>
+                  <span className="live-text">{language === "en" ? "LIVE" : "লাইভ"}</span>
+                </span>
+              </div>
+              <p className="leaderboard-subtitle">
+                {language === "en" ? "Top 3 Solvers" : "শীর্ষ ৩ সমাধানকারী"}
+              </p>
+            </div>
+            <div className="leaderboard-list">
+              {Array.from({ length: 3 }).map((_, rankIndex) => {
+                const entry = leaderboard[rankIndex];
+                const rank = rankIndex + 1;
+                const medalGradients = [
+                  "linear-gradient(135deg, #FFE066, #F5B041)", // Gold
+                  "linear-gradient(135deg, #E2E8F0, #94A3B8)", // Silver
+                  "linear-gradient(135deg, #EDC9AF, #A0522D)", // Bronze
+                ];
+                
+                if (entry) {
+                  const currentStudentId = localStorage.getItem('topkorbo_id');
+                  const currentStudentName = localStorage.getItem('topkorbo_name');
+                  const entryStudentId = entry.student?._id || entry.student;
+                  const entryStudentName = entry.student?.name;
+                  const isOwn = (currentStudentId && String(entryStudentId) === String(currentStudentId)) ||
+                                (currentStudentName && entryStudentName && entryStudentName.trim().toLowerCase() === currentStudentName.trim().toLowerCase());
+                  
+                  const rawName = entryStudentName || (language === "en" ? "Anonymous" : "অজ্ঞাতনামা");
+                  const studentName = isOwn
+                    ? (language === "en" ? `${rawName} (You)` : `${rawName} (তুমি)`)
+                    : rawName;
+                  const solvedCount = entry.answersSubmitted || 0;
+                  return (
+                    <div key={rankIndex} className={`leaderboard-item leaderboard-item--rank-${rank} ${isOwn ? "leaderboard-item--own" : ""}`}>
+                      <div 
+                        className="leaderboard-rank-badge" 
+                        style={{ background: medalGradients[rankIndex] }}
+                      >
+                        {rank}
+                      </div>
+                      <div className="leaderboard-item-info">
+                        <div className="leaderboard-student-name" title={studentName}>
+                          {studentName}
+                        </div>
+                        <div className="leaderboard-solved-count">
+                          {language === "en" 
+                            ? `Number of questions Solved: ${solvedCount}`
+                            : `সমাধানকৃত প্রশ্ন সংখ্যা: ${toBnNum(solvedCount)}`}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div key={rankIndex} className="leaderboard-item leaderboard-item--empty">
+                      <div className="leaderboard-rank-badge leaderboard-rank-badge--empty">
+                        {rank}
+                      </div>
+                      <div className="leaderboard-item-info">
+                        <div className="leaderboard-student-name leaderboard-student-name--empty">
+                          {language === "en" ? "Waiting for solver..." : "সমাধানকারীর জন্য অপেক্ষা..."}
+                        </div>
+                        <div className="leaderboard-solved-count leaderboard-solved-count--empty">
+                          {language === "en" 
+                            ? "Number of questions Solved: 0"
+                            : "সমাধানকৃত প্রশ্ন সংখ্যা: ০"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
+            </div>
+          </aside>
+        )}
       </div>
 
       {!isReviewMode && (

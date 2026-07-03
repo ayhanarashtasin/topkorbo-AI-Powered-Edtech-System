@@ -393,7 +393,7 @@ export default function Contests() {
     }
   };
 
-  const handleParticipate = async (contestId) => {
+  const handleParticipate = async (contestId, isPractice = false) => {
     const contestObj = contests.find((c) => c._id === contestId);
     if (contestObj && contestObj.hasParticipated) {
       const timeInfo = getContestTimeInfo(contestObj);
@@ -443,7 +443,10 @@ export default function Contests() {
           'mock_exam_review_mode',
           'mock_exam_time_left',
           'mock_exam_written_answers',
-          'mock_exam_ai_evals'
+          'mock_exam_ai_evals',
+          'mock_exam_submitted_keys',
+          'mock_exam_visited_indexes',
+          'mock_exam_active_idx'
         ].forEach((key) => sessionStorage.removeItem(key));
 
         sessionStorage.setItem('mock_exam_questions', JSON.stringify(populatedContest.questions));
@@ -453,7 +456,8 @@ export default function Contests() {
           questionType: populatedContest.questionType,
           standard: populatedContest.name,
           totalQuestions: populatedContest.questions.length,
-          contestId: populatedContest._id
+          contestId: populatedContest._id,
+          isPractice: isPractice
         }));
         sessionStorage.setItem('mock_exam_from_qbank', 'false');
 
@@ -555,7 +559,7 @@ export default function Contests() {
       return (
         <button
           className="contest-table-cta"
-          onClick={() => handleParticipate(contest._id)}
+          onClick={() => handleParticipate(contest._id, true)}
         >
           <span>{language === 'en' ? 'Practice' : 'অনুশীলন'}</span>
           <HiArrowRight size={14} />
