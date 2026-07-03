@@ -116,3 +116,320 @@
   border-radius: 50%;
   margin-bottom: 1rem;
 }
+
+/* Options Grid Layout */
+.ielts-speaking-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .ielts-speaking-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ielts-speaking-option-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1.5px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 40px;
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+}
+
+.ielts-speaking-option-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--sky-blue);
+  box-shadow: 0 16px 40px rgba(140, 90, 60, 0.08);
+}
+
+.ielts-speaking-option-icon {
+  font-size: 3.5rem;
+  color: var(--sky-blue);
+  background: rgba(192, 133, 82, 0.06);
+  padding: 20px;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ielts-speaking-option-card:hover .ielts-speaking-option-icon {
+  background-color: rgba(192, 133, 82, 0.12);
+  transform: scale(1.05);
+}
+
+.ielts-speaking-option-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-speaking-option-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 320px;
+  flex: 1;
+}
+
+.ielts-speaking-select-btn {
+  background: var(--gradient-cta);
+  color: var(--white);
+  border: none;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.ielts-speaking-select-btn:hover {
+  opacity: 0.95;
+  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.15);
+}
+
+/* Sub-view Content Card */
+.ielts-speaking-subview-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1.5px solid rgba(192, 133, 82, 0.14);
+  border-radius: 28px;
+  padding: 60px 40px;
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.ielts-speaking-subview-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-speaking-subview-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 480px;
+}
+
+/* Teacher requests inbox styles */
+.ielts-teacher-requests-view {
+  width: 100%;
+}
+
+.ielts-teacher-loading,
+.ielts-teacher-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  box-shadow: 0 8px 24px rgba(140, 90, 60, 0.03);
+  color: var(--text-secondary);
+}
+
+.ielts-teacher-requests-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+.ielts-requests-section-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #4b2e2b;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid rgba(192, 133, 82, 0.14);
+  padding-bottom: 8px;
+}
+
+.ielts-no-requests-msg {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.ielts-requests-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.ielts-request-card {
+  background: #ffffff;
+  border: 1.5px solid rgba(192, 133, 82, 0.14);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(140, 90, 60, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  position: relative;
+  transition: all var(--transition-smooth);
+}
+
+.ielts-request-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(140, 90, 60, 0.06);
+  border-color: rgba(192, 133, 82, 0.3);
+}
+
+.ielts-request-card.historical {
+  opacity: 0.85;
+}
+
+.ielts-request-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ielts-request-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.ielts-request-badge.pending {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.ielts-request-badge.accepted {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.ielts-request-badge.rejected {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.ielts-request-date {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.ielts-request-student {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ielts-request-student-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: #f7ebe1;
+  color: #8c5a3c;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 1.1rem;
+}
+
+.ielts-request-student-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ielts-request-student-details h5 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.ielts-request-student-details p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 2px 0 0 0;
+}
+
+.ielts-request-message {
+  background: #fdfaf7;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  border-left: 3px solid #c08552;
+}
+
+.ielts-request-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ielts-btn-decline {
+  flex: 1;
+  background: #f3f4f6;
+  border: none;
+  color: #4b5563;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-btn-decline:hover {
+  background: #e5e7eb;
+}
+
+.ielts-btn-approve {
+  flex: 1;
+  background-color: #8c5a3c;
+  border: none;
+  color: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-btn-approve:hover {
+  background-color: #4b2e2b;
+}
+
+@media (max-width: 768px) {
+  .ielts-requests-grid {
+    grid-template-columns: 1fr;
+  }
+}

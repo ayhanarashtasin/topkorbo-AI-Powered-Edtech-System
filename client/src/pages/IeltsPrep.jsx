@@ -241,7 +241,7 @@ export default function IeltsPrep() {
                   {/* Listening Card */}
                   <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/listening/practice')}>
                     <div className="ielts-segment-icon"><HiVolumeUp size={36} /></div>
-                    <h3>{language === 'en' ? 'Listening' : 'লিসেনিং'}</h3>
+                    <h3>{language === 'en' ? 'Listening Practice' : 'লিসেনিং প্র্যাকটিস'}</h3>
                     <p className="ielts-segment-desc">
                       {language === 'en'
                         ? 'Practice listening to native conversations, monologues, and academic lectures with real-time feedback.'
@@ -255,7 +255,7 @@ export default function IeltsPrep() {
                   {/* Reading Card */}
                   <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/reading/practice')}>
                     <div className="ielts-segment-icon"><HiBookOpen size={36} /></div>
-                    <h3>{language === 'en' ? 'Reading' : 'রিডিং'}</h3>
+                    <h3>{language === 'en' ? 'Reading Practice' : 'রিডিং প্র্যাকটিস'}</h3>
                     <p className="ielts-segment-desc">
                       {language === 'en'
                         ? 'Enhance your skimming, scanning, and analytical comprehension using curated passages.'
@@ -269,7 +269,7 @@ export default function IeltsPrep() {
                   {/* Writing Card */}
                   <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/writing/practice')}>
                     <div className="ielts-segment-icon"><HiPencilAlt size={36} /></div>
-                    <h3>{language === 'en' ? 'Writing' : 'রাইটিং'}</h3>
+                    <h3>{language === 'en' ? 'Writing Practice' : 'রাইটিং প্র্যাকটিস'}</h3>
                     <p className="ielts-segment-desc">
                       {language === 'en'
                         ? 'Practice drafting charts, process diagrams, and analytical essays with clear structured tasks.'
@@ -283,7 +283,7 @@ export default function IeltsPrep() {
                   {/* Speaking Card */}
                   <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/speaking/practice')}>
                     <div className="ielts-segment-icon"><HiChatAlt2 size={36} /></div>
-                    <h3>{language === 'en' ? 'Speaking' : 'স্পিকিং'}</h3>
+                    <h3>{language === 'en' ? 'Speaking Practice' : 'স্পিকিং প্র্যাকটিস'}</h3>
                     <p className="ielts-segment-desc">
                       {language === 'en'
                         ? 'Review face-to-face topics, practice response formatting, and study interactive feedback.'

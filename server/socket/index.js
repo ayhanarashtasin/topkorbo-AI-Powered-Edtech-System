@@ -44,6 +44,28 @@ function initSocket(httpServer) {
       if (postId) socket.leave(`post:${String(postId)}`);
     });
 
+    socket.on('join:contest', async (contestId) => {
+      console.log(`[Socket] User ${socket.userId} joining contest room: contest:${contestId}`);
+      if (contestId) {
+        socket.join(`contest:${String(contestId)}`);
+        try {
+          const ContestResult = require('../models/ContestResult');
+          const top3 = await ContestResult.find({ contest: contestId })
+            .sort({ answersSubmitted: -1, updatedAt: 1 })
+            .limit(3)
+            .populate('student', 'name')
+            .lean();
+          console.log(`[Socket] Emitting initial leaderboard for contest ${contestId}:`, JSON.stringify(top3));
+          socket.emit('contest:leaderboard', top3);
+        } catch (err) {
+          console.error('Error fetching initial contest leaderboard:', err);
+        }
+      }
+    });
+    socket.on('leave:contest', (contestId) => {
+      if (contestId) socket.leave(`contest:${String(contestId)}`);
+    });
+
     socket.on('typing:start', ({ postId }) => {
       if (!postId || !socket.userId) return;
       socket.to(`post:${String(postId)}`).emit('typing:update', {
