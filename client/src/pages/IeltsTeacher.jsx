@@ -131,7 +131,7 @@ export default function IeltsTeacher() {
                 </div>
                 <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/listening/upload')}>
                   <HiUpload size={16} />
-                  <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
+                  <span>{language === 'en' ? 'Questions' : 'প্রশ্নসমূহ'}</span>
                 </button>
               </div>
 
@@ -148,7 +148,7 @@ export default function IeltsTeacher() {
                 </div>
                 <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/reading/upload')}>
                   <HiUpload size={16} />
-                  <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
+                  <span>{language === 'en' ? 'Questions' : 'প্রশ্নসমূহ'}</span>
                 </button>
               </div>
 
@@ -165,7 +165,7 @@ export default function IeltsTeacher() {
                 </div>
                 <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/writing/upload')}>
                   <HiUpload size={16} />
-                  <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
+                  <span>{language === 'en' ? 'Questions' : 'প্রশ্নসমূহ'}</span>
                 </button>
               </div>
 
@@ -182,7 +182,7 @@ export default function IeltsTeacher() {
                 </div>
                 <button className="ielts-upload-btn" onClick={() => navigate('/ielts-teacher/speaking/upload')}>
                   <HiUpload size={16} />
-                  <span>{language === 'en' ? 'Upload Question' : 'প্রশ্ন আপলোড করুন'}</span>
+                  <span>{language === 'en' ? 'Questions' : 'প্রশ্নসমূহ'}</span>
                 </button>
               </div>
 

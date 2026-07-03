@@ -56,6 +56,8 @@ export default function IeltsWritingPractice() {
     role: localStorage.getItem('topkorbo_role') || 'student',
   });
 
+  const [sets, setSets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSet, setSelectedSet] = useState(null);
   const [essayText, setEssayText] = useState('');
   const [wordCount, setWordCount] = useState(0);
@@ -69,6 +71,76 @@ export default function IeltsWritingPractice() {
       return;
     }
   }, [navigate]);
+
+  // Fetch writing sets from backend
+  useEffect(() => {
+    const fetchWritingSets = async () => {
+      try {
+        const token = localStorage.getItem('topkorbo_token');
+        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${backendBaseUrl}/ielts/writing/sets`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          const dbTasks = [];
+          resData.data.forEach(set => {
+            if (set.task1) {
+              dbTasks.push({
+                _id: `${set._id}_task1`,
+                setName: `${set.setName} - Task 1`,
+                taskType: 'Task 1',
+                creator: set.creator?.name || 'Educator',
+                createdAt: set.createdAt,
+                promptTitle: 'Writing Task 1',
+                promptText: set.task1.type === 'text' ? set.task1.textPrompt : 'PDF Document prompt (see viewer)',
+                pdfUrl: set.task1.type === 'pdf' ? set.task1.pdfUrl : null,
+                minWords: 150,
+                modelAnswer: 'This is a student-submitted task. Band-9 model answer is not available.',
+              });
+            }
+            if (set.task2) {
+              dbTasks.push({
+                _id: `${set._id}_task2`,
+                setName: `${set.setName} - Task 2`,
+                taskType: 'Task 2',
+                creator: set.creator?.name || 'Educator',
+                createdAt: set.createdAt,
+                promptTitle: 'Writing Task 2',
+                promptText: set.task2.type === 'text' ? set.task2.textPrompt : 'PDF Document prompt (see viewer)',
+                pdfUrl: set.task2.type === 'pdf' ? set.task2.pdfUrl : null,
+                minWords: 250,
+                modelAnswer: 'This is a student-submitted task. Band-9 model answer is not available.',
+              });
+            }
+          });
+
+          // Merge custom sets with local mock ones
+          setSets([...dbTasks, ...MOCK_WRITING_SETS]);
+        } else {
+          setSets(MOCK_WRITING_SETS);
+        }
+      } catch (err) {
+        console.error('Error fetching writing sets:', err);
+        setSets(MOCK_WRITING_SETS);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWritingSets();
+  }, [language]);
+
+  // Get full backend static file URL
+  const getFullFileUrl = (urlPath) => {
+    if (!urlPath) return '';
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const serverRoot = apiBase.replace('/api', '');
+    return `${serverRoot}${urlPath}`;
+  };
 
   // Word counter helper
   useEffect(() => {
@@ -160,7 +232,19 @@ export default function IeltsWritingPractice() {
                 {/* Prompt box */}
                 <div className="ielts-writing-prompt-card">
                   <h4>{selectedSet.promptTitle} ({selectedSet.taskType})</h4>
-                  <p style={{ margin: 0, lineHeight: '1.6' }}>{selectedSet.promptText}</p>
+                  {selectedSet.pdfUrl ? (
+                    <div className="ielts-practice-pdf-container" style={{ marginTop: '12px' }}>
+                      <iframe 
+                        src={getFullFileUrl(selectedSet.pdfUrl)} 
+                        width="100%" 
+                        height="500px" 
+                        style={{ border: 'none', borderRadius: '12px' }} 
+                        title="Writing Task PDF Prompt"
+                      />
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, lineHeight: '1.6' }}>{selectedSet.promptText}</p>
+                  )}
                 </div>
 
                 {/* Editor Textarea */}
@@ -213,21 +297,27 @@ export default function IeltsWritingPractice() {
             ) : (
               /* Lists of sets available */
               <div className="ielts-practice-set-grid">
-                {MOCK_WRITING_SETS.map((set) => (
-                  <div key={set._id} className="ielts-practice-set-card">
-                    <div className="ielts-practice-set-info">
-                      <h3>{set.setName}</h3>
-                      <div className="ielts-practice-set-meta">
-                        <span>👤 {set.creator}</span>
-                        <span>📑 {set.taskType}</span>
-                        <span>✍️ {set.minWords}+ words</span>
-                      </div>
-                    </div>
-                    <button onClick={() => handleSelectSet(set)} className="ielts-practice-set-btn">
-                      <span>{language === 'en' ? 'Start Task' : 'টাস্ক শুরু করুন'}</span>
-                    </button>
+                {isLoading ? (
+                  <div style={{ textAlign: 'center', width: '100%', padding: '40px' }}>
+                    <p>{language === 'en' ? 'Loading writing tasks...' : 'রাইটিং টাস্ক লোড হচ্ছে...'}</p>
                   </div>
-                ))}
+                ) : (
+                  sets.map((set) => (
+                    <div key={set._id} className="ielts-practice-set-card">
+                      <div className="ielts-practice-set-info">
+                        <h3>{set.setName}</h3>
+                        <div className="ielts-practice-set-meta">
+                          <span>👤 {set.creator}</span>
+                          <span>📑 {set.taskType}</span>
+                          <span>✍️ {set.minWords}+ words</span>
+                        </div>
+                      </div>
+                      <button onClick={() => handleSelectSet(set)} className="ielts-practice-set-btn">
+                        <span>{language === 'en' ? 'Start Task' : 'টাস্ক শুরু করুন'}</span>
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 

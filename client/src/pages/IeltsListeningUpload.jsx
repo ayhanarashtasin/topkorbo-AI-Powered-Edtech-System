@@ -26,6 +26,9 @@ export default function IeltsListeningUpload() {
 
   const [setName, setSetName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState('bank'); // 'bank' or 'upload'
+  const [dbSets, setDbSets] = useState([]);
+  const [isLoadingSets, setIsLoadingSets] = useState(true);
 
   // Files state
   const [sectionFiles, setSectionFiles] = useState({
@@ -48,6 +51,34 @@ export default function IeltsListeningUpload() {
       return;
     }
   }, [navigate]);
+
+  // Fetch Listening Sets
+  const fetchSets = async () => {
+    try {
+      setIsLoadingSets(true);
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${backendBaseUrl}/ielts/listening/sets`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        setDbSets(resData.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching listening sets:', err);
+    } finally {
+      setIsLoadingSets(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode === 'bank') {
+      fetchSets();
+    }
+  }, [viewMode]);
 
   const handleFileChange = (section, type, file) => {
     if (!file) return;
@@ -147,7 +178,14 @@ export default function IeltsListeningUpload() {
             : 'আইইএলটিএস লিসেনিং প্রশ্ন সেট সফলভাবে সাবমিট হয়েছে!',
           { id: toastId }
         );
-        navigate('/ielts-teacher');
+        setSetName('');
+        setSectionFiles({
+          1: { audio: null, pdf: null },
+          2: { audio: null, pdf: null },
+          3: { audio: null, pdf: null },
+          4: { audio: null, pdf: null }
+        });
+        setViewMode('bank');
       } else {
         toast.error(resData.message || (language === 'en' ? 'Failed to upload question set.' : 'প্রশ্ন সেট আপলোড করতে ব্যর্থ হয়েছে।'), { id: toastId });
       }
@@ -166,154 +204,221 @@ export default function IeltsListeningUpload() {
       <main className="ielts-upload-content">
         {/* Header */}
         <header className="ielts-upload-header">
-          <button onClick={() => navigate('/ielts-teacher')} className="ielts-upload-back-btn" title={language === 'en' ? 'Go Back' : 'পিছনে যান'}>
+          <button 
+            onClick={() => {
+              if (viewMode === 'upload') {
+                setViewMode('bank');
+              } else {
+                navigate('/ielts-teacher');
+              }
+            }} 
+            className="ielts-upload-back-btn" 
+            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+          >
             <HiArrowLeft size={20} />
           </button>
           <div className="ielts-upload-header-text">
-            <h2>{language === 'en' ? 'Upload Listening Question Set' : 'লিসেনিং প্রশ্ন সেট আপলোড করুন'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Create a new IELTS listening set containing 4 sections with their respective audio prompts and PDFs'
-                : 'আইইএলটিএস লিসেনিং টেস্টের ৪টি সেকশনের জন্য অডিও এবং পিডিএফ ফাইল আপলোড করে নতুন প্রশ্ন সেট তৈরি করুন'}
-            </p>
+            {viewMode === 'bank' ? (
+              <>
+                <h2>{language === 'en' ? 'Listening Question Bank' : 'লিসেনিং প্রশ্ন ব্যাংক'}</h2>
+                <p>
+                  {language === 'en'
+                    ? 'Manage and view all your uploaded IELTS listening question sheets'
+                    : 'আপনার আপলোডকৃত আইইএলটিএস লিসেনিং প্রশ্নপত্রগুলো পরিচালনা এবং দেখুন'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2>{language === 'en' ? 'Upload Listening Question Set' : 'লিসেনিং প্রশ্ন সেট আপলোড করুন'}</h2>
+                <p>
+                  {language === 'en'
+                    ? 'Create a new IELTS listening set containing 4 sections with their respective audio prompts and PDFs'
+                    : 'আইইএলটিএস লিসেনিং টেস্টের ৪টি সেকশনের জন্য অডিও এবং পিডিএফ ফাইল আপলোড করে নতুন প্রশ্ন সেট তৈরি করুন'}
+                </p>
+              </>
+            )}
           </div>
         </header>
 
         {/* Workspace */}
         <div className="ielts-upload-workspace">
-          <div className="ielts-upload-form-container">
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              
-              {/* Question Set Title Card */}
-              <div className="ielts-upload-card">
-                <h3>{language === 'en' ? 'General Information' : 'সাধারণ তথ্য'}</h3>
-                <div className="ielts-input-group">
-                  <label htmlFor="set-name-input">
-                    {language === 'en' ? 'Question Set Name / Title' : 'প্রশ্ন সেটের নাম / শিরোনাম'}
-                  </label>
-                  <input
-                    id="set-name-input"
-                    type="text"
-                    value={setName}
-                    onChange={(e) => setSetName(e.target.value)}
-                    placeholder={
-                      language === 'en'
-                        ? 'e.g. Cambridge IELTS 18 Practice Test 1'
-                        : 'যেমনঃ ক্যামব্রিজ আইইএলটিএস ১৮ প্র্যাকটিস টেস্ট ১'
-                    }
-                    className="ielts-set-name-input"
-                    required
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-
-              {/* Sections Upload Grid Card */}
-              <div className="ielts-upload-card">
-                <h3>{language === 'en' ? 'Section Uploads (4 Sections Required)' : 'সেকশন আপলোড (৪টি সেকশন আবশ্যক)'}</h3>
-                
-                <div className="ielts-sections-list">
-                  {[1, 2, 3, 4].map((section) => (
-                    <div key={section} className="ielts-section-row">
-                      
-                      {/* Section Badge */}
-                      <div className="ielts-section-badge">
-                        {language === 'en' ? `Section ${section}` : `সেকশন ${section}`}
-                      </div>
-
-                      {/* Audio Upload Box */}
-                      {sectionFiles[section].audio ? (
-                        <div className="ielts-file-upload-box has-file">
-                          <button
-                            type="button"
-                            className="ielts-modal-close"
-                            style={{ position: 'absolute', top: '8px', right: '8px' }}
-                            onClick={() => handleRemoveFile(section, 'audio')}
-                            disabled={isSubmitting}
-                          >
-                            <HiX size={16} />
-                          </button>
-                          <HiVolumeUp size={28} className="ielts-file-icon" />
-                          <span className="ielts-file-label" style={{ color: '#38b000' }}>
-                            {language === 'en' ? 'Audio Selected' : 'অডিও সিলেক্টেড'}
-                          </span>
-                          <span className="ielts-file-info">{sectionFiles[section].audio.name}</span>
-                        </div>
-                      ) : (
-                        <div className="ielts-file-upload-box">
-                          <HiVolumeUp size={28} className="ielts-file-icon" />
-                          <span className="ielts-file-label">
-                            {language === 'en' ? 'Upload Audio' : 'অডিও আপলোড করুন'}
-                          </span>
-                          <span className="ielts-file-info">(.mp3, .wav, .ogg)</span>
-                          <input
-                            type="file"
-                            accept="audio/*"
-                            onChange={(e) => handleFileChange(section, 'audio', e.target.files[0])}
-                            className="ielts-file-input"
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      )}
-
-                      {/* PDF Upload Box */}
-                      {sectionFiles[section].pdf ? (
-                        <div className="ielts-file-upload-box has-file">
-                          <button
-                            type="button"
-                            className="ielts-modal-close"
-                            style={{ position: 'absolute', top: '8px', right: '8px' }}
-                            onClick={() => handleRemoveFile(section, 'pdf')}
-                            disabled={isSubmitting}
-                          >
-                            <HiX size={16} />
-                          </button>
-                          <HiBookOpen size={28} className="ielts-file-icon" />
-                          <span className="ielts-file-label" style={{ color: '#38b000' }}>
-                            {language === 'en' ? 'PDF Selected' : 'পিডিএফ সিলেক্টেড'}
-                          </span>
-                          <span className="ielts-file-info">{sectionFiles[section].pdf.name}</span>
-                        </div>
-                      ) : (
-                        <div className="ielts-file-upload-box">
-                          <HiBookOpen size={28} className="ielts-file-icon" />
-                          <span className="ielts-file-label">
-                            {language === 'en' ? 'Upload PDF' : 'পিডিএফ আপলোড করুন'}
-                          </span>
-                          <span className="ielts-file-info">(.pdf)</span>
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) => handleFileChange(section, 'pdf', e.target.files[0])}
-                            className="ielts-file-input"
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      )}
-
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Question Set Button */}
-              <div className="ielts-submit-set-container">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="ielts-btn-submit-set"
+          {viewMode === 'bank' ? (
+            <div className="ielts-bank-container">
+              <div className="ielts-bank-header">
+                <h3>{language === 'en' ? 'Available Question Sets' : 'বিদ্যমান প্রশ্ন সেটসমূহ'}</h3>
+                <button 
+                  type="button" 
+                  className="ielts-btn-submit-set" 
+                  style={{ padding: '12px 24px', fontSize: '0.95rem', margin: 0 }} 
+                  onClick={() => setViewMode('upload')}
                 >
-                  <HiCheckCircle size={22} />
-                  <span>
-                    {isSubmitting
-                      ? (language === 'en' ? 'Submitting Question Set...' : 'সাবমিট হচ্ছে...')
-                      : (language === 'en' ? 'Submit Question Set' : 'প্রশ্ন সেট সাবমিট করুন')}
-                  </span>
+                  <HiUpload size={16} style={{ marginRight: '6px' }} />
+                  <span>{language === 'en' ? 'Upload new question' : 'নতুন প্রশ্ন আপলোড করুন'}</span>
                 </button>
               </div>
 
-            </form>
-          </div>
+              {isLoadingSets ? (
+                <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                  <p>{language === 'en' ? 'Loading question bank...' : 'প্রশ্ন ব্যাংক লোড হচ্ছে...'}</p>
+                </div>
+              ) : dbSets.length === 0 ? (
+                <div className="ielts-bank-empty">
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', fontStyle: 'italic' }}>
+                    {language === 'en' ? 'No question sets uploaded yet.' : 'এখনো কোনো প্রশ্ন সেট আপলোড করা হয়নি।'}
+                  </p>
+                </div>
+              ) : (
+                <div className="ielts-bank-grid">
+                  {dbSets.map((set) => (
+                    <div key={set._id} className="ielts-bank-card">
+                      <div className="ielts-bank-card-info">
+                        <h4>{set.setName}</h4>
+                        <div className="ielts-bank-card-meta">
+                          <span>👤 {set.creator?.name || 'Educator'}</span>
+                          <span>📅 {new Date(set.createdAt).toLocaleDateString()}</span>
+                          <span>🎧 {set.sections?.length || 4} Sections</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="ielts-upload-form-container">
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                
+                {/* Question Set Title Card */}
+                <div className="ielts-upload-card">
+                  <h3>{language === 'en' ? 'General Information' : 'সাধারণ তথ্য'}</h3>
+                  <div className="ielts-input-group">
+                    <label htmlFor="set-name-input">
+                      {language === 'en' ? 'Question Set Name / Title' : 'প্রশ্ন সেটের নাম / শিরোনাম'}
+                    </label>
+                    <input
+                      id="set-name-input"
+                      type="text"
+                      value={setName}
+                      onChange={(e) => setSetName(e.target.value)}
+                      placeholder={
+                        language === 'en'
+                          ? 'e.g. Cambridge IELTS 18 Practice Test 1'
+                          : 'যেমনঃ ক্যামব্রিজ আইইএলটিএস ১৮ প্র্যাকটিস টেস্ট ১'
+                      }
+                      className="ielts-set-name-input"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                {/* Sections Upload Grid Card */}
+                <div className="ielts-upload-card">
+                  <h3>{language === 'en' ? 'Section Uploads (4 Sections Required)' : 'সেকশন আপলোড (৪টি সেকশন আবশ্যক)'}</h3>
+                  
+                  <div className="ielts-sections-list">
+                    {[1, 2, 3, 4].map((section) => (
+                      <div key={section} className="ielts-section-row">
+                        
+                        {/* Section Badge */}
+                        <div className="ielts-section-badge">
+                          {language === 'en' ? `Section ${section}` : `সেকশন ${section}`}
+                        </div>
+
+                        {/* Audio Upload Box */}
+                        {sectionFiles[section].audio ? (
+                          <div className="ielts-file-upload-box has-file">
+                            <button
+                              type="button"
+                              className="ielts-modal-close"
+                              style={{ position: 'absolute', top: '8px', right: '8px' }}
+                              onClick={() => handleRemoveFile(section, 'audio')}
+                              disabled={isSubmitting}
+                            >
+                              <HiX size={16} />
+                            </button>
+                            <HiVolumeUp size={28} className="ielts-file-icon" />
+                            <span className="ielts-file-label" style={{ color: '#38b000' }}>
+                              {language === 'en' ? 'Audio Selected' : 'অডিও সিলেক্টেড'}
+                            </span>
+                            <span className="ielts-file-info">{sectionFiles[section].audio.name}</span>
+                          </div>
+                        ) : (
+                          <div className="ielts-file-upload-box">
+                            <HiVolumeUp size={28} className="ielts-file-icon" />
+                            <span className="ielts-file-label">
+                              {language === 'en' ? 'Upload Audio' : 'অডিও আপলোড করুন'}
+                            </span>
+                            <span className="ielts-file-info">(.mp3, .wav, .ogg)</span>
+                            <input
+                              type="file"
+                              accept="audio/*"
+                              onChange={(e) => handleFileChange(section, 'audio', e.target.files[0])}
+                              className="ielts-file-input"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        )}
+
+                        {/* PDF Upload Box */}
+                        {sectionFiles[section].pdf ? (
+                          <div className="ielts-file-upload-box has-file">
+                            <button
+                              type="button"
+                              className="ielts-modal-close"
+                              style={{ position: 'absolute', top: '8px', right: '8px' }}
+                              onClick={() => handleRemoveFile(section, 'pdf')}
+                              disabled={isSubmitting}
+                            >
+                              <HiX size={16} />
+                            </button>
+                            <HiBookOpen size={28} className="ielts-file-icon" />
+                            <span className="ielts-file-label" style={{ color: '#38b000' }}>
+                              {language === 'en' ? 'PDF Selected' : 'পিডিএফ সিলেক্টেড'}
+                            </span>
+                            <span className="ielts-file-info">{sectionFiles[section].pdf.name}</span>
+                          </div>
+                        ) : (
+                          <div className="ielts-file-upload-box">
+                            <HiBookOpen size={28} className="ielts-file-icon" />
+                            <span className="ielts-file-label">
+                              {language === 'en' ? 'Upload PDF' : 'পিডিএফ আপলোড করুন'}
+                            </span>
+                            <span className="ielts-file-info">(.pdf)</span>
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              onChange={(e) => handleFileChange(section, 'pdf', e.target.files[0])}
+                              className="ielts-file-input"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        )}
+
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Question Set Button */}
+                <div className="ielts-submit-set-container">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="ielts-btn-submit-set"
+                  >
+                    <HiCheckCircle size={22} />
+                    <span>
+                      {isSubmitting
+                        ? (language === 'en' ? 'Submitting Question Set...' : 'সাবমিট হচ্ছে...')
+                        : (language === 'en' ? 'Submit Question Set' : 'প্রশ্ন সেট সাবমিট করুন')}
+                    </span>
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          )}
         </div>
       </main>
     </div>

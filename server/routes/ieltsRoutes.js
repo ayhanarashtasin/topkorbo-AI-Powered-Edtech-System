@@ -5,6 +5,7 @@ const fs = require('fs');
 const multer = require('multer');
 const auth = require('../middleware/auth');
 const IeltsListeningSet = require('../models/IeltsListeningSet');
+const IeltsWritingSet = require('../models/IeltsWritingSet');
 
 // Configure Multer storage for IELTS audio and pdfs
 const UPLOAD_ROOT = path.resolve(__dirname, '..', 'uploads', 'ielts');
@@ -331,6 +332,104 @@ router.patch('/appointments/:appointmentId/status', auth, async (req, res) => {
       message: `Appointment ${status} successfully.`,
       data: appointment
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// POST Upload IELTS Writing set
+router.post('/writing/upload', auth, upload.any(), async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher') {
+      return errorResponse(res, 'Access denied. Only teachers can upload IELTS question sets.', 403);
+    }
+
+    const { setName, task1Type, task2Type, task1Text, task2Text } = req.body;
+    if (!setName || !setName.trim()) {
+      return errorResponse(res, 'Please provide a name for the question set.');
+    }
+
+    if (!['pdf', 'text'].includes(task1Type) || !['pdf', 'text'].includes(task2Type)) {
+      return errorResponse(res, 'Invalid task upload types.');
+    }
+
+    const files = req.files || [];
+    let task1PdfUrl = '';
+    let task2PdfUrl = '';
+    const userId = req.user.id;
+
+    files.forEach(file => {
+      if (file.fieldname === 'task1Pdf') {
+        task1PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+      } else if (file.fieldname === 'task2Pdf') {
+        task2PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+      }
+    });
+
+    // Validate Task 1
+    if (task1Type === 'pdf' && !task1PdfUrl) {
+      files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      });
+      return errorResponse(res, 'Please upload a PDF file for Task 1.');
+    }
+    if (task1Type === 'text' && (!task1Text || !task1Text.trim())) {
+      files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      });
+      return errorResponse(res, 'Please enter a text prompt for Task 1.');
+    }
+
+    // Validate Task 2
+    if (task2Type === 'pdf' && !task2PdfUrl) {
+      files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      });
+      return errorResponse(res, 'Please upload a PDF file for Task 2.');
+    }
+    if (task2Type === 'text' && (!task2Text || !task2Text.trim())) {
+      files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      });
+      return errorResponse(res, 'Please enter a text prompt for Task 2.');
+    }
+
+    const newWritingSet = new IeltsWritingSet({
+      creator: userId,
+      setName: setName.trim(),
+      task1: {
+        type: task1Type,
+        pdfUrl: task1Type === 'pdf' ? task1PdfUrl : undefined,
+        textPrompt: task1Type === 'text' ? task1Text.trim() : undefined
+      },
+      task2: {
+        type: task2Type,
+        pdfUrl: task2Type === 'pdf' ? task2PdfUrl : undefined,
+        textPrompt: task2Type === 'text' ? task2Text.trim() : undefined
+      }
+    });
+
+    await newWritingSet.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'IELTS Writing question set uploaded successfully!',
+      data: newWritingSet
+    });
+
+  } catch (err) {
+    console.error('Error in IELTS Writing upload route:', err);
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// GET Fetch all IELTS Writing sets
+router.get('/writing/sets', auth, async (req, res) => {
+  try {
+    const sets = await IeltsWritingSet.find()
+      .populate('creator', 'name email')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: sets });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
   }

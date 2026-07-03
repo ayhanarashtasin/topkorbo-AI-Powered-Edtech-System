@@ -1,11 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiChatAlt2, HiArrowLeft, HiClipboardCheck } from 'react-icons/hi';
+import { HiChatAlt2, HiArrowLeft, HiClipboardCheck, HiUpload } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import './IeltsSpeakingUpload.css';
+
+const MOCK_SPEAKING_SETS = [
+  {
+    _id: 'speaking_mock_1',
+    setName: 'Speaking Mock Set 1: Travel & Holidays',
+    creator: 'TopKorbo Prep Team',
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    partsCount: 3,
+  },
+  {
+    _id: 'speaking_mock_2',
+    setName: 'Speaking Mock Set 2: Technology & Modern Life',
+    creator: 'Prof. S. Rahman',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    partsCount: 3,
+  }
+];
 
 export default function IeltsSpeakingUpload() {
   const { language } = useLanguage();
@@ -21,6 +38,7 @@ export default function IeltsSpeakingUpload() {
   const [activeSubOption, setActiveSubOption] = useState(null); // null (menu), 'questions', 'requests'
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [speakingViewMode, setSpeakingViewMode] = useState('bank'); // 'bank' or 'upload'
 
   // Auth Guard
   useEffect(() => {
@@ -100,6 +118,7 @@ export default function IeltsSpeakingUpload() {
 
   const handleBackToMenu = () => {
     setActiveSubOption(null);
+    setSpeakingViewMode('bank');
   };
 
   return (
@@ -111,7 +130,9 @@ export default function IeltsSpeakingUpload() {
         <header className="ielts-speaking-upload-header">
           <button
             onClick={() => {
-              if (activeSubOption) {
+              if (activeSubOption === 'questions' && speakingViewMode === 'upload') {
+                setSpeakingViewMode('bank');
+              } else if (activeSubOption) {
                 handleBackToMenu();
               } else {
                 navigate('/ielts-teacher');
@@ -124,14 +145,25 @@ export default function IeltsSpeakingUpload() {
           </button>
           <div className="ielts-speaking-upload-header-text">
             {activeSubOption === 'questions' ? (
-              <>
-                <h2>{language === 'en' ? 'Speaking Test Questions' : 'স্পিকিং টেস্ট প্রশ্নাবলী'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Design and manage mock interview question sheets'
-                    : 'মক ইন্টারভিউ প্রশ্নপত্র ডিজাইন ও পরিচালনা করুন'}
-                </p>
-              </>
+              speakingViewMode === 'bank' ? (
+                <>
+                  <h2>{language === 'en' ? 'Speaking Question Bank' : 'স্পিকিং প্রশ্ন ব্যাংক'}</h2>
+                  <p>
+                    {language === 'en'
+                      ? 'Manage and view all uploaded IELTS speaking mock interview sheets'
+                      : 'আপনার আপলোডকৃত আইইএলটিএস স্পিকিং প্রম্পট ও কিউ কার্ডগুলো পরিচালনা এবং দেখুন'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2>{language === 'en' ? 'Upload Speaking Questions' : 'স্পিকিং প্রশ্ন আপলোড করুন'}</h2>
+                  <p>
+                    {language === 'en'
+                      ? 'Design and manage mock interview question sheets'
+                      : 'মক ইন্টারভিউ প্রশ্নপত্র ডিজাইন ও পরিচালনা করুন'}
+                  </p>
+                </>
+              )
             ) : activeSubOption === 'requests' ? (
               <>
                 <h2>{language === 'en' ? 'Test Requests' : 'টেস্ট অনুরোধসমূহ'}</h2>
@@ -211,25 +243,80 @@ export default function IeltsSpeakingUpload() {
             )}
 
             {activeSubOption === 'questions' && (
-              /* Speaking test questions view placeholder */
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                className="ielts-speaking-subview-card"
-              >
-                <div className="ielts-speaking-placeholder-icon">
-                  <HiChatAlt2 />
-                </div>
-                <h3>
-                  {language === 'en' ? 'Speaking test questions' : 'স্পিকিং টেস্ট প্রশ্নাবলী'}
-                </h3>
-                <p>
-                  {language === 'en'
-                    ? 'Speaking questions manager is coming soon! Content details will be loaded here.'
-                    : 'স্পিকিং প্রশ্ন ম্যানেজার শীঘ্রই আসছে! কন্টেন্ট বিবরণ এখানে লোড করা হবে।'}
-                </p>
-              </motion.div>
+              speakingViewMode === 'bank' ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ width: '100%' }}
+                >
+                  <div className="ielts-bank-header">
+                    <h3>{language === 'en' ? 'Available Question Sets' : 'বিদ্যমান প্রশ্ন সেটসমূহ'}</h3>
+                    <button 
+                      type="button" 
+                      className="ielts-speaking-select-btn" 
+                      style={{ padding: '12px 24px', fontSize: '0.95rem', borderRadius: '50px', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px' }} 
+                      onClick={() => setSpeakingViewMode('upload')}
+                    >
+                      <HiUpload size={16} />
+                      <span>{language === 'en' ? 'Upload new question' : 'নতুন প্রশ্ন আপলোড করুন'}</span>
+                    </button>
+                  </div>
+
+                  <div className="ielts-bank-grid">
+                    {MOCK_SPEAKING_SETS.map((set) => (
+                      <div key={set._id} className="ielts-bank-card">
+                        <div className="ielts-bank-card-info">
+                          <h4>{set.setName}</h4>
+                          <div className="ielts-bank-card-meta">
+                            <span>👤 {set.creator}</span>
+                            <span>📅 {new Date(set.createdAt).toLocaleDateString()}</span>
+                            <span>💬 {set.partsCount} Parts</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                /* Speaking test questions view placeholder */
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="ielts-speaking-subview-card"
+                >
+                  <div className="ielts-speaking-placeholder-icon">
+                    <HiChatAlt2 />
+                  </div>
+                  <h3>
+                    {language === 'en' ? 'Speaking test questions' : 'স্পিকিং টেস্ট প্রশ্নাবলী'}
+                  </h3>
+                  <p>
+                    {language === 'en'
+                      ? 'Speaking questions manager is coming soon! Content details will be loaded here.'
+                      : 'স্পিকিং প্রশ্ন ম্যানেজার শীঘ্রই আসছে! কন্টেন্ট বিবরণ এখানে লোড করা হবে।'}
+                  </p>
+                  <button 
+                    type="button" 
+                    onClick={() => setSpeakingViewMode('bank')} 
+                    className="ielts-speaking-select-btn" 
+                    style={{ 
+                      padding: '10px 20px', 
+                      fontSize: '0.88rem', 
+                      borderRadius: '50px', 
+                      border: '1.5px solid rgba(75, 46, 43, 0.2)',
+                      fontWeight: 700,
+                      background: 'transparent',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      marginTop: '1rem'
+                    }}
+                  >
+                    {language === 'en' ? 'Back to Question Bank' : 'প্রশ্ন ব্যাংকে ফিরে যান'}
+                  </button>
+                </motion.div>
+              )
             )}
 
             {activeSubOption === 'requests' && (

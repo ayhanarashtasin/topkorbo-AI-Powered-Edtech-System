@@ -43,7 +43,7 @@
   transition: all var(--transition-fast);
 }
 
-.ielts-writing-upload-back-btn:hover {
+.ielts-writing-upload-back-btn:hover:not(:disabled) {
   background: rgba(192, 133, 82, 0.08);
   border-color: var(--sky-blue);
   color: var(--text-primary);
@@ -82,37 +82,350 @@
 .ielts-writing-upload-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
   border: 1px solid rgba(192, 133, 82, 0.14);
-  border-radius: 28px;
-  padding: 40px;
-  box-shadow: 0 18px 40px rgba(140, 90, 60, 0.06);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 12px 30px rgba(140, 90, 60, 0.04);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
   gap: 1.5rem;
-  min-height: 400px;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ielts-writing-upload-card:hover {
+  box-shadow: 0 16px 40px rgba(140, 90, 60, 0.08);
 }
 
 .ielts-writing-upload-card h3 {
   font-family: var(--font-heading);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   color: var(--text-accent);
   margin: 0;
 }
 
-.ielts-writing-upload-card p {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.6;
-  max-width: 600px;
+.text-left {
+  text-align: left;
+  align-items: stretch;
 }
 
-.ielts-writing-placeholder-icon {
-  font-size: 4rem;
-  color: var(--sky-blue);
+.ielts-writing-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(192, 133, 82, 0.1);
+  padding-bottom: 16px;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .ielts-writing-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.ielts-writing-toggle-group {
+  display: flex;
   background: rgba(192, 133, 82, 0.08);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(192, 133, 82, 0.12);
+}
+
+.ielts-writing-toggle-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-writing-toggle-btn.active {
+  background: #ffffff;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.ielts-writing-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ielts-writing-input-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.ielts-writing-set-name-input {
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(192, 133, 82, 0.2);
+  background-color: #fdfaf8;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.ielts-writing-set-name-input:focus {
+  border-color: var(--sky-blue);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.12);
+}
+
+.ielts-writing-set-textarea {
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(192, 133, 82, 0.2);
+  background-color: #fdfaf8;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  outline: none;
+  resize: vertical;
+  transition: all var(--transition-fast);
+}
+
+.ielts-writing-set-textarea:focus {
+  border-color: var(--sky-blue);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.12);
+}
+
+.ielts-writing-file-group {
+  width: 100%;
+}
+
+.ielts-writing-file-dropzone {
+  border: 2px dashed rgba(192, 133, 82, 0.25);
+  border-radius: 16px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(253, 250, 248, 0.6);
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.ielts-writing-file-dropzone:hover {
+  border-color: var(--sky-blue);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.ielts-writing-file-icon {
+  color: var(--sky-blue);
+  transition: transform var(--transition-fast);
+}
+
+.ielts-writing-file-dropzone:hover .ielts-writing-file-icon {
+  transform: translateY(-2px);
+}
+
+.ielts-writing-file-icon.success {
+  color: #38b000;
+}
+
+.ielts-writing-file-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ielts-writing-file-sublabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ielts-writing-file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ielts-writing-file-uploaded {
+  border: 2px solid #38b000;
+  border-radius: 16px;
   padding: 24px;
+  text-align: center;
+  background: rgba(56, 176, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.ielts-writing-file-status {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #38b000;
+}
+
+.ielts-writing-file-name {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 176, 0, 0.15);
+}
+
+.ielts-writing-remove-file-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
   border-radius: 50%;
-  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.ielts-writing-remove-file-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Submit CTA */
+.ielts-writing-submit-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 3rem;
+}
+
+.ielts-writing-submit-btn-cta {
+  background: var(--gradient-cta);
+  color: var(--white);
+  border: none;
+  padding: 16px 48px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ielts-writing-submit-btn-cta:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.ielts-writing-submit-btn-cta:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Question Bank Styling */
+.ielts-bank-container {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.ielts-bank-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.08);
+  padding-bottom: 1rem;
+}
+
+.ielts-bank-header h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-bank-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: rgba(192, 133, 82, 0.03);
+  border: 1.5px dashed rgba(192, 133, 82, 0.15);
+  border-radius: 20px;
+}
+
+.ielts-bank-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .ielts-bank-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ielts-bank-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1.5px solid rgba(192, 133, 82, 0.12);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(140, 90, 60, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all var(--transition-smooth);
+}
+
+.ielts-bank-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--sky-blue);
+  box-shadow: var(--shadow-md);
+}
+
+.ielts-bank-card-info h4 {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+
+.ielts-bank-card-meta {
+  display: flex;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ielts-bank-card-meta span {
+  background: rgba(192, 133, 82, 0.05);
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-weight: 500;
 }
