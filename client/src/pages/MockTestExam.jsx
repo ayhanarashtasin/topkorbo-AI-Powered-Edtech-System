@@ -174,7 +174,7 @@ export default function MockTestExam() {
 
   useEffect(() => {
     console.log("[Client Socket] Connection status:", connected, "Socket:", !!socket);
-    if (!socket || !connected || !config?.contestId || isReviewMode) return;
+    if (!socket || !connected || !config?.contestId || config?.isPractice || isReviewMode) return;
 
     console.log("[Client Socket] Joining contest:", config.contestId);
     emit("join:contest", config.contestId);
@@ -568,58 +568,66 @@ export default function MockTestExam() {
     const countSubmitted = Object.keys(updatedSubmittedKeys).length;
 
     // Call submit endpoint instantly to update the database
-    try {
-      const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
-      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-      await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          score: currentScore,
-          totalQuestions: questions.length,
-          timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
-          answersSubmitted: countSubmitted,
-          answers: answers
-        }),
-      });
-      toast.success(language === "en" ? `Question ${index + 1} Submitted & Saved!` : `প্রশ্ন ${index + 1} সাবমিট এবং সেভ হয়েছে!`, { duration: 1500 });
-    } catch (err) {
-      console.error("Error saving intermediate progress:", err);
+    if (!config?.isPractice) {
+      try {
+        const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
+        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            score: currentScore,
+            totalQuestions: questions.length,
+            timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
+            answersSubmitted: countSubmitted,
+            answers: answers
+          }),
+        });
+        toast.success(language === "en" ? `Question ${index + 1} Submitted & Saved!` : `প্রশ্ন ${index + 1} সাবমিট এবং সেভ হয়েছে!`, { duration: 1500 });
+      } catch (err) {
+        console.error("Error saving intermediate progress:", err);
+      }
+    } else {
+      toast.success(language === "en" ? `Question ${index + 1} Saved!` : `প্রশ্ন ${index + 1} সেভ হয়েছে!`, { duration: 1500 });
     }
 
     // Check if ALL answers are now submitted
     if (countSubmitted === questions.length) {
-      // Clear session storage for this exam
-      [
-        "mock_test_step",
-        "mock_test_subject_ids",
-        "mock_test_chapters",
-        "mock_test_selected_topics",
-        "mock_exam_standard",
-        "mock_question_type",
-        "mock_total_questions",
-        "mock_exam_duration",
-        "mock_negative_marking",
-        "mock_exam_questions",
-        "mock_exam_config",
-        "mock_exam_from_qbank",
-        "mock_exam_answers",
-        "mock_exam_end_time",
-        "mock_exam_submitted",
-        "mock_exam_review_mode",
-        "mock_exam_time_left",
-        "mock_exam_written_answers",
-        "mock_exam_ai_evals",
-        "mock_exam_submitted_keys",
-        "mock_exam_visited_indexes",
-        "mock_exam_active_idx",
-      ].forEach((key) => sessionStorage.removeItem(key));
+      if (config?.isPractice) {
+        handleSubmit();
+      } else {
+        // Clear session storage for this exam
+        [
+          "mock_test_step",
+          "mock_test_subject_ids",
+          "mock_test_chapters",
+          "mock_test_selected_topics",
+          "mock_exam_standard",
+          "mock_question_type",
+          "mock_total_questions",
+          "mock_exam_duration",
+          "mock_negative_marking",
+          "mock_exam_questions",
+          "mock_exam_config",
+          "mock_exam_from_qbank",
+          "mock_exam_answers",
+          "mock_exam_end_time",
+          "mock_exam_submitted",
+          "mock_exam_review_mode",
+          "mock_exam_time_left",
+          "mock_exam_written_answers",
+          "mock_exam_ai_evals",
+          "mock_exam_submitted_keys",
+          "mock_exam_visited_indexes",
+          "mock_exam_active_idx",
+        ].forEach((key) => sessionStorage.removeItem(key));
 
-      // Redirect directly to /contests
-      navigate("/contests");
+        // Redirect directly to /contests
+        navigate("/contests");
+      }
       return;
     }
 
@@ -746,7 +754,7 @@ export default function MockTestExam() {
       console.error("Failed to save mock test attempt", err);
     }
 
-    if (config?.contestId) {
+    if (config?.contestId && !config?.isPractice) {
       let finalScore = 0;
       questions.forEach((question, index) => {
         const key = getQuestionKey(question, index);
@@ -1801,7 +1809,7 @@ export default function MockTestExam() {
         </div>
       </div>
 
-        {config?.contestId && !isReviewMode && (
+        {config?.contestId && !config?.isPractice && !isReviewMode && (
           <aside className="exam-sidebar-leaderboard">
             <div className="leaderboard-header">
               <div className="leaderboard-title-row">
