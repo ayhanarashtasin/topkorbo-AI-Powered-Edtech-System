@@ -904,6 +904,212 @@
     transform: translateX(4px);
 }
 
+/* ==========================================================================
+   English 1st Paper Section & Unit Cards
+   ========================================================================== */
+
+.qbank-english-section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 24px;
+    width: 100%;
+}
+
+.qbank-english-section-card {
+    position: relative;
+    min-height: 220px;
+    border-radius: 24px;
+    padding: 24px;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1.5px solid rgba(192, 133, 82, 0.22);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 247, 237, 0.72) 100%),
+        radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--english-section-accent) 24%, transparent) 0%, transparent 44%);
+    box-shadow: 0 10px 30px rgba(140, 90, 60, 0.06);
+    transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.qbank-english-section-card:hover {
+    transform: translateY(-8px);
+    border-color: color-mix(in srgb, var(--english-section-accent) 45%, #c08552);
+    box-shadow:
+        0 16px 36px rgba(140, 90, 60, 0.11),
+        0 0 0 3px color-mix(in srgb, var(--english-section-accent) 10%, transparent);
+}
+
+.qbank-english-section-card__wash {
+    position: absolute;
+    right: -34px;
+    bottom: -42px;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--english-section-accent) 30%, transparent) 0%, transparent 68%);
+    pointer-events: none;
+}
+
+.qbank-english-section-card__icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    color: var(--white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--english-section-accent), var(--english-section-accent-dark));
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--english-section-accent) 28%, transparent);
+    position: relative;
+    z-index: 1;
+    transition: transform var(--transition-base);
+}
+
+.qbank-english-section-card:hover .qbank-english-section-card__icon {
+    transform: scale(1.08) rotate(2deg);
+}
+
+.qbank-english-section-card__text {
+    position: relative;
+    z-index: 1;
+    margin-top: 22px;
+}
+
+.qbank-english-section-card__text h3 {
+    font-family: var(--font-heading);
+    font-size: 1.55rem;
+    font-weight: 850;
+    line-height: 1.05;
+    color: #7a4d31;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.03em;
+}
+
+.qbank-english-section-card__text p {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.qbank-english-section-card__action {
+    position: relative;
+    z-index: 1;
+    margin-top: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--english-section-accent-dark);
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 800;
+    transition: transform var(--transition-base);
+}
+
+.qbank-english-section-card:hover .qbank-english-section-card__action {
+    transform: translateX(4px);
+}
+
+.qbank-english-unit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 22px;
+    width: 100%;
+}
+
+.qbank-english-unit-card {
+    position: relative;
+    min-height: 190px;
+    border-radius: 18px;
+    padding: 24px 22px;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--english-unit-accent) 88%, #ffffff) 0%, var(--english-unit-accent-dark) 100%);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--english-unit-accent-dark) 18%, transparent);
+    transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.qbank-english-unit-card:hover {
+    transform: translateY(-7px);
+    box-shadow:
+        0 18px 36px color-mix(in srgb, var(--english-unit-accent-dark) 22%, transparent),
+        0 0 0 3px color-mix(in srgb, var(--english-unit-accent) 12%, transparent);
+}
+
+.qbank-english-unit-card__shine {
+    position: absolute;
+    right: -42px;
+    bottom: -48px;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, transparent 68%);
+    pointer-events: none;
+}
+
+.qbank-english-unit-card__content {
+    position: relative;
+    z-index: 2;
+    max-width: 78%;
+}
+
+.qbank-english-unit-card__content h3 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1.08;
+    margin: 0 0 4px 0;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    letter-spacing: -0.03em;
+}
+
+.qbank-english-unit-card__content p {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 0.93rem;
+    line-height: 1.35;
+    font-weight: 650;
+    margin: 0;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+}
+
+.qbank-english-unit-card__number {
+    position: absolute;
+    right: 22px;
+    bottom: 16px;
+    font-family: var(--font-heading);
+    font-size: 5.25rem;
+    line-height: 0.85;
+    font-weight: 950;
+    color: rgba(255, 255, 255, 0.34);
+    text-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+    pointer-events: none;
+}
+
+.qbank-english-unit-card__icon {
+    position: absolute;
+    right: 26px;
+    bottom: 24px;
+    width: 64px;
+    height: 64px;
+    color: rgba(255, 255, 255, 0.36);
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.14));
+}
+
+.qbank-english-unit-card--reading .qbank-english-unit-card__content {
+    max-width: 72%;
+}
+
+.qbank-english-unit-card--reading .qbank-english-unit-card__content h3 {
+    font-size: 1.45rem;
+}
+
 /* Modal Overlay & Card Styling */
 .qbank-modal-overlay {
     position: fixed;
@@ -1044,6 +1250,25 @@
 @media (max-width: 768px) {
     .qbank-options-page {
         padding: 0 16px;
+    }
+
+    .qbank-english-section-grid,
+    .qbank-english-unit-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .qbank-english-section-card {
+        min-height: 190px;
+        padding: 20px;
+    }
+
+    .qbank-english-unit-card {
+        min-height: 168px;
+    }
+
+    .qbank-english-unit-card__number {
+        font-size: 4.4rem;
     }
 }
 

@@ -26,6 +26,62 @@ import "./QuestionBank.css";
 const MCQ_ONLY_UNIVERSITIES = ["GST", "AGRI", "CU", "JU", "RU"];
 const MCQ_WRITTEN_UNIVERSITIES = ["DU"];
 
+const ENGLISH_FIRST_PAPER_SECTIONS = [
+  {
+    id: "academic",
+    titleEn: "Academic",
+    titleBn: "একাডেমিক",
+    descriptionEn: "Unit-wise English for Today lessons",
+    descriptionBn: "ইংলিশ ফর টুডে ইউনিটভিত্তিক পাঠ",
+    icon: HiAcademicCap,
+    accent: "#d4a373",
+    accentDark: "#8c5a3c",
+  },
+  {
+    id: "passage",
+    titleEn: "Passage Analysis",
+    titleBn: "প্যাসেজ বিশ্লেষণ",
+    descriptionEn: "Practice prose and comprehension passages",
+    descriptionBn: "গদ্য ও কমপ্রিহেনশন প্যাসেজ অনুশীলন",
+    icon: HiDocumentText,
+    accent: "#ef4444",
+    accentDark: "#b91c1c",
+  },
+  {
+    id: "poem",
+    titleEn: "Poem",
+    titleBn: "কবিতা",
+    descriptionEn: "Poem-focused units and reading practice",
+    descriptionBn: "কবিতাভিত্তিক ইউনিট ও রিডিং অনুশীলন",
+    icon: HiBookOpen,
+    accent: "#3b82f6",
+    accentDark: "#1d4ed8",
+  },
+];
+
+const ENGLISH_FIRST_PAPER_UNITS = [
+  { unit: 1, titleEn: "Education and Life", titleBn: "Education and Life", accent: "#22c55e", accentDark: "#15803d" },
+  { unit: 2, titleEn: "Art and Craft", titleBn: "Art and Craft", accent: "#3b82f6", accentDark: "#1d4ed8", hasPoem: true },
+  { unit: 3, titleEn: "Myths and Literature", titleBn: "Myths and Literature", accent: "#6d28d9", accentDark: "#4c1d95", hasPoem: true },
+  { unit: 4, titleEn: "History", titleBn: "History", accent: "#a855f7", accentDark: "#7e22ce" },
+  { unit: 5, titleEn: "Human Rights", titleBn: "Human Rights", accent: "#d946ef", accentDark: "#a21caf" },
+  { unit: 6, titleEn: "Dreams", titleBn: "Dreams", accent: "#dc2626", accentDark: "#991b1b", hasPoem: true },
+  { unit: 7, titleEn: "Youthful Achievers", titleBn: "Youthful Achievers", accent: "#f97316", accentDark: "#c2410c" },
+  { unit: 8, titleEn: "Relationship", titleBn: "Relationship", accent: "#eab308", accentDark: "#a16207", hasPoem: true },
+  { unit: 9, titleEn: "Adolescence", titleBn: "Adolescence", accent: "#f59e0b", accentDark: "#b45309" },
+  { unit: 10, titleEn: "Lifestyle", titleBn: "Lifestyle", accent: "#fb923c", accentDark: "#ea580c" },
+  { unit: 11, titleEn: "Peace and Conflict", titleBn: "Peace and Conflict", accent: "#ef4444", accentDark: "#b91c1c", hasPoem: true },
+  { unit: 12, titleEn: "Environment and Nature", titleBn: "Environment and Nature", accent: "#14b8a6", accentDark: "#0f766e", hasPoem: true },
+];
+
+const ENGLISH_READING_FOR_PLEASURE = {
+  id: "reading-for-pleasure",
+  titleEn: "Reading for pleasure",
+  titleBn: "Reading for pleasure",
+  accent: "#10b981",
+  accentDark: "#047857",
+};
+
 export default function QuestionBank() {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
@@ -636,6 +692,7 @@ export default function QuestionBank() {
   const [searchParams, setSearchParams] = useSearchParams();
   const subjectParam = searchParams.get("subject");
   const formatParam = searchParams.get("format");
+  const englishSectionParam = searchParams.get("section");
   const streamParam = searchParams.get("stream");
   const selectedPrepStream = streamParam;
   const paperParam = subjectParam ? subjectParam.split("_").pop() : "1";
@@ -793,9 +850,38 @@ export default function QuestionBank() {
     return academicSubjects.find((sub) => sub.id === subjectParam) || null;
   }, [subjectParam]);
 
+  const selectedEnglishSection = useMemo(() => {
+    if (selectedSubject?.id !== "english_1") return null;
+    return (
+      ENGLISH_FIRST_PAPER_SECTIONS.find(
+        (section) => section.id === englishSectionParam,
+      ) || null
+    );
+  }, [selectedSubject, englishSectionParam]);
+
+  const englishFirstPaperUnits = useMemo(() => {
+    if (!selectedEnglishSection) return [];
+    if (selectedEnglishSection.id === "poem") {
+      return [
+        ...ENGLISH_FIRST_PAPER_UNITS.filter((unit) => unit.hasPoem),
+        ENGLISH_READING_FOR_PLEASURE,
+      ];
+    }
+
+    if (selectedEnglishSection.id === "passage") {
+      return ENGLISH_FIRST_PAPER_UNITS.filter((unit) => !unit.hasPoem);
+    }
+
+    return ENGLISH_FIRST_PAPER_UNITS;
+  }, [selectedEnglishSection]);
+
   const selectedSourceContext = useMemo(() => {
     if (!selectedSubject) return null;
     const subjectKeyMap = {
+      english_2: "English",
+      bangla_1: "Bangla",
+      bangla_2: "Bangla",
+      ict: "ICT",
       physics_1: "Physics",
       physics_2: "Physics",
       chemistry_1: "Chemistry",
@@ -809,7 +895,7 @@ export default function QuestionBank() {
     const paperSuffix = selectedSubject.id.slice(-1);
     return {
       subject: subjectKeyMap[selectedSubject.id],
-      paper: paperMap[paperSuffix],
+      paper: selectedSubject.id === "ict" ? null : paperMap[paperSuffix],
     };
   }, [selectedSubject]);
 
@@ -826,8 +912,10 @@ export default function QuestionBank() {
           import.meta.env.VITE_API_URL || "http://localhost:5000/api";
         const params = new URLSearchParams({
           subject: selectedSourceContext.subject,
-          paper: selectedSourceContext.paper,
         });
+        if (selectedSourceContext.paper) {
+          params.append("paper", selectedSourceContext.paper);
+        }
         const response = await fetch(
           `${backendBaseUrl}/questions/sources?${params.toString()}`,
           {
@@ -872,7 +960,17 @@ export default function QuestionBank() {
   }, [selectedVarsity, varsityView]);
 
   const handleSubjectClick = (subject) => {
+    if (subject.id === "english_1") {
+      setSearchParams({ subject: subject.id });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     const targetPapers = [
+      "english_2",
+      "bangla_1",
+      "bangla_2",
+      "ict",
       "physics_1",
       "physics_2",
       "chemistry_1",
@@ -886,6 +984,16 @@ export default function QuestionBank() {
       setSearchParams({ subject: subject.id });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleEnglishFirstPaperUnitClick = (unit) => {
+    const isReadingCard = unit.id === ENGLISH_READING_FOR_PLEASURE.id;
+    setActiveOptionModal({
+      titleEn: isReadingCard ? unit.titleEn : `Unit ${unit.unit}: ${unit.titleEn}`,
+      titleBn: isReadingCard ? unit.titleBn : `Unit ${unit.unit}: ${unit.titleBn}`,
+      gradient: `linear-gradient(135deg, ${unit.accent} 0%, ${unit.accentDark} 100%)`,
+      icon: selectedEnglishSection?.id === "poem" ? <HiBookOpen size={30} /> : <HiDocumentText size={30} />,
+    });
   };
 
   const handleSourceCardClick = (source) => {
@@ -908,11 +1016,11 @@ export default function QuestionBank() {
         import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       const params = new URLSearchParams({
         subject,
-        paper,
         sourceType,
         name,
         type: qType,
       });
+      if (paper) params.append("paper", paper);
       if (year) params.append("year", year);
 
       const response = await fetch(
@@ -1596,13 +1704,23 @@ export default function QuestionBank() {
               <button
                 type="button"
                 className="qbank-back-btn"
-                onClick={() => navigate("/qbank")}
+                onClick={() => {
+                  if (selectedEnglishSection) {
+                    setSearchParams({ subject: subjectParam });
+                  } else {
+                    navigate("/qbank");
+                  }
+                }}
               >
                 <HiArrowLeft size={16} />
                 <span>
-                  {language === "en"
-                    ? "Back to Question Bank"
-                    : "প্রশ্নব্যাংকে ফিরে যান"}
+                  {selectedEnglishSection
+                    ? language === "en"
+                      ? "Back to English 1st Paper"
+                      : "ইংরেজি ১ম পত্রে ফিরে যান"
+                    : language === "en"
+                      ? "Back to Question Bank"
+                      : "প্রশ্নব্যাংকে ফিরে যান"}
                 </span>
               </button>
               <div className="qbank-options-header-info">
@@ -1612,15 +1730,119 @@ export default function QuestionBank() {
                     : selectedSubject.titleBn}
                 </h2>
                 <p>
-                  {language === "en"
-                    ? "Choose question format"
-                    : "প্রশ্নের ধরন নির্বাচন করুন"}
+                  {selectedSubject.id === "english_1"
+                    ? selectedEnglishSection
+                      ? language === "en"
+                        ? selectedEnglishSection.descriptionEn
+                        : selectedEnglishSection.descriptionBn
+                      : language === "en"
+                        ? "Choose an English 1st paper content area"
+                        : "ইংরেজি ১ম পত্রের কনটেন্ট এরিয়া নির্বাচন করুন"
+                    : language === "en"
+                      ? "Choose question format"
+                      : "প্রশ্নের ধরন নির্বাচন করুন"}
                 </p>
               </div>
             </header>
 
             <div className="qbank-workspace">
-              <div className="qbank-options-grid">
+              {selectedSubject.id === "english_1" ? (
+                selectedEnglishSection ? (
+                  <div className="qbank-english-unit-grid">
+                    {englishFirstPaperUnits.map((unit) => {
+                      const isReadingCard =
+                        unit.id === ENGLISH_READING_FOR_PLEASURE.id;
+
+                      return (
+                        <div
+                          key={isReadingCard ? unit.id : `unit-${unit.unit}`}
+                          className={`qbank-english-unit-card ${isReadingCard ? "qbank-english-unit-card--reading" : ""}`}
+                          style={{
+                            "--english-unit-accent": unit.accent,
+                            "--english-unit-accent-dark": unit.accentDark,
+                          }}
+                          onClick={() => handleEnglishFirstPaperUnitClick(unit)}
+                        >
+                          <div className="qbank-english-unit-card__shine"></div>
+                          <div className="qbank-english-unit-card__content">
+                            <h3>
+                              {isReadingCard
+                                ? language === "en"
+                                  ? unit.titleEn
+                                  : unit.titleBn
+                                : `${language === "en" ? "Unit" : "Unit"} ${unit.unit}`}
+                            </h3>
+                            {!isReadingCard && (
+                              <p>
+                                {language === "en" ? unit.titleEn : unit.titleBn}
+                                {selectedEnglishSection.id === "poem"
+                                  ? language === "en"
+                                    ? " (Poem)"
+                                    : " (Poem)"
+                                  : ""}
+                              </p>
+                            )}
+                          </div>
+                          {!isReadingCard && (
+                            <span className="qbank-english-unit-card__number">
+                              {unit.unit}
+                            </span>
+                          )}
+                          {isReadingCard && (
+                            <HiBookOpen className="qbank-english-unit-card__icon" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="qbank-english-section-grid">
+                    {ENGLISH_FIRST_PAPER_SECTIONS.map((section) => {
+                      const SectionIcon = section.icon;
+
+                      return (
+                        <div
+                          key={section.id}
+                          className="qbank-english-section-card"
+                          style={{
+                            "--english-section-accent": section.accent,
+                            "--english-section-accent-dark": section.accentDark,
+                          }}
+                          onClick={() => {
+                            setSearchParams({
+                              subject: subjectParam,
+                              section: section.id,
+                            });
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          <div className="qbank-english-section-card__wash"></div>
+                          <div className="qbank-english-section-card__icon">
+                            <SectionIcon size={36} />
+                          </div>
+                          <div className="qbank-english-section-card__text">
+                            <h3>
+                              {language === "en"
+                                ? section.titleEn
+                                : section.titleBn}
+                            </h3>
+                            <p>
+                              {language === "en"
+                                ? section.descriptionEn
+                                : section.descriptionBn}
+                            </p>
+                          </div>
+                          <span className="qbank-english-section-card__action">
+                            {language === "en" ? "Explore" : "দেখুন"}
+                            <HiChevronRight size={16} />
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="qbank-options-grid">
                 {/* MCQ Card */}
                 <div
                   className="qbank-option-card qbank-option-card--mcq"
@@ -1704,6 +1926,7 @@ export default function QuestionBank() {
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </div>
         ) : (

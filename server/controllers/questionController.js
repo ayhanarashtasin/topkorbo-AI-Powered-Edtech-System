@@ -165,12 +165,14 @@ exports.getTopicsForMockTest = async (req, res, next) => {
 exports.getQuestionSources = async (req, res, next) => {
   try {
     const { subject, paper, type } = req.query;
+    const isPaperlessSubject = subject === 'ICT';
 
-    if (!subject || !paper) {
+    if (!subject || (!paper && !isPaperlessSubject)) {
       return ApiResponse.error(res, 'subject and paper are required query params', 400);
     }
 
-    const baseMatch = { subject, paper };
+    const baseMatch = { subject };
+    if (paper) baseMatch.paper = paper;
     if (type && ['mcq', 'cq', 'written'].includes(type)) {
       baseMatch.type = type;
     }
@@ -251,6 +253,7 @@ exports.getQuestionSources = async (req, res, next) => {
 exports.getQuestionsBySource = async (req, res, next) => {
   try {
     const { subject, paper, sourceType, name, year, type, shift } = req.query;
+    const isPaperlessSubject = subject === 'ICT';
 
     if (!sourceType || !name) {
       return ApiResponse.error(
@@ -264,7 +267,7 @@ exports.getQuestionsBySource = async (req, res, next) => {
       return ApiResponse.error(res, "sourceType must be 'board', 'college', or 'admission'", 400);
     }
 
-    if (sourceType !== 'admission' && (!subject || !paper)) {
+    if (sourceType !== 'admission' && (!subject || (!paper && !isPaperlessSubject))) {
       return ApiResponse.error(res, 'subject and paper are required for board/college sources', 400);
     }
 
@@ -277,7 +280,7 @@ exports.getQuestionsBySource = async (req, res, next) => {
       if (shift) match['tags.shift'] = shift;
     } else {
       match.subject = subject;
-      match.paper = paper;
+      if (paper) match.paper = paper;
       match['tags.category'] = sourceType;
       match[sourceType === 'board' ? 'tags.board' : 'tags.college'] = name;
       if (year) match['tags.year'] = year;
