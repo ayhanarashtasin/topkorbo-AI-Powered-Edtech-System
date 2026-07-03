@@ -11,6 +11,7 @@ import ReaderToolbar from '../components/reader/ReaderToolbar';
 import PdfCanvas from '../components/reader/PdfCanvas';
 import HighlightSidebar from '../components/reader/HighlightSidebar';
 import ChatSidebar from '../components/reader/ChatSidebar';
+import MindMapModal from '../components/reader/MindMapModal';
 import bookApi from '../services/bookApi';
 import { useHighlights } from '../hooks/useHighlights';
 import { useChat } from '../hooks/useChat';
@@ -19,7 +20,8 @@ import {
   HiMenu,
   HiArrowLeft,
   HiOutlineLightBulb,
-  HiOutlineChatAlt2
+  HiOutlineChatAlt2,
+  HiOutlineShare
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import './ReadingBookView.css';
@@ -61,6 +63,8 @@ export default function ReadingBookView() {
   const [isChatSidebarOpen, setIsChatSidebarOpen] = useState(false);
   const [knowledgeLoading, setKnowledgeLoading] = useState(true);
   const [knowledgeStatus, setKnowledgeStatus] = useState('pending');
+  const [knowledgeTree, setKnowledgeTree] = useState(null);
+  const [isMindMapOpen, setIsMindMapOpen] = useState(false);
   const [tutorScope, setTutorScope] = useState('page');
   // Page text is held in a ref so it doesn't re-render this view; ChatSidebar
 // reads it at send time. The boolean flag below drives the chat composer's
@@ -320,6 +324,7 @@ export default function ReadingBookView() {
         const data = await bookApi.getKnowledge(bookId);
         if (cancelled || !data) return;
         setKnowledgeStatus(data.status || 'pending');
+        if (data.tree) setKnowledgeTree(data.tree);
         if (data.status === 'completed') {
           setKnowledgeLoading(false);
           return;
@@ -596,6 +601,20 @@ export default function ReadingBookView() {
     setIsChatSidebarOpen(true);
   }, []);
 
+  // Jump to a node picked in the mind map. Nodes carry the chapter they
+  // belong to; if it's a different chapter we navigate to its route, otherwise
+  // we just move within the current chapter's PDF.
+  const handleMindMapJump = useCallback(({ chapterId: targetChapterId, page }) => {
+    const nextPage = Number(page) || 1;
+    if (targetChapterId && String(targetChapterId) !== String(chapterId)) {
+      flushPenAutosave();
+      navigate(`/reading-books/${bookId}/${targetChapterId}?page=${nextPage}`);
+      return;
+    }
+    flushPenAutosave();
+    setPageNumber(nextPage);
+  }, [bookId, chapterId, flushPenAutosave, navigate]);
+
   const handleAskHighlightAI = useCallback((highlight, mode = 'summary') => {
     if (!highlight) return;
     setTutorScope('page');
@@ -840,6 +859,15 @@ export default function ReadingBookView() {
             </button>
             <button
               type="button"
+              className="rb-reader__menu-btn"
+              onClick={() => setIsMindMapOpen(true)}
+              title="Mind Map"
+              style={{ marginLeft: 8 }}
+            >
+              <HiOutlineShare size={20} />
+            </button>
+            <button
+              type="button"
               className="rb-reader__back-btn"
               onClick={() => navigate('/reading-books')}
             >
@@ -970,6 +998,14 @@ export default function ReadingBookView() {
               setPageNumber(Number(targetPage));
             }
           }}
+        />
+        <MindMapModal
+          isOpen={isMindMapOpen}
+          onClose={() => setIsMindMapOpen(false)}
+          rootNode={knowledgeTree}
+          status={knowledgeStatus}
+          loading={knowledgeLoading}
+          onJumpTo={handleMindMapJump}
         />
       </main>
     </div>

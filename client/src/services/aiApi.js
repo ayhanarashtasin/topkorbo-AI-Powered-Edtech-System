@@ -112,7 +112,7 @@ export function clearBookHistory({ bookId, chapterId, topicId, nodeId, pageNumbe
  * LaTeX representation. Used by the standalone AI Question Helper page —
  * the result is throwaway formatting work and is not persisted server-side.
  *
- * @param {{ text?: string, imageBase64?: string, mimeType?: string }} payload
+ * @param {{ text?: string, imageBase64?: string, mimeType?: string, mode?: 'solution' }} payload
  * @returns {Promise<{ extracted: { questionText: string, options: {label:string,text:string}[], correctOption: string|null, solution: string } }>}
  */
 export function extractQuestion(payload) {

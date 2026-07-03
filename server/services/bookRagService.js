@@ -431,6 +431,9 @@ async function processChapterDocument({ book, chapter, knowledgeDoc }) {
       knowledgeDoc.bookSummary = cleanDocText([knowledgeDoc.bookSummary, treeResult.treeNode.summary || ''].filter(Boolean).join(' '));
       knowledgeDoc.bookKeyPoints = Array.from(new Set([...(knowledgeDoc.bookKeyPoints || []), ...(treeResult.treeNode.keyPoints || [])])).slice(0, 12);
       knowledgeDoc.documentType = refinedProfile.type || chapterProfile.type || knowledgeDoc.documentType || 'unknown';
+      // `tree` is a Mixed field; Mongoose does not track the nested
+      // children.push() above, so flag it dirty or the mind map never persists.
+      knowledgeDoc.markModified('tree');
     } catch (treeErr) {
       knowledgeDoc.lastProcessingError = cleanText(treeErr?.message || 'Tree generation failed');
     }
@@ -572,6 +575,9 @@ async function processChapterKnowledge({ book, chapter, knowledgeDoc, structureM
   knowledgeDoc.tree.documentType = refinedProfile.type || chapterProfile.type || knowledgeDoc.tree.documentType || 'unknown';
   knowledgeDoc.tree.children = knowledgeDoc.tree.children || [];
   knowledgeDoc.tree.children.push(treeResult.treeNode);
+  // `tree` is a Mixed field; the nested children.push() is invisible to
+  // Mongoose's change tracking unless we explicitly mark it modified.
+  knowledgeDoc.markModified('tree');
   knowledgeDoc.nodes = knowledgeDoc.nodes || [];
   knowledgeDoc.nodes.push(...treeResult.flatNodes);
   knowledgeDoc.documentType = knowledgeDoc.documentType === 'unknown'
@@ -690,6 +696,7 @@ async function processBookKnowledge(bookId) {
     } : null);
     if (knowledge.tree) {
       knowledge.tree.documentType = knowledge.documentType || knowledge.tree.documentType || 'unknown';
+      knowledge.markModified('tree');
     }
     knowledge.completedAt = new Date();
     knowledge.updatedAt = new Date();

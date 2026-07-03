@@ -15,6 +15,27 @@ const VALID_GROUPS = ['Science', 'Arts', 'Commerce', 'HSC', 'Engineering', 'Medi
 const VALID_PAPERS = ['1st', '2nd', 'N/A'];
 const VALID_ANNOTATION_TYPES = ['pen'];
 
+// Books we've already auto-triggered a mind map rebuild for this server run.
+// Bounds the self-heal to one rebuild per book per process, so a book whose
+// tree legitimately builds empty can't cause the reader's poll to loop.
+const mindMapRebuildTriggered = new Set();
+
+function getMindMapStats(node) {
+  if (!node) return { total: 0, contentNodes: 0 };
+  const nodeType = String(node.nodeType || '').toLowerCase();
+  const children = Array.isArray(node.children) ? node.children : [];
+  return children.reduce((stats, child) => {
+    const childStats = getMindMapStats(child);
+    return {
+      total: stats.total + childStats.total,
+      contentNodes: stats.contentNodes + childStats.contentNodes
+    };
+  }, {
+    total: 1,
+    contentNodes: ['topic', 'subtopic', 'point'].includes(nodeType) ? 1 : 0
+  });
+}
+
 async function cleanupUploadedFile(file) {
   if (!file?.path) return;
   try {
@@ -421,11 +442,31 @@ exports.getKnowledge = async (req, res, next) => {
       });
     }
 
+    // Self-heal books that were processed before the mind map feature was
+    // enabled: a completed book with no usable tree (null, or a hollow shell
+    // with no chapter nodes) was built while ENABLE_KNOWLEDGE_TREE was off.
+    // Force a one-time rebuild so the tree/mind map actually gets created.
+    // The Set guard bounds this to a single rebuild per book per server run,
+    // so a book whose tree genuinely builds empty won't loop the reader's poll.
+    const KNOWLEDGE_TREE_ENABLED = String(process.env.ENABLE_KNOWLEDGE_TREE || '').toLowerCase() === 'true';
+    const treeChildCount = knowledge?.tree?.children?.length || 0;
+    const treeMissing = !knowledge?.tree || treeChildCount === 0;
+    const treeStats = getMindMapStats(knowledge?.tree);
+    const treeTooShallow = Number(knowledge?.sourcePages || 0) >= 5 && treeStats.contentNodes < 8;
+    const alreadyTriggered = mindMapRebuildTriggered.has(String(book._id));
+    const needsTreeRebuild = KNOWLEDGE_TREE_ENABLED && knowledge?.status === 'completed' && (treeMissing || treeTooShallow) && !alreadyTriggered;
+    if (needsTreeRebuild) {
+      mindMapRebuildTriggered.add(String(book._id));
+      queueBookKnowledge(book._id, { force: true }).catch((err) => {
+        console.error('[bookController] Failed to queue mind map rebuild:', err.message);
+      });
+    }
+
     return ApiResponse.success(res, {
       bookId: book._id,
       bookTitle: book.title,
-      status: knowledge?.status || 'pending',
-      message: knowledge?.message || 'Processing has been queued',
+      status: needsTreeRebuild ? 'indexing' : (knowledge?.status || 'pending'),
+      message: needsTreeRebuild ? 'Building the mind map…' : (knowledge?.message || 'Processing has been queued'),
       documentType: knowledge?.documentType || 'unknown',
       tree: knowledge?.tree || null,
       nodes: knowledge?.nodes || [],

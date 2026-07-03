@@ -302,6 +302,37 @@ function normalizeNodeList(nodes, { rootId, parentId = '', prefix = 'node', node
     });
 }
 
+function addBulletPointNodes(nodes) {
+  return (nodes || []).map((node) => {
+    const children = addBulletPointNodes(node.children || []);
+    const keyPoints = Array.isArray(node.keyPoints) ? node.keyPoints.filter(Boolean) : [];
+    const bulletChildren = children.length === 0
+      ? keyPoints.slice(0, 4).map((point, idx) => ({
+          nodeId: `${node.nodeId}-point-${idx + 1}`,
+          topicId: `${node.nodeId}-point-${idx + 1}`,
+          chapterId: node.chapterId || node.nodeId,
+          nodeType: 'point',
+          title: point.length > 72 ? `${point.slice(0, 69)}...` : point,
+          order: idx,
+          pageRange: node.pageRange,
+          summary: point,
+          detailedNotes: point,
+          keyPoints: [point],
+          definitions: [],
+          examples: [],
+          quizQuestions: [],
+          children: [],
+          parentId: node.nodeId
+        }))
+      : [];
+
+    return {
+      ...node,
+      children: children.length > 0 ? children : bulletChildren
+    };
+  });
+}
+
 function buildLegacyChapterEntry(rootNode, chapter, idx) {
   return {
     nodeId: rootNode.nodeId,
@@ -348,12 +379,13 @@ function buildLegacyChapterEntry(rootNode, chapter, idx) {
 }
 
 async function buildKnowledgeTree({ book, chapter, pages, chunks, documentType, mode = 'chapter' }) {
-  const sampleText = clamp(buildPageContext(samplePagesForAnalysis(pages, 10), mode === 'semantic' ? 12_000 : 16_000), mode === 'semantic' ? 12_000 : 16_000);
+  const contextLimit = mode === 'semantic' ? 28_000 : 32_000;
+  const sampleText = clamp(buildPageContext(samplePagesForAnalysis(pages, 18), contextLimit), contextLimit);
   const rootId = mode === 'semantic' ? `document-${chapter._id}` : `chapter-${chapter._id}`;
   const rootTitle = mode === 'semantic' ? cleanText(book.title || chapter.title || 'Document') : cleanText(chapter.title || book.title || 'Chapter');
   const systemInstruction = mode === 'semantic'
-    ? 'You are a document-understanding engine for an EdTech reading app. Generate a compact semantic knowledge tree from the supplied PDF text. Use only the text provided. Do not invent chapters if the document does not clearly have them.'
-    : 'You are a curriculum designer for an EdTech reading app. Generate a chapter knowledge tree from the supplied PDF text. Use only the text provided. Do not invent content that is not present.';
+    ? 'You are a document-understanding engine for an EdTech reading app. Generate a rich NotebookLM-style mind map from the supplied PDF text. Use only the text provided. Prefer specific claims, people, places, examples, causes, effects, and evidence over generic labels.'
+    : 'You are a curriculum designer for an EdTech reading app. Generate a rich NotebookLM-style chapter mind map from the supplied PDF text. Use only the text provided. Prefer specific concepts, examples, evidence, causes, effects, and relationships over generic labels.';
 
   const prompt = mode === 'semantic'
     ? [
@@ -392,7 +424,12 @@ async function buildKnowledgeTree({ book, chapter, pages, chunks, documentType, 
         '    }',
         '  ]',
         '}',
-        'Use 3 to 7 top-level semantic nodes.',
+        'Use 6 to 10 top-level semantic nodes when supported by the text.',
+        'Each top-level node should have 2 to 5 specific subtopics when supported by the text.',
+        'Every node summary should be 1 to 2 clear sentences, not a vague phrase.',
+        'Every node should include 3 to 5 keyPoints as short bullet-ready facts.',
+        'Prefer concrete entities, decisions, timeline moments, comparisons, risks, outcomes, and examples.',
+        'Avoid repeating the same title at multiple levels.',
         'Document text:',
         sampleText
       ].join('\n\n')
@@ -432,7 +469,12 @@ async function buildKnowledgeTree({ book, chapter, pages, chunks, documentType, 
         '    }',
         '  ]',
         '}',
-        'Use 3 to 6 topic nodes and 1 to 3 subtopics per topic when useful.',
+        'Use 6 to 10 topic nodes when supported by the text.',
+        'Each topic should have 2 to 5 specific subtopics when supported by the text.',
+        'Every node summary should be 1 to 2 clear sentences, not a vague phrase.',
+        'Every node should include 3 to 5 keyPoints as short bullet-ready facts.',
+        'Prefer concrete entities, decisions, timeline moments, comparisons, risks, outcomes, and examples.',
+        'Avoid repeating the same title at multiple levels.',
         'Chapter text:',
         sampleText
       ].join('\n\n');
@@ -443,7 +485,7 @@ async function buildKnowledgeTree({ book, chapter, pages, chunks, documentType, 
     temperature: 0.2
   });
 
-  const nodes = normalizeNodeList(json.nodes || [], { rootId, parentId: rootId, prefix: mode === 'semantic' ? 'topic' : 'topic', nodeType: mode === 'semantic' ? 'topic' : 'topic' });
+  const nodes = addBulletPointNodes(normalizeNodeList(json.nodes || [], { rootId, parentId: rootId, prefix: mode === 'semantic' ? 'topic' : 'topic', nodeType: mode === 'semantic' ? 'topic' : 'topic' }));
   const rootNode = {
     nodeId: rootId,
     nodeType: mode === 'semantic' ? 'document' : 'chapter',

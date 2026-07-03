@@ -280,15 +280,29 @@ const KEYBOARD_TABS = {
   }
 };
 
+function looksLikeRawLatex(text) {
+  return /\\(?:frac|sqrt|sum|int|lim|alpha|beta|gamma|theta|lambda|Rightarrow|rightarrow|leftarrow|cos|sin|tan|therefore|because|times|div|cdot|leq|geq|neq|approx|infty|pi|vec|hat|begin|end)\b/.test(text)
+    || /\b[A-Za-z0-9)}]\s*\^\s*[{(]?[A-Za-z0-9]/.test(text)
+    || /\b[A-Za-z0-9)}]\s*_\s*[{(]?[A-Za-z0-9]/.test(text);
+}
+
+function renderLatexBlock(math, displayMode) {
+  return katex.renderToString(math.trim(), { displayMode, throwOnError: false });
+}
+
 function renderLatex(text) {
   if (!text || !text.trim()) return '';
   try {
-    const rendered = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
-      return katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
-    }).replace(/\$(.*?)\$/g, (_, math) => {
-      return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
-    });
-    return rendered;
+    const hasDelimitedLatex = /\$\$[\s\S]*?\$\$|\$[^$]+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]/.test(text);
+    if (!hasDelimitedLatex && looksLikeRawLatex(text)) {
+      return renderLatexBlock(text, true);
+    }
+
+    return text
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => renderLatexBlock(math, true))
+      .replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => renderLatexBlock(math, false))
+      .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => renderLatexBlock(math, true))
+      .replace(/\$([^$]*?)\$/g, (_, math) => renderLatexBlock(math, false));
   } catch {
     return text;
   }
@@ -690,6 +704,7 @@ export default function MakeContestQuestionNextTwo() {
     setAiSolIsLoading(true); setAiSolErrorMsg(''); setAiSolExtracted(null);
     const payload = {};
     const trimmed = aiSolInputText.trim();
+    payload.mode = 'solution';
     if (trimmed) payload.text = trimmed;
     if (aiSolImage) { payload.imageBase64 = aiSolImage.base64; payload.mimeType = aiSolImage.mimeType; }
     try {

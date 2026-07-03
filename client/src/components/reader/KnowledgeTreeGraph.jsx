@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Tree from 'react-d3-tree';
-import { HiChevronDown, HiOutlineSparkles } from 'react-icons/hi';
+import { HiOutlineSparkles } from 'react-icons/hi';
 import './KnowledgeTreeGraph.css';
+
+const NODE_WIDTH = 280;
+const NODE_HEIGHT = 180;
+const NODE_GAP_X = 330;
+const NODE_GAP_Y = 230;
 
 function getNodeId(node) {
   return String(node?.nodeId || node?.topicId || node?.chapterId || node?.title || '');
@@ -38,6 +43,20 @@ function toRawNode(node, depth = 0) {
   };
 }
 
+function getTreeLayoutStats(node, depth = 0) {
+  if (!node) return { maxDepth: 0, leafCount: 1 };
+  const children = getChildren(node);
+  if (!children.length) return { maxDepth: depth, leafCount: 1 };
+
+  return children.reduce((stats, child) => {
+    const childStats = getTreeLayoutStats(child, depth + 1);
+    return {
+      maxDepth: Math.max(stats.maxDepth, childStats.maxDepth),
+      leafCount: stats.leafCount + childStats.leafCount
+    };
+  }, { maxDepth: depth, leafCount: 0 });
+}
+
 function useDesktopLayout() {
   const [isDesktop, setIsDesktop] = useState(() => (
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
@@ -58,7 +77,8 @@ function useDesktopLayout() {
 export default function KnowledgeTreeGraph({
   rootNode,
   selectedNodeId,
-  onSelectNode
+  onSelectNode,
+  showOnMobile = false
 }) {
   const isDesktop = useDesktopLayout();
 
@@ -67,44 +87,58 @@ export default function KnowledgeTreeGraph({
     return [toRawNode(rootNode)];
   }, [rootNode]);
 
-  const renderCustomNodeElement = ({ nodeDatum, toggleNode }) => {
-    const hasChildren = Array.isArray(nodeDatum.children) && nodeDatum.children.length > 0;
+  const layout = useMemo(() => {
+    const { maxDepth, leafCount } = getTreeLayoutStats(rootNode);
+    const leftExtent = Math.max(0, leafCount - 1) * NODE_GAP_X / 2;
+    const width = Math.max(820, (leftExtent * 2) + NODE_WIDTH + 80);
+    const height = Math.max(520, (maxDepth * NODE_GAP_Y) + NODE_HEIGHT + 120);
+
+    return {
+      dimensions: { width, height },
+      translate: { x: leftExtent + (NODE_WIDTH / 2) + 40, y: 62 }
+    };
+  }, [rootNode]);
+
+  const renderCustomNodeElement = ({ nodeDatum }) => {
     const active = String(selectedNodeId) === String(nodeDatum.nodeId);
     const isRoot = (nodeDatum.nodeType || '').toLowerCase() === 'book' || (nodeDatum.attributes?.type || '').toLowerCase() === 'book';
     const pageLabel = nodeDatum.attributes?.pages || '';
     const typeLabel = nodeDatum.nodeType || nodeDatum.attributes?.type || 'node';
+    const normalizedType = String(typeLabel).toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    const isPoint = normalizedType === 'point';
+    const previewPoints = Array.isArray(nodeDatum.keyPoints)
+      ? nodeDatum.keyPoints.filter(Boolean).slice(0, 3)
+      : [];
 
     return (
       <g>
         <foreignObject
-          x={-118}
-          y={-48}
-          width={236}
-          height={96}
+          x={-150}
+          y={-64}
+          width={300}
+          height={NODE_HEIGHT}
         >
           <button
             type="button"
-            className={`rb-ktree__node ${active ? 'rb-ktree__node--active' : ''} ${isRoot ? 'rb-ktree__node--root' : ''}`}
+            className={`rb-ktree__node rb-ktree__node--${normalizedType} ${active ? 'rb-ktree__node--active' : ''} ${isRoot ? 'rb-ktree__node--root' : ''}`}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onSelectNode?.(nodeDatum);
-              if (hasChildren) toggleNode();
             }}
           >
             <div className="rb-ktree__node-top">
               <span className="rb-ktree__pill">{typeLabel}</span>
-              {hasChildren && (
-                <span className="rb-ktree__toggle">
-                  <HiChevronDown size={12} />
-                </span>
-              )}
             </div>
             <div className="rb-ktree__title">{nodeDatum.name}</div>
             <div className="rb-ktree__meta">
               {pageLabel ? `Pages ${pageLabel}` : 'Knowledge node'}
             </div>
-            {nodeDatum.summary && (
+            {!isPoint && previewPoints.length > 0 ? (
+              <ul className="rb-ktree__points">
+                {previewPoints.map((point, idx) => <li key={idx}>{point}</li>)}
+              </ul>
+            ) : nodeDatum.summary && (
               <div className="rb-ktree__summary">
                 {nodeDatum.summary.slice(0, 90)}
                 {nodeDatum.summary.length > 90 ? '…' : ''}
@@ -116,7 +150,7 @@ export default function KnowledgeTreeGraph({
     );
   };
 
-  if (!isDesktop) {
+  if (!isDesktop && !showOnMobile) {
     return null;
   }
 
@@ -128,17 +162,22 @@ export default function KnowledgeTreeGraph({
       </div>
       <div className="rb-ktree__canvas">
         {data.length > 0 ? (
-          <Tree
-            data={data}
-            orientation="vertical"
-            pathFunc="elbow"
-            collapsible={false}
-            initialDepth={1}
-            translate={{ x: 118, y: 44 }}
-            nodeSize={{ x: 260, y: 128 }}
-            separation={{ siblings: 1.05, nonSiblings: 1.3 }}
-            renderCustomNodeElement={renderCustomNodeElement}
-          />
+          <div
+            className="rb-ktree__stage"
+            style={{ width: layout.dimensions.width, height: layout.dimensions.height }}
+          >
+            <Tree
+              data={data}
+              dimensions={layout.dimensions}
+              orientation="vertical"
+              pathFunc="elbow"
+              collapsible={false}
+              translate={layout.translate}
+              nodeSize={{ x: NODE_GAP_X, y: NODE_GAP_Y }}
+              separation={{ siblings: 1, nonSiblings: 1.2 }}
+              renderCustomNodeElement={renderCustomNodeElement}
+            />
+          </div>
         ) : (
           <div className="rb-ktree__empty">No knowledge tree yet.</div>
         )}

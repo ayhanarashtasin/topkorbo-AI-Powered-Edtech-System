@@ -547,7 +547,26 @@ const EXTRACT_SYSTEM_PROMPT =
   'write the closest plausible reading but keep it faithful.\n' +
   '6. Output ONLY the JSON object — no backticks, no "Here is the JSON:" preface, no trailing commentary.';
 
-function buildExtractUserContent({ text, imageBase64, mimeType }) {
+const EXTRACT_SOLUTION_SYSTEM_PROMPT =
+  'You are a careful, meticulous solution formatter. ' +
+  'A teacher will hand you either plain text of a worked solution, or an image of a worked solution. ' +
+  'Your job is to convert the worked solution into clean LaTeX and return it as JSON.\n\n' +
+  'Rules:\n' +
+  '1. Return ONLY a JSON object (no prose, no markdown fences). Shape:\n' +
+  '   {\n' +
+  '     "questionText": "<LaTeX of the question stem if the source includes it, otherwise empty string>",\n' +
+  '     "options": [],\n' +
+  '     "correctOption": null,\n' +
+  '     "solution": "<LaTeX of the full worked solution>"\n' +
+  '   }\n' +
+  '2. It is OK if the source contains ONLY a solution and no question. In that case, leave "questionText" empty and put everything meaningful in "solution".\n' +
+  '3. Preserve EVERY mathematical step, symbol, implication, and conclusion from the source. ' +
+  'Use proper LaTeX: \\frac{a}{b}, x^{2}, x_{i}, \\sqrt{x}, \\sum, \\int, \\Rightarrow, \\therefore, etc. ' +
+  'Wrap math in $...$ for inline expressions or $$...$$ for display equations.\n' +
+  '4. Never invent missing steps or change the result. If something is unclear, use the closest faithful reading.\n' +
+  '5. Output ONLY the JSON object — no backticks, no commentary.';
+
+function buildExtractUserContent({ text, imageBase64, mimeType, mode }) {
   const parts = [];
   if (imageBase64) {
     const safeMime = typeof mimeType === 'string' && mimeType.startsWith('image/')
@@ -563,7 +582,9 @@ function buildExtractUserContent({ text, imageBase64, mimeType }) {
   }
   const textPart = typeof text === 'string' && text.trim().length > 0
     ? text.trim()
-    : 'Please extract the question from the attached image and return it as JSON.';
+    : mode === 'solution'
+      ? 'Please extract the worked solution from the attached image and return it as JSON.'
+      : 'Please extract the question from the attached image and return it as JSON.';
   parts.push({ type: 'text', text: textPart });
   return parts;
 }
@@ -608,6 +629,57 @@ function normaliseExtracted(obj) {
   const solution = typeof obj.solution === 'string' ? obj.solution : '';
   if (!questionText) return null;
   return { questionText, options, correctOption, solution };
+}
+
+function decodeJsonLikeString(value) {
+  if (!value) return '';
+  try {
+    return JSON.parse(`"${value}"`);
+  } catch (_) {
+    return String(value)
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\')
+      .trim();
+  }
+}
+
+function extractLooseSolutionText(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  const match = raw.match(/"solution"\s*:\s*"([\s\S]*)/);
+  if (!match) return raw.trim();
+
+  const tail = match[1]
+    .trim()
+    .replace(/"?\s*}\s*}?\s*$/g, '')
+    .trim();
+  return decodeJsonLikeString(tail);
+}
+
+function normaliseExtractedSolution(obj, fallbackText = '') {
+  const fallbackSolution = typeof fallbackText === 'string' ? fallbackText.trim() : '';
+  if (!obj || typeof obj !== 'object') {
+    return fallbackSolution
+      ? { questionText: '', options: [], correctOption: null, solution: fallbackSolution }
+      : null;
+  }
+
+  let questionText = typeof obj.questionText === 'string' ? obj.questionText : '';
+  let solution = typeof obj.solution === 'string' ? obj.solution : '';
+  if (!solution && typeof obj.solutionText === 'string') solution = obj.solutionText;
+  if (!solution && typeof obj.workedSolution === 'string') solution = obj.workedSolution;
+  if (!solution && typeof obj.latex === 'string') solution = obj.latex;
+  if (!solution && typeof obj.text === 'string') solution = obj.text;
+  if (!solution && questionText) {
+    solution = questionText;
+    questionText = '';
+  }
+  if (!solution && fallbackSolution) solution = fallbackSolution;
+
+  if (!questionText && !solution) return null;
+  return { questionText, options: [], correctOption: null, solution };
 }
 
 // ---------------------------------------------------------------------------
@@ -975,7 +1047,8 @@ exports.modifyStudyRoutine = async (req, res, next) => {
  */
 exports.extractQuestion = async (req, res, next) => {
   try {
-    const { text, imageBase64, mimeType } = req.body || {};
+    const { text, imageBase64, mimeType, mode } = req.body || {};
+    const isSolutionMode = mode === 'solution';
     const hasText = typeof text === 'string' && text.trim().length > 0;
     const hasImage = typeof imageBase64 === 'string' && imageBase64.length > 0;
     if (!hasText && !hasImage) {
@@ -997,28 +1070,36 @@ exports.extractQuestion = async (req, res, next) => {
       }
     }
 
-    const userContent = buildExtractUserContent({ text, imageBase64, mimeType });
+    const userContent = buildExtractUserContent({ text, imageBase64, mimeType, mode });
 
     const groq = getGroqClient();
-    const completion = await groq.chat.completions.create({
+    const extractRequest = {
       model: DEFAULT_MODEL,
-      response_format: { type: 'json_object' },
       temperature: 0.2,
       messages: [
-        { role: 'system', content: EXTRACT_SYSTEM_PROMPT },
+        { role: 'system', content: isSolutionMode ? EXTRACT_SOLUTION_SYSTEM_PROMPT : EXTRACT_SYSTEM_PROMPT },
         { role: 'user', content: userContent }
       ]
-    });
+    };
+    if (!isSolutionMode) {
+      extractRequest.response_format = { type: 'json_object' };
+    }
+
+    const completion = await groq.chat.completions.create(extractRequest);
 
     const raw = completion?.choices?.[0]?.message?.content;
     const parsed = safeParseJson(raw);
-    const extracted = normaliseExtracted(parsed);
+    const extracted = isSolutionMode
+      ? normaliseExtractedSolution(parsed, extractLooseSolutionText(raw) || (hasText ? text : ''))
+      : normaliseExtracted(parsed);
 
     if (!extracted) {
       console.error('[aiController] extractQuestion: failed to parse LLM output', raw);
       return res.status(502).json({
         success: false,
-        message: 'AI could not interpret the question. Please try a clearer image or text.'
+        message: isSolutionMode
+          ? 'AI could not interpret the solution. Please try a clearer image or text.'
+          : 'AI could not interpret the question. Please try a clearer image or text.'
       });
     }
 
