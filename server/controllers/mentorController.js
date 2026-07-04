@@ -3,10 +3,13 @@ const MentorConnection = require('../models/MentorConnection');
 const MentorReview = require('../models/MentorReview');
 const MockTestAttempt = require('../models/MockTestAttempt');
 const User = require('../models/User');
+const IeltsTeacher = require('../models/IeltsTeacher');
 
 const MENTOR_ROLES = ['tutor', 'teacher'];
 const FIND_MENTOR_ROLES = ['tutor'];
 const MAX_STUDENTS_PER_MENTOR = 30;
+const LIST_RECENT_REVIEW_LIMIT = 3;
+const PROFILE_REVIEW_LIMIT = 20;
 
 function isMentorRole(role) {
   return MENTOR_ROLES.includes(role);
@@ -54,7 +57,7 @@ async function getMentorReviewSummaries(mentorIds, studentId = null) {
     return new Map();
   }
 
-  const [stats, reviews, currentUserReviews] = await Promise.all([
+  const [stats, recentReviewGroups, currentUserReviews] = await Promise.all([
     MentorReview.aggregate([
       { $match: { mentor: { $in: mentorIds } } },
       {
@@ -65,10 +68,24 @@ async function getMentorReviewSummaries(mentorIds, studentId = null) {
         }
       }
     ]),
-    MentorReview.find({ mentor: { $in: mentorIds } })
-      .sort({ createdAt: -1 })
-      .select('mentor rating comment createdAt')
-      .lean(),
+    MentorReview.aggregate([
+      { $match: { mentor: { $in: mentorIds } } },
+      { $sort: { mentor: 1, createdAt: -1 } },
+      {
+        $group: {
+          _id: '$mentor',
+          reviews: {
+            $push: {
+              _id: '$_id',
+              rating: '$rating',
+              comment: '$comment',
+              createdAt: '$createdAt'
+            }
+          }
+        }
+      },
+      { $project: { reviews: { $slice: ['$reviews', LIST_RECENT_REVIEW_LIMIT] } } }
+    ]),
     studentId
       ? MentorReview.find({ mentor: { $in: mentorIds }, student: studentId })
         .select('mentor rating comment createdAt updatedAt')
@@ -94,10 +111,10 @@ async function getMentorReviewSummaries(mentorIds, studentId = null) {
     }
   });
 
-  reviews.forEach((review) => {
-    const summary = summaryMap.get(String(review.mentor));
-    if (summary && summary.recentReviews.length < 3) {
-      summary.recentReviews.push(serializeAnonymousReview(review));
+  recentReviewGroups.forEach((item) => {
+    const summary = summaryMap.get(String(item._id));
+    if (summary) {
+      summary.recentReviews = (item.reviews || []).map(serializeAnonymousReview);
     }
   });
 
@@ -274,9 +291,12 @@ const mentorController = {
         .sort({ createdAt: -1 })
         .lean();
 
-      // Fetch IELTS teachers to merge details
-      const IeltsTeacher = require('../models/IeltsTeacher');
-      const ieltsTutors = await IeltsTeacher.find().lean();
+      const allMentorIds = mentors.map((mentor) => mentor._id);
+      const ieltsTutors = allMentorIds.length
+        ? await IeltsTeacher.find({ userId: { $in: allMentorIds } })
+          .select('userId studentIdNumber collegeName hscBatch universityName department currentYearSemester admissionAchievement ieltsScore')
+          .lean()
+        : [];
       const ieltsMap = new Map(ieltsTutors.map(t => [String(t.userId), t]));
 
       const mergedMentors = mentors.map((mentor) => {
@@ -357,7 +377,6 @@ const mentorController = {
         return res.status(404).json({ success: false, message: 'Mentor not found.' });
       }
 
-      const IeltsTeacher = require('../models/IeltsTeacher');
       const ieltsRecord = await IeltsTeacher.findOne({ userId: mentor._id }).lean();
       if (ieltsRecord && (!mentor.universityName || (mentor.interestedToGuide.length === 1 && mentor.interestedToGuide[0] === 'IELTS'))) {
         mentor.studentIdNumber = ieltsRecord.studentIdNumber;
@@ -377,6 +396,7 @@ const mentorController = {
         MentorReview.find({ mentor: mentorId })
           .sort({ createdAt: -1 })
           .select('rating comment createdAt')
+          .limit(PROFILE_REVIEW_LIMIT)
           .lean()
       ]);
 

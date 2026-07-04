@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { notifyPaywall } from '../utils/paywall';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import {
@@ -337,13 +338,20 @@ export default function AIBattle() {
           selectedAcademicTypes,
           selectedBoards,
           questionType: 'mcq',
-          totalQuestions: count
+          totalQuestions: count,
+          context: 'ai-battle' // metered against the battle-room limit (no server room)
         })
       });
       return res.json();
     };
 
     const data = await requestQuestions(totalQuestions);
+    // Over the free battle limit → show paywall and abort (no demo fallback).
+    if (!data.success && notifyPaywall(data)) {
+      const e = new Error('PAYWALL');
+      e.isPaywall = true;
+      throw e;
+    }
     if (data.success && data.data?.questions?.length) return data.data.questions;
 
     const availableCount = Number(data.data?.available || 0);
@@ -391,6 +399,7 @@ export default function AIBattle() {
       setQuestionStartedAt(Date.now());
       setNowMs(Date.now());
     } catch (err) {
+      if (err?.isPaywall) { setIsStarting(false); return; }
       console.error('Error starting AI battle:', err);
       toast('Network issue. Starting a demo battle.');
       setBattle({ questions: FALLBACK_QUESTIONS, settings: { questionTimeSeconds } });

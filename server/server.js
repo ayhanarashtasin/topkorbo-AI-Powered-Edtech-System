@@ -44,6 +44,7 @@ const mentorRoutes = require("./routes/mentorRoutes");
 const mockTestRoutes = require("./routes/mockTestRoutes");
 const liveClassRoutes = require("./routes/liveClassRoutes");
 const ieltsRoutes = require("./routes/ieltsRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 // Community / Forum
 const postRoutes = require("./routes/postRoutes");
@@ -62,6 +63,11 @@ require("./config/passport");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Dynamic API responses must always include a body. Browser revalidation can
+// otherwise turn JSON endpoints such as /api/auth/me into empty 304 responses,
+// which breaks callers that immediately parse response.json() after refresh.
+app.set("etag", false);
 
 // Fail closed on missing or placeholder JWT secret. The auth middleware
 // (middleware/auth.js) and the socket.io handshake (socket/index.js) both
@@ -111,6 +117,13 @@ app.use(
 app.use(express.urlencoded({ limit: "16mb", extended: true }));
 app.use(passport.initialize());
 
+app.use("/api", (_req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+});
+
 // Serve uploaded book PDFs
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -138,6 +151,7 @@ app.use("/api/mentor-connections", mentorRoutes);
 app.use("/api/mock-tests", mockTestRoutes);
 app.use("/api/live-class", liveClassRoutes);
 app.use("/api/ielts", ieltsRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // === Forum / Community routes ===
 app.use("/api/users", userRoutes);
@@ -153,6 +167,37 @@ app.use("/api/practice", practiceRoutes);
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "TopKorbo API is running 🚀" });
+});
+
+// Serve the built React app when the backend hosts production assets. The
+// catch-all keeps BrowserRouter routes refresh-safe, e.g. /student/find-mentor.
+//
+// Everything below is registered UNCONDITIONALLY and resolved per-request, so
+// the order of `npm run build` vs. starting the server no longer matters. (The
+// previous startup-time `fs.existsSync` guard meant that a server started
+// before the client was built never registered these handlers, so every
+// non-API URL 404'd on refresh — a blank white page.)
+const clientDistDir = path.resolve(__dirname, "../client/dist");
+const clientIndexPath = path.join(clientDistDir, "index.html");
+
+// `express.static` no-ops per request when a file is missing, so it's safe to
+// register even before the client is built — it just falls through.
+app.use(express.static(clientDistDir));
+
+app.get("*", (req, res, next) => {
+  // Never swallow API / uploads routes with the SPA fallback.
+  if (req.path.startsWith("/api")) {
+    return res.status(404).json({ success: false, message: "API route not found" });
+  }
+  if (req.path.startsWith("/uploads")) {
+    return res.status(404).end();
+  }
+  // Serve the SPA shell if a build exists; otherwise fall through (e.g. in a
+  // dev-only backend where the frontend is served by Vite on another port).
+  if (fs.existsSync(clientIndexPath)) {
+    return res.sendFile(clientIndexPath);
+  }
+  return next();
 });
 
 // Global error handler

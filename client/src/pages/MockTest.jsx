@@ -4,6 +4,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { HiFire, HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiMinusCircle, HiAcademicCap, HiBeaker, HiBookOpen, HiCollection, HiPencil, HiDocumentText, HiPhotograph, HiLightningBolt, HiChevronDown, HiChevronUp, HiX } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
+import { notifyPaywall } from '../utils/paywall';
 import './MockTest.css';
 
 const MOCK_SUBJECTS = [
@@ -604,7 +605,8 @@ export default function MockTest() {
         selectedAcademicTypes,
         selectedBoards,
         questionType,
-        totalQuestions
+        totalQuestions,
+        context: 'mock' // attributes a free-tier mock-test usage
       };
       const res = await fetch(`${base}/questions/mock-test`, {
         method: 'POST',
@@ -657,7 +659,7 @@ export default function MockTest() {
         sessionStorage.removeItem('mock_exam_from_qbank');
 
         navigate('/mock-test/exam');
-      } else {
+      } else if (!notifyPaywall(data)) {
         toast.error(data.message || 'Failed to fetch questions');
       }
     } catch (err) {

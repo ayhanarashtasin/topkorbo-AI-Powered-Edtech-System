@@ -1,0 +1,92 @@
+.plan-panel {
+  background: #fff;
+  border: 1.5px solid #ece5dd;
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 18px rgba(75, 46, 43, 0.05);
+}
+
+.plan-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.plan-panel__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b08a6a;
+}
+
+.plan-panel__title {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #3a322c;
+}
+
+.plan-panel__expiry {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #8a7d70;
+}
+
+.plan-panel__cta {
+  background: linear-gradient(135deg, #C08552, #8C5A3C);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 10px 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+.plan-panel__cta:hover { filter: brightness(1.07); }
+
+.plan-panel__usage {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plan-panel__usage-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: #4a4038;
+  margin-bottom: 5px;
+}
+
+.plan-panel__usage-count {
+  font-weight: 700;
+  color: #6b5d50;
+}
+
+.plan-panel__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #f0e9e1;
+  overflow: hidden;
+}
+
+.plan-panel__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #D4A373, #8C5A3C);
+  transition: width 0.3s ease;
+}
+.plan-panel__bar-fill.is-full { background: linear-gradient(90deg, #e08a8a, #c0392b); }
+
+.plan-panel__note {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #8a7d70;
+}

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const auth = require('../middleware/auth');
+const aiQuota = require('../middleware/enforceAiQuota');
 const studyRoutineController = require('../controllers/studyRoutineController');
 const aiController = require('../controllers/aiController');
 
@@ -23,8 +24,8 @@ router.post('/', studyRoutineController.saveRoutine);
 router.patch('/segment', studyRoutineController.toggleSegment);
 router.patch('/segment/edit', studyRoutineController.updateSegment);
 router.put('/replace', studyRoutineController.replaceRoutine);
-router.post('/modify', aiRateLimiter, aiController.modifyStudyRoutine);
-router.post('/generate-week', aiRateLimiter, aiController.generateNextWeek);
+router.post('/modify', aiRateLimiter, aiQuota, aiController.modifyStudyRoutine);
+router.post('/generate-week', aiRateLimiter, aiQuota, aiController.generateNextWeek);
 router.delete('/', studyRoutineController.deleteRoutine);
 
 router.post('/session/start', studyRoutineController.startSession);

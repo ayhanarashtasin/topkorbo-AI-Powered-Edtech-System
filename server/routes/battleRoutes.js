@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const aiQuota = require('../middleware/enforceAiQuota');
 const battleController = require('../controllers/battleController');
 
 router.post('/rooms', auth, battleController.createRoom);
@@ -10,6 +11,6 @@ router.post('/rooms/:roomId/team-name', auth, battleController.updateTeamName);
 router.post('/rooms/:roomId/start', auth, battleController.startRoom);
 router.post('/rooms/:roomId/answer', auth, battleController.submitAnswer);
 router.post('/rooms/:roomId/rematch', auth, battleController.createRematchRoom);
-router.post('/coach', auth, battleController.generateCoach);
+router.post('/coach', auth, aiQuota, battleController.generateCoach);
 
 module.exports = router;

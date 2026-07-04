@@ -9,7 +9,8 @@ import {
   respondToMentorRequest,
   sendMentorRequest
 } from '../services/mentorApi';
-import { getStats } from '../services/practiceApi';
+import { getStats, listMyAttempts } from '../services/practiceApi';
+import { getMyRating } from '../services/contestApi';
 import './Dashboard.css';
 
 function formatDate(value, language) {
@@ -26,13 +27,68 @@ function formatDuration(seconds, language) {
   return language === 'en' ? `${mins} min` : `${mins} মিনিট`;
 }
 
+function getInitials(name) {
+  return (name || 'Student')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'S';
+}
+
+function toLocalDateKey(value) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(key) {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Codeforces-style rating tiers. A student's rating is derived from how well
+// they perform in mock tests / practice, mapped onto this scale.
+const RATING_TIERS = [
+  { name: 'Newbie', min: 0, color: '#9aa0a6' },
+  { name: 'Pupil', min: 1200, color: '#1aa334' },
+  { name: 'Specialist', min: 1400, color: '#03a89e' },
+  { name: 'Expert', min: 1600, color: '#3b5bdb' },
+  { name: 'Candidate Master', min: 1900, color: '#a11bbf' },
+  { name: 'Master', min: 2100, color: '#ff8c00' },
+  { name: 'Grandmaster', min: 2400, color: '#e8462c' }
+];
+
+function getRatingTier(rating) {
+  let tier = RATING_TIERS[0];
+  for (const candidate of RATING_TIERS) {
+    if (rating >= candidate.min) tier = candidate;
+  }
+  return tier;
+}
+
+function getHeatLevel(solved) {
+  if (solved <= 0) return 0;
+  if (solved <= 2) return 1;
+  if (solved <= 4) return 2;
+  if (solved <= 6) return 3;
+  return 4;
+}
+
 export default function Dashboard() {
   const { t, language } = useLanguage();
   const [user, setUser] = useState({
     name: localStorage.getItem('topkorbo_name') || 'Student',
     avatar: localStorage.getItem('topkorbo_avatar') || '',
     email: localStorage.getItem('topkorbo_email') || '',
-    role: localStorage.getItem('topkorbo_role') || 'student'
+    role: localStorage.getItem('topkorbo_role') || 'student',
+    collegeName: localStorage.getItem('topkorbo_collegeName') || '',
+    hscBatch: localStorage.getItem('topkorbo_hscBatch') || '',
+    username: localStorage.getItem('topkorbo_username') || ''
   });
   const [upcomingContests, setUpcomingContests] = useState([]);
   const [mentorCatalog, setMentorCatalog] = useState([]);
@@ -51,6 +107,8 @@ export default function Dashboard() {
     }
   });
   const [practiceStats, setPracticeStats] = useState(null);
+  const [studentAttempts, setStudentAttempts] = useState([]);
+  const [ratingData, setRatingData] = useState({ current: null, max: null, unrated: true, history: [] });
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState('');
   const [requestingMentorId, setRequestingMentorId] = useState('');
@@ -67,6 +125,9 @@ export default function Dashboard() {
     localStorage.removeItem('topkorbo_avatar');
     localStorage.removeItem('topkorbo_email');
     localStorage.removeItem('topkorbo_phone');
+    localStorage.removeItem('topkorbo_collegeName');
+    localStorage.removeItem('topkorbo_hscBatch');
+    localStorage.removeItem('topkorbo_username');
     window.location.href = '/';
   };
 
@@ -200,7 +261,10 @@ export default function Dashboard() {
             name: resData.data.name,
             avatar: resData.data.avatar || '',
             email: resData.data.email,
-            role: resData.data.role
+            role: resData.data.role,
+            collegeName: resData.data.collegeName || '',
+            hscBatch: resData.data.hscBatch || '',
+            username: resData.data.username || ''
           };
 
           setUser(nextUser);
@@ -208,6 +272,9 @@ export default function Dashboard() {
           localStorage.setItem('topkorbo_avatar', nextUser.avatar);
           localStorage.setItem('topkorbo_email', nextUser.email);
           localStorage.setItem('topkorbo_role', nextUser.role);
+          localStorage.setItem('topkorbo_collegeName', nextUser.collegeName);
+          localStorage.setItem('topkorbo_hscBatch', nextUser.hscBatch);
+          localStorage.setItem('topkorbo_username', nextUser.username);
 
           if (nextUser.role === 'teacher') {
             fetchContests(token, nextUser.role);
@@ -234,8 +301,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
+    if (!token) return;
     const role = localStorage.getItem('topkorbo_role');
-    if (!token || role === 'student') return;
 
     (async () => {
       try {
@@ -243,6 +310,23 @@ export default function Dashboard() {
         setPracticeStats(stats);
       } catch (err) {
         console.warn('Practice stats unavailable:', err);
+      }
+
+      // Students get the full attempt history for their daily solved heatmap,
+      // plus their real contest rating history for the rating graph.
+      if (role === 'student' || !role) {
+        try {
+          const res = await listMyAttempts({ limit: 200, sort: '-createdAt' });
+          setStudentAttempts(res?.items || []);
+        } catch (err) {
+          console.warn('Practice attempts unavailable:', err);
+        }
+        try {
+          const rating = await getMyRating();
+          if (rating) setRatingData(rating);
+        } catch (err) {
+          console.warn('Contest rating unavailable:', err);
+        }
       }
     })();
   }, []);
@@ -256,6 +340,105 @@ export default function Dashboard() {
     });
     return map;
   }, [studentMentorData.mentors]);
+
+  // Derive the daily-solved heatmap and solved/streak stats from the student's
+  // real practice/mock-test attempts (no external platform data).
+  const studentAnalytics = useMemo(() => {
+    const chronological = (studentAttempts || [])
+      .filter((attempt) => attempt && attempt.createdAt)
+      .slice()
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    // Count problems solved (correct answers) per calendar day.
+    const solvedByDay = new Map();
+    chronological.forEach((attempt) => {
+      const key = toLocalDateKey(attempt.createdAt);
+      const solved = (attempt.questions || []).filter((q) => q.isCorrect === true).length;
+      solvedByDay.set(key, (solvedByDay.get(key) || 0) + solved);
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Build a GitHub/Codeforces-style calendar: columns are weeks (Sun→Sat),
+    // rows are weekdays. The last column contains today.
+    const weekCount = 53;
+    const gridStart = new Date(today);
+    gridStart.setDate(today.getDate() - today.getDay() - (weekCount - 1) * 7);
+
+    const weeks = [];
+    const monthLabels = [];
+    let previousMonth = -1;
+    for (let week = 0; week < weekCount; week += 1) {
+      const column = [];
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek += 1) {
+        const cellDate = new Date(gridStart);
+        cellDate.setDate(gridStart.getDate() + week * 7 + dayOfWeek);
+        if (cellDate > today) {
+          column.push(null);
+        } else {
+          const key = toLocalDateKey(cellDate);
+          column.push({ date: key, solved: solvedByDay.get(key) || 0 });
+        }
+      }
+      // Month label shown on the first week that starts a new month.
+      const weekStart = new Date(gridStart);
+      weekStart.setDate(gridStart.getDate() + week * 7);
+      const month = weekStart.getMonth();
+      monthLabels.push(month !== previousMonth ? MONTH_LABELS[month] : '');
+      previousMonth = month;
+      weeks.push(column);
+    }
+
+    // Solved totals and "in a row" streaks over rolling windows.
+    const yearAgo = new Date(today);
+    yearAgo.setDate(today.getDate() - 364);
+    const monthAgo = new Date(today);
+    monthAgo.setDate(today.getDate() - 29);
+
+    let solvedAllTime = 0;
+    let solvedLastYear = 0;
+    let solvedLastMonth = 0;
+    solvedByDay.forEach((solved, key) => {
+      if (solved <= 0) return;
+      solvedAllTime += solved;
+      const date = parseDateKey(key);
+      if (date >= yearAgo && date <= today) solvedLastYear += solved;
+      if (date >= monthAgo && date <= today) solvedLastMonth += solved;
+    });
+
+    const activeKeys = [...solvedByDay.keys()].filter((key) => solvedByDay.get(key) > 0).sort();
+    const activeSet = new Set(activeKeys);
+    const earliest = activeKeys.length ? parseDateKey(activeKeys[0]) : today;
+    const maxStreakInRange = (startDate) => {
+      let max = 0;
+      let current = 0;
+      const cursor = new Date(startDate);
+      while (cursor <= today) {
+        if (activeSet.has(toLocalDateKey(cursor))) {
+          current += 1;
+          if (current > max) max = current;
+        } else {
+          current = 0;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return max;
+    };
+
+    return {
+      weeks,
+      monthLabels,
+      stats: {
+        solvedAllTime,
+        solvedLastYear,
+        solvedLastMonth,
+        maxStreakAllTime: maxStreakInRange(earliest),
+        maxStreakLastYear: maxStreakInRange(yearAgo),
+        maxStreakLastMonth: maxStreakInRange(monthAgo)
+      }
+    };
+  }, [studentAttempts]);
 
   const getRemainingTime = (contest) => {
     const offsets = {
@@ -404,7 +587,297 @@ export default function Dashboard() {
     );
   };
 
-  const renderStudentWorkspace = () => <div className="dashboard-student-blank" aria-label="Student dashboard placeholder" />;
+  const renderStudentWorkspace = () => {
+    const overall = practiceStats?.overall || {};
+    const { weeks, monthLabels, stats } = studentAnalytics;
+
+    const overallAccuracy = Math.round((overall.accuracy || 0) * 100);
+    const solvedTotal = typeof overall.correctQuestions === 'number' ? overall.correctQuestions : stats.solvedAllTime;
+    const attemptedTotal = overall.attemptedQuestions || 0;
+    const sessionCount = overall.totalAttempts || 0;
+
+    // Real, DB-backed contest rating history. Empty until the student has
+    // taken part in a contest that has ended.
+    const ratingHistory = ratingData.history || [];
+    const hasRating = ratingHistory.length > 0;
+    const currentRating = ratingData.current;
+    const maxRating = ratingData.max;
+    const currentTier = hasRating ? getRatingTier(currentRating) : null;
+    const lastDelta = hasRating ? ratingHistory[ratingHistory.length - 1].delta : 0;
+    const shortDate = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    // Codeforces-style chart geometry. Aspect ratio is preserved (no stretch),
+    // so markers stay round and the line stays crisp.
+    const plot = { left: 60, right: 984, top: 20, bottom: 314 };
+    const ratingValues = ratingHistory.map((point) => point.newRating);
+    const dataMin = ratingValues.length ? Math.min(...ratingValues) : 1200;
+    const dataMax = ratingValues.length ? Math.max(...ratingValues) : 1600;
+    const yMin = Math.max(600, Math.floor((dataMin - 90) / 100) * 100);
+    let yMax = Math.ceil((dataMax + 90) / 100) * 100;
+    if (yMax - yMin < 400) yMax = yMin + 400;
+    const xOf = (index) => (ratingHistory.length <= 1
+      ? (plot.left + plot.right) / 2
+      : plot.left + (index / (ratingHistory.length - 1)) * (plot.right - plot.left));
+    const yOf = (rating) => plot.bottom - ((rating - yMin) / (yMax - yMin)) * (plot.bottom - plot.top);
+    const chartPoints = ratingHistory.map((item, index) => ({ ...item, x: xOf(index), y: yOf(item.newRating) }));
+    const linePath = chartPoints
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+      .join(' ');
+
+    const ratingBands = RATING_TIERS.map((tier, index) => {
+      const next = RATING_TIERS[index + 1];
+      const low = Math.max(tier.min, yMin);
+      const high = Math.min(next ? next.min : yMax, yMax);
+      if (high <= low) return null;
+      return { color: tier.color, yTop: yOf(high), yBottom: yOf(low) };
+    }).filter(Boolean);
+
+    const yTicks = RATING_TIERS.map((tier) => tier.min).filter((value) => value > yMin && value < yMax);
+    const labelEvery = Math.max(1, Math.ceil(ratingHistory.length / 6));
+
+    const metricCards = [
+      {
+        name: 'Rating',
+        subtitle: currentTier ? currentTier.name : 'Unrated',
+        primaryLabel: 'Current',
+        primaryValue: hasRating ? currentRating : '—',
+        secondaryLabel: 'Max',
+        secondaryValue: hasRating ? maxRating : '—',
+        accent: currentTier ? currentTier.color : '#9aa0a6'
+      },
+      {
+        name: 'Problems solved',
+        subtitle: sessionCount ? `${overallAccuracy}% accuracy` : 'Start practicing',
+        primaryLabel: 'Solved',
+        primaryValue: solvedTotal,
+        secondaryLabel: 'Attempted',
+        secondaryValue: attemptedTotal,
+        accent: '#4f8fba'
+      }
+    ];
+
+    return (
+      <div className="student-dashboard-grid">
+        <section className="dashboard-panel student-profile-section">
+          <div className="student-profile-card">
+            <div className="student-profile-card__main">
+              <div className="student-profile-avatar" aria-label={`${user.name} profile picture`}>
+                {user.avatar ? <img src={user.avatar} alt={user.name} /> : <span>{getInitials(user.name)}</span>}
+              </div>
+              <div>
+                <span className="student-profile-kicker">Student profile</span>
+                <h3>{user.name}</h3>
+                <p>{user.collegeName || 'College name not added yet'}</p>
+                <div className="student-profile-meta">
+                  <span>{user.hscBatch ? `HSC ${user.hscBatch}` : 'HSC batch not set'}</span>
+                  <span>{user.email || 'Student account'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="student-rating-cards">
+              {metricCards.map((card) => (
+                <article key={card.name} className="student-rating-card" style={{ '--rating-accent': card.accent }}>
+                  <div className="student-rating-card__top">
+                    <strong>{card.name}</strong>
+                    <span>{card.subtitle}</span>
+                  </div>
+                  <div className="student-rating-card__values">
+                    <div>
+                      <span>{card.primaryLabel}</span>
+                      <strong>{card.primaryValue}</strong>
+                    </div>
+                    <div>
+                      <span>{card.secondaryLabel}</span>
+                      <strong>{card.secondaryValue}</strong>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="dashboard-panel student-rating-graph-section">
+          <div className="dashboard-panel__header student-section-header">
+            <div>
+              <h3>Contest rating</h3>
+              <p>Your rating changes only when you participate in a contest.</p>
+            </div>
+            {hasRating && (
+              <div className="student-graph-summary">
+                <span className="cf-rank-pill" style={{ '--rank-color': currentTier.color }}>
+                  {currentTier.name} {currentRating}
+                </span>
+                <span className="dashboard-stat-pill">Max {maxRating}</span>
+                <span className={`student-rating-change ${lastDelta >= 0 ? 'student-rating-change--up' : 'student-rating-change--down'}`}>
+                  {lastDelta >= 0 ? '+' : ''}{lastDelta}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {hasRating ? (
+            <>
+              <div className="cf-rating-chart" role="img" aria-label="Student rating progression chart">
+                <svg viewBox="0 0 1000 344">
+                  {ratingBands.map((band, index) => (
+                    <rect
+                      key={`band-${index}`}
+                      x={plot.left}
+                      y={band.yTop}
+                      width={plot.right - plot.left}
+                      height={band.yBottom - band.yTop}
+                      fill={band.color}
+                      opacity="0.13"
+                    />
+                  ))}
+
+                  {yTicks.map((rating) => {
+                    const y = yOf(rating);
+                    return (
+                      <g key={`tick-${rating}`}>
+                        <line x1={plot.left} x2={plot.right} y1={y} y2={y} className="cf-chart-gridline" />
+                        <text x={plot.left - 10} y={y + 4} textAnchor="end" className="cf-chart-axis-text">{rating}</text>
+                      </g>
+                    );
+                  })}
+
+                  <line x1={plot.left} x2={plot.right} y1={plot.bottom} y2={plot.bottom} className="cf-chart-axis-line" />
+
+                  <path
+                    d={linePath}
+                    fill="none"
+                    className="cf-rating-line"
+                    vectorEffect="non-scaling-stroke"
+                  />
+
+                  {chartPoints.map((point, index) => {
+                    const tier = getRatingTier(point.newRating);
+                    const showLabel = index % labelEvery === 0 || index === chartPoints.length - 1;
+                    return (
+                      <g key={`pt-${index}`} className="cf-rating-point">
+                        <title>{`${point.contestName} · Rank ${point.rank}/${point.participants} · ${point.newRating} (${tier.name}) · ${shortDate(point.date)}`}</title>
+                        <circle cx={point.x} cy={point.y} r="9" fill="transparent" />
+                        <circle cx={point.x} cy={point.y} r="3.6" fill={tier.color} stroke="#ffffff" strokeWidth="1.4" />
+                        {showLabel ? (
+                          <text x={point.x} y="336" textAnchor="middle" className="cf-chart-axis-text cf-chart-date-text">
+                            {shortDate(point.date)}
+                          </text>
+                        ) : null}
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+
+              <div className="student-contest-trend-list">
+                {ratingHistory.slice(-4).map((item, index) => {
+                  const tier = getRatingTier(item.newRating);
+                  return (
+                    <div key={`${item.date}-${index}`} className="student-contest-trend-item">
+                      <div>
+                        <strong>{item.contestName}</strong>
+                        <span>{shortDate(item.date)} · Rank #{item.rank}/{item.participants} · <em style={{ color: tier.color, fontStyle: 'normal', fontWeight: 600 }}>{tier.name} {item.newRating}</em></span>
+                      </div>
+                      <span className={item.delta >= 0 ? 'trend-up' : 'trend-down'}>{item.delta >= 0 ? '+' : ''}{item.delta}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="dashboard-empty">
+              You are unrated. Register for a contest and participate — your rating appears here once the contest ends.
+            </div>
+          )}
+        </section>
+
+        <section className="dashboard-panel student-progress-section">
+          <div className="dashboard-panel__header student-section-header">
+            <div>
+              <h3>Daily problem-solving progress</h3>
+              <p>Each square is one day. Hover a square to see how many problems you solved that day.</p>
+            </div>
+            <span className="dashboard-stat-pill">Last 12 months</span>
+          </div>
+
+          <div className="student-progress-heatmap" aria-label="Daily solved problem calendar">
+            <div className="student-heatmap-grid">
+              {monthLabels.map((label, weekIndex) =>
+                label ? (
+                  <span
+                    key={`m-${weekIndex}`}
+                    className="student-heatmap-month"
+                    style={{ gridColumn: weekIndex + 2, gridRow: 1 }}
+                  >
+                    {label}
+                  </span>
+                ) : null
+              )}
+
+              {[['Mon', 1], ['Wed', 3], ['Fri', 5]].map(([label, dayIndex]) => (
+                <span
+                  key={label}
+                  className="student-heatmap-weekday"
+                  style={{ gridColumn: 1, gridRow: dayIndex + 2 }}
+                >
+                  {label}
+                </span>
+              ))}
+
+              {weeks.map((column, weekIndex) =>
+                column.map((cell, dayIndex) =>
+                  cell ? (
+                    <span
+                      key={cell.date}
+                      className={`student-heat-cell student-heat-cell--${getHeatLevel(cell.solved)}`}
+                      style={{ gridColumn: weekIndex + 2, gridRow: dayIndex + 2 }}
+                      title={`${cell.solved} problem${cell.solved === 1 ? '' : 's'} solved · ${cell.date}`}
+                      aria-label={`${cell.date}: ${cell.solved} problems solved`}
+                    />
+                  ) : null
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="student-heatmap-legend" aria-hidden="true">
+            <span>Less</span>
+            {[0, 1, 2, 3, 4].map((level) => <i key={level} className={`student-heat-cell student-heat-cell--${level}`} />)}
+            <span>More</span>
+          </div>
+
+          <div className="student-progress-stats student-progress-stats--solve">
+            <div>
+              <strong>{stats.solvedAllTime}</strong>
+              <span>solved for all time</span>
+            </div>
+            <div>
+              <strong>{stats.solvedLastYear}</strong>
+              <span>solved for the last year</span>
+            </div>
+            <div>
+              <strong>{stats.solvedLastMonth}</strong>
+              <span>solved for the last month</span>
+            </div>
+            <div>
+              <strong>{stats.maxStreakAllTime}</strong>
+              <span>max. in a row</span>
+            </div>
+            <div>
+              <strong>{stats.maxStreakLastYear}</strong>
+              <span>in a row for the last year</span>
+            </div>
+            <div>
+              <strong>{stats.maxStreakLastMonth}</strong>
+              <span>in a row for the last month</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  };
 
   const renderMentorWorkspace = () => (
     <div className="dashboard-panels">

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { HiLogout } from 'react-icons/hi';
-import { HiFire } from 'react-icons/hi';
+import { HiLogout, HiFire, HiSparkles } from 'react-icons/hi';
 import { IoSchoolSharp, IoLocationSharp } from 'react-icons/io5';
 import { FcGoogle } from 'react-icons/fc'; // Added for Google logo
 import { useLanguage } from '../hooks/useLanguage';
 import Sidebar from '../components/layout/Sidebar';
+import PlanPanel from '../components/settings/PlanPanel';
 import './Setting.css';
 
 export default function Setting() {
@@ -413,6 +413,20 @@ export default function Setting() {
                 <div className="settings-nav-label-group">
                   <span className="settings-nav-label">{t('settings.tab.linking')}</span>
                   <span className="settings-nav-sub">Google Account</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`settings-nav-btn ${settingsActiveTab === 'subscription' ? 'settings-nav-btn--active' : ''}`}
+                onClick={() => setSettingsActiveTab('subscription')}
+              >
+                <span className="settings-nav-icon">
+                  <HiSparkles size={18} />
+                </span>
+                <div className="settings-nav-label-group">
+                  <span className="settings-nav-label">Subscription</span>
+                  <span className="settings-nav-sub">Upgrade plan</span>
                 </div>
               </button>
 
@@ -924,8 +938,14 @@ export default function Setting() {
                 </div>
               )}
 
+              {settingsActiveTab === 'subscription' && (
+                <div className="settings-pane-content animate-fade-in">
+                  <PlanPanel />
+                </div>
+              )}
+
               {/* Global Save Actions Row inside the pane card */}
-              {settingsActiveTab !== 'linking' && (
+              {settingsActiveTab !== 'linking' && settingsActiveTab !== 'subscription' && (
                 <div className="settings-pane-footer">
                   <button
                     type="button"

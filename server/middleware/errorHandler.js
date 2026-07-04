@@ -10,6 +10,19 @@ const errorHandler = (err, req, res, next) => {
     console.error(err.stack);
   }
 
+  // Plan / subscription gate errors (thrown by services/planService.js and
+  // middleware/requirePlan.js). Carry a machine-readable `code` + `feature`
+  // so the client can show the right paywall / upgrade prompt.
+  if (err.isPlanError) {
+    return res.status(err.statusCode || 402).json({
+      success: false,
+      message: err.message,
+      code: err.code,
+      feature: err.feature || null,
+      requiredPlan: err.requiredPlan || null
+    });
+  }
+
   // Mongoose validation error
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map(e => e.message);

@@ -65,7 +65,8 @@ export default function ReaderToolbar({
   eraserWidth = 16,
   onEraserWidthChange,
   onClearPage,
-  onPageChange
+  onPageChange,
+  canAnnotate = true
 }) {
   const { t } = useLanguage();
   const [openPopover, setOpenPopover] = useState(null);
@@ -119,12 +120,16 @@ export default function ReaderToolbar({
     };
   }, [openPopover]);
 
-  const tools = [
+  // Pen / highlighter / eraser are Pro+ reading tools. Free & Pro readers see
+  // only the (read-only) select cursor; the annotation APIs are enforced
+  // server-side regardless.
+  const allTools = [
     { id: 'select',      icon: <HiCursorClick size={16} />,    label: t('rb.reader.tools.select') },
     { id: 'pen',         icon: <HiOutlinePencil size={16} />,  label: t('rb.reader.tools.pen') },
     { id: 'highlighter', icon: <LuHighlighter size={16} />,    label: 'Highlight' },
     { id: 'eraser',      icon: <LuEraser size={16} />,         label: t('rb.reader.tools.eraser') }
   ];
+  const tools = canAnnotate ? allTools : allTools.filter((tl) => tl.id === 'select');
 
   const hintByTool = {
     pen: t('rb.reader.pen.draw') || t('rb.reader.draw_to_pen'),
@@ -149,6 +154,27 @@ export default function ReaderToolbar({
             <span className="rb-toolbar__btn-label">{tool.label}</span>
           </button>
         ))}
+        {!canAnnotate && (
+          <a
+            href="/pricing"
+            title="Pen, highlighter & notes are a Pro+ feature"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              color: '#8C5A3C',
+              textDecoration: 'none',
+              padding: '4px 10px',
+              borderRadius: 8,
+              background: '#f6efe8',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            🔒 Upgrade for tools
+          </a>
+        )}
       </div>
 
       {(activeTool === 'pen' || activeTool === 'highlighter') && (

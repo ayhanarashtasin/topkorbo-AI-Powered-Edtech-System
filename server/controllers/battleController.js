@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const ApiResponse = require('../utils/apiResponse');
 const User = require('../models/User');
+const planService = require('../services/planService');
 const { generateBattleCoachReport, normalizeCoachReport } = require('../services/groqBattleCoachService');
 
 const rooms = new Map();
@@ -253,6 +254,9 @@ exports.createRoom = async (req, res, next) => {
     if (!Array.isArray(questions) || questions.length === 0) {
       return ApiResponse.error(res, 'At least one battle question is required', 400);
     }
+
+    // Free-tier lifetime cap on battle rooms created (covers PvP + AI battle).
+    await planService.consume(req.user.id, 'battleRooms');
 
     const questionTimeSeconds = Number(settings?.questionTimeSeconds || 15);
     if (questionTimeSeconds < 5 || questionTimeSeconds > 120) {

@@ -21,6 +21,7 @@ import {
   HiDocumentText,
 } from "react-icons/hi";
 import Sidebar from "../components/layout/Sidebar";
+import { notifyPaywall } from "../utils/paywall";
 import "./QuestionBank.css";
 
 const MCQ_ONLY_UNIVERSITIES = ["GST", "AGRI", "CU", "JU", "RU"];
@@ -1019,6 +1020,7 @@ export default function QuestionBank() {
         sourceType,
         name,
         type: qType,
+        context: "qbank", // attributes a free-tier q-bank exam usage
       });
       if (paper) params.append("paper", paper);
       if (year) params.append("year", year);
@@ -1074,7 +1076,7 @@ export default function QuestionBank() {
 
         closeSourceModal();
         navigate("/mock-test/exam");
-      } else {
+      } else if (!notifyPaywall(resData)) {
         alert(
           language === "en"
             ? "No questions found for this source to start exam."
@@ -1229,7 +1231,7 @@ export default function QuestionBank() {
       if (source.questionType) params.append("type", source.questionType);
 
       const response = await fetch(
-        `${backendBaseUrl}/questions/by-source?sourceType=admission&name=${source.university}&year=${source.year || ""}&type=${source.questionType || ""}&shift=${source.shift || ""}`,
+        `${backendBaseUrl}/questions/by-source?sourceType=admission&name=${source.university}&year=${source.year || ""}&type=${source.questionType || ""}&shift=${source.shift || ""}&context=qbank`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -1277,7 +1279,7 @@ export default function QuestionBank() {
 
         closeSourceModal();
         navigate("/mock-test/exam");
-      } else {
+      } else if (!notifyPaywall(resData)) {
         alert(
           language === "en"
             ? "No questions found for this source to start exam."

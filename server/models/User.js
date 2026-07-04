@@ -69,6 +69,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['Math', 'Biology', 'Statistics']
   },
+  // Contest rating (null until the student has given at least one rated contest)
+  rating: { type: Number, default: null },
+  maxRating: { type: Number, default: null },
   // ============ Forum / Community additions ============
   username: { type: String, unique: true, sparse: true, index: true, lowercase: true, trim: true },
   bio: { type: String, default: '', maxlength: 280 },
@@ -90,6 +93,22 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'moderator', 'admin'],
     default: 'user'
+  },
+  // ============ Subscription / Pricing ============
+  // Effective plan is resolved through services/planService.getEffectivePlan
+  // (a paid plan whose planExpiresAt has passed is treated as 'free').
+  plan: {
+    type: String,
+    enum: ['free', 'pro', 'pro_plus'],
+    default: 'free'
+  },
+  planExpiresAt: { type: Date, default: null }, // null = never expires (free)
+  // Lifetime usage counters (free-tier limits are lifetime totals — no reset job).
+  usage: {
+    qbankExams: { type: Number, default: 0 },
+    mockTests: { type: Number, default: 0 },
+    battleRooms: { type: Number, default: 0 },
+    aiActions: { type: Number, default: 0 }
   },
   // Mentor / Tutor Profile Information
   studentIdNumber: {
@@ -128,5 +147,7 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+userSchema.index({ role: 1, isBanned: 1, createdAt: -1 });
 
 module.exports = mongoose.model('User', userSchema);

@@ -14,6 +14,8 @@
  * Service modules (`annotationApi`, `aiApi`, …) build on top of this.
  */
 
+import { notifyPaywall } from '../utils/paywall';
+
 const API_BASE =
   import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -75,6 +77,8 @@ async function request(path, init = {}) {
   }
 
   if (!res.ok || (payload && payload.success === false)) {
+    // Surface plan-limit / upgrade-required responses as a paywall prompt.
+    notifyPaywall(payload);
     throw new ApiError(
       (payload && (payload.message || payload.data?.message)) || res.statusText || 'Request failed',
       res.status,

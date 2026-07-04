@@ -1,6 +1,7 @@
 const Question = require('../models/Question');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
+const planService = require('../services/planService');
 
 /**
  * @desc    Create a new question (teacher only)
@@ -252,7 +253,7 @@ exports.getQuestionSources = async (req, res, next) => {
  */
 exports.getQuestionsBySource = async (req, res, next) => {
   try {
-    const { subject, paper, sourceType, name, year, type, shift } = req.query;
+    const { subject, paper, sourceType, name, year, type, shift, context } = req.query;
     const isPaperlessSubject = subject === 'ICT';
 
     if (!sourceType || !name) {
@@ -261,6 +262,13 @@ exports.getQuestionsBySource = async (req, res, next) => {
         'sourceType and name are required query params',
         400
       );
+    }
+
+    // This endpoint is shared between browsing and starting a q-bank exam.
+    // Only count usage when the client is actually starting an exam
+    // (context=qbank), so mere browsing/previews stay free.
+    if (context === 'qbank') {
+      await planService.consume(req.user.id, 'qbankExams');
     }
 
     if (!['board', 'college', 'admission'].includes(sourceType)) {
@@ -602,8 +610,24 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
       selectedColleges,        // ['Notre Dame College']
       questionType,   // 'mcq' | 'cq' | 'written' | ''
       totalQuestions, // number
-      source          // { type: 'board' | 'college', name: 'Dhaka', year: '2025' } | null
+      source,         // { type: 'board' | 'college', name: 'Dhaka', year: '2025' } | null
+      context         // 'qbank' | 'mock' | 'battle' — which feature is starting an exam
     } = req.body;
+
+    // Free-tier lifetime limits are attributed by which feature is starting the
+    // exam. Battle question fetches are counted at battleController.createRoom
+    // (per room, not per fetch), so they are not gated here.
+    if (context === 'qbank') {
+      await planService.consume(req.user.id, 'qbankExams');
+    } else if (context === 'mock') {
+      await planService.consume(req.user.id, 'mockTests');
+    } else if (context === 'ai-battle') {
+      // AI battle runs entirely client-side vs an AI opponent (no server room),
+      // so its question fetch is the choke point for the battle-room limit.
+      await planService.consume(req.user.id, 'battleRooms');
+    } else if (!context) {
+      console.warn('[planService] /questions/mock-test called without a context — usage not attributed');
+    }
 
     const limit = Math.min(parseInt(totalQuestions) || 20, 200);
 

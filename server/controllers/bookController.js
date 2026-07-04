@@ -8,6 +8,7 @@ const ReadingState = require('../models/ReadingState');
 const BookKnowledge = require('../models/BookKnowledge');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
+const planService = require('../services/planService');
 const { queueBookKnowledge, getBookKnowledgeSnapshot } = require('../services/bookRagService');
 
 const VALID_CATEGORIES = ['Academic', 'Admission'];
@@ -542,6 +543,10 @@ exports.getChapterMeta = async (req, res, next) => {
     if (!book || !book.chapters || book.chapters.length === 0) {
       return ApiResponse.error(res, 'Book or Chapter not found', 404);
     }
+    // Free plan may open at most N distinct books (Pro/Pro+ unlimited). This is
+    // the per-chapter read entry, so it is the natural choke point for the cap.
+    const reader = await planService.loadUser(req.user.id);
+    await planService.assertBookOpenable(reader, req.params.id);
     const chapter = {
       ...book.chapters[0],
       fileUrl: `/api/books/${req.params.id}/chapters/${req.params.cid}/pdf`

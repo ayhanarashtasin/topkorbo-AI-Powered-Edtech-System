@@ -3,6 +3,54 @@ const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const Question = require('../models/Question');
 const ContestResult = require('../models/ContestResult');
+const RatingHistory = require('../models/RatingHistory');
+
+// Rating a student starts from before their first rated contest.
+const INITIAL_RATING = 1400;
+
+// Timezone offsets shared by the contest scheduling helpers.
+const TZ_OFFSETS = {
+  'Asia/Dhaka': '+06:00',
+  'Asia/Kolkata': '+05:30',
+  'Asia/Dubai': '+04:00',
+  'Europe/London': '+00:00',
+  'America/New_York': '-05:00',
+  'Asia/Tokyo': '+09:00',
+  'Asia/Singapore': '+08:00',
+  'Australia/Sydney': '+10:00'
+};
+
+/** Resolve a contest's absolute start/end Date from its stored local time. */
+function resolveContestDates(contest) {
+  const tz = contest.startTime?.timezone || 'Asia/Dhaka';
+  const offset = TZ_OFFSETS[tz] || '+06:00';
+  let hour = contest.startTime?.hour || 12;
+  const minute = contest.startTime?.minute || 0;
+  const period = contest.startTime?.period || 'AM';
+  if (period === 'PM' && hour < 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
+  const pad = (num) => String(num).padStart(2, '0');
+  const startDate = new Date(`${contest.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
+  const durationHours = contest.duration?.hours || 0;
+  const durationMinutes = contest.duration?.minutes || 0;
+  const endDate = new Date(startDate.getTime() + durationHours * 3600000 + durationMinutes * 60000);
+  return { startDate, endDate };
+}
+
+/**
+ * Performance rating a student "earned" in one contest, derived purely from
+ * their real standing among actual participants.
+ *  - Multiple participants: top rank ≈ 2400, last rank ≈ 800.
+ *  - Solo participant: scaled from their real score percentage.
+ */
+function contestPerformance(rank, participants, percentage) {
+  if (participants <= 1) {
+    const pct = Math.max(0, Math.min(100, percentage || 0));
+    return Math.round(800 + (pct / 100) * 1200);
+  }
+  const standing = (participants - rank) / (participants - 1); // 1 = best, 0 = worst
+  return Math.round(800 + standing * 1600);
+}
 
 /**
  * @desc    Create a new contest (teacher only)
@@ -736,6 +784,124 @@ exports.registerForContest = async (req, res, next) => {
     return ApiResponse.success(res, { contestId, registered: true }, 'Successfully registered for the contest', 200);
   } catch (err) {
     console.error('Register for contest error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Get the current student's contest rating history (Codeforces-style)
+ * @route   GET /api/contests/rating/me
+ * @access  Private (student)
+ *
+ * Ratings are computed from real, finished contests the student took part in.
+ * The value only moves when they participate in a contest that has ended; it
+ * is persisted to RatingHistory (one entry per contest) and to the User doc,
+ * so it is stable and never regenerated from fake data.
+ */
+exports.getMyRating = async (req, res, next) => {
+  try {
+    const studentId = req.user.id;
+    const now = new Date();
+
+    // Every contest this student submitted a result for.
+    const myResults = await ContestResult.find({ student: studentId })
+      .populate('contest')
+      .lean();
+
+    // Keep only contests that have actually ended, ordered by when they ended.
+    const finishedResults = myResults
+      .filter((r) => r.contest && resolveContestDates(r.contest).endDate < now)
+      .sort((a, b) => resolveContestDates(a.contest).endDate - resolveContestDates(b.contest).endDate);
+
+    // Which of those already have a persisted rating entry?
+    const existing = await RatingHistory.find({ student: studentId }).lean();
+    const ratedContestIds = new Set(existing.map((e) => e.contest.toString()));
+
+    // Rating so far = newRating of the latest existing entry (chronologically).
+    const orderedExisting = [...existing].sort(
+      (a, b) => new Date(a.contestDate) - new Date(b.contestDate)
+    );
+    let runningRating = orderedExisting.length
+      ? orderedExisting[orderedExisting.length - 1].newRating
+      : INITIAL_RATING;
+
+    // Finalize any not-yet-rated finished contests, in chronological order.
+    for (const result of finishedResults) {
+      const contest = result.contest;
+      if (ratedContestIds.has(contest._id.toString())) continue;
+
+      // Real standings for this contest.
+      const contestResults = await ContestResult.find({ contest: contest._id }).lean();
+      contestResults.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.timeTakenSeconds - b.timeTakenSeconds;
+      });
+      let rank = contestResults.length;
+      for (let i = 0; i < contestResults.length; i += 1) {
+        if (contestResults[i].student.toString() === studentId.toString()) {
+          rank = i + 1;
+          break;
+        }
+      }
+      const participants = contestResults.length;
+      const percentage = result.totalQuestions > 0
+        ? (result.score / result.totalQuestions) * 100
+        : 0;
+
+      const performance = contestPerformance(rank, participants, percentage);
+      const oldRating = runningRating;
+      const delta = Math.round((performance - oldRating) / 2);
+      const newRating = Math.max(800, oldRating + delta);
+
+      try {
+        await RatingHistory.create({
+          student: studentId,
+          contest: contest._id,
+          contestName: contest.name || 'Contest',
+          contestDate: resolveContestDates(contest).endDate,
+          rank,
+          participants,
+          score: result.score,
+          totalQuestions: result.totalQuestions,
+          oldRating,
+          newRating,
+          delta
+        });
+        runningRating = newRating;
+      } catch (writeErr) {
+        // Unique index guards against a race; ignore duplicates.
+        if (writeErr.code !== 11000) throw writeErr;
+      }
+    }
+
+    // Final ordered history to return + persist current/max on the user.
+    const history = await RatingHistory.find({ student: studentId })
+      .sort({ contestDate: 1 })
+      .lean();
+
+    const current = history.length ? history[history.length - 1].newRating : null;
+    const max = history.length ? Math.max(...history.map((h) => h.newRating)) : null;
+
+    if (current !== null) {
+      await User.findByIdAndUpdate(studentId, { rating: current, maxRating: max });
+    }
+
+    return ApiResponse.success(res, {
+      current,
+      max,
+      unrated: history.length === 0,
+      history: history.map((h) => ({
+        contestName: h.contestName,
+        date: h.contestDate,
+        rank: h.rank,
+        participants: h.participants,
+        oldRating: h.oldRating,
+        newRating: h.newRating,
+        delta: h.delta
+      }))
+    }, 'Rating history fetched successfully');
+  } catch (err) {
+    console.error('Get my rating error:', err);
     return next(err);
   }
 };

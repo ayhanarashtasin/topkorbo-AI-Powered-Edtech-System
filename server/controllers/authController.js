@@ -2,6 +2,7 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const TeacherApplication = require('../models/TeacherApplication');
+const planService = require('../services/planService');
 
 const authController = {
   /**
@@ -385,6 +386,13 @@ const authController = {
       // Automatically promote user role to 'teacher' if their TeacherApplication is approved
       if (user.role === 'tutor' && teacherApplication && teacherApplication.status === 'approved') {
         user.role = 'teacher';
+        await user.save();
+      }
+
+      // Lazily downgrade an expired paid plan back to free (monthly recurring).
+      if (user.plan && user.plan !== 'free' && planService.getEffectivePlan(user) === 'free') {
+        user.plan = 'free';
+        user.planExpiresAt = null;
         await user.save();
       }
 

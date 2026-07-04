@@ -1,63 +1,69 @@
-import { Component } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Component, lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { ForumProvider } from './context/ForumContext';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+// The landing page is the LCP element for first-time visitors, so it stays in
+// the entry bundle. Every other route is code-split with React.lazy so a given
+// page only downloads its own JS/CSS (and heavy deps like react-pdf, katex,
+// framer-motion, socket.io) when it is actually visited.
 import LandingPage from './pages/LandingPage';
-import Dashboard from './pages/Dashboard';
-import Contests from './pages/Contests';
-import BecomeTeacher from './pages/BecomeTeacher';
-import Setting from './pages/Setting';
-import UploadQuestion from './pages/UploadQuestion';
-import QuestionBank from './pages/QuestionBank';
-import BoardQuestionsView from './pages/BoardQuestionsView';
-import VarsityWrittenView from './pages/VarsityWrittenView';
-import MockTest from './pages/MockTest';
-import MockTestExam from './pages/MockTestExam';
-import StudyRoutine from './pages/StudyRoutine';
-import Battle from './pages/Battle';
-import AIBattle from './pages/AIBattle';
-import MakeContestQuestion from './pages/MakeContestQuestion';
-import MakeContestQuestionNext from './pages/MakeContestQuestionNext';
-import MakeContestQuestionNextTwo from './pages/MakeContestQuestionNextTwo';
-import MakeContestQuestionChooseQBank from './pages/MakeContestQuestionChooseQBank';
-import MakeContestQuestionConfirm from './pages/MakeContestQuestionConfirm';
-import ReadingBooks from './pages/ReadingBooks';
-import UploadBook from './pages/UploadBook';
-import ReadingBookView from './pages/ReadingBookView';
-import PracticeHistory from './pages/PracticeHistory';
-import FindMentor from './pages/FindMentor';
-import MentorLiveClass from './pages/MentorLiveClass';
-import StudentLiveClass from './pages/StudentLiveClass';
-import IeltsPrep from './pages/IeltsPrep';
-import IeltsTeacher from './pages/IeltsTeacher';
-import IeltsListeningUpload from './pages/IeltsListeningUpload';
-import IeltsReadingUpload from './pages/IeltsReadingUpload';
-import IeltsWritingUpload from './pages/IeltsWritingUpload';
-import IeltsSpeakingUpload from './pages/IeltsSpeakingUpload';
-import IeltsListening from './pages/IeltsListening';
-import IeltsReading from './pages/IeltsReading';
-import IeltsWriting from './pages/IeltsWriting';
-import IeltsSpeaking from './pages/IeltsSpeaking';
-import IeltsListeningPractice from './pages/IeltsListeningPractice';
-import IeltsReadingPractice from './pages/IeltsReadingPractice';
-import IeltsWritingPractice from './pages/IeltsWritingPractice';
-import IeltsSpeakingPractice from './pages/IeltsSpeakingPractice';
-import './pages/PracticeHistory.css';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Contests = lazy(() => import('./pages/Contests'));
+const BecomeTeacher = lazy(() => import('./pages/BecomeTeacher'));
+const Setting = lazy(() => import('./pages/Setting'));
+const UploadQuestion = lazy(() => import('./pages/UploadQuestion'));
+const QuestionBank = lazy(() => import('./pages/QuestionBank'));
+const BoardQuestionsView = lazy(() => import('./pages/BoardQuestionsView'));
+const VarsityWrittenView = lazy(() => import('./pages/VarsityWrittenView'));
+const MockTest = lazy(() => import('./pages/MockTest'));
+const MockTestExam = lazy(() => import('./pages/MockTestExam'));
+const StudyRoutine = lazy(() => import('./pages/StudyRoutine'));
+const Battle = lazy(() => import('./pages/Battle'));
+const AIBattle = lazy(() => import('./pages/AIBattle'));
+const MakeContestQuestion = lazy(() => import('./pages/MakeContestQuestion'));
+const MakeContestQuestionNext = lazy(() => import('./pages/MakeContestQuestionNext'));
+const MakeContestQuestionNextTwo = lazy(() => import('./pages/MakeContestQuestionNextTwo'));
+const MakeContestQuestionChooseQBank = lazy(() => import('./pages/MakeContestQuestionChooseQBank'));
+const MakeContestQuestionConfirm = lazy(() => import('./pages/MakeContestQuestionConfirm'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const ReadingBooks = lazy(() => import('./pages/ReadingBooks'));
+const UploadBook = lazy(() => import('./pages/UploadBook'));
+const ReadingBookView = lazy(() => import('./pages/ReadingBookView'));
+const PracticeHistory = lazy(() => import('./pages/PracticeHistory'));
+const FindMentor = lazy(() => import('./pages/FindMentor'));
+const MentorLiveClass = lazy(() => import('./pages/MentorLiveClass'));
+const StudentLiveClass = lazy(() => import('./pages/StudentLiveClass'));
+const IeltsPrep = lazy(() => import('./pages/IeltsPrep'));
+const IeltsTeacher = lazy(() => import('./pages/IeltsTeacher'));
+const IeltsListeningUpload = lazy(() => import('./pages/IeltsListeningUpload'));
+const IeltsReadingUpload = lazy(() => import('./pages/IeltsReadingUpload'));
+const IeltsWritingUpload = lazy(() => import('./pages/IeltsWritingUpload'));
+const IeltsSpeakingUpload = lazy(() => import('./pages/IeltsSpeakingUpload'));
+const IeltsListening = lazy(() => import('./pages/IeltsListening'));
+const IeltsReading = lazy(() => import('./pages/IeltsReading'));
+const IeltsWriting = lazy(() => import('./pages/IeltsWriting'));
+const IeltsSpeaking = lazy(() => import('./pages/IeltsSpeaking'));
+const IeltsListeningPractice = lazy(() => import('./pages/IeltsListeningPractice'));
+const IeltsReadingPractice = lazy(() => import('./pages/IeltsReadingPractice'));
+const IeltsWritingPractice = lazy(() => import('./pages/IeltsWritingPractice'));
+const IeltsSpeakingPractice = lazy(() => import('./pages/IeltsSpeakingPractice'));
 
 // === Forum / Community ===
-import ForumLayout from './components/forum/ForumLayout';
-import Forum from './pages/Forum';
-import ForumPostDetail from './pages/ForumPostDetail';
-import ForumCompose from './pages/ForumCompose';
-import ForumSearch from './pages/ForumSearch';
-import ForumUserProfile from './pages/ForumUserProfile';
-import ForumBookmarks from './pages/ForumBookmarks';
+const ForumLayout = lazy(() => import('./components/forum/ForumLayout'));
+const Forum = lazy(() => import('./pages/Forum'));
+const ForumPostDetail = lazy(() => import('./pages/ForumPostDetail'));
+const ForumCompose = lazy(() => import('./pages/ForumCompose'));
+const ForumSearch = lazy(() => import('./pages/ForumSearch'));
+const ForumUserProfile = lazy(() => import('./pages/ForumUserProfile'));
+const ForumBookmarks = lazy(() => import('./pages/ForumBookmarks'));
 
 import './styles/index.css';
 import './styles/animations.css';
+import './pages/Dashboard.css';
 import './styles/forum.css';
 
 function AppContent() {
@@ -76,6 +82,8 @@ function AppContent() {
           }
         }}
       />
+      <PaywallListener />
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route
           path="/"
@@ -108,6 +116,7 @@ function AppContent() {
         <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />
         <Route path="/make-contest-question/choose-qbank" element={<MakeContestQuestionChooseQBank />} />
         <Route path="/make-contest-question/confirm" element={<MakeContestQuestionConfirm />} />
+        <Route path="/pricing" element={<Pricing />} />
         <Route path="/reading-books" element={<ReadingBooks />} />
         <Route path="/reading-books/upload" element={<UploadBook />} />
         <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
@@ -139,7 +148,44 @@ function AppContent() {
         </Route>
 
       </Routes>
+      </Suspense>
     </>
+  );
+}
+
+/**
+ * PaywallListener — routes the user to /pricing when any API call reports a
+ * plan limit / upgrade-required response (see utils/paywall.js, which toasts
+ * and dispatches the `topkorbo:paywall` event).
+ */
+function PaywallListener() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const onPaywall = () => navigate('/pricing');
+    window.addEventListener('topkorbo:paywall', onPaywall);
+    return () => window.removeEventListener('topkorbo:paywall', onPaywall);
+  }, [navigate]);
+  return null;
+}
+
+/**
+ * Lightweight fallback shown while a lazily-loaded route chunk downloads.
+ * Intentionally minimal (no heavy deps) so it never delays the first paint.
+ */
+function RouteFallback() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading"
+      style={{
+        minHeight: '60vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <div className="route-fallback-spinner" />
+    </div>
   );
 }
 

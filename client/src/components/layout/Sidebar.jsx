@@ -137,7 +137,7 @@ export default function Sidebar({ activeTab, user }) {
     <aside className={`dashboard-sidebar ${isSidebarCollapsed ? 'dashboard-sidebar--collapsed' : ''}`}>
       {/* Sidebar Logo */}
       <div className="dashboard-sidebar__logo-container">
-        <a href="/dashboard" className="dashboard-sidebar__logo">
+        <a href="/" className="dashboard-sidebar__logo">
           <svg viewBox="0 0 100 100" fill="none" className="dashboard-sidebar__logo-svg" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="dbLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">

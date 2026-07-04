@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { notifyPaywall } from '../utils/paywall';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import {
@@ -479,7 +480,8 @@ export default function Battle() {
           selectedAcademicTypes,
           selectedBoards,
           questionType,
-          totalQuestions: count
+          totalQuestions: count,
+          context: 'battle' // room creation is what's metered, not this fetch
         })
       });
       return res.json();
@@ -540,7 +542,9 @@ export default function Battle() {
         });
         const createData = await createRes.json();
         if (!createData.success) {
-          toast.error(createData.message || 'Could not create battle room.');
+          if (!notifyPaywall(createData)) {
+            toast.error(createData.message || 'Could not create battle room.');
+          }
           return;
         }
         setInviteRoom(createData.data);

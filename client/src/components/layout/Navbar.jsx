@@ -81,6 +81,7 @@ export default function Navbar() {
     { label: t('nav.ai'), href: '#ai' },
     { label: t('nav.battle'), href: '#battle' },
     { label: t('nav.mentors'), href: '#mentors' },
+    { label: t('nav.pricing') || 'Pricing', href: '/pricing' },
   ];
   const liveClassHref = userRole === 'student'
     ? '/student/live-class'
@@ -89,7 +90,7 @@ export default function Navbar() {
   return (
     <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`} id="navbar">
       <div className="navbar__container container">
-        <a href="#" className="navbar__logo" id="nav-logo">
+        <a href="/" className="navbar__logo" id="nav-logo">
           <div className="navbar__logo-svg-wrapper">
             <svg viewBox="0 0 100 100" fill="none" className="navbar__logo-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>

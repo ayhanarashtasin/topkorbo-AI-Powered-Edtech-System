@@ -13,6 +13,25 @@ export default defineConfig({
   worker: {
     format: 'es'
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split large shared libraries into their own long-term-cacheable
+        // chunks. They are only pulled in by the lazily-loaded routes that
+        // use them, so this keeps them out of the entry bundle while avoiding
+        // duplicating them across every route chunk.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('react-pdf') || id.includes('pdfjs-dist')) return 'pdf';
+          if (id.includes('katex') || id.includes('rehype-katex') || id.includes('remark') || id.includes('micromark') || id.includes('mdast')) return 'katex';
+          if (id.includes('framer-motion')) return 'motion';
+          if (id.includes('socket.io')) return 'socket';
+          if (id.includes('react-router') || id.includes('/react-dom/') || id.includes('/react/') || id.includes('scheduler')) return 'react-vendor';
+          return undefined;
+        }
+      }
+    }
+  },
   server: {
     // Pin the dev server to a single port. The backend's Google OAuth callback
     // always redirects to http://localhost:5173 (FRONTEND_URL), and the auth

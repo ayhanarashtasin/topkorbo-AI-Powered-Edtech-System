@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const requirePlan = require('../middleware/requirePlan');
 const c = require('../controllers/bookController');
 
 // IMPORTANT: literal path segments (like `/annotations` and `/reading-state`)
@@ -11,11 +12,13 @@ const c = require('../controllers/bookController');
 
 // ── Taxonomy (any auth user) ──
 router.get('/taxonomy',                    auth, c.getTaxonomy);
-router.get('/:id/knowledge',               auth, c.getKnowledge);
+// AI knowledge tree / mind-map is a Pro+ reading feature.
+router.get('/:id/knowledge',               auth, requirePlan('pro_plus'), c.getKnowledge);
 
 // ── Annotations (user-scoped) — declare before /:id routes ──
-router.post('/annotations',                auth, c.createAnnotation);
-router.post('/annotations/bulk',           auth, c.createAnnotationsBulk);
+// Pen / highlighter / highlight-note creation is a Pro+ reading tool.
+router.post('/annotations',                auth, requirePlan('pro_plus'), c.createAnnotation);
+router.post('/annotations/bulk',           auth, requirePlan('pro_plus'), c.createAnnotationsBulk);
 router.post('/annotations/bulk-delete',    auth, c.deleteAnnotationsBulk);
 router.get('/annotations',                 auth, c.listAnnotations);
 router.delete('/annotations/:id',          auth, c.deleteAnnotation);

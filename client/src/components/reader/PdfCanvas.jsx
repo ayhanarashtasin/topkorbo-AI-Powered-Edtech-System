@@ -62,7 +62,8 @@ export default function PdfCanvas({
   onDocumentLoad,
   onDocumentError,
   onPageTextReady,
-  onSummarizeSelection
+  onSummarizeSelection,
+  canAnnotate = true
 }) {
   const { t } = useLanguage();
   const pageRef = useRef(null);
@@ -210,8 +211,9 @@ export default function PdfCanvas({
             });
           }
           window.getSelection()?.removeAllRanges();
-        } else {
-          // Fallback to popup if using 'select' tool
+        } else if (canAnnotate) {
+          // Fallback to popup if using 'select' tool. Highlight notes are a
+          // Pro+ reading tool, so the popup is suppressed for other plans.
           setSelectionPopup({
             position: { x: lastDomRect.right + 'px', y: lastDomRect.top + 'px' },
             text: text.trim(),
@@ -221,7 +223,7 @@ export default function PdfCanvas({
         }
       }
     }, 10);
-  }, [activeTool, penColor, pageNumber, onAddHighlight]);
+  }, [activeTool, penColor, pageNumber, onAddHighlight, canAnnotate]);
 
   const onWrapperPointerDown = useCallback(
     (ev) => {

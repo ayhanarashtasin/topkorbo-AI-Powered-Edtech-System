@@ -15,6 +15,7 @@ import MindMapModal from '../components/reader/MindMapModal';
 import bookApi from '../services/bookApi';
 import { useHighlights } from '../hooks/useHighlights';
 import { useChat } from '../hooks/useChat';
+import { usePlan } from '../hooks/usePlan';
 import ErrorBoundary from '../components/layout/ErrorBoundary';
 import {
   HiMenu,
@@ -76,6 +77,10 @@ export default function ReadingBookView() {
 
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const saveInProgressRef = useRef(false);
+
+  // Reading tools (pen/highlighter/notes) and reading AI (tutor chat / mind-map)
+  // are Pro+ features. Enforcement is server-side; this only hides the UI.
+  const { canReadingTools, canReadingAI } = usePlan();
 
   const { highlights, addHighlight, deleteHighlight, updateHighlight } = useHighlights({ bookId, chapterId, apiBase });
   const chat = useChat({
@@ -845,27 +850,41 @@ export default function ReadingBookView() {
             >
               <HiOutlineLightBulb size={20} />
             </button>
-            <button
-              type="button"
-              className="rb-reader__menu-btn"
-              onClick={() => {
-                setTutorScope('page');
-                setIsChatSidebarOpen(true);
-              }}
-              title="Ask AI Tutor"
-              style={{ marginLeft: 8 }}
-            >
-              <HiOutlineChatAlt2 size={20} />
-            </button>
-            <button
-              type="button"
-              className="rb-reader__menu-btn"
-              onClick={() => setIsMindMapOpen(true)}
-              title="Mind Map"
-              style={{ marginLeft: 8 }}
-            >
-              <HiOutlineShare size={20} />
-            </button>
+            {canReadingAI ? (
+              <>
+                <button
+                  type="button"
+                  className="rb-reader__menu-btn"
+                  onClick={() => {
+                    setTutorScope('page');
+                    setIsChatSidebarOpen(true);
+                  }}
+                  title="Ask AI Tutor"
+                  style={{ marginLeft: 8 }}
+                >
+                  <HiOutlineChatAlt2 size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="rb-reader__menu-btn"
+                  onClick={() => setIsMindMapOpen(true)}
+                  title="Mind Map"
+                  style={{ marginLeft: 8 }}
+                >
+                  <HiOutlineShare size={20} />
+                </button>
+              </>
+            ) : (
+              <a
+                href="/pricing"
+                className="rb-reader__menu-btn"
+                title="AI tutor & mind-map are a Pro+ feature"
+                style={{ marginLeft: 8, textDecoration: 'none' }}
+              >
+                <HiOutlineChatAlt2 size={20} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, marginLeft: 4 }}>Pro+</span>
+              </a>
+            )}
             <button
               type="button"
               className="rb-reader__back-btn"
@@ -902,6 +921,7 @@ export default function ReadingBookView() {
           )}
 
           <ReaderToolbar
+            canAnnotate={canReadingTools}
             activeTool={activeTool}
             onToolChange={setActiveTool}
             penColor={penColor}
@@ -960,7 +980,8 @@ export default function ReadingBookView() {
                   onDocumentLoad={onDocumentLoadSuccess}
                   onDocumentError={onDocumentLoadError}
                   onPageTextReady={handlePageTextReady}
-                  onSummarizeSelection={handleAskHighlightAI}
+                  onSummarizeSelection={canReadingAI ? handleAskHighlightAI : undefined}
+                  canAnnotate={canReadingTools}
                 />
               </ErrorBoundary>
             )}

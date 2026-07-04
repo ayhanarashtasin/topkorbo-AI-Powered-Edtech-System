@@ -15,6 +15,10 @@ router.get('/mine', auth, contestController.getMyContests);
 // @route   GET /api/contests/upcoming
 router.get('/upcoming', auth, contestController.getUpcomingContests);
 
+// @desc    Get current student's contest rating history
+// @route   GET /api/contests/rating/me
+router.get('/rating/me', auth, contestController.getMyRating);
+
 // @desc    Delete a contest owned by current teacher
 // @route   DELETE /api/contests/:id
 router.delete('/:id', auth, contestController.deleteContest);
