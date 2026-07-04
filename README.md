@@ -1,330 +1,619 @@
 <div align="center">
 
-#  TopKorbo
+# TopKorbo
 
-### The Elite Academic Testing, Learning & Community Platform for Bangladeshi Students
+### Academic Testing, Learning, AI, Reading, Mentorship, and Community Platform
 
-A full-stack learning ecosystem combining a multi-subject Question Bank, real-time Mock Tests, Codeforces-style Contests, an AI Tutor, IELTS preparation, live classes, mentorship, a PDF reading library, and a complete community forum.
+TopKorbo is a full-stack learning ecosystem for Bangladeshi students, built for the CUET SciBlitz AI Hackathon. It combines question-bank practice, mock tests, contests, AI tutoring, study planning, IELTS preparation, live classes, mentorship, a PDF reading library, subscriptions, payments, and a real-time community forum.
 
-Built for the **CUET SciBlitz AI Hackathon**.
-
-[Features](#-features) · [Tech Stack](#-tech-stack) · [Getting Started](#-getting-started) · [Environment Variables](#-environment-variables) · [Project Structure](#-project-structure) · [API Overview](#-api-overview)
+[Overview](#overview) . [Features](#features) . [Tech Stack](#tech-stack) . [Getting Started](#getting-started) . [Environment Variables](#environment-variables) . [API Overview](#api-overview) . [Deployment](#deployment)
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 ![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-010101?logo=socket.io&logoColor=white)
 
 </div>
 
 ---
 
-##  Overview
+## Overview
 
-**TopKorbo** is a comprehensive academic platform designed for Bangladeshi students preparing for board exams and university admission tests. It unifies practice, assessment, live learning, AI assistance, and peer community into a single, bilingual (বাংলা / English) web application.
+TopKorbo is a monorepo with two independent JavaScript packages:
 
-The project is a monorepo with two independent packages:
-
-| Package | Description | Stack |
+| Package | Purpose | Stack |
 | --- | --- | --- |
-| **`client/`** | Single-page React frontend | React 19 + Vite |
-| **`server/`** | REST + WebSocket API | Node.js + Express + MongoDB |
+| `client/` | Single-page web application | React 19, Vite 8, React Router 7 |
+| `server/` | REST API, Socket.io API, file handling, AI, payments | Node.js, Express, MongoDB, Mongoose |
+
+The frontend is route-code-split with `React.lazy`, uses `BrowserRouter`, and stores the auth token in `localStorage.topkorbo_token`. The backend exposes JSON APIs under `/api`, serves `/uploads`, runs Socket.io on the same HTTP server, and can also serve the built React app from `client/dist` in production.
 
 ---
 
-##  Features
+## Features
 
-### 1. Question Bank & Guided Practice
-- **Structured academic taxonomy:** Questions are organized by Subject, Paper, Chapter, Topic, and source so students can practice exactly what they need.
-- **Multiple question sources:** Supports Board Exam questions, college questions, varsity/admission questions, and teacher-created custom questions.
-- **Multiple question formats:** Handles MCQ, Written/Descriptive, and Creative Question (CQ) formats, including CQ stems and four-part sub-questions.
-- **Rich question content:** Supports images, detailed solutions, solution images, and KaTeX/LaTeX rendering for mathematical expressions.
-- **Smart browsing flows:** Separate views for source questions, varsity written questions, admission question cards, and filtered Question Bank practice.
-- **Practice attempt tracking:** Saves per-question snapshots, selected answers, written uploads, scores, time spent, skipped/flagged states, and post-practice notes.
-- **Performance summaries:** Practice history includes attempt review, subject/chapter/topic breakdowns, accuracy, score trends, and retry-friendly records.
+### 1. Authentication, Roles, and Profiles
 
-### 2. Mock Tests & Exam Simulation
-- **Configurable test generation:** Students can build mock tests from selected subjects, papers, chapters, topics, and question counts.
-- **Timed exam mode:** Provides a focused exam screen with countdown, answer selection, submission flow, and final result handling.
-- **Automatic MCQ grading:** Calculates correct, wrong, skipped, obtained marks, percentages, and negative-marking aware scores where configured.
-- **Written answer evaluation:** Supports handwritten/written answer uploads and AI-assisted evaluation with partial marks and feedback.
-- **Attempt persistence:** Stores immutable question snapshots so historical results remain valid even if source questions are edited later.
+- Google OAuth 2.0 login through Passport.js.
+- JWT-protected REST APIs and Socket.io handshakes.
+- Required strong `JWT_SECRET`; the server exits if it is missing or set to a placeholder.
+- Profile completion for students, tutors, and teachers.
+- Phone-number verification endpoint.
+- Teacher application flow for becoming a content creator/teacher.
+- Role-aware behavior for students, tutors, teachers, forum moderators, and admins.
+- Admin bootstrap through `ADMIN_EMAILS`, which promotes matching users to forum admin on server startup.
+- User profile editing, avatar upload, follows, follow-state checks, user post history, and forum profile data.
 
-### 3. Contests & Competitive Learning
-- **Codeforces-style contests:** Teachers can create scheduled academic contests with title, timing, questions, registration, and result tracking.
-- **Question sourcing options:** Contest creators can add questions manually or select existing questions from the Question Bank.
-- **Participant registration:** Students can register for upcoming contests and access contest details before participating.
-- **Submission and results:** Stores contest submissions, scores, time taken, correct answers, wrong answers, skipped answers, and leaderboard-ready result data.
-- **Creator dashboard:** Teachers can view, update, delete, and manage their own contests.
+### 2. Subscription Plans, Limits, and Payments
 
-### 4. Real-Time AI Battle Arena
-- **Room-based battles:** Students can create and join battle rooms with shareable room IDs.
-- **Multiple battle modes:** Supports duel, squad/custom squad, and raid-style configurations with player limits and team assignment logic.
-- **Live round progression:** Tracks current question, round timer, readiness, answers, scores, and player state in real time through Socket.io.
-- **Custom game settings:** Battle hosts can configure question time, total questions, question type, team names, and negative marking.
-- **Rematch support:** Finished rooms can generate rematch rooms while preserving battle context and team preferences.
-- **AI battle coaching:** Includes a Groq-powered coach endpoint for generating feedback and learning guidance after battles.
+- Plans are defined centrally in `server/config/plans.js`.
+- Free plan: 5 question-bank exams, 5 mock tests, 3 battle rooms, 20 AI actions, and up to 2 opened reading books.
+- Pro plan: 150 BDT for 30 days, unlimited question-bank exams, mock tests, battles, AI actions, and reading books.
+- Pro+ plan: 250 BDT for 30 days, everything in Pro plus reading tools and reading AI.
+- Paid plans lazily expire after 30 days and are treated as free after expiry.
+- Usage counters are stored on the user document and enforced server-side.
+- Paywall responses use `LIMIT_REACHED` or `UPGRADE_REQUIRED`; the frontend listens for those responses and redirects users to `/pricing`.
+- SSLCommerz checkout flow supports payment init, success, failure, cancel, and IPN callbacks.
+- Payment success is validated server-side before a plan is granted.
+- Settings page includes plan status, usage bars, expiration display, and upgrade/manage links.
 
-### 5. AI Tutor & Academic Assistance
-- **Groq-powered tutoring:** Uses an OpenAI-compatible Groq LLM backend for explanations, chat, grading, and study assistance.
-- **Question explanation:** Generates step-by-step solutions for MCQ, written, and CQ questions with LaTeX-friendly formatting.
-- **Mistake analysis:** Can compare a student's uploaded handwritten solution with the reference solution and explain where the answer went wrong.
-- **MCQ answer helper:** Provides AI support for answering and explaining MCQ-style problems.
-- **AI question extraction:** Extracts structured question data from uploaded or pasted content to speed up question creation.
-- **Persistent chat history:** Stores user and assistant messages for general book/page chat and context-specific tutoring sessions.
+### 3. Question Bank and Practice
 
-### 6. Smart Reading Library
-- **Teacher book uploads:** Teachers can upload PDF books with title, description, category, group, subject, paper, and chapter metadata.
-- **In-app PDF reader:** Students can read books inside the platform with `react-pdf`, chapter navigation, page controls, and streaming-friendly PDF delivery.
-- **Reading progress:** Saves last-read position, bookmarks, and user-specific reading state.
-- **Highlights and annotations:** Supports persistent highlights, pen annotations, bulk annotation operations, and deletion.
-- **AI book understanding:** Generates and stores book knowledge snapshots, topic trees, summaries, key points, definitions, examples, quizzes, and source-linked context.
-- **Contextual book chat:** Students can ask AI questions scoped to a page, topic, chapter, node, or entire book with saved conversation history.
-- **Knowledge visualization:** Includes a knowledge tree graph for exploring generated book structure and concepts.
+- Teacher question creation for MCQ, written/descriptive, and creative/CQ-style content.
+- Questions support subject, paper, chapter, topic, source, source type, images, solution text, solution images, options, and metadata.
+- Dedicated question-bank browsing flows for source questions, board/college questions, admission cards, varsity sources, and varsity written questions.
+- Mock-test-oriented topic lookup and question filtering.
+- QBank browse endpoint for contest question selection.
+- Teacher-owned question management through `GET /api/questions/mine`, `PUT /api/questions/:id`, and `DELETE /api/questions/:id`.
+- Practice attempts store immutable question snapshots, answers, selected options, uploads, scoring data, skipped/flagged state, time spent, and notes.
+- Practice history supports listing, single-attempt review, aggregate stats, note updates, and soft deletion.
 
-### 7. Study Routine Planner
-- **Personalized routine generation:** Builds study plans from exam information, weak subjects, target goals, available hours, wake/sleep time, duration, and study days per week.
-- **Calendar-based planning:** Uses a calendar view to show daily sessions, rest days, tasks, priorities, and estimated study time.
-- **Routine editing and persistence:** Students can save, update, mark segments complete, and continue from stored routines.
-- **Session analytics:** Tracks total sessions, completed work, upcoming tasks, subject distribution, and progress summaries.
-- **AI routine modification:** Supports AI-assisted changes and next-week routine generation based on the current plan.
+### 4. Mock Tests and Exam Evaluation
 
-### 8. IELTS Preparation Hub
-- **Skill-based IELTS sections:** Provides dedicated areas for Listening, Reading, Writing, and Speaking preparation.
-- **Practice flows:** Includes student-facing practice pages for each IELTS skill area.
-- **Listening set management:** Teachers can upload complete listening sets with all four sections, each containing audio and PDF files.
-- **Teacher IELTS studio:** Provides upload screens for Listening, Reading, Writing, and Speaking materials.
-- **Secure file validation:** Restricts IELTS uploads to supported PDF and audio formats with file-size limits.
+- Students can generate mock tests from selected subjects, papers, chapters, topics, and counts.
+- Exam page supports timed test flow, answer selection, submission, and results.
+- Mock-test attempts are persisted through `/api/mock-tests/attempts`.
+- MCQ-style scoring supports correct, wrong, skipped, obtained marks, and percentage-style summaries.
+- Written-answer evaluation is available through the AI evaluation endpoints.
+- Attempt data uses snapshots so previous results remain stable even if source questions are later edited.
 
-### 9. Live Classes & Mentorship
-- **LiveKit video classrooms:** Mentors/teachers can start live sessions and students can join through generated LiveKit access tokens.
-- **Separate role experiences:** Includes mentor dashboard/host flow and student session discovery/join flow.
-- **Attendance tracking:** Records join/leave activity and class attendance data for live sessions.
-- **Mentor discovery:** Students can browse mentors by profile details, guidance interests, university, department, admission achievement, and ratings.
-- **Connection workflow:** Students can request mentors, and mentors can accept or reject connection requests.
-- **Mentor dashboards:** Mentors can view connected students, recent mock-test performance, subject summaries, and student progress signals.
-- **Reviews and ratings:** Students can submit mentor reviews; mentor listings include average rating, review count, and recent anonymous reviews.
+### 5. Contests and Ratings
 
-### 10. Community Forum
-- **Rich post creation:** Users can create text or question posts with rich HTML content, tags, categories, mentions, and up to eight images.
-- **Personalized feeds:** Supports latest, trending, most-discussed, following, and category-filtered feeds with cursor pagination.
-- **Threaded discussions:** Includes nested comments, comment editing/deletion, replies, and per-comment reactions.
-- **Reactions and bookmarks:** Users can react with like/love and save posts to personal bookmarks.
-- **User profiles and follows:** Forum profiles include username, bio, avatar, reputation, followers, following, and user post history.
-- **Real-time updates:** Socket.io broadcasts new posts, post updates, comments, and notification events.
-- **Search and discovery:** Full-text search covers posts, tags, categories, and user-facing forum discovery flows.
-- **Moderation system:** Users can report content; moderators/admins can review reports, hide content, warn users, or ban accounts.
+- Teachers can create contests with title, schedule, questions, and publishing details.
+- Contest builder supports manual question entry and selecting existing question-bank questions.
+- Students can view upcoming/active contests, register, participate, and submit results.
+- Result endpoint supports contest ranking/result display.
+- Students have contest rating history through `/api/contests/rating/me`.
+- Teachers can view, update, and delete their own contests.
 
-### 11. Teacher Studio & Content Management
-- **Teacher application flow:** Users can apply to become teachers/tutors with academic, identity, and guidance-related profile details.
-- **Question uploader:** Teachers can create MCQ, written, and CQ questions with options, solutions, images, source tags, and chapter/topic metadata.
-- **My questions management:** Teachers can view, edit, and delete their own uploaded questions.
-- **Contest builder:** Step-by-step contest creation supports manual question entry, Question Bank selection, confirmation, and publishing.
-- **Book management:** Teachers can upload, update, publish/unpublish, and delete their own reading-library books.
-- **IELTS content tools:** Teachers can upload IELTS preparation resources, including structured listening sets.
+### 6. Real-Time AI Battle Arena
 
-### 12. Authentication, Profiles & Platform Foundation
-- **Google OAuth login:** Uses Passport.js Google OAuth 2.0 for account creation and login.
-- **JWT-protected APIs:** Secures private REST routes and Socket.io connections with signed JWT authentication.
-- **Profile completion:** Collects role-specific student, tutor, and teacher profile information after login.
-- **Role-based access control:** Separates student, tutor, teacher, moderator, and admin capabilities across APIs and UI flows.
-- **Bilingual interface:** Provides Bengali and English language context support for the frontend.
-- **Media storage:** Uses Cloudinary for forum images, Firebase Storage for uploaded books, and local disk storage for IELTS uploads.
-- **Security-minded backend:** Includes HTML sanitization, upload validation, rate limiting, strong JWT secret enforcement, and centralized error handling.
-- **Responsive polished UI:** Uses React 19, Vite, Framer Motion, React Hot Toast, React Icons, and mobile-friendly layouts.
+- Authenticated users can create battle rooms, join rooms, start rooms, answer questions, update team names, and create rematches.
+- Supports room-based real-time game state through Socket.io.
+- Supports duel, squad/custom squad, and raid-style battle configurations in the app flow.
+- Battle state includes players, teams, readiness, current question, round timer, answers, scoring, and room lifecycle.
+- Room creation consumes the free-plan `battleRooms` quota.
+- AI battle coaching is available through `/api/battles/coach` and consumes AI quota.
+- The AI opponent helper endpoint `/api/ai/answer-mcq` is intentionally not metered per move because battle room creation already limits the flow.
+
+### 7. AI Tutor and Academic Assistance
+
+- Groq/OpenAI-compatible LLM backend for general chat, question explanations, answer help, extraction, study routines, and written evaluation.
+- AI routes include chat, study routine generation, question extraction, MCQ answer assistance, chat history, and book chat.
+- Evaluation routes include written answer evaluation, question explanation, and question-specific tutoring chat.
+- General AI actions consume the free-plan `aiActions` quota.
+- Book chat and reading knowledge features require Pro+.
+- Chat history can be listed and cleared for general AI and book-specific AI.
+
+### 8. Smart Reading Library
+
+- Teachers can upload PDF books with title, description, category, group, subject, paper, publish state, and first-chapter metadata.
+- Book PDFs are uploaded to Firebase Storage and streamed back through backend chapter PDF endpoints.
+- Server supports HTTP range requests for local PDF files and storage-backed PDFs.
+- Student reader supports chapter navigation, PDF rendering, reading state, bookmarks, highlights, annotations, chat sidebar, and mind map modal.
+- Free plan can open up to 2 distinct books; Pro and Pro+ can open unlimited books.
+- Reading tools such as highlights, highlight notes, pen annotations, and bulk annotation actions are gated to Pro+ where enforced by routes.
+- Reading AI includes book knowledge snapshots, summaries, topic trees, key points, definitions, examples, quizzes, contextual book chat, and knowledge graph/mind map visualization.
+- `ENABLE_KNOWLEDGE_TREE=true` enables extra LLM calls to build the mind map data during book processing.
+
+### 9. Study Routine Planner
+
+- Students can create and save study routines with daily sessions, subjects, priorities, rest days, and time estimates.
+- Calendar and day-detail views show planned sessions and progress.
+- Routine stats summarize total sessions, completed work, upcoming tasks, subject distribution, and progress.
+- Users can toggle segments complete, edit segments, replace routines, delete routines, start sessions, and stop sessions.
+- AI-assisted routine modification and next-week generation are available and consume AI quota.
+
+### 10. IELTS Preparation Hub
+
+- Student-facing IELTS areas for Listening, Reading, Writing, and Speaking.
+- Teacher studio for uploading IELTS Listening, Reading, Writing, and Speaking materials.
+- Listening uploads support structured four-section sets with audio and PDF files.
+- Writing upload and writing-set listing are implemented.
+- IELTS teacher discovery and appointment routes support teacher profiles, appointment booking, appointment listing, and appointment status updates.
+- Upload middleware validates supported file formats and size limits for IELTS content.
+
+### 11. Live Classes
+
+- LiveKit-powered live class sessions for tutors and teachers.
+- Mentors can view dashboard data, start sessions, reconnect to active sessions, and end sessions.
+- Students can list available sessions and join sessions with generated LiveKit tokens.
+- Attendance records track join/leave activity.
+- LiveKit webhook endpoint accepts room/session callbacks.
+- Live class tokens use a 2-hour TTL.
+- Mentors are limited to 4 live sessions per week.
+- LiveKit config accepts `LIVEKIT_HOST` or `LIVEKIT_URL`, plus API key and secret.
+
+### 12. Mentorship
+
+- Students can browse mentors and open mentor profiles.
+- Mentor profiles include role, academic/university information, guidance interests, achievements, ratings, and reviews.
+- Students can request mentor connections.
+- Mentors can accept or reject connection requests.
+- Student dashboard and mentor dashboard expose connection and progress-oriented data.
+- Students can submit mentor reviews.
+
+### 13. Community Forum
+
+- Rich post creation with sanitized HTML, categories, tags, mentions, and up to 8 uploaded images.
+- Forum images upload to Cloudinary when configured, otherwise fall back to local `/uploads/forum/...` storage.
+- Feed supports latest/trending/discussion/following/category-oriented flows through backend feed logic.
+- Post details include comments and discussion thread data.
+- Nested comments support create, edit, delete, and replies.
+- Reactions are handled through a toggle endpoint.
+- Bookmarks are available through post bookmark routes and a dedicated bookmarks page.
+- User profiles support username, bio, avatar, reputation, followers, following, warnings, bans, and user post history.
+- Search supports forum/global search and category listing.
+- Notifications support list, mark-one-read, and mark-all-read.
+- Moderation supports reports plus admin report review/actions.
+- Socket.io broadcasts community, notification, and realtime events.
+
+### 14. Landing Page and Bilingual UI
+
+- Landing page includes hero, stats, feature grid, analytics preview, question-bank preview, AI section, battle arena/showcase, mentor section, testimonials, and CTA sections.
+- Waitlist submission and public stats are available under `/api/landing`.
+- Frontend language context supports English and Bangla locale JSON files in `client/public/locales`.
+
+### 15. Security, Uploads, and Reliability
+
+- Centralized auth middleware protects private routes.
+- Admin middleware protects moderation/admin actions.
+- Plan and quota checks are enforced on the backend, not trusted from the client.
+- Dynamic `/api` responses disable cache to avoid empty 304 JSON responses after refresh.
+- Express JSON/urlencoded body size limit is `16mb`.
+- Raw request body is captured for webhook-style HMAC verification paths.
+- Uploaded PDFs use disk-backed temporary storage with a 500 MB limit before Firebase upload.
+- Forum image uploads validate and limit image handling through Multer and upload services.
+- HTML content is sanitized server-side.
+- Global error handler standardizes errors.
+- Backend registers SPA fallback after API/uploads routes so browser refresh works for frontend routes.
+- Windows MongoDB Atlas SRV DNS handling is adjusted to use stable public resolvers when needed.
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend (`client/`)
+
 | Category | Technologies |
 | --- | --- |
-| Core | React 19, Vite 8 |
-| Routing & HTTP | React Router DOM 7, Axios |
-| Realtime | Socket.io Client, LiveKit Components |
-| Math & Markdown | KaTeX, react-markdown, remark-gfm, rehype-katex |
-| Media | react-pdf, react-big-calendar |
-| Animation & Feedback | Framer Motion, React Hot Toast, React Confetti |
-| Icons & Dates | React Icons, date-fns, moment |
-| Testing | Vitest, Testing Library |
+| Core | React 19, React DOM, Vite 8 |
+| Routing | React Router DOM 7 |
+| HTTP | Fetch, Axios, shared `httpClient` service |
+| Realtime | Socket.io Client |
+| Live Video | LiveKit React Components, LiveKit Client |
+| PDF and Reader | react-pdf, react-d3-tree, custom annotation/highlight layers |
+| Calendar and Dates | react-big-calendar, date-fns, moment |
+| Math and Markdown | KaTeX, react-markdown, remark-gfm, rehype-katex |
+| UI and Feedback | Framer Motion, React Hot Toast, React Icons, React Confetti |
+| Testing | Vitest, Testing Library, jsdom |
+| Linting | ESLint 10, React Hooks plugin, React Refresh plugin |
 
 ### Backend (`server/`)
+
 | Category | Technologies |
 | --- | --- |
-| Runtime | Node.js, Express |
-| Database | MongoDB, Mongoose |
-| Auth | Passport.js (JWT, Google OAuth 2.0) |
+| Runtime | Node.js, Express 4 |
+| Database | MongoDB, Mongoose 8 |
+| Auth | Passport, Passport Google OAuth 2.0, JSON Web Token |
 | Realtime | Socket.io |
-| Live Video | LiveKit Server SDK |
-| AI | Groq SDK (OpenAI-compatible) |
-| Media & Uploads | Multer, Cloudinary, Canvas |
-| Security & Utils | CORS, Dotenv, Express Rate Limit, sanitize-html, slugify |
+| AI | Groq SDK, OpenAI-compatible API settings, `@xenova/transformers` for embeddings/RAG support |
+| PDF and Files | Multer, pdf-parse, Canvas, Firebase Admin Storage |
+| Payments | SSLCommerz (`sslcommerz-lts`) |
+| Media | Cloudinary with local fallback |
+| Security and Utilities | CORS, dotenv, express-rate-limit, sanitize-html, slugify, jose |
 | Testing | Jest |
 
 ---
 
-##  Getting Started
+## Project Structure
+
+```text
+CUET-SciBlitz-AI-Hackathon/
+├── README.md
+├── vercel.json                    # Frontend Vercel build config from repo root
+├── client/
+│   ├── package.json
+│   ├── public/
+│   │   ├── _redirects
+│   │   ├── favicon.svg
+│   │   ├── icons.svg
+│   │   ├── assets/
+│   │   └── locales/               # en.json, bn.json
+│   └── src/
+│       ├── App.jsx                # Browser routes and providers
+│       ├── components/            # layout, landing, forum, reader, liveclass, study, settings
+│       ├── context/               # LanguageContext, ForumContext
+│       ├── hooks/                 # plan, socket, reader, drawing, debounce, chat hooks
+│       ├── pages/                 # dashboard, qbank, contests, battle, reader, IELTS, forum, etc.
+│       ├── services/              # API service wrappers
+│       ├── styles/                # global, animation, forum CSS
+│       ├── test/                  # test setup
+│       └── utils/                 # date helpers, paywall, question tags
+└── server/
+    ├── package.json
+    ├── server.js                  # Express, routes, Socket.io, uploads, SPA fallback
+    ├── config/                    # db, passport, firebase, cloudinary, plans
+    ├── controllers/               # request handling by feature
+    ├── middleware/                # auth, admin, uploads, plan/AI quota, errors
+    ├── models/                    # Mongoose schemas
+    ├── routes/                    # REST route modules
+    ├── scripts/                   # bootstrapAdmin
+    ├── services/                  # AI, RAG, PDF, upload, plan, notifications, sanitization
+    ├── socket/                    # Socket.io handlers
+    ├── tmp/                       # temporary upload directory at runtime
+    └── uploads/                   # local upload fallback, ignored by git
+```
+
+`node_modules/`, `client/dist/`, logs, `.env` files, `.puku/`, and `server/uploads/` are ignored by git.
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+ recommended)
-- [MongoDB](https://www.mongodb.com/) running locally or a MongoDB Atlas connection string
-- *(Optional)* [Groq API key](https://console.groq.com/keys) for the AI Tutor
-- *(Optional)* LiveKit and Cloudinary credentials for live classes and image uploads
+
+- Node.js 18 or newer.
+- npm.
+- MongoDB locally or a MongoDB Atlas URI.
+- Google OAuth credentials for login.
+- A strong random JWT secret.
+- Optional: Groq API key for AI features.
+- Optional: Firebase Admin and Storage bucket for book uploads.
+- Optional: LiveKit credentials for live classes.
+- Optional: Cloudinary credentials for forum image hosting.
+- Optional: SSLCommerz sandbox/live credentials for paid plan checkout.
 
 ### 1. Clone the repository
+
 ```bash
 git clone https://github.com/ayhanarashtasin/CUET-SciBlitz-AI-Hackathon.git
 cd CUET-SciBlitz-AI-Hackathon
 ```
 
-### 2. Backend setup (`server/`)
+### 2. Install backend dependencies
+
 ```bash
 cd server
 npm install
-cp .env.example .env   # then fill in the values (see below)
+```
+
+### 3. Configure backend environment
+
+```bash
+cp .env.example .env
+```
+
+Fill in at least `MONGODB_URI`, `JWT_SECRET`, Google OAuth values, and any optional service keys you need.
+
+Generate a strong JWT secret:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
+
+### 4. Run the backend
+
+```bash
 npm run dev
 ```
-The API runs at **http://localhost:5000** (health check: `GET /api/health`).
 
-### 3. Frontend setup (`client/`)
-Open a new terminal:
+The API runs at `http://localhost:5000` by default.
+
+Health check:
+
+```bash
+GET http://localhost:5000/api/health
+```
+
+### 5. Install frontend dependencies
+
+Open a second terminal:
+
 ```bash
 cd client
 npm install
+```
+
+### 6. Configure frontend environment
+
+Create `client/.env` if you need to override the API URL:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+### 7. Run the frontend
+
+```bash
 npm run dev
 ```
-The app runs at **http://localhost:5173**.
 
->  **Note:** `JWT_SECRET` must be a strong random value — the server refuses to start with a missing or placeholder secret. Generate one with:
-> ```bash
-> node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
-> ```
+The app runs at `http://localhost:5173` by default.
+
+### Important Notes
+
+- There is no root `package.json` script for running both apps together. Start `server/` and `client/` separately.
+- The backend reads `server/.env`; the Vite dev server reads `client/.env` or shell-provided `VITE_*` variables.
+- `server/.env.example` includes `VITE_API_URL` for convenience, but that value only affects frontend builds when it is also present in the frontend environment.
+- If Firebase variables are missing, book upload functionality will not work correctly because `bookController` imports the Firebase bucket at startup.
+- If SSLCommerz variables are missing, payment init returns a gateway-not-configured error.
+- If LiveKit variables are missing, live-class endpoints return configuration errors.
+- If Cloudinary variables are missing, forum images use local disk fallback under `/uploads/forum`.
 
 ---
 
-##  Environment Variables
+## Environment Variables
 
-Create `server/.env` from `server/.env.example`:
+### Backend (`server/.env`)
 
 ```env
-# ===== Core =====
+# Core
 MONGODB_URI=mongodb://localhost:27017/topkorbo
 PORT=5000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+SERVER_URL=http://localhost:5000
 VITE_API_URL=http://localhost:5000/api
 
-# ===== Auth =====
+# Auth
 JWT_SECRET=replace-with-a-long-random-secret
 GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 
-# ===== AI Tutor (Groq — OpenAI-compatible) =====
+# AI tutor / LLM
 # Either LLM_API_KEY or GROQ_API_KEY works.
-GROQ_API_KEY=
 LLM_API_KEY=
+GROQ_API_KEY=
 LLM_BASE_URL=https://api.groq.com/openai/v1
 LLM_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+ENABLE_KNOWLEDGE_TREE=true
 
-# ===== Live Classes (LiveKit) =====
+# Firebase Storage for reading-library PDF uploads
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_STORAGE_BUCKET=
+
+# Live classes (LiveKit)
+# LIVEKIT_HOST or LIVEKIT_URL may be used.
+LIVEKIT_HOST=
 LIVEKIT_URL=
 LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
 
-# ===== Image Uploads (Cloudinary — optional) =====
-# When any of the three are missing, uploads fall back to local disk.
+# Community image uploads (Cloudinary optional)
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-# ===== Admin bootstrap =====
-# On startup, users matching these emails are upgraded to forumRole 'admin'.
+# Admin bootstrap
 ADMIN_EMAILS=admin@topkorbo.local
+
+# Payments (SSLCommerz)
+SSLCZ_STORE_ID=your-sandbox-store-id
+SSLCZ_STORE_PASSWORD=your-sandbox-store-password
+SSLCZ_IS_LIVE=false
+```
+
+### Frontend (`client/.env`)
+
+```env
+VITE_API_URL=http://localhost:5000/api
 ```
 
 ---
 
-##  Project Structure
+## Frontend Routes
 
-```text
-CUET-SciBlitz-AI-Hackathon/
-├── client/                      # React frontend (Vite)
-│   ├── public/                  # Static assets & i18n JSON files
-│   └── src/
-│       ├── components/          # forum, landing, layout, liveclass, reader, study
-│       ├── context/             # Language & global context providers
-│       ├── pages/               # QuestionBank, MockTest, Contests, IELTS, Forum, ...
-│       └── styles/              # Custom CSS & animations
-│
-└── server/                      # Node.js / Express API
-    ├── config/                  # db.js, passport.js, cloudinary.js
-    ├── controllers/             # Request handling logic (per feature)
-    ├── middleware/              # Auth verification & error handling
-    ├── models/                  # Mongoose schemas
-    ├── routes/                  # REST route definitions
-    ├── scripts/                 # bootstrapAdmin & maintenance scripts
-    ├── socket/                  # Socket.io realtime handlers
-    └── server.js                # Entry point
-```
+| Route | Page |
+| --- | --- |
+| `/` | Landing page |
+| `/dashboard` | Student dashboard |
+| `/contests` | Contest list |
+| `/qbank` | Question Bank |
+| `/qbank/source-questions` | Board/source questions |
+| `/qbank/varsity-written` | Varsity written questions |
+| `/setting`, `/settings` | Settings and subscription panel |
+| `/teacher` | Teacher application |
+| `/upload-question` | Teacher question upload |
+| `/mock-test` | Mock test setup |
+| `/mock-test/exam` | Mock test exam screen |
+| `/study-routine` | Study routine planner |
+| `/practice-history` | Practice history and stats |
+| `/student/find-mentor` | Mentor discovery |
+| `/battle` | Realtime battle arena |
+| `/battle-ai` | AI battle flow |
+| `/make-contest-question` | Contest question builder start |
+| `/make-contest-question/next` | Contest builder step |
+| `/make-contest-question/next-two` | Contest builder step |
+| `/make-contest-question/choose-qbank` | Choose contest questions from QBank |
+| `/make-contest-question/confirm` | Confirm contest questions |
+| `/pricing` | Subscription pricing and checkout |
+| `/reading-books` | Reading library |
+| `/reading-books/upload` | Teacher book upload |
+| `/reading-books/:bookId/:chapterId` | PDF reader |
+| `/mentor/live-class` | Mentor live class host page |
+| `/student/live-class` | Student live class join page |
+| `/ielts-prep` | IELTS hub |
+| `/ielts-teacher` | IELTS teacher studio |
+| `/ielts-teacher/listening/upload` | IELTS listening upload |
+| `/ielts-teacher/reading/upload` | IELTS reading upload |
+| `/ielts-teacher/writing/upload` | IELTS writing upload |
+| `/ielts-teacher/speaking/upload` | IELTS speaking upload |
+| `/ielts-prep/listening` | IELTS listening |
+| `/ielts-prep/reading` | IELTS reading |
+| `/ielts-prep/writing` | IELTS writing |
+| `/ielts-prep/speaking` | IELTS speaking |
+| `/ielts-prep/listening/practice` | IELTS listening practice |
+| `/ielts-prep/reading/practice` | IELTS reading practice |
+| `/ielts-prep/writing/practice` | IELTS writing practice |
+| `/ielts-prep/speaking/practice` | IELTS speaking practice |
+| `/forum` | Forum feed |
+| `/forum/compose` | Compose forum post |
+| `/forum/post/:id` | Forum post details |
+| `/forum/search` | Forum search |
+| `/forum/bookmarks` | Forum bookmarks |
+| `/forum/u/:id` | Forum user profile |
 
 ---
 
-## 🔌 API Overview
+## API Overview
 
-All routes are mounted under `/api`.
+All backend routes are mounted under `/api` unless noted.
 
-| Area | Base Route | Description |
+| Area | Base Route | Main Capabilities |
 | --- | --- | --- |
-| Landing | `/api/landing` | Public landing-page data |
-| Auth | `/api/auth` | Register, login, Google OAuth |
-| Users | `/api/users` | Profiles & user management |
-| Questions | `/api/questions` | Question Bank CRUD & filtering |
-| Contests | `/api/contests` | Contest creation & results |
-| AI Battle | `/api/battles` | Real-time question battles |
-| Mock Tests | `/api/mock-tests` | Mock test attempts & grading |
-| Practice | `/api/practice` | Practice attempts & history |
-| AI Tutor | `/api/ai` | LLM-powered question help |
-| IELTS | `/api/ielts` | Listening sets & prep content |
-| Live Classes | `/api/live-class` | LiveKit sessions & attendance |
-| Mentorship | `/api/mentor-connections` | Student ↔ mentor connections |
-| Books | `/api/books` | Reading library & uploads |
-| Highlights | `/api/highlights` | Annotations & reading state |
-| Evaluation | `/api/evaluate` | Answer evaluation |
-| Study Routine | `/api/study-routine` | Study planner |
-| Forum — Posts | `/api/posts` | Posts & nested comments |
-| Forum — Comments | `/api/comments` | Comment management |
-| Forum — Reactions | `/api/reactions` | Likes / reactions |
-| Notifications | `/api/notifications` | User notifications |
-| Search | `/api/search` | Global search |
-| Moderation | `/api/...` | Reports & moderation |
-| Health | `/api/health` | Service status check |
+| Health | `/api/health` | Service health JSON |
+| Landing | `/api/landing` | Waitlist signup, public stats |
+| Auth | `/api/auth` | Google OAuth, profile completion, phone verification, current user, teacher application |
+| Users | `/api/users` | Current forum profile, profile update/avatar, follow/unfollow, follow state, user posts, user lookup |
+| Questions | `/api/questions` | Create/update/delete questions, teacher questions, topics, sources, source browsing, varsity/admission browsing, QBank browse, mock-test question fetch |
+| Practice | `/api/practice` | Submit attempts, list attempts, stats summary, attempt details, notes, soft delete |
+| Mock Tests | `/api/mock-tests` | Create persisted mock-test attempts |
+| Contests | `/api/contests` | Create, list own/upcoming, update, delete, register, submit result, contest result, rating history |
+| Battles | `/api/battles` | Rooms, joins, team names, start, answers, rematch, AI coach |
+| AI | `/api/ai` | Chat, book chat, study routine, question extraction, MCQ answer helper, history, book history |
+| Evaluation | `/api/evaluate` | Written answer evaluation, explanations, question chat |
+| Study Routine | `/api/study-routine` | Routine CRUD, stats, segment toggle/edit, replace, AI modify, next-week generation, session start/stop |
+| Books | `/api/books` | Taxonomy, book list/detail, chapters, PDF stream, upload, update, delete, reading state, annotations, knowledge |
+| Highlights | `/api/highlights` | List/create/update/delete highlights and highlight notes |
+| Mentorship | `/api/mentor-connections` | Mentor list/profile/reviews, student dashboard, mentor dashboard, requests, request responses |
+| Live Classes | `/api/live-class` | Mentor dashboard/start/end, student sessions/join, LiveKit webhook |
+| IELTS | `/api/ielts` | Listening upload/list, writing upload/list, teachers, appointments, appointment status |
+| Payments | `/api/payments` | SSLCommerz checkout init, success/fail/cancel redirects, IPN |
+| Posts | `/api/posts` | Forum feed, create, detail, update, delete, bookmarks |
+| Post Comments | `/api/posts/:postId/comments` | Create/list nested comments for a post |
+| Comments | `/api/comments` | Edit/delete comments |
+| Reactions | `/api/reactions` | Toggle reactions |
+| Notifications | `/api/notifications` | List, mark read, mark all read |
+| Search | `/api/search` | Search and categories |
+| Moderation | `/api/reports`, `/api/admin/reports` | Create reports, admin report list, admin moderation action |
+| Uploads | `/uploads` | Static local upload fallback, outside `/api` |
 
 ---
 
-##  Testing
+## Testing
+
+### Backend
 
 ```bash
-# Backend (Jest)
-cd server && npm test
+cd server
+npm test
+```
 
-# Frontend (Vitest)
-cd client && npm test
+Runs Jest with `--forceExit --detectOpenHandles`.
+
+### Frontend
+
+```bash
+cd client
+npm test
+```
+
+Runs Vitest once with Testing Library/jsdom setup.
+
+### Frontend Lint
+
+```bash
+cd client
+npm run lint
 ```
 
 ---
 
-## 👥 Contributors
+## Build and Preview
 
-- **Arpita Sarkar** — [@arpii26](https://github.com/arpii26)
-- **Ayhan Arashtasin** — [@ayhanarashtasin](https://github.com/ayhanarashtasin)
+### Frontend build
+
+```bash
+cd client
+npm run build
+```
+
+### Frontend preview
+
+```bash
+cd client
+npm run preview
+```
+
+### Backend serving built frontend
+
+After `client/dist` exists, the Express server serves those static files and falls back to `client/dist/index.html` for non-API, non-upload routes. This keeps frontend routes refresh-safe in production.
+
+---
+
+## Deployment
+
+### Vercel Frontend
+
+The root `vercel.json` is configured for a frontend-only Vercel deployment:
+
+```json
+{
+  "installCommand": "cd client && npm ci",
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+Set `VITE_API_URL` in the Vercel project environment so the frontend points to the deployed backend.
+
+### Backend
+
+Deploy `server/` to a Node-capable host with MongoDB access and the required environment variables. If the backend is also serving the React build, run the frontend build first so `client/dist` exists beside the server.
+
+### Webhooks and Public Callback URLs
+
+- SSLCommerz callbacks use `SERVER_URL` for `/api/payments/success`, `/api/payments/fail`, `/api/payments/cancel`, and `/api/payments/ipn`.
+- LiveKit webhooks call `/api/live-class/webhooks`.
+- Payment IPN and LiveKit webhooks require a publicly reachable backend URL in deployed or tunnelled development environments.
+
+---
+
+## Data and Storage Notes
+
+- MongoDB stores users, questions, contests, contest results, practice attempts, mock-test attempts, books, book knowledge, book chunks, book pages, reading states, annotations, highlights, posts, comments, reactions, reports, notifications, payments, live sessions, attendance, mentor connections, reviews, IELTS sets, appointments, study routines, study sessions, rating history, and waitlist entries.
+- Firebase Storage stores uploaded reading-library PDFs.
+- Local `server/uploads/` stores fallback forum images and any local upload files; it is ignored by git.
+- Cloudinary is used for forum images only when all three Cloudinary credentials are configured.
+- Temporary large book uploads are written under `server/tmp/uploads/books` before being uploaded to Firebase.
+
+---
+
+## Contributors
+
+- **Arpita Sarkar** - [@arpii26](https://github.com/arpii26)
+- **Ayhan Arashtasin** - [@ayhanarashtasin](https://github.com/ayhanarashtasin)
 
 ---
 
 <div align="center">
 
-Built with  for the **CUET SciBlitz AI Hackathon**
+Built for the **CUET SciBlitz AI Hackathon**.
 
 </div>

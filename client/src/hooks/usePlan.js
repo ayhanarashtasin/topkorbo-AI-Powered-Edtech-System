@@ -29,6 +29,7 @@ export function usePlan() {
   });
   const [usage, setUsage] = useState({ qbankExams: 0, mockTests: 0, battleRooms: 0, aiActions: 0 });
   const [planExpiresAt, setPlanExpiresAt] = useState(null);
+  const [planIsTrial, setPlanIsTrial] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -43,6 +44,7 @@ export function usePlan() {
         setPlan(p);
         setUsage(data.usage || { qbankExams: 0, mockTests: 0, battleRooms: 0, aiActions: 0 });
         setPlanExpiresAt(data.planExpiresAt || null);
+        setPlanIsTrial(!!data.planIsTrial);
         try { localStorage.setItem('topkorbo_plan', p); } catch (_) { /* ignore */ }
       }
     } catch (_) {
@@ -74,7 +76,7 @@ export function usePlan() {
     };
   }, [plan, usage]);
 
-  return { plan, usage, planExpiresAt, loading, refresh, ...helpers };
+  return { plan, usage, planExpiresAt, planIsTrial, loading, refresh, ...helpers };
 }
 
 export default usePlan;

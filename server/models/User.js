@@ -103,6 +103,10 @@ const userSchema = new mongoose.Schema({
     default: 'free'
   },
   planExpiresAt: { type: Date, default: null }, // null = never expires (free)
+  // True while the current paid-tier access came from the free signup trial
+  // rather than a real payment. Cleared when a payment grants a plan or when
+  // the plan lazily downgrades to free.
+  planIsTrial: { type: Boolean, default: false },
   // Lifetime usage counters (free-tier limits are lifetime totals — no reset job).
   usage: {
     qbankExams: { type: Number, default: 0 },

@@ -5,14 +5,11 @@ const upload = require('./upload');
  * Global error handler middleware
  */
 const errorHandler = (err, req, res, next) => {
-  console.error('❌ Error:', err.message);
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack);
-  }
-
   // Plan / subscription gate errors (thrown by services/planService.js and
-  // middleware/requirePlan.js). Carry a machine-readable `code` + `feature`
-  // so the client can show the right paywall / upgrade prompt.
+  // middleware/requirePlan.js). These are EXPECTED business responses (the
+  // client shows a paywall / upgrade prompt), not server faults — so we return
+  // them without logging, to keep the terminal clean. Carry a machine-readable
+  // `code` + `feature` so the client can show the right prompt.
   if (err.isPlanError) {
     return res.status(err.statusCode || 402).json({
       success: false,
@@ -21,6 +18,11 @@ const errorHandler = (err, req, res, next) => {
       feature: err.feature || null,
       requiredPlan: err.requiredPlan || null
     });
+  }
+
+  console.error('❌ Error:', err.message);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(err.stack);
   }
 
   // Mongoose validation error

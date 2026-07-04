@@ -393,6 +393,7 @@ const authController = {
       if (user.plan && user.plan !== 'free' && planService.getEffectivePlan(user) === 'free') {
         user.plan = 'free';
         user.planExpiresAt = null;
+        user.planIsTrial = false;
         await user.save();
       }
 

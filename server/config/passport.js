@@ -1,6 +1,7 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
+const { TRIAL_PLAN, trialExpiresAt } = require('./plans');
 
 const requiredGoogleEnv = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_CALLBACK_URL'];
 const missingGoogleEnv = requiredGoogleEnv.filter((key) => !process.env[key]);
@@ -61,13 +62,17 @@ passport.use(new GoogleStrategy({
           return done(null, user);
         }
 
-        // Create new user record
+        // Create new user record. Every new signup starts on a free Pro+
+        // trial that lazily downgrades to free once planExpiresAt passes.
         user = await User.create({
           googleId: profile.id,
           name: profile.displayName,
           email: email,
           avatar: profile.photos[0]?.value,
-          role: role
+          role: role,
+          plan: TRIAL_PLAN,
+          planExpiresAt: trialExpiresAt(),
+          planIsTrial: true
         });
 
         user.isNewUser = true;

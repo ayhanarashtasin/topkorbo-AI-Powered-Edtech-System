@@ -12,8 +12,12 @@ const USAGE_ROWS = [
 ];
 
 export default function PlanPanel() {
-  const { plan, usage, planExpiresAt, loading, isFree, limitOf, refresh } = usePlan();
+  const { plan, usage, planExpiresAt, planIsTrial, loading, isFree, limitOf, refresh } = usePlan();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const trialDaysLeft = planExpiresAt
+    ? Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 0;
 
   useEffect(() => {
     if (searchParams.get('upgraded') === '1') {
@@ -34,7 +38,12 @@ export default function PlanPanel() {
           <span className="plan-panel__eyebrow">Subscription</span>
           <h3 className="plan-panel__title">
             {meta.label} plan
-            {!isFree && planExpiresAt && (
+            {!isFree && planIsTrial && (
+              <span className="plan-panel__expiry">
+                {' '}· free trial · {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} left
+              </span>
+            )}
+            {!isFree && !planIsTrial && planExpiresAt && (
               <span className="plan-panel__expiry">
                 {' '}· renews {new Date(planExpiresAt).toLocaleDateString()}
               </span>
@@ -42,7 +51,7 @@ export default function PlanPanel() {
           </h3>
         </div>
         <a href="/pricing" className="plan-panel__cta">
-          {isFree ? 'Upgrade' : 'Manage plan'}
+          {isFree ? 'Upgrade' : planIsTrial ? 'Upgrade' : 'Manage plan'}
         </a>
       </div>
 
@@ -82,6 +91,12 @@ export default function PlanPanel() {
           {plan === 'pro_plus'
             ? ' Reading tools and reading AI are unlocked.'
             : ' Upgrade to Pro+ to unlock reading tools and reading AI.'}
+          {planIsTrial && (
+            <>
+              {' '}Your free trial ends in {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} —
+              upgrade to keep these features.
+            </>
+          )}
         </p>
       )}
     </div>

@@ -39,8 +39,26 @@ const PLAN_IDS = Object.keys(PLANS);
 // Paid plans grant 30 days of access, then lazily revert to free.
 const PLAN_DURATION_DAYS = 30;
 
+// Every new signup gets this many days of Pro+ for free (a trial). When it
+// expires the user is lazily downgraded to free, exactly like a paid plan.
+const TRIAL_DURATION_DAYS = 5;
+const TRIAL_PLAN = 'pro_plus';
+
 function getPlanConfig(planId) {
   return PLANS[planId] || PLANS.free;
 }
 
-module.exports = { PLANS, PLAN_IDS, PLAN_DURATION_DAYS, getPlanConfig };
+/** Absolute expiry Date for a fresh signup trial, `days` from now. */
+function trialExpiresAt(days = TRIAL_DURATION_DAYS) {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
+
+module.exports = {
+  PLANS,
+  PLAN_IDS,
+  PLAN_DURATION_DAYS,
+  TRIAL_DURATION_DAYS,
+  TRIAL_PLAN,
+  getPlanConfig,
+  trialExpiresAt
+};

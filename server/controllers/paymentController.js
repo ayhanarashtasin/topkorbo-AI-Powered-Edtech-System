@@ -118,7 +118,7 @@ async function grantIfValid(tranId, gatewayData) {
   const expiresAt = new Date(Date.now() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000);
   await User.updateOne(
     { _id: payment.user },
-    { $set: { plan: payment.plan, planExpiresAt: expiresAt } }
+    { $set: { plan: payment.plan, planExpiresAt: expiresAt, planIsTrial: false } }
   );
   return true;
 }
