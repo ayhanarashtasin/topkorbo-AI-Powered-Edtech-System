@@ -269,7 +269,11 @@ exports.getAttempt = async (req, res) => {
     if (!attempt || attempt.isDeleted) {
       return ApiResponse.error(res, 'Attempt not found', 404);
     }
-    if (String(attempt.userId) !== String(userId) && req.user.role !== 'admin') {
+    if (
+      String(attempt.userId) !== String(userId) &&
+      req.user.role !== 'admin' &&
+      req.user.forumRole !== 'admin'
+    ) {
       return ApiResponse.error(res, 'Forbidden', 403);
     }
 
@@ -294,7 +298,11 @@ exports.deleteAttempt = async (req, res) => {
     if (!attempt || attempt.isDeleted) {
       return ApiResponse.error(res, 'Attempt not found', 404);
     }
-    if (String(attempt.userId) !== String(userId) && req.user.role !== 'admin') {
+    if (
+      String(attempt.userId) !== String(userId) &&
+      req.user.role !== 'admin' &&
+      req.user.forumRole !== 'admin'
+    ) {
       return ApiResponse.error(res, 'Forbidden', 403);
     }
 

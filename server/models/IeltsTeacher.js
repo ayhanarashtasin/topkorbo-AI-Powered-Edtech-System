@@ -56,6 +56,52 @@ const ieltsTeacherSchema = new mongoose.Schema({
   },
   gender: {
     type: String
+  },
+  verificationStatus: {
+    type: String,
+    enum: ['unverified', 'pending', 'verified', 'rejected'],
+    default: 'unverified'
+  },
+  verificationNote: {
+    type: String,
+    default: ''
+  },
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  verifiedAt: {
+    type: Date,
+    default: null
+  },
+  verificationHistory: {
+    type: [
+      {
+        previousStatus: {
+          type: String,
+          default: ''
+        },
+        nextStatus: {
+          type: String,
+          default: ''
+        },
+        note: {
+          type: String,
+          default: ''
+        },
+        actedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null
+        },
+        actedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+    default: []
   }
 }, {
   timestamps: true

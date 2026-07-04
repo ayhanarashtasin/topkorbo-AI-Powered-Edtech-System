@@ -57,6 +57,63 @@ const teacherApplicationSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
+  },
+  reviewStage: {
+    type: String,
+    enum: ['pending', 'under_review', 'more_info_requested', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  adminNote: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  reviewReason: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  reviewedAt: {
+    type: Date,
+    default: null
+  },
+  reviewHistory: {
+    type: [
+      {
+        action: {
+          type: String,
+          enum: ['submitted', 'under_review', 'approved', 'rejected', 'more_info_requested'],
+          required: true
+        },
+        previousStatus: {
+          type: String,
+          default: ''
+        },
+        nextStatus: {
+          type: String,
+          default: ''
+        },
+        note: {
+          type: String,
+          default: ''
+        },
+        actedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null
+        },
+        actedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+    default: []
   }
 }, {
   timestamps: true

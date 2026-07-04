@@ -81,6 +81,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const callbackRole = params.get('role');
+      const callbackForumRole = params.get('forumRole');
       const profileName = params.get('name');
       const profileEmail = params.get('email');
       const profileAvatar = params.get('avatar');
@@ -92,6 +93,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         if (profileAvatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(profileAvatar));
         if (profileEmail) localStorage.setItem('topkorbo_email', decodeURIComponent(profileEmail));
         if (callbackRole) localStorage.setItem('topkorbo_role', callbackRole);
+        if (callbackForumRole) localStorage.setItem('topkorbo_forum_role', decodeURIComponent(callbackForumRole));
 
         setRole(callbackRole || 'student');
         setStep('profile_form');

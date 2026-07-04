@@ -58,7 +58,11 @@ const authController = {
 
       // Generate a JWT token
       const token = jwt.sign(
-        { id: user._id, role: user.role },
+        {
+          id: user._id,
+          role: user.role,
+          forumRole: user.forumRole || 'user'
+        },
         process.env.JWT_SECRET,
         { expiresIn: '60d' }
       );
@@ -68,7 +72,15 @@ const authController = {
         ? ''
         : user.avatar || '';
 
-      res.redirect(`${frontendUrl}?token=${token}&role=${user.role}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&avatar=${encodeURIComponent(avatarUrl)}&isComplete=${isComplete}`);
+      res.redirect(
+        `${frontendUrl}?token=${token}` +
+        `&role=${user.role}` +
+        `&forumRole=${encodeURIComponent(user.forumRole || 'user')}` +
+        `&name=${encodeURIComponent(user.name)}` +
+        `&email=${encodeURIComponent(user.email)}` +
+        `&avatar=${encodeURIComponent(avatarUrl)}` +
+        `&isComplete=${isComplete}`
+      );
     })(req, res, next);
   },
 
@@ -492,10 +504,25 @@ const authController = {
           createIeltsQSet: !!createIeltsQSet,
           createIeltsQSetDetails: createIeltsQSetDetails || '',
           aboutYou: aboutYou.trim(),
-          status: 'pending' // Reset to pending if resubmitted
+          status: 'pending',
+          reviewStage: 'pending',
+          adminNote: '',
+          reviewReason: '',
+          reviewedBy: null,
+          reviewedAt: null
         },
         { new: true, upsert: true, runValidators: true }
       );
+
+      application.reviewHistory = Array.isArray(application.reviewHistory) ? application.reviewHistory : [];
+      application.reviewHistory.push({
+        action: 'submitted',
+        previousStatus: application.status,
+        nextStatus: 'pending',
+        note: 'Application submitted by teacher.',
+        actedAt: new Date()
+      });
+      await application.save();
 
       res.json({
         success: true,

@@ -1,5 +1,29 @@
 const mongoose = require('mongoose');
 
+const INTERESTED_TO_GUIDE_VALUES = ['Medical', 'Engineering', 'University', 'Academic', 'IELTS'];
+
+function normalizeInterestedToGuide(values) {
+  if (!Array.isArray(values)) return values;
+
+  const legacyValueMap = {
+    buet: 'Engineering',
+    'hsc academic': 'Academic'
+  };
+
+  return values
+    .map((value) => {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const directMatch = INTERESTED_TO_GUIDE_VALUES.find(
+        (allowed) => allowed.toLowerCase() === raw.toLowerCase()
+      );
+      if (directMatch) return directMatch;
+
+      return legacyValueMap[raw.toLowerCase()] || raw;
+    })
+    .filter(Boolean);
+}
+
 const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
@@ -14,6 +38,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true
+  },
+  // Optional local-only hash reserved for dev/admin seed flows.
+  passwordHash: {
+    type: String,
+    default: ''
   },
   avatar: {
     type: String
@@ -86,8 +115,16 @@ const userSchema = new mongoose.Schema({
     }
   ],
   isBanned: { type: Boolean, default: false },
+  accountStatus: {
+    type: String,
+    enum: ['active', 'suspended', 'banned'],
+    default: 'active'
+  },
+  statusReason: { type: String, default: '' },
   banReason: { type: String, default: '' },
   banExpiresAt: { type: Date },
+  suspendedAt: { type: Date, default: null },
+  statusChangedAt: { type: Date, default: null },
   bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
   forumRole: {
     type: String,
@@ -132,7 +169,8 @@ const userSchema = new mongoose.Schema({
   },
   interestedToGuide: {
     type: [String],
-    enum: ['Medical', 'Engineering', 'University', 'Academic', 'IELTS']
+    enum: INTERESTED_TO_GUIDE_VALUES,
+    set: normalizeInterestedToGuide
   },
   universityName: {
     type: String
@@ -146,6 +184,10 @@ const userSchema = new mongoose.Schema({
   admissionAchievement: {
     type: String
   },
+  lastActiveAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -153,5 +195,14 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.index({ role: 1, isBanned: 1, createdAt: -1 });
+userSchema.index({ accountStatus: 1, createdAt: -1 });
+userSchema.index({ forumRole: 1, createdAt: -1 });
+
+userSchema.pre('validate', function normalizeLegacyGuideValues(next) {
+  if (Array.isArray(this.interestedToGuide)) {
+    this.interestedToGuide = normalizeInterestedToGuide(this.interestedToGuide);
+  }
+  next();
+});
 
 module.exports = mongoose.model('User', userSchema);

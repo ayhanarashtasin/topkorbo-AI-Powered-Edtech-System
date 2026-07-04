@@ -52,17 +52,19 @@ export default function Navbar() {
       const email = params.get('email');
       const avatar = params.get('avatar');
       const role = params.get('role');
+      const forumRole = params.get('forumRole');
       
       if (name) localStorage.setItem('topkorbo_name', decodeURIComponent(name));
       if (email) localStorage.setItem('topkorbo_email', decodeURIComponent(email));
       if (avatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(avatar));
       if (role) localStorage.setItem('topkorbo_role', role);
+      if (forumRole) localStorage.setItem('topkorbo_forum_role', decodeURIComponent(forumRole));
       setUserRole(role || '');
       
       if (isComplete) {
-        // Fully registered user: redirect to dashboard directly!
+        // Fully registered admins should land in the admin workspace immediately.
         window.history.replaceState({}, document.title, window.location.pathname);
-        window.location.href = '/dashboard';
+        window.location.href = forumRole === 'admin' ? '/admin/dashboard' : '/dashboard';
       } else {
         // Partially registered: show profile completion modal
         setModalMode('signup');

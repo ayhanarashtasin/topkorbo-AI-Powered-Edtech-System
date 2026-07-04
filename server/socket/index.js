@@ -24,6 +24,7 @@ function initSocket(httpServer) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.userId = String(decoded.id);
       socket.userRole = decoded.role || 'student';
+      socket.forumRole = decoded.forumRole || 'user';
       next();
     } catch (err) {
       socket.userId = null;

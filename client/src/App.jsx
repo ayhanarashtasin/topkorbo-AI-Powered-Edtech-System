@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { ForumProvider } from './context/ForumContext';
 import { Toaster } from 'react-hot-toast';
@@ -60,6 +60,7 @@ const ForumCompose = lazy(() => import('./pages/ForumCompose'));
 const ForumSearch = lazy(() => import('./pages/ForumSearch'));
 const ForumUserProfile = lazy(() => import('./pages/ForumUserProfile'));
 const ForumBookmarks = lazy(() => import('./pages/ForumBookmarks'));
+import { renderAdminRoutes } from './admin/routes/AdminRoutes';
 
 import './styles/index.css';
 import './styles/animations.css';
@@ -136,6 +137,8 @@ function AppContent() {
         <Route path="/ielts-prep/reading/practice" element={<IeltsReadingPractice />} />
         <Route path="/ielts-prep/writing/practice" element={<IeltsWritingPractice />} />
         <Route path="/ielts-prep/speaking/practice" element={<IeltsSpeakingPractice />} />
+
+        {renderAdminRoutes()}
 
         {/* === Forum / Community === */}
         <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
