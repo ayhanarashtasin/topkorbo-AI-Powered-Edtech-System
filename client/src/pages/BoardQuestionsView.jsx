@@ -297,8 +297,8 @@ export default function BoardQuestionsView() {
     setIsSendingFollowUp(true);
 
     try {
-      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-      const res = await fetch(`${backendBaseUrl}/api/evaluate/chat`, {
+      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${backendBaseUrl}/evaluate/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -918,8 +918,8 @@ export default function BoardQuestionsView() {
                           if (!explanationModalQuestion) return;
                           setAiExplainLoading(true);
                           try {
-                            const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-                            const res = await fetch(`${backendBaseUrl}/api/evaluate/explain`, {
+                            const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+                            const res = await fetch(`${backendBaseUrl}/evaluate/explain`, {
                               method: "POST",
                               headers: {
                                 "Content-Type": "application/json",

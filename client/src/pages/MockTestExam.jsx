@@ -878,8 +878,8 @@ export default function MockTestExam() {
           questionId: key,
           studentImageBase64: writtenAnswers[key],
         }));
-        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-        const res = await fetch(`${backendBaseUrl}/api/evaluate/written`, {
+        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const res = await fetch(`${backendBaseUrl}/evaluate/written`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1361,8 +1361,8 @@ export default function MockTestExam() {
     setIsSendingFollowUp(true);
 
     try {
-      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-      const res = await fetch(`${backendBaseUrl}/api/evaluate/chat`, {
+      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${backendBaseUrl}/evaluate/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2417,8 +2417,8 @@ export default function MockTestExam() {
                           if (!explanationModalQuestion) return;
                           setAiExplainLoading(true);
                           try {
-                            const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-                            const res = await fetch(`${backendBaseUrl}/api/evaluate/explain`, {
+                            const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+                            const res = await fetch(`${backendBaseUrl}/evaluate/explain`, {
                               method: "POST",
                               headers: {
                                 "Content-Type": "application/json",
