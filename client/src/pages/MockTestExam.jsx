@@ -164,6 +164,8 @@ export default function MockTestExam() {
   const streamRef = useRef(null);
   const aiExplainFileRef = useRef(null);
   const followUpFileRef = useRef(null);
+  const hasCheatedRef = useRef(false);
+  const lastMetaTimeRef = useRef(0);
 
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [submittedQuestionKeys, setSubmittedQuestionKeys] = useState({});
@@ -346,6 +348,213 @@ export default function MockTestExam() {
   useEffect(() => {
     sessionStorage.setItem("mock_exam_active_idx", String(activeQuestionIndex));
   }, [activeQuestionIndex]);
+
+  const isContestActive = !!(config?.contestId && !config?.isPractice && !isReviewMode && !isSubmitted);
+
+  const timeLeftRef = useRef(timeLeft);
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  const answersRef = useRef(answers);
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  const submittedQuestionKeysRef = useRef(submittedQuestionKeys);
+  useEffect(() => {
+    submittedQuestionKeysRef.current = submittedQuestionKeys;
+  }, [submittedQuestionKeys]);
+
+  const submitDisqualification = async (reason) => {
+    toast.error(
+      language === "en"
+        ? `Contest ended automatically due to cheating detection: ${reason}`
+        : `কনটেস্টটি স্বয়ংক্রিয়ভাবে বন্ধ হয়ে গেছে: ${reason}`
+    );
+
+    try {
+      const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
+      const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          score: 0,
+          totalQuestions: questions.length,
+          timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeftRef.current),
+          answersSubmitted: Object.keys(submittedQuestionKeysRef.current).length,
+          answers: answersRef.current,
+          isDisqualified: true,
+          disqualificationReason: reason
+        }),
+      });
+    } catch (err) {
+      console.error("Error submitting disqualification:", err);
+    }
+
+    // Clean up session storage
+    [
+      "mock_test_step",
+      "mock_test_subject_ids",
+      "mock_test_chapters",
+      "mock_test_selected_topics",
+      "mock_exam_standard",
+      "mock_question_type",
+      "mock_total_questions",
+      "mock_exam_duration",
+      "mock_negative_marking",
+      "mock_exam_questions",
+      "mock_exam_config",
+      "mock_exam_from_qbank",
+      "mock_exam_answers",
+      "mock_exam_end_time",
+      "mock_exam_submitted",
+      "mock_exam_review_mode",
+      "mock_exam_time_left",
+      "mock_exam_written_answers",
+      "mock_exam_ai_evals",
+      "mock_exam_submitted_keys",
+      "mock_exam_visited_indexes",
+      "mock_exam_active_idx",
+    ].forEach((key) => sessionStorage.removeItem(key));
+
+    navigate("/contests");
+  };
+
+  useEffect(() => {
+    if (!isContestActive) return;
+
+    const handleViolation = (reason) => {
+      if (hasCheatedRef.current) return;
+      hasCheatedRef.current = true;
+      submitDisqualification(reason);
+    };
+
+    // Tab Switch / Window Blur / Minimization Detection
+    const handleBlur = () => {
+      handleViolation(
+        language === "en"
+          ? "Window lost focus / minimised / tab changed"
+          : "উইন্ডো ফোকাস হারিয়েছে / মিনিমাইজ করা হয়েছে / ট্যাব পরিবর্তন করা হয়েছে"
+      );
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        handleViolation(
+          language === "en"
+            ? "Tab switched or window minimised"
+            : "ট্যাব পরিবর্তন করা হয়েছে বা উইন্ডো মিনিমাইজ করা হয়েছে"
+        );
+      }
+    };
+
+    // Screenshot Keydown / Print Screen Detection
+    const handleKeyDown = (e) => {
+      const isPrtScn = e.key === "PrintScreen" || e.key === "PrtScn" || e.key === "Snapshot" || e.keyCode === 44;
+      const isMeta = e.key === "Meta" || e.keyCode === 91 || e.keyCode === 92;
+
+      if (isMeta) {
+        lastMetaTimeRef.current = Date.now();
+      }
+
+      if (isPrtScn) {
+        e.preventDefault();
+        handleViolation(
+          language === "en"
+            ? "PrintScreen / Screenshot attempt detected"
+            : "স্ক্রিনশট নেওয়ার চেষ্টা সনাক্ত করা হয়েছে"
+        );
+      }
+
+      // Check if PrtScn was typed right after Windows key (within 2 seconds)
+      if (isPrtScn && (Date.now() - lastMetaTimeRef.current < 2000)) {
+        handleViolation(
+          language === "en"
+            ? "Screenshot attempt detected (Windows + PrtScn)"
+            : "স্ক্রিনশট নেওয়ার চেষ্টা সনাক্ত করা হয়েছে (Windows + PrtScn)"
+        );
+      }
+
+      // Windows Snipping Tool: Meta + Shift + S
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "s") {
+        handleViolation(
+          language === "en"
+            ? "Screenshot attempt detected (Meta + Shift + S)"
+            : "স্ক্রিনশট নেওয়ার চেষ্টা সনাক্ত করা হয়েছে (Meta + Shift + S)"
+        );
+      }
+
+      // Print: Ctrl + P or Cmd + P
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        handleViolation(
+          language === "en"
+            ? "Print attempt detected"
+            : "প্রিন্ট করার চেষ্টা সনাক্ত করা হয়েছে"
+        );
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      const isPrtScn = e.key === "PrintScreen" || e.key === "PrtScn" || e.key === "Snapshot" || e.keyCode === 44;
+      
+      if (isPrtScn) {
+        handleViolation(
+          language === "en"
+            ? "PrintScreen / Screenshot attempt detected (keyup)"
+            : "স্ক্রিনশট নেওয়ার চেষ্টা সনাক্ত করা হয়েছে (keyup)"
+        );
+      }
+
+      if (isPrtScn && (Date.now() - lastMetaTimeRef.current < 2000)) {
+        handleViolation(
+          language === "en"
+            ? "Screenshot attempt detected (Windows + PrtScn)"
+            : "স্ক্রিনশট নেওয়ার চেষ্টা সনাক্ত করা হয়েছে (Windows + PrtScn)"
+        );
+      }
+    };
+
+    // Copy / Text Selection Prevention
+    const preventCopy = (e) => {
+      e.preventDefault();
+      toast.error(
+        language === "en"
+          ? "Copying questions is disabled during the contest!"
+          : "কনটেস্ট চলাকালীন প্রশ্ন কপি করা যাবে না!"
+      );
+    };
+
+    const preventContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    // Attach listeners
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    document.addEventListener("copy", preventCopy);
+    document.addEventListener("cut", preventCopy);
+    document.addEventListener("contextmenu", preventContextMenu);
+    document.addEventListener("selectstart", preventCopy);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("copy", preventCopy);
+      document.removeEventListener("cut", preventCopy);
+      document.removeEventListener("contextmenu", preventContextMenu);
+      document.removeEventListener("selectstart", preventCopy);
+    };
+  }, [isContestActive, language, config, questions]);
 
   const getQuestionKey = (question, index) =>
     question._id || `question-${index}`;
@@ -1231,7 +1440,7 @@ export default function MockTestExam() {
 
   return (
     <div
-      className={`exam-room-container ${showResultModal ? "exam-room-container--dimmed" : ""}`}
+      className={`exam-room-container ${showResultModal ? "exam-room-container--dimmed" : ""} ${isContestActive ? "no-copy-select" : ""}`}
     >
       <div className="exam-layout-wrapper">
         <div className="exam-main-content">

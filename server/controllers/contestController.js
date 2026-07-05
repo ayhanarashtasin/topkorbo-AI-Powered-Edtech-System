@@ -583,7 +583,7 @@ exports.getContestById = async (req, res, next) => {
  */
 exports.submitContestResult = async (req, res, next) => {
   try {
-    const { score, totalQuestions, timeTakenSeconds, answersSubmitted, answers } = req.body;
+    const { score, totalQuestions, timeTakenSeconds, answersSubmitted, answers, isDisqualified, disqualificationReason } = req.body;
     const contestId = req.params.id;
     const studentId = req.user.id;
 
@@ -606,14 +606,16 @@ exports.submitContestResult = async (req, res, next) => {
         timeTakenSeconds,
         answersSubmitted: answersSubmitted || 0,
         answers: answers || {},
+        isDisqualified: isDisqualified || false,
+        disqualificationReason: disqualificationReason || '',
         submittedAt: new Date()
       },
       { upsert: true, new: true, runValidators: true }
     );
 
-    // Fetch top 3 and emit live updates to the contest room
+    // Fetch top 3 and emit live updates to the contest room (exclude disqualified students)
     try {
-      const top3 = await ContestResult.find({ contest: contestId })
+      const top3 = await ContestResult.find({ contest: contestId, isDisqualified: { $ne: true } })
         .sort({ answersSubmitted: -1, updatedAt: 1 })
         .limit(3)
         .populate('student', 'name')
@@ -648,8 +650,10 @@ exports.getContestResult = async (req, res, next) => {
       .populate('student', 'name')
       .lean();
 
-    // Sort: score desc, timeTakenSeconds asc
+    // Sort: score desc, timeTakenSeconds asc (disqualified to the bottom)
     results.sort((a, b) => {
+      if (a.isDisqualified && !b.isDisqualified) return 1;
+      if (!a.isDisqualified && b.isDisqualified) return -1;
       if (b.score !== a.score) {
         return b.score - a.score;
       }
@@ -662,6 +666,12 @@ exports.getContestResult = async (req, res, next) => {
     let currentRank = 0;
 
     const rankedResults = results.map((resItem, index) => {
+      if (resItem.isDisqualified) {
+        return {
+          ...resItem,
+          rank: 'DQ'
+        };
+      }
       if (resItem.score !== lastScore || resItem.timeTakenSeconds !== lastTime) {
         currentRank = index + 1;
       }
@@ -682,12 +692,14 @@ exports.getContestResult = async (req, res, next) => {
         totalQuestions: userResult.totalQuestions,
         percentage: userResult.totalQuestions > 0 ? Math.round((userResult.score / userResult.totalQuestions) * 100) : 0,
         rank: userResult.rank,
-        timeTakenSeconds: userResult.timeTakenSeconds
+        timeTakenSeconds: userResult.timeTakenSeconds,
+        isDisqualified: userResult.isDisqualified || false,
+        disqualificationReason: userResult.disqualificationReason || ''
       } : null,
       leaderboard: {
-        first: rankedResults[0]?.student?.name || '—',
-        second: rankedResults[1]?.student?.name || '—',
-        third: rankedResults[2]?.student?.name || '—'
+        first: rankedResults.find(r => !r.isDisqualified)?.student?.name || '—',
+        second: rankedResults.filter(r => !r.isDisqualified)[1]?.student?.name || '—',
+        third: rankedResults.filter(r => !r.isDisqualified)[2]?.student?.name || '—'
       }
     }, 'Contest results fetched successfully');
   } catch (err) {
@@ -833,6 +845,8 @@ exports.getMyRating = async (req, res, next) => {
       // Real standings for this contest.
       const contestResults = await ContestResult.find({ contest: contest._id }).lean();
       contestResults.sort((a, b) => {
+        if (a.isDisqualified && !b.isDisqualified) return 1;
+        if (!a.isDisqualified && b.isDisqualified) return -1;
         if (b.score !== a.score) return b.score - a.score;
         return a.timeTakenSeconds - b.timeTakenSeconds;
       });

@@ -33,6 +33,14 @@ const contestResultSchema = new mongoose.Schema(
     answers: {
       type: mongoose.Schema.Types.Mixed,
       default: {}
+    },
+    isDisqualified: {
+      type: Boolean,
+      default: false
+    },
+    disqualificationReason: {
+      type: String,
+      default: ''
     }
   },
   { timestamps: { createdAt: 'submittedAt', updatedAt: 'updatedAt' } }

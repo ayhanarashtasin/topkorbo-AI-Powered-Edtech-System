@@ -96,8 +96,9 @@ export default function IeltsWritingPractice() {
                 creator: set.creator?.name || 'Educator',
                 createdAt: set.createdAt,
                 promptTitle: 'Writing Task 1',
-                promptText: set.task1.type === 'text' ? set.task1.textPrompt : 'PDF Document prompt (see viewer)',
+                promptText: set.task1.type === 'text' ? set.task1.textPrompt : (set.task1.type === 'image' ? 'Image Prompt (see below)' : 'PDF Document prompt (see viewer)'),
                 pdfUrl: set.task1.type === 'pdf' ? set.task1.pdfUrl : null,
+                imageUrl: set.task1.type === 'image' ? set.task1.imageUrl : null,
                 minWords: 150,
                 modelAnswer: 'This is a student-submitted task. Band-9 model answer is not available.',
               });
@@ -110,8 +111,9 @@ export default function IeltsWritingPractice() {
                 creator: set.creator?.name || 'Educator',
                 createdAt: set.createdAt,
                 promptTitle: 'Writing Task 2',
-                promptText: set.task2.type === 'text' ? set.task2.textPrompt : 'PDF Document prompt (see viewer)',
+                promptText: set.task2.type === 'text' ? set.task2.textPrompt : (set.task2.type === 'image' ? 'Image Prompt (see below)' : 'PDF Document prompt (see viewer)'),
                 pdfUrl: set.task2.type === 'pdf' ? set.task2.pdfUrl : null,
+                imageUrl: set.task2.type === 'image' ? set.task2.imageUrl : null,
                 minWords: 250,
                 modelAnswer: 'This is a student-submitted task. Band-9 model answer is not available.',
               });
@@ -229,23 +231,33 @@ export default function IeltsWritingPractice() {
                   </button>
                 </div>
 
-                {/* Prompt box */}
-                <div className="ielts-writing-prompt-card">
-                  <h4>{selectedSet.promptTitle} ({selectedSet.taskType})</h4>
-                  {selectedSet.pdfUrl ? (
-                    <div className="ielts-practice-pdf-container" style={{ marginTop: '12px' }}>
-                      <iframe 
-                        src={getFullFileUrl(selectedSet.pdfUrl)} 
-                        width="100%" 
-                        height="500px" 
-                        style={{ border: 'none', borderRadius: '12px' }} 
-                        title="Writing Task PDF Prompt"
-                      />
-                    </div>
-                  ) : (
-                    <p style={{ margin: 0, lineHeight: '1.6' }}>{selectedSet.promptText}</p>
-                  )}
-                </div>
+                 {/* Prompt box */}
+                 <div className="ielts-writing-prompt-card">
+                   <h4>{selectedSet.promptTitle} ({selectedSet.taskType})</h4>
+                   {selectedSet.pdfUrl && (
+                     <div className="ielts-practice-pdf-container" style={{ marginTop: '12px' }}>
+                       <iframe 
+                         src={getFullFileUrl(selectedSet.pdfUrl)} 
+                         width="100%" 
+                         height="500px" 
+                         style={{ border: 'none', borderRadius: '12px' }} 
+                         title="Writing Task PDF Prompt"
+                       />
+                     </div>
+                   )}
+                   {selectedSet.imageUrl && (
+                     <div className="ielts-practice-image-container" style={{ marginTop: '12px', textAlign: 'center' }}>
+                       <img 
+                         src={getFullFileUrl(selectedSet.imageUrl)} 
+                         alt="Writing Task Image Prompt"
+                         style={{ maxWidth: '100%', maxHeight: '450px', borderRadius: '12px', border: '1px solid rgba(192, 133, 82, 0.15)' }} 
+                       />
+                     </div>
+                   )}
+                   {!selectedSet.pdfUrl && !selectedSet.imageUrl && (
+                     <p style={{ margin: 0, lineHeight: '1.6' }}>{selectedSet.promptText}</p>
+                   )}
+                 </div>
 
                 {/* Editor Textarea */}
                 <div className="ielts-writing-textarea-container">

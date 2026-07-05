@@ -891,32 +891,58 @@ export default function Contests() {
               <h2>{language === 'en' ? 'Contest Results' : 'কনটেস্টের ফলাফল'}</h2>
             </div>
 
-            <div className="contest-metrics-grid">
-              <div className="contest-metric-item score">
-                <span className="metric-label">{language === 'en' ? 'Marks Obtained' : 'প্রাপ্ত নম্বর'}</span>
-                <strong className="metric-val">
-                  {selectedResult.userResult ? `${selectedResult.userResult.score} / ${selectedResult.userResult.totalQuestions}` : '—'}
-                </strong>
+            {selectedResult.userResult?.isDisqualified ? (
+              <div 
+                style={{
+                  background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
+                  border: '1.5px solid #ef4444',
+                  borderRadius: '16px',
+                  padding: '24px 20px',
+                  textAlign: 'center',
+                  marginBottom: '24px',
+                  color: '#991b1b',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)'
+                }}
+              >
+                <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}>⚠️</div>
+                <h3 style={{ margin: '0 0 8px 0', fontWeight: '800', fontSize: '1.2rem', color: '#991b1b' }}>
+                  {language === 'en' ? 'Disqualified' : 'অযোগ্য ঘোষিত'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.92rem', color: '#b91c1c', fontWeight: '600', lineHeight: '1.5' }}>
+                  {language === 'en' 
+                    ? `You were disqualified from this contest: ${selectedResult.userResult.disqualificationReason}`
+                    : `কনটেস্ট থেকে আপনাকে অযোগ্য ঘোষণা করা হয়েছে: ${selectedResult.userResult.disqualificationReason}`
+                  }
+                </p>
               </div>
-              <div className="contest-metric-item percentage">
-                <span className="metric-label">{language === 'en' ? 'Percentage' : 'শতকরা হার'}</span>
-                <strong className="metric-val">
-                  {selectedResult.userResult ? `${selectedResult.userResult.percentage}%` : '—'}
-                </strong>
+            ) : (
+              <div className="contest-metrics-grid">
+                <div className="contest-metric-item score">
+                  <span className="metric-label">{language === 'en' ? 'Marks Obtained' : 'প্রাপ্ত নম্বর'}</span>
+                  <strong className="metric-val">
+                    {selectedResult.userResult ? `${selectedResult.userResult.score} / ${selectedResult.userResult.totalQuestions}` : '—'}
+                  </strong>
+                </div>
+                <div className="contest-metric-item percentage">
+                  <span className="metric-label">{language === 'en' ? 'Percentage' : 'শতকরা হার'}</span>
+                  <strong className="metric-val">
+                    {selectedResult.userResult ? `${selectedResult.userResult.percentage}%` : '—'}
+                  </strong>
+                </div>
+                <div className="contest-metric-item rank">
+                  <span className="metric-label">{language === 'en' ? 'Rank' : 'র‍্যাংক/অবস্থান'}</span>
+                  <strong className="metric-val">
+                    {selectedResult.userResult ? `# ${selectedResult.userResult.rank}` : '—'}
+                  </strong>
+                </div>
+                <div className="contest-metric-item time">
+                  <span className="metric-label">{language === 'en' ? 'Time Taken' : 'ব্যয়িত সময়'}</span>
+                  <strong className="metric-val">
+                    {selectedResult.userResult ? `${Math.floor(selectedResult.userResult.timeTakenSeconds / 60)}m ${selectedResult.userResult.timeTakenSeconds % 60}s` : '—'}
+                  </strong>
+                </div>
               </div>
-              <div className="contest-metric-item rank">
-                <span className="metric-label">{language === 'en' ? 'Rank' : 'র‍্যাংক/অবস্থান'}</span>
-                <strong className="metric-val">
-                  {selectedResult.userResult ? `# ${selectedResult.userResult.rank}` : '—'}
-                </strong>
-              </div>
-              <div className="contest-metric-item time">
-                <span className="metric-label">{language === 'en' ? 'Time Taken' : 'ব্যয়িত সময়'}</span>
-                <strong className="metric-val">
-                  {selectedResult.userResult ? `${Math.floor(selectedResult.userResult.timeTakenSeconds / 60)}m ${selectedResult.userResult.timeTakenSeconds % 60}s` : '—'}
-                </strong>
-              </div>
-            </div>
+            )}
 
             <div className="contest-leaderboard-section">
               <h3>

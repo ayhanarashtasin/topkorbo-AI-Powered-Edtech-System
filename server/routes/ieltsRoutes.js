@@ -6,6 +6,85 @@ const multer = require('multer');
 const auth = require('../middleware/auth');
 const IeltsListeningSet = require('../models/IeltsListeningSet');
 const IeltsWritingSet = require('../models/IeltsWritingSet');
+const Groq = require('groq-sdk');
+const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.LLM_API_KEY });
+const VISION_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+const TEXT_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+
+async function generateCleanPrompt(type, filePath, textContent) {
+  if (type === 'text') {
+    return textContent ? textContent.trim() : '';
+  }
+
+  if (type === 'pdf') {
+    try {
+      const { extractPdfPages } = require('../services/pdfService');
+      const buffer = fs.readFileSync(filePath);
+      const pages = await extractPdfPages(buffer);
+      const rawText = pages.map(p => p.text).join('\n').trim();
+
+      if (!rawText) {
+        return 'Empty PDF document. Could not extract text.';
+      }
+
+      const prompt = `Format the following extracted raw text of an IELTS writing question set into a clean, professional, and well-structured written question format. Remove any irrelevant OCR artifacts, page numbers, or headers. Provide only the clean, complete question text itself:\n\n${rawText}`;
+
+      const completion = await groqClient.chat.completions.create({
+        model: TEXT_MODEL,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: 'You are an IELTS exam compiler. Format raw extracted text into clean, typed written IELTS exam prompts.' },
+          { role: 'user', content: prompt }
+        ]
+      });
+
+      return completion?.choices?.[0]?.message?.content?.trim() || rawText;
+    } catch (err) {
+      console.error('Error generating clean prompt from PDF:', err);
+      return 'PDF Document Prompt';
+    }
+  }
+
+  if (type === 'image') {
+    try {
+      const imageBuffer = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      let mimeType = 'image/jpeg';
+      if (ext === '.png') mimeType = 'image/png';
+      else if (ext === '.webp') mimeType = 'image/webp';
+      else if (ext === '.gif') mimeType = 'image/gif';
+
+      const base64Image = imageBuffer.toString('base64');
+
+      const completion = await groqClient.chat.completions.create({
+        model: VISION_MODEL,
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Transcribe and rewrite this IELTS writing prompt image into a clean, typed written/described version of the question. Describe any charts, graphs, maps, diagrams, or pie charts in clean textual detail as if it were a typed description, so it can be easily understood in text format. Do not use generic placeholders; output a clean, self-contained typed prompt version of the question.' },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ]
+      });
+
+      return completion?.choices?.[0]?.message?.content?.trim() || 'Image Document Prompt';
+    } catch (err) {
+      console.error('Error generating clean prompt from image:', err);
+      return 'Image Document Prompt';
+    }
+  }
+
+  return '';
+}
+
 
 // Configure Multer storage for IELTS audio and pdfs
 const UPLOAD_ROOT = path.resolve(__dirname, '..', 'uploads', 'ielts');
@@ -29,11 +108,16 @@ const storage = multer.diskStorage({
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExts = ['.pdf', '.mp3', '.wav', '.ogg', '.m4a'];
-  if (allowedExts.includes(ext) || file.mimetype.startsWith('audio/') || file.mimetype === 'application/pdf') {
+  const allowedExts = ['.pdf', '.mp3', '.wav', '.ogg', '.m4a', '.png', '.jpg', '.jpeg', '.webp', '.gif'];
+  if (
+    allowedExts.includes(ext) ||
+    file.mimetype.startsWith('audio/') ||
+    file.mimetype === 'application/pdf' ||
+    file.mimetype.startsWith('image/')
+  ) {
     return cb(null, true);
   }
-  cb(new Error('Only PDF and Audio files (.mp3, .wav, .ogg, .m4a) are allowed.'));
+  cb(new Error('Only PDF, Audio, and Image files (.pdf, .mp3, .wav, .ogg, .m4a, .png, .jpg, .jpeg, .webp, .gif) are allowed.'));
 };
 
 const upload = multer({
@@ -79,7 +163,7 @@ router.post('/listening/upload', auth, upload.any(), async (req, res) => {
         const fileType = match[2]; // 'audio' or 'pdf'
         // HTTP URL format: /uploads/ielts/:userId/:filename
         const fileUrl = `/uploads/ielts/${userId}/${file.filename}`;
-        
+
         if (fileType === 'audio') {
           sectionsMap[secNum].audioUrl = fileUrl;
         } else if (fileType === 'pdf') {
@@ -164,8 +248,8 @@ router.get('/teachers', auth, async (req, res) => {
       interestedToGuide: 'IELTS',
       isBanned: { $ne: true }
     })
-    .select('name avatar email interestedToGuide universityName department currentYearSemester admissionAchievement collegeName hscBatch')
-    .lean();
+      .select('name avatar email interestedToGuide universityName department currentYearSemester admissionAchievement collegeName hscBatch')
+      .lean();
 
     const teacherIds = teachers.map(t => t._id);
     const ieltsRecords = await IeltsTeacher.find({ userId: { $in: teacherIds } }).lean();
@@ -262,7 +346,7 @@ router.get('/appointments', auth, async (req, res) => {
         .populate('teacher', 'name email avatar')
         .sort({ createdAt: -1 })
         .lean();
-      
+
       // Also populate teacher ieltsScore
       const teacherIds = appointments.map(app => app.teacher?._id).filter(Boolean);
       const ieltsRecords = await IeltsTeacher.find({ userId: { $in: teacherIds } }).select('userId ieltsScore universityName department').lean();
@@ -349,33 +433,51 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
       return errorResponse(res, 'Please provide a name for the question set.');
     }
 
-    if (!['pdf', 'text'].includes(task1Type) || !['pdf', 'text'].includes(task2Type)) {
+    if (!['pdf', 'text', 'image'].includes(task1Type) || !['pdf', 'text', 'image'].includes(task2Type)) {
       return errorResponse(res, 'Invalid task upload types.');
     }
 
     const files = req.files || [];
     let task1PdfUrl = '';
     let task2PdfUrl = '';
+    let task1ImageUrl = '';
+    let task2ImageUrl = '';
+    let task1FilePath = '';
+    let task2FilePath = '';
     const userId = req.user.id;
 
     files.forEach(file => {
       if (file.fieldname === 'task1Pdf') {
         task1PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        task1FilePath = file.path;
       } else if (file.fieldname === 'task2Pdf') {
         task2PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        task2FilePath = file.path;
+      } else if (file.fieldname === 'task1Image') {
+        task1ImageUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        task1FilePath = file.path;
+      } else if (file.fieldname === 'task2Image') {
+        task2ImageUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        task2FilePath = file.path;
       }
     });
 
     // Validate Task 1
     if (task1Type === 'pdf' && !task1PdfUrl) {
       files.forEach(file => {
-        try { fs.unlinkSync(file.path); } catch (e) {}
+        try { fs.unlinkSync(file.path); } catch (e) { }
       });
       return errorResponse(res, 'Please upload a PDF file for Task 1.');
     }
+    if (task1Type === 'image' && !task1ImageUrl) {
+      files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) { }
+      });
+      return errorResponse(res, 'Please upload an image file for Task 1.');
+    }
     if (task1Type === 'text' && (!task1Text || !task1Text.trim())) {
       files.forEach(file => {
-        try { fs.unlinkSync(file.path); } catch (e) {}
+        try { fs.unlinkSync(file.path); } catch (e) { }
       });
       return errorResponse(res, 'Please enter a text prompt for Task 1.');
     }
@@ -383,16 +485,25 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
     // Validate Task 2
     if (task2Type === 'pdf' && !task2PdfUrl) {
       files.forEach(file => {
-        try { fs.unlinkSync(file.path); } catch (e) {}
+        try { fs.unlinkSync(file.path); } catch (e) { }
       });
       return errorResponse(res, 'Please upload a PDF file for Task 2.');
     }
+    if (task2Type === 'image' && !task2ImageUrl) {
+      files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) { }
+      });
+      return errorResponse(res, 'Please upload an image file for Task 2.');
+    }
     if (task2Type === 'text' && (!task2Text || !task2Text.trim())) {
       files.forEach(file => {
-        try { fs.unlinkSync(file.path); } catch (e) {}
+        try { fs.unlinkSync(file.path); } catch (e) { }
       });
       return errorResponse(res, 'Please enter a text prompt for Task 2.');
     }
+
+    const cleanTask1Prompt = await generateCleanPrompt(task1Type, task1FilePath, task1Text);
+    const cleanTask2Prompt = await generateCleanPrompt(task2Type, task2FilePath, task2Text);
 
     const newWritingSet = new IeltsWritingSet({
       creator: userId,
@@ -400,12 +511,16 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
       task1: {
         type: task1Type,
         pdfUrl: task1Type === 'pdf' ? task1PdfUrl : undefined,
-        textPrompt: task1Type === 'text' ? task1Text.trim() : undefined
+        imageUrl: task1Type === 'image' ? task1ImageUrl : undefined,
+        textPrompt: task1Type === 'text' ? task1Text.trim() : undefined,
+        cleanPrompt: cleanTask1Prompt
       },
       task2: {
         type: task2Type,
         pdfUrl: task2Type === 'pdf' ? task2PdfUrl : undefined,
-        textPrompt: task2Type === 'text' ? task2Text.trim() : undefined
+        imageUrl: task2Type === 'image' ? task2ImageUrl : undefined,
+        textPrompt: task2Type === 'text' ? task2Text.trim() : undefined,
+        cleanPrompt: cleanTask2Prompt
       }
     });
 

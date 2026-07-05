@@ -1,3 +1,10 @@
+.no-copy-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
 .exam-room-container {
     min-height: 100vh;
     background-color: #f2ebe0;

@@ -13,26 +13,38 @@ const ieltsWritingSetSchema = new mongoose.Schema({
   task1: {
     type: {
       type: String,
-      enum: ['pdf', 'text'],
+      enum: ['pdf', 'text', 'image'],
       required: true
     },
     pdfUrl: {
       type: String
     },
+    imageUrl: {
+      type: String
+    },
     textPrompt: {
+      type: String
+    },
+    cleanPrompt: {
       type: String
     }
   },
   task2: {
     type: {
       type: String,
-      enum: ['pdf', 'text'],
+      enum: ['pdf', 'text', 'image'],
       required: true
     },
     pdfUrl: {
       type: String
     },
+    imageUrl: {
+      type: String
+    },
     textPrompt: {
+      type: String
+    },
+    cleanPrompt: {
       type: String
     }
   },
