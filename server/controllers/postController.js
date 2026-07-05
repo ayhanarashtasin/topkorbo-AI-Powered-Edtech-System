@@ -26,20 +26,32 @@ function computeScore(post) {
   return (likes + 3 * comments) / Math.pow(hours, 1.5);
 }
 
-async function attachUserReactions(docs, userId, targetType) {
-  if (!userId || !docs || docs.length === 0) return docs;
-  const ids = docs.map(d => d._id);
-  const myReactions = await Reaction.find({
-    targetType,
-    target: { $in: ids },
-    user: userId
-  }).lean();
-  const reactionMap = {};
-  for (const r of myReactions) {
-    reactionMap[String(r.target)] = r.type;
+async function attachUserPostState(docs, userId, options = {}) {
+  if (!docs || docs.length === 0) return docs;
+  if (!userId) {
+    for (const d of docs) {
+      d.userReaction = null;
+      d.bookmarked = false;
+    }
+    return docs;
   }
+
+  const ids = docs.map((d) => d._id);
+  const [myReactions, me] = await Promise.all([
+    Reaction.find({
+      targetType: 'post',
+      target: { $in: ids },
+      user: userId
+    }).lean(),
+    options.allBookmarked ? null : User.findById(userId).select('bookmarks').lean()
+  ]);
+
+  const reactionMap = {};
+  for (const r of myReactions) reactionMap[String(r.target)] = r.type;
+  const bookmarkedIds = new Set((me?.bookmarks || []).map((id) => String(id)));
   for (const d of docs) {
     d.userReaction = reactionMap[String(d._id)] || null;
+    d.bookmarked = options.allBookmarked || bookmarkedIds.has(String(d._id));
   }
   return docs;
 }
@@ -179,7 +191,7 @@ const postController = {
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
 
-      await attachUserReactions(posts, req.user?.id, 'post');
+      await attachUserPostState(posts, req.user?.id);
 
       let nextCursor = null;
       if (posts.length > limit) {
@@ -212,7 +224,7 @@ const postController = {
         }
       }
       
-      await attachUserReactions([post], req.user?.id, 'post');
+      await attachUserPostState([post], req.user?.id);
       
       return res.json({ success: true, data: post });
     } catch (err) {
@@ -336,7 +348,7 @@ const postController = {
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
         
-      await attachUserReactions(posts, req.user?.id, 'post');
+      await attachUserPostState(posts, req.user?.id);
       
       let nextCursor = null;
       if (posts.length > limit) {
@@ -363,7 +375,7 @@ const postController = {
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
         
-      await attachUserReactions(posts, req.user?.id, 'post');
+      await attachUserPostState(posts, req.user?.id, { allBookmarked: true });
       
       return res.json({ success: true, data: posts });
     } catch (err) {

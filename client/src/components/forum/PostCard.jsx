@@ -40,14 +40,8 @@ export default function PostCard({ post, onDelete, detail = false }) {
   // Local state for the reaction counts / which one the current user picked
   // and the bookmark flag — all updated optimistically for snappy UI.
   const [counts, setCounts] = useState(post.reactionsCount || { like: 0, love: 0 });
-  const [myReaction, setMyReaction] = useState(null);
+  const [myReaction, setMyReaction] = useState(post.userReaction || null);
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked);
-
-  // Re-sync the counts whenever the server's authoritative counts change
-  // (e.g. another user's reaction arrived over the socket).
-  useEffect(() => {
-    setCounts(post.reactionsCount || { like: 0, love: 0 });
-  }, [post.reactionsCount]);
 
   // Subscribe to live reaction updates for this post.
   const unsubRef = useRef(null);
@@ -62,31 +56,6 @@ export default function PostCard({ post, onDelete, detail = false }) {
     unsubRef.current = off;
     return () => off && off();
   }, [post?._id, subscribeReaction, user]);
-
-  // Fetch the current bookmark state for this post via a direct toggle call.
-  // We use a direct fetch (rather than `toggleBookmark`) so a sync from the
-  // bookmarks page also reflects here — the server is the source of truth.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const token = localStorage.getItem('topkorbo_token');
-        if (!token) return;
-        const r = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/posts/${post._id}/bookmark`,
-          { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (cancelled) return;
-        if (r.ok) {
-          const j = await r.json();
-          setBookmarked(!!j.data?.bookmarked);
-        }
-      } catch {
-        // Best-effort — network errors during the initial bookmark check are ignored.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [post._id]);
 
   async function react(type) {
     if (busy) return;
