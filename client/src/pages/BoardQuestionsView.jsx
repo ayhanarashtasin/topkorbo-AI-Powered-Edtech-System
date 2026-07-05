@@ -14,6 +14,7 @@ import {
   HiPaperClip
 } from 'react-icons/hi';
 import katex from 'katex';
+import { sanitizeHtml } from '../utils/safeHtml';
 import 'katex/dist/katex.min.css';
 import { buildInlinePayload, submitAttempt as saveInlineAttempt } from '../services/practiceApi';
 import './BoardQuestionsView.css';
@@ -267,7 +268,7 @@ export default function BoardQuestionsView() {
       processed = processed.replace(`%%MATH_BLOCK_${index}%%`, () => renderedMath);
     });
 
-    return { __html: processed };
+    return { __html: sanitizeHtml(processed) };
   };
 
   const handleSendFollowUp = async () => {
@@ -458,7 +459,7 @@ export default function BoardQuestionsView() {
       catch (e) { return match; }
     });
 
-    return { __html: renderedText };
+    return { __html: sanitizeHtml(renderedText) };
   };
 
   const getOptionPrefix = (index) => {

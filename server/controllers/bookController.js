@@ -571,10 +571,24 @@ exports.streamChapterPdf = async (req, res, next) => {
 
     const book = await Book.findOne(
       { _id: req.params.id, 'chapters._id': req.params.cid },
-      { 'chapters.$': 1 }
+      { 'chapters.$': 1, isPublished: 1, uploadedBy: 1 }
     ).lean();
     if (!book || !book.chapters || book.chapters.length === 0) {
       return ApiResponse.error(res, 'Book or Chapter not found', 404);
+    }
+
+    // Access control — the raw PDF stream must enforce the same rules as the
+    // chapter-metadata endpoint (previously it was wide open to anyone with an
+    // id): unpublished books are visible only to their owner or an admin, and
+    // free-plan book-open caps apply to everyone else.
+    const isOwner = book.uploadedBy && String(book.uploadedBy) === String(req.user.id);
+    const isAdmin = req.user.role === 'admin';
+    if (!book.isPublished && !isOwner && !isAdmin) {
+      return ApiResponse.error(res, 'Book or Chapter not found', 404);
+    }
+    if (!isOwner && !isAdmin) {
+      const reader = await planService.loadUser(req.user.id);
+      await planService.assertBookOpenable(reader, req.params.id);
     }
 
     const fileUrl = book.chapters[0].fileUrl;

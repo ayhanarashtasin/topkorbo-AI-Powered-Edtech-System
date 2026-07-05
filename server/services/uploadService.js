@@ -39,7 +39,9 @@ async function uploadImage(file, userId, folder = 'topkorbo/forum') {
   }
 
   // Local fallback — write to /uploads/forum/<userId>/<timestamp>-<rand>.<ext>
-  const ext = (path.extname(file.originalname || '') || mimeToExt(file.mimetype) || '.jpg')
+  // Derive the extension from the *detected* content type (set by
+  // verifyImageBytes), never from the client-supplied filename/mimetype.
+  const ext = (file.detectedExt || mimeToExt(file.detectedMime) || mimeToExt(file.mimetype) || '.jpg')
     .toLowerCase()
     .replace(/[^a-z0-9.]/g, '');
   const userDir = path.join(LOCAL_ROOT, String(userId || 'anon'));

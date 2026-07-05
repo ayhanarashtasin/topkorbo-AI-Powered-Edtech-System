@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { HiArrowLeft, HiAcademicCap, HiCalendar, HiEye, HiSparkles, HiX, HiPaperAirplane, HiPaperClip } from 'react-icons/hi';
 import { useLanguage } from '../hooks/useLanguage';
 import katex from 'katex';
+import { sanitizeHtml } from '../utils/safeHtml';
 import 'katex/dist/katex.min.css';
 import './VarsityWrittenView.css';
 import './MockTestExam.css';
@@ -88,7 +89,7 @@ const renderMarkdownWithMath = (text) => {
     processed = processed.replace(`%%MATH_BLOCK_${index}%%`, () => renderedMath);
   });
 
-  return { __html: processed };
+  return { __html: sanitizeHtml(processed) };
 };
 
 const VarsityWrittenView = () => {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { notifyPaywall } from '../utils/paywall';
 import katex from 'katex';
+import { sanitizeHtml } from '../utils/safeHtml';
 import 'katex/dist/katex.min.css';
 import {
   HiAcademicCap,
@@ -155,7 +156,7 @@ const renderMath = (text) => {
       catch { return match; }
     })
     .replace(/\n/g, '<br />');
-  return { __html: rendered };
+  return { __html: sanitizeHtml(rendered) };
 };
 
 export default function AIBattle() {

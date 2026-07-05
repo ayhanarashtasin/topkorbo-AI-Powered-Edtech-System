@@ -36,6 +36,15 @@ const paymentSchema = new mongoose.Schema({
     enum: ['pending', 'valid', 'failed', 'cancelled'],
     default: 'pending'
   },
+  // The SSLCommerz val_id that validated this transaction. Unique so the same
+  // gateway validation cannot be replayed against a second local payment row.
+  valId: {
+    type: String,
+    default: null,
+    unique: true,
+    sparse: true,
+    index: true
+  },
   // SSLCommerz validation payload (val_id, bank_tran_id, card_type, etc.)
   gatewayData: {
     type: mongoose.Schema.Types.Mixed,

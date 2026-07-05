@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { avatarUpload } = require('../middleware/forumUpload');
+const { avatarUpload, verifyImageBytes } = require('../middleware/forumUpload');
 const userController = require('../controllers/userController');
 const postController = require('../controllers/postController');
 
 router.get('/me', auth, userController.me);
-router.patch('/me', auth, avatarUpload.single('avatar'), userController.updateMe);
+router.patch('/me', auth, avatarUpload.single('avatar'), verifyImageBytes, userController.updateMe);
 
 // Follow
 router.post('/:id/follow', auth, userController.follow);

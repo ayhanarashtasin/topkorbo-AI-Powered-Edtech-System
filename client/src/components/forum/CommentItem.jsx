@@ -4,6 +4,7 @@ import { useForum } from '../../context/ForumContext';
 import UserAvatar from './UserAvatar';
 import ReportModal from './ReportModal';
 import forumApi from '../../services/forumApi';
+import { sanitizeHtml } from '../../utils/safeHtml';
 
 function formatRelative(date) {
   if (!date) return '';
@@ -136,7 +137,7 @@ export default function CommentItem({
         ) : (
           <div
             className="forum-comment__text"
-            dangerouslySetInnerHTML={{ __html: comment.contentHtml || '' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(comment.contentHtml || '') }}
           />
         )}
 

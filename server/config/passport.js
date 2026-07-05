@@ -18,20 +18,30 @@ passport.use(new GoogleStrategy({
   },
   async (req, accessToken, refreshToken, profile, done) => {
     try {
-      // Parse state parameter which can be JSON or a simple string for role
-      let role = 'student';
+      // SECURITY: role is client-supplied via the OAuth `state` parameter and can
+      // be forged. Only *self-service* roles may ever be assigned at signup.
+      // Privileged roles ('teacher', 'admin') are server-owned and can only be
+      // granted through the admin-approved promotion workflow (see
+      // authController.getMe -> TeacherApplication, and admin routes). A 'tutor'
+      // is an unprivileged applicant who becomes a 'teacher' only after approval.
+      const SELF_SIGNUP_ROLES = new Set(['student', 'tutor']);
+
+      let requestedRole = 'student';
       let action = 'signup';
 
       if (req.query.state) {
         try {
           const parsedState = JSON.parse(req.query.state);
-          role = parsedState.role || 'student';
+          requestedRole = parsedState.role || 'student';
           action = parsedState.action || 'signup';
         } catch (e) {
           // If not valid JSON, treat it as the raw role string for backwards compatibility
-          role = req.query.state;
+          requestedRole = req.query.state;
         }
       }
+
+      // Never trust a privileged role from the client. Fall back to 'student'.
+      const role = SELF_SIGNUP_ROLES.has(requestedRole) ? requestedRole : 'student';
       
       const email = profile.emails[0].value;
 

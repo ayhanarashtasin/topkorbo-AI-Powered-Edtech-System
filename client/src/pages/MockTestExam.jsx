@@ -17,6 +17,7 @@ import {
 } from "react-icons/hi";
 import katex from "katex";
 import "katex/dist/katex.min.css";
+import { sanitizeHtml } from "../utils/safeHtml";
 import Confetti from "react-confetti";
 import toast from "react-hot-toast";
 import { createMockTestAttempt } from "../services/mockTestApi";
@@ -1278,7 +1279,8 @@ export default function MockTestExam() {
         }
       });
 
-    return { __html: renderedText };
+    // Non-math text is interpolated raw, so sanitize before injecting as HTML.
+    return { __html: sanitizeHtml(renderedText) };
   };
 
   const renderMarkdownWithMath = (text) => {
@@ -1333,7 +1335,8 @@ export default function MockTestExam() {
       processed = processed.replace(`%%MATH_BLOCK_${index}%%`, () => renderedMath);
     });
 
-    return { __html: processed };
+    // Markdown + interpolated text is built as a raw string, so sanitize it.
+    return { __html: sanitizeHtml(processed) };
   };
 
   const handleSendFollowUp = async () => {
@@ -2575,7 +2578,7 @@ export default function MockTestExam() {
                                   className="chat-bubble-text"
                                   dangerouslySetInnerHTML={
                                     isUser
-                                      ? { __html: msg.content.replace(/\n/g, '<br/>') }
+                                      ? { __html: sanitizeHtml(msg.content.replace(/\n/g, '<br/>')) }
                                       : renderMarkdownWithMath(msg.content)
                                   }
                                 />

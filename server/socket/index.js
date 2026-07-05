@@ -1,11 +1,37 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 
 let io = null;
 
+// Same allowlist strategy as the REST CORS config in server.js.
+function buildOriginAllowlist() {
+  return [
+    process.env.FRONTEND_URL,
+    ...(process.env.CORS_ORIGINS || '').split(','),
+    ...(process.env.NODE_ENV === 'production'
+      ? []
+      : ['http://localhost:5173', 'http://127.0.0.1:5173'])
+  ]
+    .map((s) => (s || '').trim())
+    .filter(Boolean);
+}
+
 function initSocket(httpServer) {
+  const allowlist = buildOriginAllowlist();
   io = new Server(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: {
+      origin(origin, cb) {
+        // Enforce the allowlist when configured; otherwise allow all so an
+        // unconfigured deploy keeps working (matches the REST CORS fallback).
+        if (!origin || allowlist.length === 0 || allowlist.includes(origin)) {
+          return cb(null, true);
+        }
+        return cb(new Error('Origin not allowed'));
+      },
+      methods: ['GET', 'POST'],
+      credentials: true
+    },
     pingTimeout: 30000,
     pingInterval: 25000
   });
@@ -46,9 +72,11 @@ function initSocket(httpServer) {
     });
 
     socket.on('join:contest', async (contestId) => {
-      console.log(`[Socket] User ${socket.userId} joining contest room: contest:${contestId}`);
-      if (contestId) {
-        socket.join(`contest:${String(contestId)}`);
+      // Validate the id before it reaches a Mongo query to avoid cast errors and
+      // query amplification from malformed/abusive room-join spam.
+      if (!contestId || !mongoose.isValidObjectId(contestId)) return;
+      socket.join(`contest:${String(contestId)}`);
+      {
         try {
           const ContestResult = require('../models/ContestResult');
           const top3 = await ContestResult.find({ contest: contestId, isDisqualified: { $ne: true } })

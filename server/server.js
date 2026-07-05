@@ -62,8 +62,16 @@ const bootstrapAdmin = require("./scripts/bootstrapAdmin");
 // Load Passport Configuration
 require("./config/passport");
 
+const { globalLimiter } = require("./middleware/rateLimiters");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Behind a single reverse proxy (Vercel/Render/Nginx) in production so that
+// req.ip and rate limiting reflect the real client, not the proxy.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
 // Dynamic API responses must always include a body. Browser revalidation can
 // otherwise turn JSON endpoints such as /api/auth/me into empty 304 responses,
@@ -89,9 +97,40 @@ if (!jwtSecret || PLACEHOLDER_JWT_SECRETS.has(jwtSecret)) {
 // Connect to MongoDB
 connectDB();
 
-// Middleware
+// CORS: restrict to an explicit allowlist in production. In development we
+// default to the local Vite origins. Configure additional origins via
+// CORS_ORIGINS (comma-separated) or FRONTEND_URL.
+const corsAllowlist = new Set(
+  [
+    process.env.FRONTEND_URL,
+    ...(process.env.CORS_ORIGINS || "").split(","),
+    ...(process.env.NODE_ENV === "production"
+      ? []
+      : ["http://localhost:5173", "http://127.0.0.1:5173"]),
+  ]
+    .map((s) => (s || "").trim())
+    .filter(Boolean),
+);
+
+if (process.env.NODE_ENV === "production" && corsAllowlist.size === 0) {
+  console.warn(
+    "⚠️  CORS: no FRONTEND_URL/CORS_ORIGINS configured in production — " +
+      "falling back to allow-all. Set CORS_ORIGINS to lock this down.",
+  );
+}
+
 app.use(
   cors({
+    origin(origin, cb) {
+      // Allow same-origin / non-browser requests (no Origin header).
+      if (!origin) return cb(null, true);
+      // When an allowlist is configured, enforce it strictly. When it is NOT
+      // configured, fall back to allow-all so an unconfigured deploy still works
+      // (a warning is logged above in production).
+      if (corsAllowlist.size === 0 || corsAllowlist.has(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
     exposedHeaders: [
       "Accept-Ranges",
       "Content-Encoding",
@@ -125,6 +164,22 @@ app.use("/api", (_req, res, next) => {
   next();
 });
 
+// Readiness gate: DB-backed API routes must fail cleanly with 503 (instead of
+// buffering/timing out) when Mongo is not connected. Liveness/health,
+// readiness, and payment gateway callbacks are exempt so they can still report
+// status and the gateway does not retry-storm.
+const DB_EXEMPT_PREFIXES = ["/api/health", "/api/ready", "/api/payments/"];
+app.use("/api", (req, res, next) => {
+  if (DB_EXEMPT_PREFIXES.some((p) => req.originalUrl.startsWith(p))) return next();
+  if (!connectDB.isDbReady()) {
+    return res.status(503).json({
+      success: false,
+      message: "Service temporarily unavailable — database not ready.",
+    });
+  }
+  next();
+});
+
 // Serve uploaded book PDFs
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -134,8 +189,19 @@ app.use(
     maxAge: "7d",
     etag: true,
     lastModified: true,
+    setHeaders: (res) => {
+      // Never let the browser MIME-sniff user-uploaded content into an
+      // executable/HTML context. Combined with magic-byte validation on upload,
+      // this closes the "upload an image that is actually HTML/JS" vector.
+      res.set("X-Content-Type-Options", "nosniff");
+      res.set("Content-Security-Policy", "default-src 'none'; sandbox");
+    },
   }),
 );
+
+// Global rate-limit backstop for the whole API surface. Route-level limiters
+// (auth, payments, AI, forum writes) add stricter caps on top of this.
+app.use("/api", globalLimiter);
 
 // Routes
 app.use("/api/landing", landingRoutes);
@@ -166,9 +232,22 @@ app.use("/api/search", searchRoutes);
 app.use("/api", moderationRoutes);
 app.use("/api/practice", practiceRoutes);
 
-// Health check
+// Liveness — the process is up (does not assert dependencies).
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "TopKorbo API is running 🚀" });
+});
+
+// Readiness — the process can serve DB-backed traffic. Load balancers should
+// route on this, not /health. Returns 503 until Mongo is connected.
+app.get("/api/ready", (req, res) => {
+  const ready = connectDB.isDbReady();
+  let payments = false;
+  try { require("sslcommerz-lts"); payments = true; } catch (_) { payments = false; }
+  return res.status(ready ? 200 : 503).json({
+    success: ready,
+    db: ready ? "connected" : "not_ready",
+    payments: payments ? "available" : "unavailable",
+  });
 });
 
 // Serve the built React app when the backend hosts production assets. The
@@ -205,14 +284,25 @@ app.get("*", (req, res, next) => {
 // Global error handler
 app.use(errorHandler);
 
-// Prevent crashes from unhandled errors
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION:", err.message);
-  console.error(err.stack);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error(" UNHANDLED REJECTION:", reason);
-});
+// A process that hit an uncaught exception / rejection is in an unknown, possibly
+// corrupt state. Log, then shut the HTTP server so a supervisor (pm2, systemd,
+// container orchestrator) can restart a clean process. Continuing to serve from
+// a poisoned process risks data corruption and silent failures.
+let shuttingDown = false;
+function fatalShutdown(label, err) {
+  console.error(`${label}:`, err && err.stack ? err.stack : err);
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    if (server) server.close(() => process.exit(1));
+  } catch (_) {
+    process.exit(1);
+  }
+  // Force-exit if graceful close hangs.
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+process.on("uncaughtException", (err) => fatalShutdown("UNCAUGHT EXCEPTION", err));
+process.on("unhandledRejection", (reason) => fatalShutdown("UNHANDLED REJECTION", reason));
 
 const httpServer = http.createServer(app);
 initSocket(httpServer);
@@ -224,43 +314,13 @@ const server = httpServer.listen(PORT, () => {
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`\nError: Port ${PORT} is already in use.`);
-    console.error(`💡 To fix this manually, you can run:`);
+    // Do NOT attempt to kill whatever owns the port — on a shared or production
+    // host that could terminate an unrelated service. Fail loudly and let the
+    // operator resolve the conflict.
     console.error(
-      `   Windows (PowerShell): Stop-Process -Id (Get-NetTCPConnection -LocalPort ${PORT}).OwningProcess -Force`,
+      `\nFATAL: Port ${PORT} is already in use. Stop the process using it, ` +
+        `or set a different PORT, then restart.`,
     );
-    console.error(`   Linux/macOS: kill -9 $(lsof -t -i:${PORT})`);
-    console.error(`\nAttempting to automatically free port ${PORT}...`);
-
-    try {
-      const { execSync } = require("child_process");
-      if (process.platform === "win32") {
-        const pid = execSync(
-          `powershell -Command "Get-NetTCPConnection -State Listen -LocalPort ${PORT} | Select-Object -First 1 -ExpandProperty OwningProcess"`,
-          { encoding: "utf8" },
-        ).trim();
-
-        if (pid && !isNaN(pid) && pid !== "0") {
-          console.log(
-            `Killing process with PID ${pid} occupying port ${PORT}...`,
-          );
-          execSync(`taskkill /F /PID ${pid}`);
-          console.log(`Port ${PORT} freed! Please restart the server.`);
-        } else {
-          console.log(
-            `Could not identify the listening process on port ${PORT}.`,
-          );
-        }
-      } else {
-        execSync(`kill -9 $(lsof -t -i:${PORT})`);
-        console.log(` Port ${PORT} freed! Please restart the server.`);
-      }
-    } catch (killError) {
-      console.error(
-        ` Could not automatically free port ${PORT}:`,
-        killError.message,
-      );
-    }
     process.exit(1);
   } else {
     throw err;

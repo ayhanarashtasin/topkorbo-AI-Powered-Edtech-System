@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { commentUpload } = require('../middleware/forumUpload');
+const { commentUpload, verifyImageBytes } = require('../middleware/forumUpload');
 const commentController = require('../controllers/commentController');
 
 // Comments nested under posts
@@ -12,6 +12,7 @@ postComments.post(
   auth,
   commentController.commentLimiter,
   commentUpload.array('images', 3),
+  verifyImageBytes,
   commentController.create
 );
 

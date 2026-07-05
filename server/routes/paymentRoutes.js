@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { paymentLimiter } = require('../middleware/rateLimiters');
 const paymentController = require('../controllers/paymentController');
 
 // Create a checkout session (authenticated user).
-router.post('/init', auth, paymentController.initPayment);
+router.post('/init', auth, paymentLimiter, paymentController.initPayment);
 
 // SSLCommerz callbacks — public (gateway/browser posts here, no bearer token).
 // The success/IPN paths re-validate every transaction against SSLCommerz

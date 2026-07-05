@@ -51,4 +51,10 @@ function redactUri(uri) {
   return uri.replace(/(mongodb(?:\+srv)?:\/\/[^:]+:)([^@]+)(@)/, '$1***$3');
 }
 
+/** True only when the connection is fully established (readyState === 1). */
+function isDbReady() {
+  return mongoose.connection.readyState === 1;
+}
+
 module.exports = connectDB;
+module.exports.isDbReady = isDbReady;

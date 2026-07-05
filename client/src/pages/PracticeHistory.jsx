@@ -43,6 +43,7 @@ import {
 } from "../services/practiceApi";
 import "./PracticeHistory.css";
 import katex from "katex";
+import { sanitizeHtml } from "../utils/safeHtml";
 import "katex/dist/katex.min.css";
 
 const MODE_LABELS = {
@@ -132,7 +133,7 @@ function renderMarkdownWithMath(text) {
     processed = processed.replace(`%%MATH_BLOCK_${index}%%`, () => renderedMath);
   });
 
-  return { __html: processed };
+  return { __html: sanitizeHtml(processed) };
 }
 
 export default function PracticeHistory() {

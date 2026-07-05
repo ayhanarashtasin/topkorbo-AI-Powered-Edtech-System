@@ -6,6 +6,7 @@ import UserAvatar from './UserAvatar';
 import { useForum } from '../../context/ForumContext';
 import forumApi from '../../services/forumApi';
 import ReportModal from './ReportModal';
+import { sanitizeHtml } from '../../utils/safeHtml';
 
 function formatRelative(date) {
   if (!date) return '';
@@ -159,10 +160,11 @@ export default function PostCard({ post, onDelete, detail = false }) {
 
       {post.title && <h2 className="forum-post__title">{post.title}</h2>}
 
-      {/* `contentHtml` is sanitized server-side, so dangerouslySetInnerHTML is safe here. */}
+      {/* `contentHtml` is sanitized server-side; we sanitize again client-side
+          (defense in depth) so a stale/compromised payload still can't run JS. */}
       <div
         className="forum-post__body"
-        dangerouslySetInnerHTML={{ __html: post.contentHtml || '' }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.contentHtml || '') }}
       />
 
       {post.images && post.images.length > 0 && (

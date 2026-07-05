@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiters');
 const authController = require('../controllers/authController');
 
 // @desc    Auth with Google
 // @route   GET /api/auth/google
-router.get('/google', authController.googleAuth);
+router.get('/google', authLimiter, authController.googleAuth);
 
 // @desc    Google auth callback
 // @route   GET /api/auth/google/callback
-router.get('/google/callback', authController.googleCallback);
+router.get('/google/callback', authLimiter, authController.googleCallback);
 
 // @desc    Save/Complete Profile details (Student or Mentor)
 // @route   POST /api/auth/profile

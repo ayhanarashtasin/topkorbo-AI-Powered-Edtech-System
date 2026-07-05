@@ -583,11 +583,15 @@ exports.getContestById = async (req, res, next) => {
  */
 exports.submitContestResult = async (req, res, next) => {
   try {
-    const { score, totalQuestions, timeTakenSeconds, answersSubmitted, answers, isDisqualified, disqualificationReason } = req.body;
+    // SECURITY: `score`, `answersSubmitted` and `totalQuestions` are computed
+    // server-side from the answer key — never trusted from the client. Only the
+    // student's raw `answers`, timing, and self-reported proctoring flags are
+    // read from the request body.
+    const { timeTakenSeconds, answers, isDisqualified, disqualificationReason } = req.body;
     const contestId = req.params.id;
     const studentId = req.user.id;
 
-    const contest = await Contest.findById(contestId);
+    const contest = await Contest.findById(contestId).lean();
     if (!contest) {
       return ApiResponse.error(res, 'Contest not found', 404);
     }
@@ -598,15 +602,55 @@ exports.submitContestResult = async (req, res, next) => {
       return ApiResponse.error(res, 'You must register for this contest before participating', 403);
     }
 
+    // Build the authoritative answer key. For qbank-sourced questions the
+    // correct option lives on the original Question document, so resolve those.
+    const submitted = (answers && typeof answers === 'object') ? answers : {};
+    const contestQuestions = Array.isArray(contest.questions) ? contest.questions : [];
+
+    const qbankIds = contestQuestions
+      .filter(q => q.source === 'qbank' && q.originalQuestionId)
+      .map(q => q.originalQuestionId);
+    const originals = qbankIds.length
+      ? await Question.find({ _id: { $in: qbankIds } }).select('options').lean()
+      : [];
+    const originalById = new Map(originals.map(o => [String(o._id), o]));
+
+    let score = 0;
+    let answersSubmitted = 0;
+    let totalQuestions = 0;
+
+    for (const q of contestQuestions) {
+      const type = q.type || 'mcq';
+      // Only MCQs can be graded server-side; written/cq are not auto-scored.
+      if (type !== 'mcq') continue;
+      totalQuestions += 1;
+
+      let options = Array.isArray(q.options) ? q.options : [];
+      if ((!options.length) && q.source === 'qbank' && q.originalQuestionId) {
+        const orig = originalById.get(String(q.originalQuestionId));
+        options = (orig && Array.isArray(orig.options)) ? orig.options : [];
+      }
+      const correctIndex = options.findIndex(opt => opt && opt.isCorrect);
+
+      const key = String(q._id);
+      const selected = submitted[key];
+      if (selected === undefined || selected === null) continue;
+
+      answersSubmitted += 1;
+      if (Number(selected) === correctIndex && correctIndex !== -1) {
+        score += 1;
+      }
+    }
+
     const result = await ContestResult.findOneAndUpdate(
       { contest: contestId, student: studentId },
       {
         score,
         totalQuestions,
-        timeTakenSeconds,
-        answersSubmitted: answersSubmitted || 0,
-        answers: answers || {},
-        isDisqualified: isDisqualified || false,
+        timeTakenSeconds: Number(timeTakenSeconds) || 0,
+        answersSubmitted,
+        answers: submitted,
+        isDisqualified: !!isDisqualified,
         disqualificationReason: disqualificationReason || '',
         submittedAt: new Date()
       },

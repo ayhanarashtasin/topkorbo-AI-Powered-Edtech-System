@@ -99,21 +99,58 @@ exports.initPayment = async (req, res, next) => {
  */
 async function grantIfValid(tranId, gatewayData) {
   const payment = await Payment.findOne({ tranId });
-  if (!payment || payment.status === 'valid') return payment && payment.status === 'valid';
+  if (!payment) return false;
+  if (payment.status === 'valid') return true; // already granted (idempotent)
+
+  // SECURITY: the gateway validation payload must be bound to *this* local
+  // transaction. Without this, a valid val_id for one order could be replayed
+  // against another pending row to grant an unpaid upgrade.
+  if (String(gatewayData.tran_id || '') !== String(tranId)) {
+    return false;
+  }
+
+  // Currency must match what we charged.
+  const currency = String(gatewayData.currency || '').toUpperCase();
+  if (currency && currency !== String(payment.currency || 'BDT').toUpperCase()) {
+    await Payment.updateOne({ tranId, status: 'pending' }, { $set: { status: 'failed', gatewayData } });
+    return false;
+  }
+
+  // Gateway must report a validated status.
+  const status = String(gatewayData.status || '').toUpperCase();
+  if (!['VALID', 'VALIDATED'].includes(status)) {
+    return false;
+  }
 
   // Verify the amount matches what we expect for this plan.
   const expected = getPlanConfig(payment.plan).price;
   const paid = Number(gatewayData.amount);
-  if (Number.isFinite(paid) && Math.round(paid) !== Math.round(expected)) {
-    payment.status = 'failed';
-    payment.gatewayData = gatewayData;
-    await payment.save();
+  if (!Number.isFinite(paid) || Math.round(paid) !== Math.round(expected)) {
+    await Payment.updateOne({ tranId, status: 'pending' }, { $set: { status: 'failed', gatewayData } });
     return false;
   }
 
-  payment.status = 'valid';
-  payment.gatewayData = gatewayData;
-  await payment.save();
+  // Atomically transition pending -> valid. If another concurrent callback (IPN
+  // vs browser redirect) already flipped it, the matchedCount is 0 and we do NOT
+  // double-grant. The unique sparse index on valId also rejects replayed val_ids.
+  const valId = gatewayData.val_id || null;
+  let update;
+  try {
+    update = await Payment.updateOne(
+      { tranId, status: 'pending' },
+      { $set: { status: 'valid', valId, gatewayData } }
+    );
+  } catch (err) {
+    // Duplicate valId => this validation was already consumed by another order.
+    if (err && err.code === 11000) return false;
+    throw err;
+  }
+
+  if (!update.matchedCount) {
+    // Someone else already resolved this payment; treat as granted only if valid.
+    const current = await Payment.findOne({ tranId }).lean();
+    return !!(current && current.status === 'valid');
+  }
 
   const expiresAt = new Date(Date.now() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000);
   await User.updateOne(

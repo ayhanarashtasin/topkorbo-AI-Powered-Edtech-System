@@ -62,7 +62,13 @@ const errorHandler = (err, req, res, next) => {
     return ApiResponse.error(res, 'Token expired', 401);
   }
 
-  return ApiResponse.error(res, err.message || 'Internal Server Error', err.statusCode || 500);
+  // Known client errors (4xx) may surface their message; anything 500+ must NOT
+  // leak internal/upstream details to the client in production.
+  const statusCode = err.statusCode || 500;
+  if (statusCode >= 500 && process.env.NODE_ENV === 'production') {
+    return ApiResponse.error(res, 'Internal Server Error', 500);
+  }
+  return ApiResponse.error(res, err.message || 'Internal Server Error', statusCode);
 };
 
 module.exports = errorHandler;
