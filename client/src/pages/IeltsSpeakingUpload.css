@@ -506,3 +506,47 @@
   border-radius: 50px;
   font-weight: 500;
 }
+
+.ielts-speaking-upload-header {
+  padding: 24px 40px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.ielts-speaking-upload-back-btn {
+  background: transparent;
+  border: 1px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-speaking-upload-back-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  border-color: var(--sky-blue);
+  color: var(--text-primary);
+}
+
+.ielts-speaking-upload-header-text h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-speaking-upload-header-text p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}

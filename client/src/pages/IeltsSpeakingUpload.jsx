@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiChatAlt2, HiArrowLeft, HiClipboardCheck, HiUpload } from 'react-icons/hi';
@@ -127,6 +127,24 @@ export default function IeltsSpeakingUpload() {
 
       <main className="ielts-speaking-upload-content">
         {/* Header */}
+        <div className="ielts-speaking-upload-header">
+          <button
+            type="button"
+            onClick={() => navigate('/ielts-teacher')}
+            className="ielts-speaking-upload-back-btn"
+            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+          >
+            <HiArrowLeft size={20} />
+          </button>
+          <div className="ielts-speaking-upload-header-text">
+            <h2>{language === 'en' ? 'Speaking Question Designer' : 'স্পিকিং প্রশ্ন ডিজাইনার'}</h2>
+            <p>
+              {language === 'en'
+                ? 'Create, manage, and upload question sets to the Speaking Question Bank.'
+                : 'স্পিকিং প্রশ্ন ব্যাংকে প্রশ্ন সেট তৈরি, পরিচালনা এবং আপলোড করুন।'}
+            </p>
+          </div>
+        </div>
 
         {/* Workspace */}
         <div className="ielts-speaking-upload-workspace">

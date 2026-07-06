@@ -50,7 +50,9 @@ const IeltsSpeaking = lazy(() => import('./pages/IeltsSpeaking'));
 const IeltsListeningPractice = lazy(() => import('./pages/IeltsListeningPractice'));
 const IeltsReadingPractice = lazy(() => import('./pages/IeltsReadingPractice'));
 const IeltsWritingPractice = lazy(() => import('./pages/IeltsWritingPractice'));
+const IeltsWritingDemo = lazy(() => import('./pages/IeltsWritingDemo'));
 const IeltsSpeakingPractice = lazy(() => import('./pages/IeltsSpeakingPractice'));
+const IeltsSpeakingDemo = lazy(() => import('./pages/IeltsSpeakingDemo'));
 
 // === Forum / Community ===
 const ForumLayout = lazy(() => import('./components/forum/ForumLayout'));
@@ -85,72 +87,74 @@ function AppContent() {
       />
       <PaywallListener />
       <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              <Navbar />
-              <LandingPage />
-              <Footer />
-            </>
-          }
-        />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/contests" element={<Contests />} />
-        <Route path="/qbank" element={<QuestionBank />} />
-        <Route path="/qbank/source-questions" element={<BoardQuestionsView />} />
-        <Route path="/qbank/varsity-written" element={<VarsityWrittenView />} />
-        <Route path="/setting" element={<Setting />} />
-        <Route path="/settings" element={<Setting />} />
-        <Route path="/teacher" element={<BecomeTeacher />} />
-        <Route path="/upload-question" element={<UploadQuestion />} />
-        <Route path="/mock-test" element={<MockTest />} />
-        <Route path="/mock-test/exam" element={<MockTestExam />} />
-        <Route path="/study-routine" element={<StudyRoutine />} />
-        <Route path="/practice-history" element={<PracticeHistory />} />
-        <Route path="/student/find-mentor" element={<FindMentor />} />
-        <Route path="/battle" element={<Battle />} />
-        <Route path="/battle-ai" element={<AIBattle />} />
-        <Route path="/make-contest-question" element={<MakeContestQuestion />} />
-        <Route path="/make-contest-question/next" element={<MakeContestQuestionNext />} />
-        <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />
-        <Route path="/make-contest-question/choose-qbank" element={<MakeContestQuestionChooseQBank />} />
-        <Route path="/make-contest-question/confirm" element={<MakeContestQuestionConfirm />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/reading-books" element={<ReadingBooks />} />
-        <Route path="/reading-books/upload" element={<UploadBook />} />
-        <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
-        <Route path="/mentor/live-class" element={<MentorLiveClass />} />
-        <Route path="/student/live-class" element={<StudentLiveClass />} />
-        <Route path="/ielts-prep" element={<IeltsPrep />} />
-        <Route path="/ielts-teacher" element={<IeltsTeacher />} />
-        <Route path="/ielts-teacher/listening/upload" element={<IeltsListeningUpload />} />
-        <Route path="/ielts-teacher/reading/upload" element={<IeltsReadingUpload />} />
-        <Route path="/ielts-teacher/writing/upload" element={<IeltsWritingUpload />} />
-        <Route path="/ielts-teacher/speaking/upload" element={<IeltsSpeakingUpload />} />
-        <Route path="/ielts-prep/listening" element={<IeltsListening />} />
-        <Route path="/ielts-prep/reading" element={<IeltsReading />} />
-        <Route path="/ielts-prep/writing" element={<IeltsWriting />} />
-        <Route path="/ielts-prep/speaking" element={<IeltsSpeaking />} />
-        <Route path="/ielts-prep/listening/practice" element={<IeltsListeningPractice />} />
-        <Route path="/ielts-prep/reading/practice" element={<IeltsReadingPractice />} />
-        <Route path="/ielts-prep/writing/practice" element={<IeltsWritingPractice />} />
-        <Route path="/ielts-prep/speaking/practice" element={<IeltsSpeakingPractice />} />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <Navbar />
+                <LandingPage />
+                <Footer />
+              </>
+            }
+          />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/contests" element={<Contests />} />
+          <Route path="/qbank" element={<QuestionBank />} />
+          <Route path="/qbank/source-questions" element={<BoardQuestionsView />} />
+          <Route path="/qbank/varsity-written" element={<VarsityWrittenView />} />
+          <Route path="/setting" element={<Setting />} />
+          <Route path="/settings" element={<Setting />} />
+          <Route path="/teacher" element={<BecomeTeacher />} />
+          <Route path="/upload-question" element={<UploadQuestion />} />
+          <Route path="/mock-test" element={<MockTest />} />
+          <Route path="/mock-test/exam" element={<MockTestExam />} />
+          <Route path="/study-routine" element={<StudyRoutine />} />
+          <Route path="/practice-history" element={<PracticeHistory />} />
+          <Route path="/student/find-mentor" element={<FindMentor />} />
+          <Route path="/battle" element={<Battle />} />
+          <Route path="/battle-ai" element={<AIBattle />} />
+          <Route path="/make-contest-question" element={<MakeContestQuestion />} />
+          <Route path="/make-contest-question/next" element={<MakeContestQuestionNext />} />
+          <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />
+          <Route path="/make-contest-question/choose-qbank" element={<MakeContestQuestionChooseQBank />} />
+          <Route path="/make-contest-question/confirm" element={<MakeContestQuestionConfirm />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/reading-books" element={<ReadingBooks />} />
+          <Route path="/reading-books/upload" element={<UploadBook />} />
+          <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />
+          <Route path="/mentor/live-class" element={<MentorLiveClass />} />
+          <Route path="/student/live-class" element={<StudentLiveClass />} />
+          <Route path="/ielts-prep" element={<IeltsPrep />} />
+          <Route path="/ielts-teacher" element={<IeltsTeacher />} />
+          <Route path="/ielts-teacher/listening/upload" element={<IeltsListeningUpload />} />
+          <Route path="/ielts-teacher/reading/upload" element={<IeltsReadingUpload />} />
+          <Route path="/ielts-teacher/writing/upload" element={<IeltsWritingUpload />} />
+          <Route path="/ielts-teacher/speaking/upload" element={<IeltsSpeakingUpload />} />
+          <Route path="/ielts-prep/listening" element={<IeltsListening />} />
+          <Route path="/ielts-prep/reading" element={<IeltsReading />} />
+          <Route path="/ielts-prep/writing" element={<IeltsWriting />} />
+          <Route path="/ielts-prep/speaking" element={<IeltsSpeaking />} />
+          <Route path="/ielts-prep/listening/practice" element={<IeltsListeningPractice />} />
+          <Route path="/ielts-prep/reading/practice" element={<IeltsReadingPractice />} />
+          <Route path="/ielts-prep/writing/practice" element={<IeltsWritingPractice />} />
+          <Route path="/ielts-prep/writing/demo" element={<IeltsWritingDemo />} />
+          <Route path="/ielts-prep/speaking/practice" element={<IeltsSpeakingPractice />} />
+          <Route path="/ielts-prep/speaking/demo" element={<IeltsSpeakingDemo />} />
 
-        {renderAdminRoutes()}
+          {renderAdminRoutes()}
 
-        {/* === Forum / Community === */}
-        <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
-          <Route path="/forum" element={<Forum />} />
-          <Route path="/forum/compose" element={<ForumCompose />} />
-          <Route path="/forum/post/:id" element={<ForumPostDetail />} />
-          <Route path="/forum/search" element={<ForumSearch />} />
-          <Route path="/forum/bookmarks" element={<ForumBookmarks />} />
-          <Route path="/forum/u/:id" element={<ForumUserProfile />} />
-        </Route>
+          {/* === Forum / Community === */}
+          <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
+            <Route path="/forum" element={<Forum />} />
+            <Route path="/forum/compose" element={<ForumCompose />} />
+            <Route path="/forum/post/:id" element={<ForumPostDetail />} />
+            <Route path="/forum/search" element={<ForumSearch />} />
+            <Route path="/forum/bookmarks" element={<ForumBookmarks />} />
+            <Route path="/forum/u/:id" element={<ForumUserProfile />} />
+          </Route>
 
-      </Routes>
+        </Routes>
       </Suspense>
     </>
   );

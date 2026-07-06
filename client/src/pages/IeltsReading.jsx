@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -91,6 +91,22 @@ export default function IeltsReading() {
 
       <main className="ielts-reading-main">
         {/* Header */}
+        <header className="ielts-reading-header">
+          <div className="ielts-reading-header__left">
+            <button
+              onClick={() => navigate('/ielts-prep')}
+              className="ielts-reading-back-btn"
+              title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+            >
+              <HiArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                {language === 'en' ? 'IELTS Reading' : 'আইইএলটিএস রিডিং'}
+              </h2>
+            </div>
+          </div>
+        </header>
 
         {/* Content */}
         <div className="ielts-reading-workspace">

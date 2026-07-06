@@ -1,0 +1,196 @@
+.ielts-speaking-demo-page {
+  display: flex;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background-color: #fff8f0;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.ielts-speaking-demo-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(192, 133, 82, 0.08), transparent 26%),
+    linear-gradient(180deg, #faf4ee 0%, #f6efe7 100%);
+}
+
+.ielts-speaking-demo-header {
+  padding: 24px 40px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1.5px solid rgba(75, 46, 43, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.ielts-speaking-demo-back-btn {
+  background: transparent;
+  border: 1px solid rgba(75, 46, 43, 0.2);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+}
+
+.ielts-speaking-demo-back-btn:hover {
+  background: rgba(192, 133, 82, 0.08);
+  border-color: var(--sky-blue);
+  color: var(--text-primary);
+}
+
+.ielts-speaking-demo-header-text h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ielts-speaking-demo-header-text p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.ielts-speaking-demo-workspace {
+  flex: 1;
+  padding: 32px 40px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.ielts-speaking-demo-container {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-bottom: 40px;
+}
+
+.ielts-demo-speaking-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 247, 0.98));
+  border: 1px solid rgba(192, 133, 82, 0.14);
+  border-radius: 24px;
+  padding: 36px;
+  box-shadow: 0 18px 40px rgba(140, 90, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.ielts-speaking-set-title {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-accent);
+  border-bottom: 2px solid rgba(192, 133, 82, 0.2);
+  padding-bottom: 12px;
+  margin: 0;
+}
+
+.ielts-speaking-part-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ielts-speaking-part-header {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  padding-left: 8px;
+  border-left: 4px solid var(--sky-blue);
+  line-height: 1.2;
+}
+
+.ielts-speaking-questions-box {
+  background-color: #ffffff;
+  border: 1.5px solid rgba(192, 133, 82, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.01);
+}
+
+.ielts-speaking-questions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ielts-speaking-questions-list li {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  display: flex;
+  gap: 8px;
+}
+
+.ielts-speaking-cue-card-box {
+  background: linear-gradient(135deg, rgba(192, 133, 82, 0.03), rgba(140, 90, 60, 0.05));
+  border: 1.5px solid rgba(75, 46, 43, 0.8);
+  border-radius: 16px;
+  padding: 24px;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #1a1a1a;
+}
+
+.ielts-speaking-cue-card-box p {
+  margin: 0 0 12px 0;
+}
+
+.ielts-speaking-cue-card-box p:last-of-type {
+  margin-bottom: 0;
+}
+
+.ielts-speaking-cue-card-box ul {
+  margin: 8px 0 12px 24px;
+  padding: 0;
+}
+
+.ielts-speaking-cue-card-box li {
+  margin-bottom: 6px;
+}
+
+.ielts-speaking-time-hint {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .ielts-speaking-demo-header {
+    padding: 16px 20px;
+  }
+
+  .ielts-speaking-demo-workspace {
+    padding: 20px;
+  }
+
+  .ielts-demo-speaking-card {
+    padding: 24px;
+    gap: 1.5rem;
+  }
+}

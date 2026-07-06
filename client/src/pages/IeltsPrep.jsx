@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -139,30 +139,6 @@ export default function IeltsPrep() {
                   </h3>
 
                   <div className="ielts-grid-4">
-                    {/* Listening */}
-                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/listening')} style={{ cursor: 'pointer' }}>
-                      <div className="ielts-dist-icon"><HiVolumeUp size={24} /></div>
-                      <h4>{language === 'en' ? 'Listening' : 'লিসেনিং'}</h4>
-                      <span className="ielts-dist-detail">
-                        {language === 'en' ? '4 Sections | 40 Questions' : '৪টি সেকশন | ৪০টি প্রশ্ন'}
-                      </span>
-                      <span className="ielts-dist-duration">
-                        {language === 'en' ? '30 Mins' : '৩০ মিনিট'}
-                      </span>
-                    </div>
-
-                    {/* Reading */}
-                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/reading')} style={{ cursor: 'pointer' }}>
-                      <div className="ielts-dist-icon"><HiBookOpen size={24} /></div>
-                      <h4>{language === 'en' ? 'Reading' : 'রিডিং'}</h4>
-                      <span className="ielts-dist-detail">
-                        {language === 'en' ? '3 Passages | 40 Questions' : '৩টি প্যাসেজ | ৪০টি প্রশ্ন'}
-                      </span>
-                      <span className="ielts-dist-duration">
-                        {language === 'en' ? '60 Mins' : '৬০ মিনিট'}
-                      </span>
-                    </div>
-
                     {/* Writing */}
                     <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/writing')} style={{ cursor: 'pointer' }}>
                       <div className="ielts-dist-icon"><HiPencilAlt size={24} /></div>
@@ -184,6 +160,30 @@ export default function IeltsPrep() {
                       </span>
                       <span className="ielts-dist-duration">
                         {language === 'en' ? '11-14 Mins' : '১১-১৪ মিনিট'}
+                      </span>
+                    </div>
+
+                    {/* Listening */}
+                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/listening')} style={{ cursor: 'pointer' }}>
+                      <div className="ielts-dist-icon"><HiVolumeUp size={24} /></div>
+                      <h4>{language === 'en' ? 'Listening' : 'লিসেনিং'}</h4>
+                      <span className="ielts-dist-detail">
+                        {language === 'en' ? '4 Sections | 40 Questions' : '৪টি সেকশন | ৪০টি প্রশ্ন'}
+                      </span>
+                      <span className="ielts-dist-duration">
+                        {language === 'en' ? '30 Mins' : '৩০ মিনিট'}
+                      </span>
+                    </div>
+
+                    {/* Reading */}
+                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/reading')} style={{ cursor: 'pointer' }}>
+                      <div className="ielts-dist-icon"><HiBookOpen size={24} /></div>
+                      <h4>{language === 'en' ? 'Reading' : 'রিডিং'}</h4>
+                      <span className="ielts-dist-detail">
+                        {language === 'en' ? '3 Passages | 40 Questions' : '৩টি প্যাসেজ | ৪০টি প্রশ্ন'}
+                      </span>
+                      <span className="ielts-dist-duration">
+                        {language === 'en' ? '60 Mins' : '৬০ মিনিট'}
                       </span>
                     </div>
                   </div>
@@ -224,34 +224,6 @@ export default function IeltsPrep() {
 
                 {/* Grid of the 4 segments */}
                 <div className="ielts-segments-grid">
-                  {/* Listening Card */}
-                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/listening/practice')}>
-                    <div className="ielts-segment-icon"><HiVolumeUp size={36} /></div>
-                    <h3>{language === 'en' ? 'Listening Practice' : 'লিসেনিং প্র্যাকটিস'}</h3>
-                    <p className="ielts-segment-desc">
-                      {language === 'en'
-                        ? 'Practice listening to native conversations, monologues, and academic lectures with real-time feedback.'
-                        : 'রিয়েল-টাইম ফিডব্যাক সহ ইংরেজিভাষীদের কথোপকথন, একক বক্তৃতা এবং একাডেমিক লেকচার শোনার অনুশীলন করুন।'}
-                    </p>
-                    <span className="ielts-segment-meta">
-                      {language === 'en' ? '40 Questions' : '৪০টি প্রশ্ন'}
-                    </span>
-                  </div>
-
-                  {/* Reading Card */}
-                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/reading/practice')}>
-                    <div className="ielts-segment-icon"><HiBookOpen size={36} /></div>
-                    <h3>{language === 'en' ? 'Reading Practice' : 'রিডিং প্র্যাকটিস'}</h3>
-                    <p className="ielts-segment-desc">
-                      {language === 'en'
-                        ? 'Enhance your skimming, scanning, and analytical comprehension using curated passages.'
-                        : 'সংগৃহীত প্যাসেজ ব্যবহারের মাধ্যমে স্কিমিং, স্ক্যানিং এবং বিশ্লেষণাত্মক রিডিং দক্ষতা বৃদ্ধি করুন।'}
-                    </p>
-                    <span className="ielts-segment-meta">
-                      {language === 'en' ? '3 Passages' : '৩টি প্যাসেজ'}
-                    </span>
-                  </div>
-
                   {/* Writing Card */}
                   <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/writing/practice')}>
                     <div className="ielts-segment-icon"><HiPencilAlt size={36} /></div>
@@ -277,6 +249,34 @@ export default function IeltsPrep() {
                     </p>
                     <span className="ielts-segment-meta">
                       {language === 'en' ? '3 Parts' : '৩টি পার্ট'}
+                    </span>
+                  </div>
+
+                  {/* Listening Card */}
+                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/listening/practice')}>
+                    <div className="ielts-segment-icon"><HiVolumeUp size={36} /></div>
+                    <h3>{language === 'en' ? 'Listening Practice' : 'লিসেনিং প্র্যাকটিস'}</h3>
+                    <p className="ielts-segment-desc">
+                      {language === 'en'
+                        ? 'Practice listening to native conversations, monologues, and academic lectures with real-time feedback.'
+                        : 'রিয়েল-টাইম ফিডব্যাক সহ ইংরেজিভাষীদের কথোপকথন, একক বক্তৃতা এবং একাডেমিক লেকচার শোনার অনুশীলন করুন।'}
+                    </p>
+                    <span className="ielts-segment-meta">
+                      {language === 'en' ? '40 Questions' : '৪০টি প্রশ্ন'}
+                    </span>
+                  </div>
+
+                  {/* Reading Card */}
+                  <div className="ielts-segment-card" onClick={() => navigate('/ielts-prep/reading/practice')}>
+                    <div className="ielts-segment-icon"><HiBookOpen size={36} /></div>
+                    <h3>{language === 'en' ? 'Reading Practice' : 'রিডিং প্র্যাকটিস'}</h3>
+                    <p className="ielts-segment-desc">
+                      {language === 'en'
+                        ? 'Enhance your skimming, scanning, and analytical comprehension using curated passages.'
+                        : 'সংগৃহীত প্যাসেজ ব্যবহারের মাধ্যমে স্কিমিং, স্ক্যানিং এবং বিশ্লেষণাত্মক রিডিং দক্ষতা বৃদ্ধি করুন।'}
+                    </p>
+                    <span className="ielts-segment-meta">
+                      {language === 'en' ? '3 Passages' : '৩টি প্যাসেজ'}
                     </span>
                   </div>
                 </div>

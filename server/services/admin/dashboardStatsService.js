@@ -9,6 +9,7 @@ const Payment = require('../../models/Payment');
 const Notification = require('../../models/Notification');
 const IeltsListeningSet = require('../../models/IeltsListeningSet');
 const IeltsWritingSet = require('../../models/IeltsWritingSet');
+const IeltsReadingSet = require('../../models/IeltsReadingSet');
 
 const EMPTY_STATS = {
   totalUsers: 0,
@@ -80,8 +81,12 @@ async function fetchDashboardStats() {
     Report.countDocuments({ status: 'open' }),
     Promise.resolve(0),
     Contest.countDocuments(),
-    Promise.all([IeltsListeningSet.countDocuments(), IeltsWritingSet.countDocuments()]).then(
-      ([listeningSets, writingSets]) => listeningSets + writingSets
+    Promise.all([
+      IeltsListeningSet.countDocuments(),
+      IeltsWritingSet.countDocuments(),
+      IeltsReadingSet.countDocuments()
+    ]).then(
+      ([listeningSets, writingSets, readingSets]) => listeningSets + writingSets + readingSets
     ),
     Payment.aggregate([
       { $match: { status: 'valid' } },

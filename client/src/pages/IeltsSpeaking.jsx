@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -78,11 +78,7 @@ export default function IeltsSpeaking() {
   }
 
   const handleStartDemo = () => {
-    toast.success(
-      language === 'en'
-        ? 'Starting Speaking mock interview...'
-        : 'স্পিকিং মক ইন্টারভিউ শুরু করা হচ্ছে...'
-    );
+    navigate('/ielts-prep/speaking/demo');
   };
 
   return (
@@ -91,6 +87,22 @@ export default function IeltsSpeaking() {
 
       <main className="ielts-speaking-main">
         {/* Header */}
+        <header className="ielts-speaking-header">
+          <div className="ielts-speaking-header__left">
+            <button
+              onClick={() => navigate('/ielts-prep')}
+              className="ielts-speaking-back-btn"
+              title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+            >
+              <HiArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                {language === 'en' ? 'IELTS Speaking' : 'আইইএলটিএস স্পিকিং'}
+              </h2>
+            </div>
+          </div>
+        </header>
 
         {/* Content */}
         <div className="ielts-speaking-workspace">

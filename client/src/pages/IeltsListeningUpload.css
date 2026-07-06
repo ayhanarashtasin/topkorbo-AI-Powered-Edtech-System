@@ -222,40 +222,89 @@
 }
 
 /* Submit Section Button */
-.ielts-submit-set-container {
+.ielts-listening-form-actions {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: 16px;
+  border-top: 1.5px solid rgba(192, 133, 82, 0.15);
+  padding-top: 1.5rem;
   margin-top: 1rem;
-  margin-bottom: 2rem;
 }
 
-.ielts-btn-submit-set {
-  background: var(--gradient-cta);
-  color: var(--white);
+.ielts-listening-cancel-btn {
+  padding: 12px 24px;
+  border-radius: 50px;
+  border: 1.5px solid rgba(75, 46, 43, 0.2);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ielts-listening-cancel-btn:hover {
+  background: rgba(192, 133, 82, 0.05);
+}
+
+.ielts-listening-submit-btn {
+  padding: 12px 28px;
+  border-radius: 50px;
   border: none;
-  padding: 16px 48px;
-  font-size: 1.1rem;
+  background: var(--gradient-cta);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.ielts-listening-submit-btn:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.ielts-listening-submit-btn:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .ielts-listening-form-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  .ielts-listening-cancel-btn,
+  .ielts-listening-submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.ielts-listening-submit-btn-cta {
+  background: var(--gradient-cta);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 0.95rem;
   font-weight: 700;
   border-radius: 50px;
   cursor: pointer;
   box-shadow: var(--shadow-md);
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-smooth, 0.3s);
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
-.ielts-btn-submit-set:hover {
+.ielts-listening-submit-btn-cta:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
-  opacity: 0.95;
 }
 
-.ielts-btn-submit-set:disabled {
-  background: var(--text-muted);
+.ielts-listening-submit-btn-cta:disabled {
+  opacity: 0.65;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
 @media (max-width: 768px) {

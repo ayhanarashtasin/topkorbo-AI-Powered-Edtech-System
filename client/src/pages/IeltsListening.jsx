@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -84,6 +84,22 @@ export default function IeltsListening() {
 
       <main className="ielts-listening-main">
         {/* Header */}
+        <header className="ielts-listening-header">
+          <div className="ielts-listening-header__left">
+            <button
+              onClick={() => navigate('/ielts-prep')}
+              className="ielts-listening-back-btn"
+              title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+            >
+              <HiArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                {language === 'en' ? 'IELTS Listening' : 'আইইএলটিএস লিসেনিং'}
+              </h2>
+            </div>
+          </div>
+        </header>
 
         {/* Content */}
         <div className="ielts-listening-workspace">
@@ -186,36 +202,6 @@ export default function IeltsListening() {
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Demo Question Action Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.15 }}
-              className="ielts-listening-actions"
-            >
-              <div
-                className="ielts-listening-action-card"
-                onClick={() => navigate('/ielts-prep/listening/demo')}
-              >
-                <div className="ielts-listening-action-card__left">
-                  <div className="ielts-listening-action-card__icon">
-                    <HiPlay size={28} />
-                  </div>
-                  <div className="ielts-listening-action-card__text">
-                    <h3>{language === 'en' ? 'Demo Question' : 'ডেমো প্রশ্ন'}</h3>
-                    <p>
-                      {language === 'en'
-                        ? 'Try a sample listening question to familiarize yourself with the format and experience.'
-                        : 'ফরম্যাট এবং অভিজ্ঞতার সাথে পরিচিত হতে একটি নমুনা লিসেনিং প্রশ্ন চেষ্টা করুন।'}
-                    </p>
-                  </div>
-                </div>
-                <div className="ielts-listening-action-card__arrow">
-                  <HiArrowRight size={22} />
                 </div>
               </div>
             </motion.div>
