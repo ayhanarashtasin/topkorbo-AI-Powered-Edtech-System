@@ -87,6 +87,227 @@ export async function fetchAdminAuditLogs(params = {}) {
   return httpClient.request(`/admin/audit-logs${query ? `?${query}` : ''}`);
 }
 
+export async function fetchAdminNotificationAudienceStats() {
+  return httpClient.request('/admin/notifications/stats');
+}
+
+export async function fetchAdminBroadcasts(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/notifications/broadcasts${query ? `?${query}` : ''}`);
+}
+
+export async function createAdminBroadcast(payload) {
+  return httpClient.request('/admin/notifications/broadcasts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminSupportTickets(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/support/tickets${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminSupportTicketDetails(ticketId) {
+  return httpClient.request(`/admin/support/tickets/${ticketId}`);
+}
+
+export async function updateAdminSupportTicketStatus(ticketId, payload) {
+  return httpClient.request(`/admin/support/tickets/${ticketId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAdminSupportTicketPriority(ticketId, payload) {
+  return httpClient.request(`/admin/support/tickets/${ticketId}/priority`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function replyAdminSupportTicket(ticketId, payload) {
+  return httpClient.request(`/admin/support/tickets/${ticketId}/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function addAdminSupportTicketNote(ticketId, payload) {
+  return httpClient.request(`/admin/support/tickets/${ticketId}/note`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminFeedbackEntries(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/support/feedback${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminFeedbackDetails(feedbackId) {
+  return httpClient.request(`/admin/support/feedback/${feedbackId}`);
+}
+
+export async function updateAdminFeedbackStatus(feedbackId, payload) {
+  return httpClient.request(`/admin/support/feedback/${feedbackId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function addAdminFeedbackNote(feedbackId, payload) {
+  return httpClient.request(`/admin/support/feedback/${feedbackId}/note`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminModerationReports(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/moderation/reports${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminModerationReportDetails(reportId) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}`);
+}
+
+export async function markAdminModerationReportUnderReview(reportId, payload = {}) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/under-review`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function dismissAdminModerationReport(reportId, payload = {}) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/dismiss`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function resolveAdminModerationReport(reportId, payload = {}) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/resolve`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function addAdminModerationReportNote(reportId, payload) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/note`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function warnAdminModerationReportUser(reportId, payload = {}) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/warn`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function hideAdminModerationReportContent(reportId, payload = {}) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/hide`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAdminModerationReportUserStatus(reportId, payload) {
+  return httpClient.request(`/admin/moderation/reports/${reportId}/user-status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminModerationAppeals(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/moderation/appeals${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminModerationAppealDetails(appealId) {
+  return httpClient.request(`/admin/moderation/appeals/${appealId}`);
+}
+
+export async function approveAdminModerationAppeal(appealId, payload = {}) {
+  return httpClient.request(`/admin/moderation/appeals/${appealId}/approve`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function rejectAdminModerationAppeal(appealId, payload = {}) {
+  return httpClient.request(`/admin/moderation/appeals/${appealId}/reject`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function addAdminModerationAppealNote(appealId, payload) {
+  return httpClient.request(`/admin/moderation/appeals/${appealId}/note`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function fetchAdminQuestions(params = {}) {
   const searchParams = new URLSearchParams();
 
@@ -216,6 +437,116 @@ export async function approveAdminBook(bookId, payload = {}) {
 
 export async function rejectAdminBook(bookId, payload) {
   return httpClient.request(`/admin/books/${bookId}/reject`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminContests(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/contests${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminContestDetails(contestId) {
+  return httpClient.request(`/admin/contests/${contestId}`);
+}
+
+export async function createAdminContest(payload) {
+  return httpClient.request('/admin/contests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAdminContest(contestId, payload) {
+  return httpClient.request(`/admin/contests/${contestId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function cancelAdminContest(contestId, payload) {
+  return httpClient.request(`/admin/contests/${contestId}/cancel`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function archiveAdminContest(contestId, payload = {}) {
+  return httpClient.request(`/admin/contests/${contestId}/archive`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminLiveContestSummary(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/contests/live/summary${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminLiveContestParticipants(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/contests/live/participants${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminSuspiciousAttempts(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/contests/anti-cheat${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminAttemptDetails(resultId) {
+  return httpClient.request(`/admin/contests/anti-cheat/${resultId}`);
+}
+
+export async function flagAdminAttempt(resultId, payload) {
+  return httpClient.request(`/admin/contests/anti-cheat/${resultId}/flag`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function clearAdminAttemptFlag(resultId, payload = {}) {
+  return httpClient.request(`/admin/contests/anti-cheat/${resultId}/clear`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function addAdminAttemptReviewNote(resultId, payload) {
+  return httpClient.request(`/admin/contests/anti-cheat/${resultId}/review-note`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)

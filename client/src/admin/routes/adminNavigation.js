@@ -30,7 +30,7 @@ export const adminNavigation = [
   { label: 'Notices', to: '/admin/content/notices', icon: HiMiniMegaphone },
   { label: 'Waitlist', to: '/admin/content/waitlist', icon: HiMiniUserGroup },
   { label: 'Content Approval', to: '/admin/content-approval', icon: HiMiniQueueList },
-  { label: 'Moderation', to: '/admin/reports', icon: HiMiniShieldCheck },
+  { label: 'Moderation', to: '/admin/moderation', icon: HiMiniShieldCheck },
   { label: 'Notifications', to: '/admin/notifications', icon: HiMiniMegaphone },
   { label: 'Analytics', to: '/admin/analytics', icon: HiMiniChartBar },
   { label: 'Payments', to: '/admin/payments', icon: HiMiniReceiptPercent },

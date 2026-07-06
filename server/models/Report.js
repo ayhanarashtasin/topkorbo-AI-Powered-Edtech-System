@@ -45,7 +45,17 @@ const reportSchema = new mongoose.Schema(
     },
     reviewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     reviewedAt: { type: Date },
-    actionTaken: { type: String, default: '' } // e.g. "hidden_post", "warned_user"
+    actionTaken: { type: String, default: '' }, // e.g. "hidden_post", "warned_user"
+    adminNotes: {
+      type: [
+        {
+          note: { type: String, required: true, maxlength: 1000 },
+          addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+          addedAt: { type: Date, default: Date.now }
+        }
+      ],
+      default: []
+    }
   },
   { timestamps: true }
 );

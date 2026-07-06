@@ -10,7 +10,8 @@ const ICONS = {
   reply: HiChatAlt2,
   mention: HiAtSymbol,
   follow: HiUserAdd,
-  warning: HiExclamationCircle
+  warning: HiExclamationCircle,
+  admin_update: HiBell
 };
 
 function timeAgo(date) {

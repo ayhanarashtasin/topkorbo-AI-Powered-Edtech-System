@@ -4,37 +4,24 @@ const ApiResponse = require('../utils/apiResponse');
 const Question = require('../models/Question');
 const ContestResult = require('../models/ContestResult');
 const RatingHistory = require('../models/RatingHistory');
+const {
+  resolveContestDates,
+  normalizeAdminContestStatus
+} = require('../utils/contestSchedule');
 
 // Rating a student starts from before their first rated contest.
 const INITIAL_RATING = 1400;
 
-// Timezone offsets shared by the contest scheduling helpers.
-const TZ_OFFSETS = {
-  'Asia/Dhaka': '+06:00',
-  'Asia/Kolkata': '+05:30',
-  'Asia/Dubai': '+04:00',
-  'Europe/London': '+00:00',
-  'America/New_York': '-05:00',
-  'Asia/Tokyo': '+09:00',
-  'Asia/Singapore': '+08:00',
-  'Australia/Sydney': '+10:00'
-};
-
-/** Resolve a contest's absolute start/end Date from its stored local time. */
-function resolveContestDates(contest) {
-  const tz = contest.startTime?.timezone || 'Asia/Dhaka';
-  const offset = TZ_OFFSETS[tz] || '+06:00';
-  let hour = contest.startTime?.hour || 12;
-  const minute = contest.startTime?.minute || 0;
-  const period = contest.startTime?.period || 'AM';
-  if (period === 'PM' && hour < 12) hour += 12;
-  if (period === 'AM' && hour === 12) hour = 0;
-  const pad = (num) => String(num).padStart(2, '0');
-  const startDate = new Date(`${contest.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
-  const durationHours = contest.duration?.hours || 0;
-  const durationMinutes = contest.duration?.minutes || 0;
-  const endDate = new Date(startDate.getTime() + durationHours * 3600000 + durationMinutes * 60000);
-  return { startDate, endDate };
+function canAccessContest(contest, user) {
+  const status = normalizeAdminContestStatus(contest);
+  if (status === 'active') return true;
+  if (user?.role === 'admin') return true;
+  const creatorId = contest?.creator?._id || contest?.creator;
+  if (creatorId && String(creatorId) === String(user?.id)) return true;
+  if (Array.isArray(contest?.registeredStudents)) {
+    return contest.registeredStudents.some((studentId) => String(studentId) === String(user?.id));
+  }
+  return false;
 }
 
 /**
@@ -232,39 +219,14 @@ exports.getMyContests = async (req, res, next) => {
     const contests = await Contest.find({ creator: user._id }).lean();
 
     const now = new Date();
-    const offsets = {
-      'Asia/Dhaka': '+06:00',
-      'Asia/Kolkata': '+05:30',
-      'Asia/Dubai': '+04:00',
-      'Europe/London': '+00:00',
-      'America/New_York': '-05:00',
-      'Asia/Tokyo': '+09:00',
-      'Asia/Singapore': '+08:00',
-      'Australia/Sydney': '+10:00'
-    };
-
-    const getContestDates = (c) => {
-      const tz = c.startTime?.timezone || 'Asia/Dhaka';
-      const offset = offsets[tz] || '+06:00';
-      let hour = c.startTime?.hour || 12;
-      const minute = c.startTime?.minute || 0;
-      const period = c.startTime?.period || 'AM';
-      if (period === 'PM' && hour < 12) hour += 12;
-      if (period === 'AM' && hour === 12) hour = 0;
-      const pad = (num) => String(num).padStart(2, '0');
-      const startDate = new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
-      const durationHours = c.duration?.hours || 0;
-      const durationMinutes = c.duration?.minutes || 0;
-      const endDate = new Date(startDate.getTime() + (durationHours * 60 * 60 * 1000) + (durationMinutes * 60 * 1000));
-      return { startDate, endDate };
-    };
 
     const mappedContests = contests.map(contest => {
-      const { startDate, endDate } = getContestDates(contest);
+      const { startDate, endDate } = resolveContestDates(contest);
       return {
         ...contest,
         startDate,
-        endDate
+        endDate,
+        adminStatus: normalizeAdminContestStatus(contest)
       };
     });
 
@@ -300,7 +262,13 @@ exports.getMyContests = async (req, res, next) => {
  */
 exports.getUpcomingContests = async (req, res, next) => {
   try {
-    const contests = await Contest.find().populate('creator', 'name').lean();
+    const contests = await Contest.find({
+      $or: [
+        { adminStatus: 'active' },
+        { adminStatus: { $exists: false } },
+        { adminStatus: null }
+      ]
+    }).populate('creator', 'name').lean();
     
     // Find contest results for this student
     const studentId = req.user.id;
@@ -308,37 +276,11 @@ exports.getUpcomingContests = async (req, res, next) => {
     const participatedContestIds = new Set(results.map(r => r.contest.toString()));
 
     const now = new Date();
-    const offsets = {
-      'Asia/Dhaka': '+06:00',
-      'Asia/Kolkata': '+05:30',
-      'Asia/Dubai': '+04:00',
-      'Europe/London': '+00:00',
-      'America/New_York': '-05:00',
-      'Asia/Tokyo': '+09:00',
-      'Asia/Singapore': '+08:00',
-      'Australia/Sydney': '+10:00'
-    };
-
-    const getContestDates = (c) => {
-      const tz = c.startTime?.timezone || 'Asia/Dhaka';
-      const offset = offsets[tz] || '+06:00';
-      let hour = c.startTime?.hour || 12;
-      const minute = c.startTime?.minute || 0;
-      const period = c.startTime?.period || 'AM';
-      if (period === 'PM' && hour < 12) hour += 12;
-      if (period === 'AM' && hour === 12) hour = 0;
-      const pad = (num) => String(num).padStart(2, '0');
-      const startDate = new Date(`${c.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
-      const durationHours = c.duration?.hours || 0;
-      const durationMinutes = c.duration?.minutes || 0;
-      const endDate = new Date(startDate.getTime() + (durationHours * 60 * 60 * 1000) + (durationMinutes * 60 * 1000));
-      return { startDate, endDate };
-    };
 
     const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
 
     const mappedContests = contests.map(contest => {
-      const { startDate, endDate } = getContestDates(contest);
+      const { startDate, endDate } = resolveContestDates(contest);
       const registeredIds = (contest.registeredStudents || []).map(id => id.toString());
       const hasRegistered = registeredIds.includes(studentId.toString());
       const registrationDeadline = new Date(startDate.getTime() - ONE_HOUR_MS);
@@ -539,6 +481,9 @@ exports.getContestById = async (req, res, next) => {
     if (!contest) {
       return ApiResponse.error(res, 'Contest not found', 404);
     }
+    if (!canAccessContest(contest, req.user)) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
 
     // Populate actual QBank questions content
     const populatedQuestions = [];
@@ -594,6 +539,9 @@ exports.submitContestResult = async (req, res, next) => {
     const contest = await Contest.findById(contestId).lean();
     if (!contest) {
       return ApiResponse.error(res, 'Contest not found', 404);
+    }
+    if (normalizeAdminContestStatus(contest) !== 'active') {
+      return ApiResponse.error(res, 'This contest is not accepting submissions right now', 403);
     }
 
     // Only registered students can submit results
@@ -688,6 +636,13 @@ exports.submitContestResult = async (req, res, next) => {
 exports.getContestResult = async (req, res, next) => {
   try {
     const contestId = req.params.id;
+    const contest = await Contest.findById(contestId).select('creator registeredStudents adminStatus');
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
+    if (!canAccessContest(contest, req.user)) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
     
     // Find all results for this contest, populated with student's name
     const results = await ContestResult.find({ contest: contestId })
@@ -771,6 +726,9 @@ exports.registerForContest = async (req, res, next) => {
     if (!contest) {
       return ApiResponse.error(res, 'Contest not found', 404);
     }
+    if (normalizeAdminContestStatus(contest) !== 'active') {
+      return ApiResponse.error(res, 'This contest is not open for registration right now', 403);
+    }
 
     const student = await User.findById(studentId);
     if (!student) {
@@ -783,27 +741,7 @@ exports.registerForContest = async (req, res, next) => {
       return ApiResponse.error(res, 'You are already registered for this contest', 400);
     }
 
-    // Calculate contest start time
-    const offsets = {
-      'Asia/Dhaka': '+06:00',
-      'Asia/Kolkata': '+05:30',
-      'Asia/Dubai': '+04:00',
-      'Europe/London': '+00:00',
-      'America/New_York': '-05:00',
-      'Asia/Tokyo': '+09:00',
-      'Asia/Singapore': '+08:00',
-      'Australia/Sydney': '+10:00'
-    };
-
-    const tz = contest.startTime?.timezone || 'Asia/Dhaka';
-    const offset = offsets[tz] || '+06:00';
-    let hour = contest.startTime?.hour || 12;
-    const minute = contest.startTime?.minute || 0;
-    const period = contest.startTime?.period || 'AM';
-    if (period === 'PM' && hour < 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-    const pad = (num) => String(num).padStart(2, '0');
-    const startDate = new Date(`${contest.date}T${pad(hour)}:${pad(minute)}:00${offset}`);
+    const { startDate } = resolveContestDates(contest);
 
     // Registration closes 1 hour before contest start
     const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
