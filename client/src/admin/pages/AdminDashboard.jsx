@@ -47,7 +47,7 @@ const CARD_CONFIG = [
   { key: 'pendingQuestions', label: 'Pending questions', hint: 'Approval queue placeholder', icon: <HiMiniDocumentText />, tone: 'neutral' },
   { key: 'pendingBooks', label: 'Pending books', hint: 'Unpublished reading uploads', icon: <HiMiniBookOpen />, tone: 'neutral' },
   { key: 'reports', label: 'Reports', hint: 'Open moderation issues', icon: <HiMiniExclamationTriangle />, tone: 'danger' },
-  { key: 'supportTickets', label: 'Support tickets', hint: 'Reserved until support backend lands', icon: <HiMiniChatBubbleLeftRight />, tone: 'neutral' },
+  { key: 'supportTickets', label: 'Support tickets', hint: 'Open support issues needing admin attention', icon: <HiMiniChatBubbleLeftRight />, tone: 'neutral' },
   { key: 'contests', label: 'Contests', hint: 'All contest records', icon: <HiMiniTrophy />, tone: 'info' },
   { key: 'totalRevenue', label: 'Revenue', hint: 'Validated payment totals', icon: <HiMiniChartBarSquare />, tone: 'success', format: 'currency' }
 ];

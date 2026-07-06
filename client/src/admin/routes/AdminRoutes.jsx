@@ -4,40 +4,20 @@ import AdminAcademicTaxonomyPage from '../pages/AdminAcademicTaxonomyPage';
 import AdminRoute from '../components/AdminRoute';
 import AdminAuditLogsPage from '../pages/AdminAuditLogsPage';
 import AdminBooksPage from '../pages/AdminBooksPage';
+import AdminContestsPage from '../pages/AdminContestsPage';
 import AdminDashboard from '../pages/AdminDashboard';
 import AdminIeltsSetsPage from '../pages/AdminIeltsSetsPage';
+import AdminModerationPage from '../pages/AdminModerationPage';
+import AdminNotificationsPage from '../pages/AdminNotificationsPage';
 import AdminNoticesPage from '../pages/AdminNoticesPage';
 import AdminPlaceholderPage from '../pages/AdminPlaceholderPage';
 import AdminQuestionsPage from '../pages/AdminQuestionsPage';
+import AdminSupportPage from '../pages/AdminSupportPage';
 import AdminTeachersPage from '../pages/AdminTeachersPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
 import AdminWaitlistPage from '../pages/AdminWaitlistPage';
 
 const placeholderRoutes = [
-  {
-    path: 'contests',
-    title: 'Contests',
-    description: 'Contest oversight and lifecycle controls will appear here once the admin workflows are built.',
-    bullets: ['Contest review', 'Schedule controls', 'Contest issue handling']
-  },
-  {
-    path: 'reports',
-    title: 'Moderation Reports',
-    description: 'Moderation workflows already have backend support; this route is reserved for the richer admin review UI.',
-    bullets: ['Open report queue', 'Action history', 'Reviewer notes']
-  },
-  {
-    path: 'support',
-    title: 'Support',
-    description: 'Support tickets and admin response workflows are scaffolded here for a future backend module.',
-    bullets: ['Ticket inbox', 'Priority labels', 'Resolution tracking']
-  },
-  {
-    path: 'notifications',
-    title: 'Notifications',
-    description: 'Administrative announcements, broadcast tools, and notification management will be implemented here.',
-    bullets: ['Broadcast composer', 'Notification history', 'Audience targeting']
-  },
   {
     path: 'settings',
     title: 'Settings',
@@ -86,10 +66,19 @@ export function renderAdminRoutes() {
         <Route path="questions/quality" element={<AdminQuestionsPage />} />
         <Route path="questions/import-export" element={<AdminQuestionsPage />} />
         <Route path="books" element={<AdminBooksPage />} />
+        <Route path="contests" element={<AdminContestsPage />} />
+        <Route path="contests/live" element={<AdminContestsPage />} />
+        <Route path="contests/anti-cheat" element={<AdminContestsPage />} />
         <Route path="content/ielts-sets" element={<AdminIeltsSetsPage />} />
         <Route path="content/notices" element={<AdminNoticesPage />} />
         <Route path="content/waitlist" element={<AdminWaitlistPage />} />
         <Route path="academic-taxonomy" element={<AdminAcademicTaxonomyPage />} />
+        <Route path="notifications" element={<AdminNotificationsPage />} />
+        <Route path="support" element={<AdminSupportPage />} />
+        <Route path="support/feedback" element={<AdminSupportPage />} />
+        <Route path="moderation" element={<AdminModerationPage />} />
+        <Route path="moderation/appeals" element={<AdminModerationPage />} />
+        <Route path="reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
         {placeholderRoutes.map((route) => (
           <Route

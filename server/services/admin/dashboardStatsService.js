@@ -10,6 +10,7 @@ const Notification = require('../../models/Notification');
 const IeltsListeningSet = require('../../models/IeltsListeningSet');
 const IeltsWritingSet = require('../../models/IeltsWritingSet');
 const IeltsReadingSet = require('../../models/IeltsReadingSet');
+const SupportTicket = require('../../models/SupportTicket');
 
 const EMPTY_STATS = {
   totalUsers: 0,
@@ -79,7 +80,7 @@ async function fetchDashboardStats() {
     Question.countDocuments({ approvalStatus: 'pending' }),
     Book.countDocuments({ approvalStatus: 'pending' }),
     Report.countDocuments({ status: 'open' }),
-    Promise.resolve(0),
+    SupportTicket.countDocuments({ status: { $in: ['open', 'in_progress'] } }),
     Contest.countDocuments(),
     Promise.all([
       IeltsListeningSet.countDocuments(),
