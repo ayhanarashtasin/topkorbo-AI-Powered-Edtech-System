@@ -18,10 +18,23 @@ function getSSLCommerz() {
 
 function sslConfig() {
   return {
-    store_id: process.env.SSLCZ_STORE_ID,
-    store_passwd: process.env.SSLCZ_STORE_PASSWORD,
-    is_live: process.env.SSLCZ_IS_LIVE === 'true'
+    store_id: (process.env.SSLCZ_STORE_ID || '').trim(),
+    store_passwd: (process.env.SSLCZ_STORE_PASSWORD || '').trim(),
+    is_live: String(process.env.SSLCZ_IS_LIVE || '').toLowerCase() === 'true'
   };
+}
+
+function gatewayInitFailureMessage(apiResponse) {
+  const reason = apiResponse && (
+    apiResponse.failedreason ||
+    apiResponse.errorReason ||
+    apiResponse.error ||
+    apiResponse.message
+  );
+
+  return reason
+    ? `Failed to initialise payment session: ${reason}`
+    : 'Failed to initialise payment session.';
 }
 
 // Absolute base the gateway/browser will hit for our callbacks.
@@ -67,14 +80,18 @@ exports.initPayment = async (req, res, next) => {
       fail_url: `${base}/api/payments/fail`,
       cancel_url: `${base}/api/payments/cancel`,
       ipn_url: `${base}/api/payments/ipn`,
+      emi_option: 0,
       shipping_method: 'NO',
+      num_of_item: 1,
       product_name: `TopKorbo ${plan === 'pro_plus' ? 'Pro+' : 'Pro'} (30 days)`,
       product_category: 'Subscription',
       product_profile: 'non-physical-goods',
       cus_name: user.name || 'TopKorbo User',
       cus_email: user.email || 'user@topkorbo.com',
       cus_add1: user.areaName || 'N/A',
+      cus_add2: '',
       cus_city: user.district || 'Dhaka',
+      cus_state: user.district || 'Dhaka',
       cus_postcode: '1000',
       cus_country: 'Bangladesh',
       cus_phone: user.phoneNumber || '01700000000'
@@ -83,11 +100,16 @@ exports.initPayment = async (req, res, next) => {
     const sslcz = new SSLCommerzPayment(store_id, store_passwd, sslConfig().is_live);
     const apiResponse = await sslcz.init(data);
 
-    if (!apiResponse || !apiResponse.GatewayPageURL) {
-      return ApiResponse.error(res, 'Failed to initialise payment session.', 502);
+    const gatewayUrl = apiResponse && (apiResponse.GatewayPageURL || apiResponse.redirectGatewayURL);
+    if (!gatewayUrl) {
+      await Payment.updateOne(
+        { tranId, status: 'pending' },
+        { $set: { status: 'failed', gatewayData: apiResponse || {} } }
+      );
+      return ApiResponse.error(res, gatewayInitFailureMessage(apiResponse), 502);
     }
 
-    return ApiResponse.success(res, { url: apiResponse.GatewayPageURL, tranId }, 'Payment session created');
+    return ApiResponse.success(res, { url: gatewayUrl, tranId }, 'Payment session created');
   } catch (err) {
     next(err);
   }
@@ -134,11 +156,13 @@ async function grantIfValid(tranId, gatewayData) {
   // vs browser redirect) already flipped it, the matchedCount is 0 and we do NOT
   // double-grant. The unique sparse index on valId also rejects replayed val_ids.
   const valId = gatewayData.val_id || null;
+  const setValid = { status: 'valid', gatewayData };
+  if (valId) setValid.valId = valId;
   let update;
   try {
     update = await Payment.updateOne(
       { tranId, status: 'pending' },
-      { $set: { status: 'valid', valId, gatewayData } }
+      { $set: setValid }
     );
   } catch (err) {
     // Duplicate valId => this validation was already consumed by another order.

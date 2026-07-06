@@ -124,6 +124,21 @@ const corsAllowlist = new Set(
     .filter(Boolean),
 );
 
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  if (corsAllowlist.size === 0 || corsAllowlist.has(origin)) return true;
+
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === "sslcommerz.com" ||
+      hostname.endsWith(".sslcommerz.com") ||
+      hostname === "sslcommerz.com.bd" ||
+      hostname.endsWith(".sslcommerz.com.bd");
+  } catch (_) {
+    return false;
+  }
+}
+
 if (process.env.NODE_ENV === "production" && corsAllowlist.size === 0) {
   console.warn(
     "⚠️  CORS: no FRONTEND_URL/CORS_ORIGINS configured in production — " +
@@ -131,25 +146,42 @@ if (process.env.NODE_ENV === "production" && corsAllowlist.size === 0) {
   );
 }
 
+// SSLCommerz redirects the user's browser back to these endpoints via a
+// cross-site POST after payment. Because the navigation arrives through the
+// gateway/bank redirect chain, the browser sends an opaque `Origin: null`
+// (or a gateway subdomain) that the allowlist rejects. These are top-level
+// navigations that only issue a redirect — the response is never read by JS —
+// so CORS enforcement here is unnecessary and would break the return flow.
+const GATEWAY_CALLBACK_PATHS = new Set([
+  "/api/payments/success",
+  "/api/payments/fail",
+  "/api/payments/cancel",
+  "/api/payments/ipn",
+]);
+
 app.use(
-  cors({
-    origin(origin, cb) {
-      // Allow same-origin / non-browser requests (no Origin header).
-      if (!origin) return cb(null, true);
-      // When an allowlist is configured, enforce it strictly. When it is NOT
-      // configured, fall back to allow-all so an unconfigured deploy still works
-      // (a warning is logged above in production).
-      if (corsAllowlist.size === 0 || corsAllowlist.has(origin)) return cb(null, true);
-      return cb(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    exposedHeaders: [
-      "Accept-Ranges",
-      "Content-Encoding",
-      "Content-Length",
-      "Content-Range",
-    ],
-  }),
+  cors((req, done) =>
+    done(null, {
+      origin(origin, cb) {
+        // Allow same-origin / non-browser requests (no Origin header) and the
+        // payment gateway callbacks. When an allowlist is configured, enforce
+        // it strictly for everything else; when it is NOT configured, fall back
+        // to allow-all so an unconfigured deploy still works (a warning is
+        // logged above in production).
+        if (GATEWAY_CALLBACK_PATHS.has(req.path) || isAllowedCorsOrigin(origin)) {
+          return cb(null, true);
+        }
+        return cb(new Error("Not allowed by CORS"));
+      },
+      credentials: true,
+      exposedHeaders: [
+        "Accept-Ranges",
+        "Content-Encoding",
+        "Content-Length",
+        "Content-Range",
+      ],
+    }),
+  ),
 );
 // JSON body parser with a `verify` callback that stashes the raw bytes on
 // req.rawBody before parsing. Routes that need HMAC verification over the
