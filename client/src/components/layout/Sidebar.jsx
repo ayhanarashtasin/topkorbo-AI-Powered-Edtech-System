@@ -206,9 +206,7 @@ export default function Sidebar({ activeTab, user }) {
             <circle cx="18" cy="52" r="3.5" fill="url(#dbLogoGrad)" />
             <path d="M 14,55 H 22 L 24,78 H 12 Z" fill="url(#dbLogoGrad)" />
           </svg>
-          {!isSidebarCollapsed && (
-            <span className="dashboard-sidebar__logo-text">𝖙𝖔𝖕ƙ𝖔𝖗𝖇𝖔</span>
-          )}
+          <span className="dashboard-sidebar__logo-text">𝖙𝖔𝖕ƙ𝖔𝖗𝖇𝖔</span>
         </a>
 
         <button
@@ -269,9 +267,7 @@ export default function Sidebar({ activeTab, user }) {
                 className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''}`}
               >
                 <span className="dashboard-sidebar__menu-icon">{item.icon}</span>
-                {!isSidebarCollapsed && (
-                  <span className="dashboard-sidebar__menu-label">{item.label}</span>
-                )}
+                <span className="dashboard-sidebar__menu-label">{item.label}</span>
               </button>
             </li>
           ))}
@@ -296,11 +292,9 @@ export default function Sidebar({ activeTab, user }) {
               </div>
             )}
           </div>
-          {!isSidebarCollapsed && (
-            <div className="dashboard-sidebar__user-info">
-              <h4 className="dashboard-sidebar__user-name">{safeUser.name}</h4>
-            </div>
-          )}
+          <div className="dashboard-sidebar__user-info">
+            <h4 className="dashboard-sidebar__user-name">{safeUser.name}</h4>
+          </div>
         </div>
       </div>
     </aside>
