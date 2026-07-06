@@ -858,7 +858,7 @@
   font-size: 0.78rem;
 }
 
-.student-contest-trend-item > span {
+.student-contest-trend-item>span {
   flex-shrink: 0;
   padding: 6px 9px;
   border-radius: 999px;
@@ -1020,6 +1020,7 @@
 }
 
 @media (max-width: 900px) {
+
   .dashboard-workspace,
   .dashboard-workspace--teacher {
     flex-direction: column;
@@ -1038,8 +1039,22 @@
 }
 
 @media (max-width: 768px) {
+  /* On phones/tablets, abandon the desktop "lock to 100dvh + internal scroll"
+     model. As the mobile browser's address bar shows/hides, 100dvh changes and
+     the container's overflow:hidden clips content unpredictably (the first
+     panel gets cut off, differently on each device). Instead let the whole
+     PAGE scroll naturally via the body, with the sticky top bar pinned. */
   .dashboard-container {
     flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .dashboard-main {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
   }
 
   .dashboard-header {
@@ -1067,6 +1082,7 @@
 
   .dashboard-workspace {
     padding: 18px 16px 28px;
+    overflow: visible;
   }
 
   .dashboard-panel {
@@ -1089,9 +1105,15 @@
   .student-profile-card,
   .student-profile-card__main,
   .student-rating-cards,
-  .student-contest-trend-list,
-  .student-progress-stats {
+  .student-contest-trend-list {
     grid-template-columns: 1fr;
+  }
+
+  /* Keep the six solved/streak tiles two-up on phones instead of a long
+     single-column stack. */
+  .student-progress-stats,
+  .student-progress-stats--solve {
+    grid-template-columns: 1fr 1fr;
   }
 
   .student-profile-card__main {
@@ -1104,8 +1126,14 @@
     justify-content: flex-start;
   }
 
-  .student-rating-chart svg {
-    height: 280px;
+  /* Enlarge the rating chart's axis/date labels so they stay legible once
+     the wide (1000-unit) viewBox is scaled down to phone width. */
+  .cf-chart-axis-text {
+    font-size: 24px;
+  }
+
+  .cf-chart-date-text {
+    font-size: 22px;
   }
 }
 
@@ -1181,5 +1209,18 @@
 
   .student-progress-stats strong {
     font-size: 1.45rem;
+  }
+
+  /* Single column for the mentor/student card grids so the 260px-min cards
+     never overflow the narrowest phones. */
+  .mentor-catalog,
+  .student-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* One column for the solved/streak tiles on the very smallest screens. */
+  .student-progress-stats,
+  .student-progress-stats--solve {
+    grid-template-columns: 1fr;
   }
 }

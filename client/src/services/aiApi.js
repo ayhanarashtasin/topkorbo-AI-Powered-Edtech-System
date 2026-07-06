@@ -138,23 +138,6 @@ export function generateStudyRoutine(payload) {
   });
 }
 
-/**
- * Ask the AI opponent to answer a single MCQ (used by the 1v1-vs-AI battle).
- * The answer key is intentionally NOT sent — the model genuinely answers and
- * correctness is judged client-side. The server falls back to a random valid
- * index on any LLM failure, so this resolves to a usable index.
- *
- * @param {{ questionText: string, options: ({text:string}|string)[] }} payload
- * @returns {Promise<{ answerIndex: number }>}
- */
-export function answerMcq(payload) {
-  return request('/ai/answer-mcq', {
-    method: 'POST',
-    headers: buildHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(payload)
-  });
-}
-
 export const aiApi = {
   send: sendMessage,
   sendBook: sendBookMessage,
@@ -163,8 +146,7 @@ export const aiApi = {
   clear: clearHistory,
   clearBook: clearBookHistory,
   extract: extractQuestion,
-  studyRoutine: generateStudyRoutine,
-  answerMcq
+  studyRoutine: generateStudyRoutine
 };
 
 // Re-export `ApiError` so callers can `import { ApiError } from '../services/aiApi'`.

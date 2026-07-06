@@ -16,9 +16,6 @@ router.post('/chat', aiQuota, aiController.chat);
 router.post('/book-chat', requirePlan('pro_plus'), aiController.bookChat);
 router.post('/study-routine', aiQuota, aiController.studyRoutine);
 router.post('/extract-question', aiQuota, aiController.extractQuestion);
-// AI-battle opponent moves are bounded by the battle-room limit and the shared
-// aiLimiter above (previously this endpoint was entirely unmetered).
-router.post('/answer-mcq', aiController.answerMcq);
 router.get('/history', aiController.getHistory);
 router.delete('/history', aiController.clearHistory);
 router.get('/book-history', aiController.bookHistory);

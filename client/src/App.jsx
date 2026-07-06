@@ -23,7 +23,6 @@ const MockTest = lazy(() => import('./pages/MockTest'));
 const MockTestExam = lazy(() => import('./pages/MockTestExam'));
 const StudyRoutine = lazy(() => import('./pages/StudyRoutine'));
 const Battle = lazy(() => import('./pages/Battle'));
-const AIBattle = lazy(() => import('./pages/AIBattle'));
 const MakeContestQuestion = lazy(() => import('./pages/MakeContestQuestion'));
 const MakeContestQuestionNext = lazy(() => import('./pages/MakeContestQuestionNext'));
 const MakeContestQuestionNextTwo = lazy(() => import('./pages/MakeContestQuestionNextTwo'));
@@ -113,7 +112,6 @@ function AppContent() {
           <Route path="/practice-history" element={<PracticeHistory />} />
           <Route path="/student/find-mentor" element={<FindMentor />} />
           <Route path="/battle" element={<Battle />} />
-          <Route path="/battle-ai" element={<AIBattle />} />
           <Route path="/make-contest-question" element={<MakeContestQuestion />} />
           <Route path="/make-contest-question/next" element={<MakeContestQuestionNext />} />
           <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />

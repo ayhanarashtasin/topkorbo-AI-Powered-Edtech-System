@@ -3,8 +3,6 @@
  * lifetime `aiActions` credit for the current user (no-op / unlimited for
  * Pro & Pro+). Applied on general-AI routes. Reading AI (book chat / knowledge)
  * is NOT metered here — it is gated to Pro+ via requirePlan('pro_plus').
- * The AI-battle opponent (`/ai/answer-mcq`) is also excluded — that flow is
- * bounded by the battle-room limit, so per-move metering would drain the quota.
  */
 const planService = require('../services/planService');
 

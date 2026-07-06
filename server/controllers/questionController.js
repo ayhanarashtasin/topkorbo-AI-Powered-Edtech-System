@@ -621,10 +621,6 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
       await planService.consume(req.user.id, 'qbankExams');
     } else if (context === 'mock') {
       await planService.consume(req.user.id, 'mockTests');
-    } else if (context === 'ai-battle') {
-      // AI battle runs entirely client-side vs an AI opponent (no server room),
-      // so its question fetch is the choke point for the battle-room limit.
-      await planService.consume(req.user.id, 'battleRooms');
     } else if (!context) {
       console.warn('[planService] /questions/mock-test called without a context — usage not attributed');
     }

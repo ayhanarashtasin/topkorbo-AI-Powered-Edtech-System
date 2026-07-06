@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { notifyPaywall } from '../utils/paywall';
 import katex from 'katex';
@@ -98,10 +98,30 @@ const BOARDS = ['Dhaka', 'Comilla', 'Rajshahi', 'Jessore', 'Chittagong', 'Sylhet
 
 const BATTLE_MODES = [
   { id: 'duel', label: '1v1', players: 2, accent: '#C08552' },
-  { id: 'ai-duel', label: '1v1 AI', players: 2, accent: '#8B5CF6', to: '/battle-ai' },
   { id: 'custom-squad', label: 'Custom Squad', players: 10, accent: '#10B981' },
   { id: 'raid', label: 'Grand Raid', players: 30, accent: '#F97316' }
 ];
+
+const BATTLE_MODE_META = {
+  duel: {
+    title: 'Head-to-head Duel',
+    desc: 'Fast 1v1 room for solving under pressure with instant score swings.',
+    icon: <HiLightningBolt size={22} />,
+    badge: 'Fastest setup'
+  },
+  'custom-squad': {
+    title: 'Custom Squad',
+    desc: 'Create team battles with flexible squad sizes for study groups.',
+    icon: <HiCollection size={22} />,
+    badge: 'Team mode'
+  },
+  raid: {
+    title: 'Grand Raid',
+    desc: 'Open a leaderboard room where every player fights for rank one.',
+    icon: <HiFire size={22} />,
+    badge: 'Large room'
+  }
+};
 
 const FALLBACK_QUESTIONS = [
   {
@@ -182,8 +202,7 @@ const renderMath = (text) => {
 };
 
 export default function Battle() {
-  const { t, language } = useLanguage();
-  const navigate = useNavigate();
+  const { language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const stepParam = searchParams.get('step');
   const roomIdParam = searchParams.get('room');
@@ -1321,37 +1340,79 @@ export default function Battle() {
           {step === 1 && (
             <div className="battle-setup-shell">
               <div className="battle-hero-panel">
-                <div className="battle-hero-panel__players">
-                  <div className="battle-avatar battle-avatar--blue"><HiAcademicCap size={30} /></div>
-                  <div className="battle-vs-orb">VS</div>
-                  <div className="battle-avatar battle-avatar--orange"><HiAcademicCap size={30} /></div>
+                <div className="battle-hero-copy">
+                  <span className="battle-kicker">Live Battle Arena</span>
+                  <h3>Choose your arena, then challenge the room.</h3>
+                  <p>Pick the battle format first. Subjects, syllabus range, timing, and scoring rules come next.</p>
+                  <div className="battle-hero-stats" aria-label="Battle highlights">
+                    <span><strong>{activeMode.id === 'custom-squad' ? `${customSquadSize}v${customSquadSize}` : activeMode.id === 'raid' ? `Up to ${raidMaxPlayers}` : activeMode.players}</strong> players</span>
+                    <span><strong>5s</strong> speed bonus</span>
+                    <span><strong>Live</strong> scoreboard</span>
+                  </div>
                 </div>
-                <h3>Battle Modes</h3>
-                <p>Pick your room size first. Question filters and battle settings come next.</p>
+                <div className="battle-hero-visual" aria-hidden="true">
+                  <div className="battle-hero-panel__players">
+                    <div className="battle-avatar battle-avatar--blue"><HiAcademicCap size={30} /></div>
+                    <div className="battle-vs-orb">VS</div>
+                    <div className="battle-avatar battle-avatar--orange"><HiAcademicCap size={30} /></div>
+                  </div>
+                  <div className="battle-hero-score-card battle-hero-score-card--left">
+                    <span>You</span>
+                    <strong>+5</strong>
+                  </div>
+                  <div className="battle-hero-score-card battle-hero-score-card--right">
+                    <span>Rival</span>
+                    <strong>+2</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="battle-setup-heading">
+                <div>
+                  <span className="battle-kicker">Step 1</span>
+                  <h3>Battle Modes</h3>
+                </div>
+                <p>Select the room style that matches your practice plan.</p>
               </div>
               <div className="battle-mode-grid">
-                {BATTLE_MODES.map((mode) => (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    className={`battle-mode-card ${selectedMode === mode.id ? 'battle-mode-card--selected' : ''} ${mode.disabled ? 'battle-mode-card--disabled' : ''}`}
-                    style={{ '--battle-accent': mode.accent }}
-                    onClick={() => {
-                      if (mode.disabled) return;
-                      if (mode.to) { navigate(mode.to); return; }
-                      sessionStorage.setItem('battle_mode', mode.id);
-                      setSelectedMode(mode.id);
-                      setStep(2);
-                    }}
-                    disabled={mode.disabled}
-                  >
-                    <span>{mode.label}</span>
-                    <strong>{selectedMode === mode.id ? 'Selected' : mode.disabled ? 'Coming later' : mode.to ? 'Solo vs AI' : mode.id === 'custom-squad' ? `${customSquadSize}v${customSquadSize}` : mode.id === 'raid' ? `Up to ${raidMaxPlayers}` : `${mode.players} players`}</strong>
-                  </button>
-                ))}
+                {BATTLE_MODES.map((mode) => {
+                  const meta = BATTLE_MODE_META[mode.id];
+                  const modeCount = mode.id === 'custom-squad' ? `${customSquadSize}v${customSquadSize}` : mode.id === 'raid' ? `Up to ${raidMaxPlayers}` : `${mode.players} players`;
+
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      className={`battle-mode-card ${selectedMode === mode.id ? 'battle-mode-card--selected' : ''} ${mode.disabled ? 'battle-mode-card--disabled' : ''}`}
+                      style={{ '--battle-accent': mode.accent }}
+                      onClick={() => {
+                        if (mode.disabled) return;
+                        sessionStorage.setItem('battle_mode', mode.id);
+                        setSelectedMode(mode.id);
+                        setStep(2);
+                      }}
+                      disabled={mode.disabled}
+                    >
+                      <span className="battle-mode-card__glow" />
+                      <span className="battle-mode-card__top">
+                        <span className="battle-mode-card__icon">{meta.icon}</span>
+                        <span className="battle-mode-card__badge">{mode.disabled ? 'Coming later' : meta.badge}</span>
+                      </span>
+                      <span className="battle-mode-card__body">
+                        <span className="battle-mode-card__label">{mode.label}</span>
+                        <strong>{meta.title}</strong>
+                        <em>{meta.desc}</em>
+                      </span>
+                      <span className="battle-mode-card__footer">
+                        <span>{selectedMode === mode.id ? 'Selected' : modeCount}</span>
+                        <HiArrowRight size={17} />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               <div className="battle-join-card">
                 <div>
+                  <span className="battle-kicker">Already invited?</span>
                   <h3>Join Battle Room</h3>
                   <p>Have a room code from a friend? Enter it here to join the live match.</p>
                 </div>
