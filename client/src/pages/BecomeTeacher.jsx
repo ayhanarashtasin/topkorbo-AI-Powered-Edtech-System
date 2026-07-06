@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import Sidebar from '../components/layout/Sidebar';
 import './BecomeTeacher.css';
@@ -523,24 +523,6 @@ export default function BecomeTeacher() {
       <Sidebar activeTab="teacher" user={user} />
 
       <main className="dashboard-main">
-        {/* Premium White Page Header */}
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>{language === 'en' ? 'Become a Teacher' : 'শিক্ষক হোন'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Join our verified educator team to grade papers, draft question banks, and host contests.'
-                : 'আমাদের ভেরিফাইড শিক্ষক প্যানেলে যোগ দিয়ে পরীক্ষার খাতা মূল্যায়ন, প্রশ্ন ব্যাংক তৈরি এবং কুইজ কন্টেস্ট পরিচালনা করুন।'}
-            </p>
-          </div>
-          <div className="dashboard-header__actions">
-            <span className="teacher-badge-pill">
-              <span className="badge-pulse-dot"></span>
-              {language === 'en' ? 'Educator Application' : 'শিক্ষক আবেদনপত্র'}
-            </span>
-          </div>
-        </header>
-
         {/* Scrollable Page Body */}
         <div className="dashboard-teacher-body">
           <div className="teacher-content-container animate-fade-in">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiBookOpen, HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
@@ -211,23 +211,6 @@ export default function IeltsReadingPractice() {
 
       <main className="ielts-reading-practice-content">
         {/* Header */}
-        <header className="ielts-reading-practice-header">
-          <button 
-            onClick={() => navigate('/ielts-prep', { state: { step: 2 } })} 
-            className="ielts-reading-practice-back-btn" 
-            title={language === 'en' ? 'Go Back to Prep' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-reading-practice-header-text">
-            <h2>{language === 'en' ? 'IELTS Reading Practice Room' : 'আইইএলটিএস রিডিং প্র্যাকটিস রুম'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Enhance reading comprehension skills with passages and instant evaluations.'
-                : 'প্যাসেজ ও ইনস্ট্যান্ট মূল্যায়নের সাহায্যে রিডিং দক্ষতা বৃদ্ধি করুন।'}
-            </p>
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-reading-practice-workspace">

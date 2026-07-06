@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiVolumeUp, HiArrowLeft, HiArrowRight } from 'react-icons/hi';
@@ -134,23 +134,6 @@ export default function IeltsListeningPractice() {
 
       <main className="ielts-listening-practice-content">
         {/* Header */}
-        <header className="ielts-listening-practice-header">
-          <button 
-            onClick={() => navigate('/ielts-prep', { state: { step: 2 } })} 
-            className="ielts-listening-practice-back-btn" 
-            title={language === 'en' ? 'Go Back to Prep' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-listening-practice-header-text">
-            <h2>{language === 'en' ? 'IELTS Listening Practice Room' : 'আইইএলটিএস লিসেনিং প্র্যাকটিস রুম'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Practice standard audio sheets uploaded by educators.'
-                : 'শিক্ষকদের আপলোডকৃত লিসেনিং শিট ও অডিওগুলোর সাহায্যে অনুশীলন করুন।'}
-            </p>
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-listening-practice-workspace">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiAcademicCap, HiBeaker, HiBookOpen, HiCollection, HiPencil, HiDocumentText, HiPhotograph, HiChevronDown, HiChevronUp, HiX, HiTag } from 'react-icons/hi';
@@ -554,21 +554,6 @@ export default function MakeContestQuestionChooseQBank() {
 
       <main className="dashboard-main">
         {/* Header Section */}
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>{language === 'en' ? 'Choose from Question Bank' : 'প্রশ্ন ব্যাংক থেকে বেছে নিন'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Select subjects and chapters to add questions to your contest.'
-                : 'আপনার কনটেস্টে প্রশ্ন যোগ করতে বিষয় এবং অধ্যায় নির্বাচন করুন।'}
-            </p>
-          </div>
-          <div className="mock-header__actions">
-            <span className="dashboard-header__badge">
-              {language === 'en' ? 'Teacher Studio' : 'শিক্ষক স্টুডিও'}
-            </span>
-          </div>
-        </header>
 
         <div className="mock-workspace animate-fade-in">
           <div className="mock-step-indicator">

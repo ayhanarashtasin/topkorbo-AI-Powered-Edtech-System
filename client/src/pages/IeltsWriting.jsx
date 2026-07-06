@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -91,29 +91,6 @@ export default function IeltsWriting() {
 
       <main className="ielts-writing-main">
         {/* Header */}
-        <header className="ielts-writing-header">
-          <div className="ielts-writing-header__left">
-            <button
-              onClick={() => navigate('/ielts-prep')}
-              className="ielts-writing-back-btn"
-              title={language === 'en' ? 'Back to IELTS Prep' : 'আইইএলটিএস প্রস্তুতিতে ফিরে যান'}
-            >
-              <HiArrowLeft size={20} />
-            </button>
-            <div className="ielts-writing-header__title">
-              <h2>{language === 'en' ? 'IELTS Writing' : 'আইইএলটিএস রাইটিং'}</h2>
-              <p>
-                {language === 'en'
-                  ? 'Master the writing module with structured task descriptions and prompt reviews'
-                  : 'সুনির্দিষ্ট টাস্ক ও প্রম্পট রিভিউয়ের মাধ্যমে রাইটিং সেকশনটি আয়ত্ত করুন'}
-              </p>
-            </div>
-          </div>
-          <div className="ielts-writing-badge">
-            <HiPencilAlt size={18} />
-            <span>{language === 'en' ? 'Writing Module' : 'রাইটিং মডিউল'}</span>
-          </div>
-        </header>
 
         {/* Content */}
         <div className="ielts-writing-workspace">

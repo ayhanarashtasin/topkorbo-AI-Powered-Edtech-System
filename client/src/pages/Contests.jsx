@@ -781,21 +781,6 @@ export default function Contests() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <main className="contests-content">
-        <header className="contests-header">
-          <div className="contests-header__badge">
-            <span className="contests-header__badge-dot"></span>
-            {language === 'en' ? 'Contests Arena' : 'কনটেস্ট এরিনা'}
-          </div>
-          <h1 className="contests-title">
-            {language === 'en' ? 'All Contests' : 'সকল কনটেস্টসমূহ'}
-          </h1>
-          <p className="contests-subtitle">
-            {language === 'en'
-              ? 'Join academic contests, test your knowledge against other students, and build your profile.'
-              : 'একাডেমিক কনটেস্টগুলোতে অংশগ্রহণ করুন, অন্যান্য শিক্ষার্থীদের সাথে নিজের মেধা যাচাই করুন এবং আপনার প্রোফাইল উন্নত করুন।'}
-          </p>
-        </header>
-
         {/* ═══════ Table 1: Current or Upcoming Contests ═══════ */}
         <section className="contests-table-section">
           <div className="contests-section-header">

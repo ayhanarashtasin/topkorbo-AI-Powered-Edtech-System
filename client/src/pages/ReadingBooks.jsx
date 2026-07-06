@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
@@ -362,28 +362,6 @@ export default function ReadingBooks() {
     <div className="dashboard-container">
       <Sidebar activeTab={activeTab} user={user} />
       <main className="dashboard-main">
-        <header className="dashboard-header rb-header">
-          <div className="dashboard-header__welcome">
-            <h2>
-              <HiLibrary style={{ verticalAlign: 'middle', marginRight: 8 }} />
-              {t('rb.title')}
-            </h2>
-            <p>{t('rb.subtitle')}</p>
-          </div>
-          <div className="dashboard-header__actions">
-            {user.role === 'teacher' && (
-              <button
-                type="button"
-                className="rb-upload-cta"
-                onClick={handleUploadClick}
-              >
-                <HiPlusCircle size={18} />
-                <span>{t('rb.upload_cta')}</span>
-              </button>
-            )}
-            <span className="dashboard-header__badge">{t('db.workspace')}</span>
-          </div>
-        </header>
 
         <div className="rb-workspace animate-fade-in">
           <div className="rb-filters">

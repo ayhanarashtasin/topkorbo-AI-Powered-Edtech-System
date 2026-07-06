@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -91,29 +91,6 @@ export default function IeltsReading() {
 
       <main className="ielts-reading-main">
         {/* Header */}
-        <header className="ielts-reading-header">
-          <div className="ielts-reading-header__left">
-            <button
-              onClick={() => navigate('/ielts-prep')}
-              className="ielts-reading-back-btn"
-              title={language === 'en' ? 'Back to IELTS Prep' : 'আইইএলটিএস প্রস্তুতিতে ফিরে যান'}
-            >
-              <HiArrowLeft size={20} />
-            </button>
-            <div className="ielts-reading-header__title">
-              <h2>{language === 'en' ? 'IELTS Reading' : 'আইইএলটিএস রিডিং'}</h2>
-              <p>
-                {language === 'en'
-                  ? 'Master the reading module with skimming, scanning, and detailed comprehension practice'
-                  : 'স্কিমিং, স্ক্যানিং এবং বিস্তারিত কম্প্রিহেনশন অনুশীলনের মাধ্যমে রিডিং মডিউল আয়ত্ত করুন'}
-              </p>
-            </div>
-          </div>
-          <div className="ielts-reading-badge">
-            <HiBookOpen size={18} />
-            <span>{language === 'en' ? 'Reading Module' : 'রিডিং মডিউল'}</span>
-          </div>
-        </header>
 
         {/* Content */}
         <div className="ielts-reading-workspace">

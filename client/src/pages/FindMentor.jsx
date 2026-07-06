@@ -223,17 +223,6 @@ export default function FindMentor() {
       <Sidebar activeTab="find-mentor" user={user} />
       <main className="dashboard-main">
         <div className="find-mentor-page">
-          <header className="find-mentor-hero">
-            <div>
-              <span className="find-mentor-eyebrow">Student mentor marketplace</span>
-              <h1>Find your mentor</h1>
-              <p>Compare mentor profiles, anonymous student reviews, ratings, and request the mentors you want to learn from.</p>
-            </div>
-            <div className="find-mentor-hero__stat">
-              <strong>{mentors.length}</strong>
-              <span>available mentors</span>
-            </div>
-          </header>
 
           <section className="find-mentor-toolbar">
             <label className="find-mentor-search">

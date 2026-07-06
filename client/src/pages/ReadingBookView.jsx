@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { useDebouncedAutoSave } from '../hooks/useDebouncedAutoSave';
@@ -832,80 +832,6 @@ export default function ReadingBookView() {
         />
 
         <div className="rb-reader__main">
-          <header className="rb-reader__topbar">
-            <button
-              type="button"
-              className="rb-reader__menu-btn"
-              onClick={() => setIsNavOpen(prev => !prev)}
-              aria-label={t('rb.reader.menu')}
-            >
-              <HiMenu size={20} />
-            </button>
-            <button
-              type="button"
-              className="rb-reader__menu-btn"
-              onClick={() => setIsHighlightSidebarOpen(true)}
-              title="Show Highlights"
-              style={{ marginLeft: 8 }}
-            >
-              <HiOutlineLightBulb size={20} />
-            </button>
-            {canReadingAI ? (
-              <>
-                <button
-                  type="button"
-                  className="rb-reader__menu-btn"
-                  onClick={() => {
-                    setTutorScope('page');
-                    setIsChatSidebarOpen(true);
-                  }}
-                  title="Ask AI Tutor"
-                  style={{ marginLeft: 8 }}
-                >
-                  <HiOutlineChatAlt2 size={20} />
-                </button>
-                <button
-                  type="button"
-                  className="rb-reader__menu-btn"
-                  onClick={() => setIsMindMapOpen(true)}
-                  title="Mind Map"
-                  style={{ marginLeft: 8 }}
-                >
-                  <HiOutlineShare size={20} />
-                </button>
-              </>
-            ) : (
-              <a
-                href="/pricing"
-                className="rb-reader__menu-btn"
-                title="AI tutor & mind-map are a Pro+ feature"
-                style={{ marginLeft: 8, textDecoration: 'none' }}
-              >
-                <HiOutlineChatAlt2 size={20} />
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, marginLeft: 4 }}>Pro+</span>
-              </a>
-            )}
-            <button
-              type="button"
-              className="rb-reader__back-btn"
-              onClick={() => navigate('/reading-books')}
-            >
-              <HiArrowLeft size={16} />
-              <span>{t('rb.title')}</span>
-            </button>
-            <div className="rb-reader__topbar-spacer" />
-            <div className="rb-reader__progress">
-              <span className="rb-reader__progress-text">
-                {t('rb.reader.progress_label').replace('{pct}', progress)}
-              </span>
-              <div className="rb-reader__progress-bar">
-                <div
-                  className="rb-reader__progress-fill"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          </header>
 
           {(knowledgeLoading || knowledgeStatus !== 'completed') && (
             <div className="rb-reader__knowledge-banner">

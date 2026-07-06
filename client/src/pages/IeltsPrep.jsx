@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -106,20 +106,6 @@ export default function IeltsPrep() {
 
       <main className="ielts-prep-main">
         {/* Header */}
-        <header className="ielts-prep-header">
-          <div className="ielts-prep-header__title">
-            <h2>{language === 'en' ? 'IELTS Preparation' : 'আইইএলটিএস প্রস্তুতি'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Master the IELTS exam with comprehensive section reviews'
-                : 'সম্পূর্ণ সেকশন রিভিউর মাধ্যমে আইইএলটিএস পরীক্ষায় ভালো স্কোর করুন'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.25rem' }}>🇬🇧</span>
-            <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>IELTS Academic & GT</span>
-          </div>
-        </header>
 
         {/* Content Workspace */}
         <div className="ielts-prep-workspace">

@@ -1350,8 +1350,7 @@ export default function QuestionBank() {
             key="varsity-options"
             className="qbank-options-page animate-fade-in"
           >
-            <header className="dashboard-header qbank-header">
-              <button
+            <button
                 type="button"
                 className="qbank-back-btn"
                 onClick={clearVarsitySelection}
@@ -1363,19 +1362,6 @@ export default function QuestionBank() {
                     : "ভর্তি পরীক্ষায় ফিরে যান"}
                 </span>
               </button>
-              <div className="qbank-options-header-info">
-                <h2>
-                  {language === "en"
-                    ? selectedVarsity.name
-                    : selectedVarsity.bnName}
-                </h2>
-                <p>
-                  {language === "en"
-                    ? "Admission Question Bank"
-                    : "ভর্তি পরীক্ষার প্রশ্নব্যাংক"}
-                </p>
-              </div>
-            </header>
 
             <div className="qbank-workspace">
               {/* DU: MCQ / Written Chooser */}
@@ -1540,8 +1526,7 @@ export default function QuestionBank() {
           </div>
         ) : selectedSourceContext ? (
           <div className="qbank-options-page animate-fade-in">
-            <header className="dashboard-header qbank-header">
-              <button
+            <button
                 type="button"
                 className="qbank-back-btn"
                 onClick={() => setSearchParams({})}
@@ -1553,15 +1538,6 @@ export default function QuestionBank() {
                     : "প্রশ্নব্যাংকে ফিরে যান"}
                 </span>
               </button>
-              <div className="qbank-options-header-info">
-                <h2>
-                  {language === "en"
-                    ? selectedSubject?.titleEn
-                    : selectedSubject?.titleBn}
-                </h2>
-                <p>{t("qbank.sources.subtitle")}</p>
-              </div>
-            </header>
 
             <div className="qbank-workspace">
               {sourcesLoading ? (
@@ -1702,8 +1678,7 @@ export default function QuestionBank() {
             key="subject-options"
             className="qbank-options-page animate-fade-in"
           >
-            <header className="dashboard-header qbank-header">
-              <button
+            <button
                 type="button"
                 className="qbank-back-btn"
                 onClick={() => {
@@ -1725,27 +1700,6 @@ export default function QuestionBank() {
                       : "প্রশ্নব্যাংকে ফিরে যান"}
                 </span>
               </button>
-              <div className="qbank-options-header-info">
-                <h2>
-                  {language === "en"
-                    ? selectedSubject.titleEn
-                    : selectedSubject.titleBn}
-                </h2>
-                <p>
-                  {selectedSubject.id === "english_1"
-                    ? selectedEnglishSection
-                      ? language === "en"
-                        ? selectedEnglishSection.descriptionEn
-                        : selectedEnglishSection.descriptionBn
-                      : language === "en"
-                        ? "Choose an English 1st paper content area"
-                        : "ইংরেজি ১ম পত্রের কনটেন্ট এরিয়া নির্বাচন করুন"
-                    : language === "en"
-                      ? "Choose question format"
-                      : "প্রশ্নের ধরন নির্বাচন করুন"}
-                </p>
-              </div>
-            </header>
 
             <div className="qbank-workspace">
               {selectedSubject.id === "english_1" ? (
@@ -1933,17 +1887,7 @@ export default function QuestionBank() {
           </div>
         ) : (
           <Fragment key="main-qbank">
-            <header className="dashboard-header qbank-header">
-              <div className="dashboard-header__welcome">
-                <h2>{t("qbank.title")}</h2>
-                <p>{t("qbank.subtitle")}</p>
-              </div>
-              <div className="dashboard-header__actions">
-                <span className="dashboard-header__badge">
-                  {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
-                </span>
-              </div >
-            </header >
+
 
     {/* Question Bank Workspace Panel */}
     < div className = "qbank-workspace animate-fade-in" >

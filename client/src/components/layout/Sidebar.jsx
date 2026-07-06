@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch } from 'react-icons/hi';
+import { useState, useEffect } from 'react';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import './Sidebar.css';
@@ -23,6 +23,12 @@ export default function Sidebar({ activeTab, user }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
     localStorage.getItem('topkorbo_sidebar_collapsed') === 'true'
   );
+  
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [activeTab]);
 
   const toggleSidebar = () => {
     const nextVal = !isSidebarCollapsed;
@@ -134,9 +140,51 @@ export default function Sidebar({ activeTab, user }) {
   }
 
   return (
-    <aside className={`dashboard-sidebar ${isSidebarCollapsed ? 'dashboard-sidebar--collapsed' : ''}`}>
-      {/* Sidebar Logo */}
-      <div className="dashboard-sidebar__logo-container">
+    <>
+      {/* Mobile Top Bar */}
+      <div className="dashboard-mobile-topbar">
+        <div className="dashboard-sidebar__logo-container">
+          <a href="/" className="dashboard-sidebar__logo">
+            <svg viewBox="0 0 100 100" fill="none" className="dashboard-sidebar__logo-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="dbLogoGradMobile" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#C08552" />
+                  <stop offset="35%" stopColor="#D4A373" />
+                  <stop offset="70%" stopColor="#8C5A3C" />
+                  <stop offset="100%" stopColor="#4B2E2B" />
+                </linearGradient>
+              </defs>
+              <path d="M 28,45 C 28,45 28,58 50,68 C 72,58 72,45 72,45" stroke="url(#dbLogoGradMobile)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" fill="rgba(37, 24, 23, 0.2)" />
+              <path d="M 50,15 L 90,36 L 50,57 L 10,36 Z" stroke="url(#dbLogoGradMobile)" strokeWidth="4.5" strokeLinejoin="round" fill="rgba(37, 24, 23, 0.55)" />
+              <path d="M 50,19 L 82,36 L 50,53 L 18,36 Z" stroke="url(#dbLogoGradMobile)" strokeWidth="1" strokeLinejoin="round" fill="url(#dbLogoGradMobile)" fillOpacity="0.08" />
+              <path d="M 37,25 H 63 M 50,25 V 45" stroke="url(#dbLogoGradMobile)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M 37,25 V 29 M 63,25 V 29" stroke="url(#dbLogoGradMobile)" strokeWidth="3" strokeLinecap="round" />
+              <path d="M 44,28 V 44" stroke="url(#dbLogoGradMobile)" strokeWidth="3.5" strokeLinecap="round" />
+              <path d="M 44,36 L 55,28 M 44,36 L 55,44" stroke="url(#dbLogoGradMobile)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M 50,36 C 40,30 20,25 18,32 L 18,50" stroke="url(#dbLogoGradMobile)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <circle cx="18" cy="52" r="3.5" fill="url(#dbLogoGradMobile)" />
+              <path d="M 14,55 H 22 L 24,78 H 12 Z" fill="url(#dbLogoGradMobile)" />
+            </svg>
+            <span className="dashboard-sidebar__logo-text">𝖙𝖔𝖕ƙ𝖔𝖗𝖇𝖔</span>
+          </a>
+        </div>
+        <button
+          className="dashboard-mobile-menu-btn"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <HiX size={24} /> : <HiMenu size={24} />}
+        </button>
+      </div>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div className="dashboard-mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
+      <aside className={`dashboard-sidebar ${isSidebarCollapsed ? 'dashboard-sidebar--collapsed' : ''} ${isMobileMenuOpen ? 'dashboard-sidebar--mobile-open' : ''}`}>
+        {/* Sidebar Logo */}
+        <div className="dashboard-sidebar__logo-container desktop-only-logo">
         <a href="/" className="dashboard-sidebar__logo">
           <svg viewBox="0 0 100 100" fill="none" className="dashboard-sidebar__logo-svg" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -256,5 +304,6 @@ export default function Sidebar({ activeTab, user }) {
         </div>
       </div>
     </aside>
+    </>
   );
 }

@@ -1052,18 +1052,6 @@ export default function Dashboard() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>{t('db.welcome').replace('{name}', user.name.split(' ')[0])}</h2>
-            <p>{t('db.welcome.sub')}</p>
-          </div>
-          <div className="dashboard-header__actions">
-            <span className="dashboard-header__badge">
-              {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
-            </span>
-          </div>
-        </header>
-
         <div className={`dashboard-workspace ${isTeacher ? 'dashboard-workspace--teacher' : ''}`}>
           <div className="dashboard-workspace__body">
             {dashboardError ? <div className="dashboard-empty dashboard-empty--error">{dashboardError}</div> : null}

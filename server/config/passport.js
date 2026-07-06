@@ -3,7 +3,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 const { TRIAL_PLAN, trialExpiresAt } = require('./plans');
 
-const requiredGoogleEnv = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_CALLBACK_URL'];
+const requiredGoogleEnv = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
 const missingGoogleEnv = requiredGoogleEnv.filter((key) => !process.env[key]);
 
 if (missingGoogleEnv.length > 0) {
@@ -13,7 +13,10 @@ if (missingGoogleEnv.length > 0) {
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    // We use a relative path and trust the proxy so that it works dynamically
+    // for both localhost and production (Render) without needing absolute URLs in .env.
+    callbackURL: '/api/auth/google/callback',
+    proxy: true,
     passReqToCallback: true
   },
   async (req, accessToken, refreshToken, profile, done) => {

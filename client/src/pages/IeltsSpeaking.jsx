@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -91,29 +91,6 @@ export default function IeltsSpeaking() {
 
       <main className="ielts-speaking-main">
         {/* Header */}
-        <header className="ielts-speaking-header">
-          <div className="ielts-speaking-header__left">
-            <button
-              onClick={() => navigate('/ielts-prep')}
-              className="ielts-speaking-back-btn"
-              title={language === 'en' ? 'Back to IELTS Prep' : 'আইইএলটিএস প্রস্তুতিতে ফিরে যান'}
-            >
-              <HiArrowLeft size={20} />
-            </button>
-            <div className="ielts-speaking-header__title">
-              <h2>{language === 'en' ? 'IELTS Speaking' : 'আইইএলটিএস স্পিকিং'}</h2>
-              <p>
-                {language === 'en'
-                  ? 'Master the speaking module with structured mock parts and cue card templates'
-                  : 'সুসংগঠিত মক পার্টস ও কিউ কার্ডের সাহায্যে স্পিকিং মডিউল আয়ত্ত করুন'}
-              </p>
-            </div>
-          </div>
-          <div className="ielts-speaking-badge">
-            <HiChatAlt2 size={18} />
-            <span>{language === 'en' ? 'Speaking Module' : 'স্পিকিং মডিউল'}</span>
-          </div>
-        </header>
 
         {/* Content */}
         <div className="ielts-speaking-workspace">

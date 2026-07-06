@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -203,42 +203,6 @@ export default function IeltsListeningUpload() {
 
       <main className="ielts-upload-content">
         {/* Header */}
-        <header className="ielts-upload-header">
-          <button 
-            onClick={() => {
-              if (viewMode === 'upload') {
-                setViewMode('bank');
-              } else {
-                navigate('/ielts-teacher');
-              }
-            }} 
-            className="ielts-upload-back-btn" 
-            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-upload-header-text">
-            {viewMode === 'bank' ? (
-              <>
-                <h2>{language === 'en' ? 'Listening Question Bank' : 'লিসেনিং প্রশ্ন ব্যাংক'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Manage and view all your uploaded IELTS listening question sheets'
-                    : 'আপনার আপলোডকৃত আইইএলটিএস লিসেনিং প্রশ্নপত্রগুলো পরিচালনা এবং দেখুন'}
-                </p>
-              </>
-            ) : (
-              <>
-                <h2>{language === 'en' ? 'Upload Listening Question Set' : 'লিসেনিং প্রশ্ন সেট আপলোড করুন'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Create a new IELTS listening set containing 4 sections with their respective audio prompts and PDFs'
-                    : 'আইইএলটিএস লিসেনিং টেস্টের ৪টি সেকশনের জন্য অডিও এবং পিডিএফ ফাইল আপলোড করে নতুন প্রশ্ন সেট তৈরি করুন'}
-                </p>
-              </>
-            )}
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-upload-workspace">

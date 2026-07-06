@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiChatAlt2, HiArrowLeft, HiClipboardCheck, HiUpload } from 'react-icons/hi';
@@ -127,64 +127,6 @@ export default function IeltsSpeakingUpload() {
 
       <main className="ielts-speaking-upload-content">
         {/* Header */}
-        <header className="ielts-speaking-upload-header">
-          <button
-            onClick={() => {
-              if (activeSubOption === 'questions' && speakingViewMode === 'upload') {
-                setSpeakingViewMode('bank');
-              } else if (activeSubOption) {
-                handleBackToMenu();
-              } else {
-                navigate('/ielts-teacher');
-              }
-            }}
-            className="ielts-speaking-upload-back-btn"
-            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-speaking-upload-header-text">
-            {activeSubOption === 'questions' ? (
-              speakingViewMode === 'bank' ? (
-                <>
-                  <h2>{language === 'en' ? 'Speaking Question Bank' : 'স্পিকিং প্রশ্ন ব্যাংক'}</h2>
-                  <p>
-                    {language === 'en'
-                      ? 'Manage and view all uploaded IELTS speaking mock interview sheets'
-                      : 'আপনার আপলোডকৃত আইইএলটিএস স্পিকিং প্রম্পট ও কিউ কার্ডগুলো পরিচালনা এবং দেখুন'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h2>{language === 'en' ? 'Upload Speaking Questions' : 'স্পিকিং প্রশ্ন আপলোড করুন'}</h2>
-                  <p>
-                    {language === 'en'
-                      ? 'Design and manage mock interview question sheets'
-                      : 'মক ইন্টারভিউ প্রশ্নপত্র ডিজাইন ও পরিচালনা করুন'}
-                  </p>
-                </>
-              )
-            ) : activeSubOption === 'requests' ? (
-              <>
-                <h2>{language === 'en' ? 'Test Requests' : 'টেস্ট অনুরোধসমূহ'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'View and manage student speaking appointment requests'
-                    : 'শিক্ষার্থীদের স্পিকিং অ্যাপয়েন্টমেন্টের অনুরোধগুলো দেখুন ও পরিচালনা করুন'}
-                </p>
-              </>
-            ) : (
-              <>
-                <h2>{language === 'en' ? 'Speaking Module Management' : 'স্পিকিং মডিউল ব্যবস্থাপনা'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Choose an option to manage speaking questions or student requests'
-                    : 'স্পিকিং প্রশ্ন অথবা শিক্ষার্থীর অনুরোধসমূহ পরিচালনা করতে একটি বিকল্প বেছে নিন'}
-                </p>
-              </>
-            )}
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-speaking-upload-workspace">

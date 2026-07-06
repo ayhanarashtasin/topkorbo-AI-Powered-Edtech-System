@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiChatAlt2, HiArrowLeft, HiMicrophone, HiStop, HiCalendar, HiClock, HiUser, HiCheckCircle } from 'react-icons/hi';
@@ -259,23 +259,6 @@ export default function IeltsSpeakingPractice() {
 
       <main className="ielts-speaking-practice-content">
         {/* Header */}
-        <header className="ielts-speaking-practice-header">
-          <button 
-            onClick={() => navigate('/ielts-prep', { state: { step: 2 } })} 
-            className="ielts-speaking-practice-back-btn" 
-            title={language === 'en' ? 'Go Back to Prep' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-speaking-practice-header-text">
-            <h2>{language === 'en' ? 'IELTS Speaking Practice Room' : 'আইইএলটিএস স্পিকিং প্র্যাকটিস রুম'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Practice standard speaking tasks with active voice recording capabilities.'
-                : 'ভয়েস রেকর্ডিং ফিচারের সাহায্যে স্ট্যান্ডার্ড স্পিকিং মডিউল অনুশীলন করুন।'}
-            </p>
-          </div>
-        </header>
 
         {/* View Selector Tabs */}
         <div className="ielts-speaking-views-nav">

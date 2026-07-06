@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -84,29 +84,6 @@ export default function IeltsListening() {
 
       <main className="ielts-listening-main">
         {/* Header */}
-        <header className="ielts-listening-header">
-          <div className="ielts-listening-header__left">
-            <button
-              onClick={() => navigate('/ielts-prep')}
-              className="ielts-listening-back-btn"
-              title={language === 'en' ? 'Back to IELTS Prep' : 'আইইএলটিএস প্রস্তুতিতে ফিরে যান'}
-            >
-              <HiArrowLeft size={20} />
-            </button>
-            <div className="ielts-listening-header__title">
-              <h2>{language === 'en' ? 'IELTS Listening' : 'আইইএলটিএস লিসেনিং'}</h2>
-              <p>
-                {language === 'en'
-                  ? 'Master the listening module with structured practice'
-                  : 'সুসংগঠিত অনুশীলনের মাধ্যমে লিসেনিং মডিউল আয়ত্ত করুন'}
-              </p>
-            </div>
-          </div>
-          <div className="ielts-listening-badge">
-            <HiVolumeUp size={18} />
-            <span>{language === 'en' ? 'Listening Module' : 'লিসেনিং মডিউল'}</span>
-          </div>
-        </header>
 
         {/* Content */}
         <div className="ielts-listening-workspace">

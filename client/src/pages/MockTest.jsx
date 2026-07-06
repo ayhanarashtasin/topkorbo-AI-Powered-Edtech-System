@@ -699,22 +699,6 @@ export default function MockTest() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>{t('mock.title')}</h2>
-            <p>{t('mock.subtitle')}</p>
-          </div>
-          <div className="mock-header__actions">
-            <div className="mock-streak-widget animate-pulse-slow">
-              <HiFire size={20} className="mock-streak-icon" />
-              <span className="mock-streak-count">{user.streak}</span>
-            </div>
-            <span className="dashboard-header__badge">
-              {user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}
-            </span>
-          </div>
-        </header>
-
         <div className="mock-workspace animate-fade-in">
           <div className="mock-step-indicator">
             {STEP_LABELS.map((s, idx) => (

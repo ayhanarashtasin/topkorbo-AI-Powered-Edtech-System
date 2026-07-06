@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import {
   HiUpload,
@@ -1223,15 +1223,6 @@ export default function UploadQuestion() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>{t('uq.title')}</h2>
-            <p>{t('uq.subtitle')}</p>
-          </div>
-          <div className="dashboard-header__actions">
-            <span className="dashboard-header__badge">{t('uq.badge')}</span>
-          </div>
-        </header>
 
         <div className="uq-workspace">
           {/* ── Toast ── */}

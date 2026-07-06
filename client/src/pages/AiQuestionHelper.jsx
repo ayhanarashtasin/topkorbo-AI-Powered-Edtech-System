@@ -243,22 +243,6 @@ export default function AiQuestionHelper() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>
-              <HiOutlineSparkles style={{ verticalAlign: '-3px', marginRight: 8, color: 'var(--sky-blue)' }} />
-              AI Question Helper
-            </h2>
-            <p>
-              Paste a question or upload an image — get a clean LaTeX version
-              you can copy into the Upload Question form.
-            </p>
-          </div>
-          <div className="dashboard-header__actions">
-            <span className="dashboard-header__badge">Teacher Studio</span>
-          </div>
-        </header>
-
         <div className="dashboard-workspace dashboard-workspace--teacher">
           <div className="aih-page">
             <section className="aih-card aih-card--input">

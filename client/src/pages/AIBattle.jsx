@@ -557,16 +557,6 @@ export default function AIBattle() {
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
         <main className="dashboard-main">
-          <header className="dashboard-header">
-            <div className="dashboard-header__welcome">
-              <h2>Battle vs AI</h2>
-              <p>Solo duel against the AI opponent.</p>
-            </div>
-            <div className="mock-header__actions">
-              <div className="battle-room-pill"><HiFire size={18} /> 1v1 vs AI</div>
-              <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
-            </div>
-          </header>
 
           <div className="battle-room">
             <section className="battle-room__stage">
@@ -631,16 +621,6 @@ export default function AIBattle() {
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
         <main className="dashboard-main">
-          <header className="dashboard-header">
-            <div className="dashboard-header__welcome">
-              <h2>Battle vs AI</h2>
-              <p>Race the AI — the first correct answer wins the question.</p>
-            </div>
-            <div className="mock-header__actions">
-              <div className="battle-room-pill"><HiFire size={18} /> 1v1 vs AI</div>
-              <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
-            </div>
-          </header>
 
           <div className="battle-room">
             <section className="battle-room__stage">
@@ -723,18 +703,6 @@ export default function AIBattle() {
     <div className="dashboard-container">
       <Sidebar activeTab="battle" user={user} />
       <main className="dashboard-main">
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>Battle vs AI</h2>
-            <p>Pick your syllabus, then duel the AI one question at a time.</p>
-          </div>
-          <div className="mock-header__actions">
-            <button type="button" className="battle-outline-btn" onClick={() => navigate('/battle')}>
-              <HiArrowLeft size={16} /> Battle Arena
-            </button>
-            <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
-          </div>
-        </header>
 
         <div className="mock-workspace battle-workspace animate-fade-in">
           <div className="mock-step-indicator battle-step-indicator">

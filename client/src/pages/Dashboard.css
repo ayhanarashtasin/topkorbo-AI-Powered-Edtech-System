@@ -1043,10 +1043,26 @@
   }
 
   .dashboard-header {
-    padding: 20px 24px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+    padding: 14px 20px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .dashboard-header__welcome h2 {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+
+  .dashboard-header__welcome p {
+    display: none;
+  }
+
+  .dashboard-header__badge {
+    padding: 5px 12px;
+    font-size: 0.72rem;
   }
 
   .dashboard-workspace {
@@ -1095,7 +1111,11 @@
 
 @media (max-width: 430px) {
   .dashboard-header {
-    padding: 16px;
+    padding: 12px 16px;
+  }
+
+  .dashboard-header__welcome h2 {
+    font-size: 1.15rem;
   }
 
   .dashboard-workspace {

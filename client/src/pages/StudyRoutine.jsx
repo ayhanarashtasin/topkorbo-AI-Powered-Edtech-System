@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+﻿import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
@@ -475,28 +475,6 @@ export default function StudyRoutine() {
     <div className="dashboard-container">
       <Sidebar activeTab={activeTab} user={user} />
       <main className="dashboard-main">
-        <header className="dashboard-header routine-header">
-          <div className="dashboard-header__welcome">
-            <h2>
-              <HiCalendar className="routine-header-icon" /> AI Study Routine
-            </h2>
-            <p>Date-aware study planner with streak tracking and calendar view.</p>
-          </div>
-          <div className="routine-header-actions">
-            <span className={`routine-status ${isExpired ? 'routine-status--expired' : activeRoutine ? 'routine-status--ready' : ''}`}>
-              {isExpired ? 'Routine Expired' : activeRoutine ? 'Routine Active' : messages.length === 0 ? 'Ready to start' : 'Collecting details'}
-            </span>
-            <button
-              type="button"
-              className="routine-icon-btn"
-              onClick={resetConversation}
-              title="Reset"
-              disabled={isLoading && !activeRoutine}
-            >
-              <HiOutlineRefresh />
-            </button>
-          </div>
-        </header>
 
         <div className="dashboard-workspace routine-workspace">
           {activeRoutine && activeRoutine.routine?.length > 0 ? (

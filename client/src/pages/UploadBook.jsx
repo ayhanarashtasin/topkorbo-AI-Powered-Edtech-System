@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -263,15 +263,6 @@ export default function UploadBook() {
     <div className="dashboard-container">
       <Sidebar activeTab={activeTab} user={user} />
       <main className="dashboard-main">
-        <header className="dashboard-header rb-header">
-          <div className="dashboard-header__welcome">
-            <h2>
-              <HiDocumentText style={{ verticalAlign: 'middle', marginRight: 8 }} />
-              {bookId ? (language === 'en' ? 'Edit Book Information' : 'বইয়ের তথ্য পরিবর্তন') : t('rb.upload.title')}
-            </h2>
-            <p>{bookId ? (language === 'en' ? 'Update the metadata for this book.' : 'এই বইটির বিবরণ পরিবর্তন করুন।') : t('rb.upload.subtitle')}</p>
-          </div>
-        </header>
 
         <div className="rb-workspace rb-upload-workspace animate-fade-in">
           <div className="rb-upload-step">

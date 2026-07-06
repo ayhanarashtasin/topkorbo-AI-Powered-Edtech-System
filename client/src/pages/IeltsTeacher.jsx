@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -86,22 +86,6 @@ export default function IeltsTeacher() {
 
       <main className="ielts-teacher-main">
         {/* Header */}
-        <header className="ielts-teacher-header">
-          <div className="ielts-teacher-header__title">
-            <h2>{language === 'en' ? 'IELTS Teacher Portal' : 'আইইএলটিএস টিচার পোর্টাল'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Create, manage, and upload question sheets for IELTS segments.'
-                : 'আইইএলটিএস সেগমেন্টের প্রশ্ন তৈরি, পরিচালনা এবং আপলোড করুন।'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.25rem' }}>👨‍🏫</span>
-            <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>
-              {language === 'en' ? 'Educator Mode' : 'শিক্ষক প্যানেল'}
-            </span>
-          </div>
-        </header>
 
         {/* Content Workspace */}
         <div className="ielts-teacher-workspace">

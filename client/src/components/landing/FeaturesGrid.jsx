@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useLanguage } from '../../hooks/useLanguage';
-import { HiOutlineLightningBolt, HiOutlineShieldCheck, HiOutlineSparkles, HiOutlineCollection, HiOutlineChartBar, HiOutlineUserGroup, HiOutlineFire, HiOutlineLockClosed, HiOutlineViewGrid, HiOutlinePencilAlt, HiOutlineCog, HiOutlineCreditCard, HiOutlineBell } from 'react-icons/hi';
+import { HiOutlineLightningBolt, HiOutlineSparkles, HiOutlineCollection, HiOutlineChatAlt2, HiOutlineFire, HiOutlineBookOpen, HiOutlineClipboardCheck, HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineCalendar } from 'react-icons/hi';
 
 import './FeaturesGrid.css';
 
@@ -12,11 +12,17 @@ export default function FeaturesGrid() {
   const features = [
     { key: 'arena', icon: <HiOutlineLightningBolt />, color: '#F59E0B', size: 'large' },
     { key: 'ai', icon: <HiOutlineSparkles />, color: '#8B5CF6', size: 'large' },
-    { key: 'battle', icon: <HiOutlineFire />, color: '#F97316', size: 'large' },
-    { key: 'student_dash', icon: <HiOutlineViewGrid />, color: '#14B8A6', size: 'large' },
-    { key: 'mentor', icon: <HiOutlineUserGroup />, color: '#EC4899', size: 'large' },
+    
     { key: 'questionbank', icon: <HiOutlineCollection />, color: '#10B981', size: 'small' },
-    { key: 'analytics', icon: <HiOutlineChartBar />, color: '#3B82F6', size: 'small' },
+    { key: 'forum', icon: <HiOutlineChatAlt2 />, color: '#3B82F6', size: 'small' },
+    { key: 'battle', icon: <HiOutlineFire />, color: '#F97316', size: 'large' },
+    
+    { key: 'reading_library', icon: <HiOutlineBookOpen />, color: '#6366F1', size: 'large' },
+    { key: 'mock_test', icon: <HiOutlineClipboardCheck />, color: '#EC4899', size: 'small' },
+    { key: 'ielts', icon: <HiOutlineGlobeAlt />, color: '#06B6D4', size: 'small' },
+
+    { key: 'mentor', icon: <HiOutlineUserGroup />, color: '#EAB308', size: 'large' },
+    { key: 'study_routine', icon: <HiOutlineCalendar />, color: '#14B8A6', size: 'large' },
   ];
 
   return (

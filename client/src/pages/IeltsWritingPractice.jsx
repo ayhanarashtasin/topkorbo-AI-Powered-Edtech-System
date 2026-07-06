@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiPencilAlt, HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
@@ -197,23 +197,6 @@ export default function IeltsWritingPractice() {
 
       <main className="ielts-writing-practice-content">
         {/* Header */}
-        <header className="ielts-writing-practice-header">
-          <button 
-            onClick={() => navigate('/ielts-prep', { state: { step: 2 } })} 
-            className="ielts-writing-practice-back-btn" 
-            title={language === 'en' ? 'Go Back to Prep' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-writing-practice-header-text">
-            <h2>{language === 'en' ? 'IELTS Writing Practice Room' : 'আইইএলটিএস রাইটিং প্র্যাকটিস রুম'}</h2>
-            <p>
-              {language === 'en'
-                ? 'Practice essay tasks and report drafts with benchmark model answers.'
-                : 'মডেল উত্তরের সাহায্যে রচনার বিবরণ এবং রিপোর্টের খসড়া অনুশীলন করুন।'}
-            </p>
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-writing-practice-workspace">

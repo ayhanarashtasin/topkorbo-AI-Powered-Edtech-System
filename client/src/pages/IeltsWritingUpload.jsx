@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiPencilAlt, HiArrowLeft, HiUpload, HiCheckCircle, HiX, HiDocumentText, HiPhotograph } from 'react-icons/hi';
@@ -274,43 +274,6 @@ export default function IeltsWritingUpload() {
 
       <main className="ielts-writing-upload-content">
         {/* Header */}
-        <header className="ielts-writing-upload-header">
-          <button
-            onClick={() => {
-              if (viewMode === 'upload') {
-                setViewMode('bank');
-              } else {
-                navigate('/ielts-teacher');
-              }
-            }}
-            className="ielts-writing-upload-back-btn"
-            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
-            disabled={isSubmitting}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-writing-upload-header-text">
-            {viewMode === 'bank' ? (
-              <>
-                <h2>{language === 'en' ? 'Writing Question Bank' : 'রাইটিং প্রশ্ন ব্যাংক'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Manage and view all your uploaded IELTS writing question sheets'
-                    : 'আপনার আপলোডকৃত আইইএলটিএস রাইটিং প্রশ্নপত্রগুলো পরিচালনা এবং দেখুন'}
-                </p>
-              </>
-            ) : (
-              <>
-                <h2>{language === 'en' ? 'Upload Writing Question Set' : 'রাইটিং প্রশ্ন সেট আপলোড করুন'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Create a custom Writing question set with Tasks 1 & 2 using PDF documents or text prompts.'
-                    : 'পিডিএফ ডকুমেন্ট অথবা টেক্সট প্রম্পট ব্যবহার করে টাস্ক ১ এবং টাস্ক ২ সম্বলিত কাস্টম রাইটিং প্রশ্ন সেট তৈরি করুন।'}
-                </p>
-              </>
-            )}
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-writing-upload-workspace">

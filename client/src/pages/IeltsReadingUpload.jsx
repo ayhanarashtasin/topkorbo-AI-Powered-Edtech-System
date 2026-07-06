@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiBookOpen, HiArrowLeft, HiUpload } from 'react-icons/hi';
@@ -55,42 +55,6 @@ export default function IeltsReadingUpload() {
 
       <main className="ielts-reading-upload-content">
         {/* Header */}
-        <header className="ielts-reading-upload-header">
-          <button 
-            onClick={() => {
-              if (viewMode === 'upload') {
-                setViewMode('bank');
-              } else {
-                navigate('/ielts-teacher');
-              }
-            }} 
-            className="ielts-reading-upload-back-btn" 
-            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
-          >
-            <HiArrowLeft size={20} />
-          </button>
-          <div className="ielts-reading-upload-header-text">
-            {viewMode === 'bank' ? (
-              <>
-                <h2>{language === 'en' ? 'Reading Question Bank' : 'রিডিং প্রশ্ন ব্যাংক'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Manage and view all your uploaded IELTS reading passages'
-                    : 'আপনার আপলোডকৃত আইইএলটিএস রিডিং প্যাসেজগুলো পরিচালনা এবং দেখুন'}
-                </p>
-              </>
-            ) : (
-              <>
-                <h2>{language === 'en' ? 'Upload Reading Question' : 'রিডিং প্রশ্ন আপলোড করুন'}</h2>
-                <p>
-                  {language === 'en'
-                    ? 'Create custom Reading comprehension passages and questions'
-                    : 'কাস্টম রিডিং কম্প্রিহেনশন প্যাসেজ এবং প্রশ্নাবলী তৈরি করুন'}
-                </p>
-              </>
-            )}
-          </div>
-        </header>
 
         {/* Workspace */}
         <div className="ielts-reading-upload-workspace">

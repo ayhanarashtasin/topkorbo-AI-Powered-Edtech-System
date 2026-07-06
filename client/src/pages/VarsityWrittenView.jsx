@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+﻿import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { HiArrowLeft, HiAcademicCap, HiCalendar, HiEye, HiSparkles, HiX, HiPaperAirplane, HiPaperClip } from 'react-icons/hi';
 import { useLanguage } from '../hooks/useLanguage';
@@ -352,8 +352,7 @@ const VarsityWrittenView = () => {
 
   return (
     <div className="varsity-written-page animate-fade-in">
-      <header className="dashboard-header qbank-header varsity-written-header">
-        <button
+      <button
           type="button"
           className="qbank-back-btn"
           onClick={() =>
@@ -365,18 +364,6 @@ const VarsityWrittenView = () => {
             {language === "en" ? "Back to Formats" : "ফরম্যাটে ফিরে যান"}
           </span>
         </button>
-        <div className="qbank-options-header-info">
-          <h2>
-            {universityParam.toUpperCase()}{" "}
-            {language === "en" ? "Written Question Bank" : "লিখিত প্রশ্নব্যাংক"}
-          </h2>
-          <p>
-            {language === "en"
-              ? `Review written questions from past admission exams for ${universityParam.toUpperCase()}.`
-              : `${universityParam.toUpperCase()}-এর বিগত বছরের ভর্তি পরীক্ষার লিখিত প্রশ্নসমূহ রিভিউ করুন।`}
-          </p>
-        </div>
-      </header>
 
       {/* Subject & Paper Selector Row */}
       <div className="varsity-written-selectors">

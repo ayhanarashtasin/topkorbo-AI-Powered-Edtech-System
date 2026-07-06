@@ -46,13 +46,6 @@ export default function ForumLayout() {
 
       <div className="forum-main">
         <header className="forum-header">
-          <div className="forum-header__left">
-            <h1 className="forum-header__title">Community</h1>
-            <p className="forum-header__subtitle">
-              {t('forum.subtitle') || 'Connect, share and learn with fellow TopKorbo students.'}
-            </p>
-          </div>
-
           <form className="forum-search" onSubmit={onSearch} role="search">
             <HiSearch className="forum-search__icon" size={18} />
             <input

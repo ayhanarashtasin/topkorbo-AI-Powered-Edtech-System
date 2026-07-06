@@ -973,16 +973,6 @@ export default function Battle() {
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
         <main className="dashboard-main battle-dashboard-main">
-          <header className="dashboard-header">
-            <div className="dashboard-header__welcome">
-              <h2>Battle Arena</h2>
-              <p>{mode.label} real-student room is waiting for players.</p>
-            </div>
-            <div className="mock-header__actions">
-              <div className="battle-room-pill"><HiFire size={18} /> {mode.label}</div>
-              <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
-            </div>
-          </header>
 
           <div className="battle-waiting-room">
             <section className="battle-invite-card">
@@ -1118,16 +1108,6 @@ export default function Battle() {
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
         <main className={`dashboard-main battle-dashboard-main ${battleState?.finished ? 'battle-dashboard-main--scroll' : ''}`}>
-          <header className="dashboard-header">
-            <div className="dashboard-header__welcome">
-              <h2>Battle Arena</h2>
-              <p>Live knowledge battle with speed based scoring.</p>
-            </div>
-            <div className="mock-header__actions">
-              <div className="battle-room-pill"><HiFire size={18} /> {battleState.mode.label}</div>
-              <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
-            </div>
-          </header>
 
           <div className={`battle-room ${battleState.finished ? 'battle-room--finished' : ''}`}>
             <section className="battle-room__stage">
@@ -1319,19 +1299,6 @@ export default function Battle() {
       <Sidebar activeTab="battle" user={user} />
 
       <main className="dashboard-main battle-dashboard-main">
-        <header className="dashboard-header">
-          <div className="dashboard-header__welcome">
-            <h2>Battle Arena</h2>
-            <p>Challenge friends or strangers in real-time study warfare.</p>
-          </div>
-          <div className="mock-header__actions">
-            <div className="mock-streak-widget animate-pulse-slow">
-              <HiFire size={20} className="mock-streak-icon" />
-              <span className="mock-streak-count">{user.streak}</span>
-            </div>
-            <span className="dashboard-header__badge">{user.role === 'teacher' ? t('db.workspace.teacher') : t('db.workspace')}</span>
-          </div>
-        </header>
 
         <div className="mock-workspace battle-workspace animate-fade-in">
           <div className="mock-step-indicator battle-step-indicator">
