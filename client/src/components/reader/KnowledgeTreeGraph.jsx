@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import Tree from 'react-d3-tree';
-import { HiOutlineSparkles } from 'react-icons/hi';
+import { HiOutlineSparkles, HiOutlineZoomIn, HiOutlineZoomOut } from 'react-icons/hi';
 import './KnowledgeTreeGraph.css';
 
-const NODE_WIDTH = 280;
-const NODE_HEIGHT = 180;
-const NODE_GAP_X = 330;
-const NODE_GAP_Y = 230;
+const NODE_WIDTH = 260;
+const NODE_HEIGHT = 156;
+// react-d3-tree (horizontal) builds the layout with
+// d3.tree().nodeSize([nodeSize.y, nodeSize.x]), so `nodeSize.x` becomes the gap
+// between depth levels (horizontal on screen) and `nodeSize.y` the gap between
+// siblings (vertical). Both must stay comfortably larger than the card box or
+// neighbouring cards overlap. Keep depth spacing > NODE_WIDTH and sibling
+// spacing > NODE_HEIGHT with room to spare.
+const DEPTH_SPACING = 420;   // horizontal distance between parent and child levels
+const SIBLING_SPACING = 210; // vertical distance between sibling cards
+const MIN_ZOOM = 0.35;
+const MAX_ZOOM = 1.8;
+const ZOOM_STEP = 0.15;
 
 function getNodeId(node) {
   return String(node?.nodeId || node?.topicId || node?.chapterId || node?.title || '');
@@ -20,8 +29,10 @@ function getNodeType(node) {
   return node?.nodeType || (node?.chapterId ? 'chapter' : 'topic');
 }
 
-function toRawNode(node, depth = 0) {
-  const children = getChildren(node).map((child) => toRawNode(child, depth + 1)).filter(Boolean);
+function toRawNode(node, depth = 0, index = 1) {
+  const children = getChildren(node)
+    .map((child, childIndex) => toRawNode(child, depth + 1, childIndex + 1))
+    .filter(Boolean);
   const pageRange = node?.pageRange || {};
   return {
     name: node?.title || (depth === 0 ? 'Whole PDF' : 'Untitled'),
@@ -35,6 +46,7 @@ function toRawNode(node, depth = 0) {
     definitions: node?.definitions || [],
     examples: node?.examples || [],
     quizQuestions: node?.quizQuestions || [],
+    stepLabel: depth === 0 ? 'Start' : `Step ${depth}.${index}`,
     attributes: {
       type: getNodeType(node),
       pages: pageRange.start ? `${pageRange.start}-${pageRange.end || pageRange.start}` : ''
@@ -81,6 +93,7 @@ export default function KnowledgeTreeGraph({
   showOnMobile = false
 }) {
   const isDesktop = useDesktopLayout();
+  const [zoom, setZoom] = useState(0.78);
 
   const data = useMemo(() => {
     if (!rootNode) return [];
@@ -89,15 +102,20 @@ export default function KnowledgeTreeGraph({
 
   const layout = useMemo(() => {
     const { maxDepth, leafCount } = getTreeLayoutStats(rootNode);
-    const leftExtent = Math.max(0, leafCount - 1) * NODE_GAP_X / 2;
-    const width = Math.max(820, (leftExtent * 2) + NODE_WIDTH + 80);
-    const height = Math.max(520, (maxDepth * NODE_GAP_Y) + NODE_HEIGHT + 120);
+    const width = Math.max(980, (maxDepth * DEPTH_SPACING) + NODE_WIDTH + 280);
+    const height = Math.max(560, (Math.max(1, leafCount) * SIBLING_SPACING) + NODE_HEIGHT + 160);
 
     return {
       dimensions: { width, height },
-      translate: { x: leftExtent + (NODE_WIDTH / 2) + 40, y: 62 }
+      // Leave room on the left so the root card (centred on the node point) is
+      // fully visible instead of being clipped by the canvas edge.
+      translate: { x: (NODE_WIDTH / 2) + 48, y: height / 2 }
     };
   }, [rootNode]);
+
+  const setBoundedZoom = (nextZoom) => {
+    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(nextZoom.toFixed(2)))));
+  };
 
   const renderCustomNodeElement = ({ nodeDatum }) => {
     const active = String(selectedNodeId) === String(nodeDatum.nodeId);
@@ -113,9 +131,9 @@ export default function KnowledgeTreeGraph({
     return (
       <g>
         <foreignObject
-          x={-150}
-          y={-64}
-          width={300}
+          x={-NODE_WIDTH / 2}
+          y={-NODE_HEIGHT / 2}
+          width={NODE_WIDTH}
           height={NODE_HEIGHT}
         >
           <button
@@ -129,6 +147,7 @@ export default function KnowledgeTreeGraph({
           >
             <div className="rb-ktree__node-top">
               <span className="rb-ktree__pill">{typeLabel}</span>
+              <span className="rb-ktree__step">{nodeDatum.stepLabel}</span>
             </div>
             <div className="rb-ktree__title">{nodeDatum.name}</div>
             <div className="rb-ktree__meta">
@@ -157,8 +176,31 @@ export default function KnowledgeTreeGraph({
   return (
     <div className="rb-ktree">
       <div className="rb-ktree__header">
-        <HiOutlineSparkles size={14} />
-        <span>Knowledge Tree</span>
+        <div className="rb-ktree__header-title">
+          <HiOutlineSparkles size={14} />
+          <span>Step Graph</span>
+        </div>
+        <div className="rb-ktree__zoom" aria-label="Mind map zoom controls">
+          <button
+            type="button"
+            onClick={() => setBoundedZoom(zoom - ZOOM_STEP)}
+            disabled={zoom <= MIN_ZOOM}
+            aria-label="Zoom out"
+          >
+            <HiOutlineZoomOut size={14} />
+          </button>
+          <button type="button" onClick={() => setBoundedZoom(0.78)} aria-label="Reset zoom">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={() => setBoundedZoom(zoom + ZOOM_STEP)}
+            disabled={zoom >= MAX_ZOOM}
+            aria-label="Zoom in"
+          >
+            <HiOutlineZoomIn size={14} />
+          </button>
+        </div>
       </div>
       <div className="rb-ktree__canvas">
         {data.length > 0 ? (
@@ -169,12 +211,17 @@ export default function KnowledgeTreeGraph({
             <Tree
               data={data}
               dimensions={layout.dimensions}
-              orientation="vertical"
-              pathFunc="elbow"
+              orientation="horizontal"
+              pathFunc="diagonal"
+              pathClassFunc={() => 'rb-ktree__link'}
               collapsible={false}
+              zoomable
+              draggable
+              zoom={zoom}
+              scaleExtent={{ min: MIN_ZOOM, max: MAX_ZOOM }}
               translate={layout.translate}
-              nodeSize={{ x: NODE_GAP_X, y: NODE_GAP_Y }}
-              separation={{ siblings: 1, nonSiblings: 1.2 }}
+              nodeSize={{ x: DEPTH_SPACING, y: SIBLING_SPACING }}
+              separation={{ siblings: 1.15, nonSiblings: 1.5 }}
               renderCustomNodeElement={renderCustomNodeElement}
             />
           </div>

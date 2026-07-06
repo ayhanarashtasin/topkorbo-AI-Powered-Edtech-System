@@ -3,6 +3,20 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 const { TRIAL_PLAN, trialExpiresAt } = require('./plans');
 
+async function hasCompletedProfile(user) {
+  if (!user) return false;
+
+  if (user.role === 'tutor' || user.role === 'teacher') {
+    if (user.universityName) return true;
+
+    const IeltsTeacher = require('../models/IeltsTeacher');
+    const ieltsRecord = await IeltsTeacher.findOne({ userId: user._id }).select('universityName').lean();
+    return !!ieltsRecord?.universityName;
+  }
+
+  return !!user.collegeName;
+}
+
 const requiredGoogleEnv = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
 const missingGoogleEnv = requiredGoogleEnv.filter((key) => !process.env[key]);
 
@@ -52,8 +66,9 @@ passport.use(new GoogleStrategy({
       let user = await User.findOne({ email });
 
       if (action === 'login') {
-        if (!user) {
-          // If trying to login but account does not exist in DB, trigger signup required
+        if (!user || !(await hasCompletedProfile(user))) {
+          // Login is only for completed accounts. Missing or abandoned signup
+          // records must restart at role selection, not the profile form.
           return done(null, false, { message: 'signup_required', profile });
         }
 
@@ -67,11 +82,16 @@ passport.use(new GoogleStrategy({
       } else {
         // action === 'signup'
         if (user) {
-          // User already exists, treat as a login (idempotent)
+          // Completed users can sign in through the signup button too. Incomplete
+          // users are continuing signup after choosing a role, so keep them in
+          // the selected signup path instead of forcing the old role/profile.
           if (!user.googleId) {
             user.googleId = profile.id;
-            await user.save();
           }
+          if (!(await hasCompletedProfile(user))) {
+            user.role = role;
+          }
+          await user.save();
           return done(null, user);
         }
 

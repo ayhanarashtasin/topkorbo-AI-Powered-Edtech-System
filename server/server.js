@@ -1,3 +1,15 @@
+const originalEmitWarning = process.emitWarning;
+process.emitWarning = function emitWarningExceptKnownDependencyNoise(warning, ...args) {
+  const options = args[0] && typeof args[0] === "object" ? args[0] : null;
+  const code = warning?.code || options?.code || args[1];
+
+  // passport-oauth2 still calls Node's deprecated url.parse() internally.
+  // Suppress only that dependency warning while keeping all other warnings visible.
+  if (code === "DEP0169") return;
+
+  return originalEmitWarning.call(process, warning, ...args);
+};
+
 const { execSync } = require("child_process");
 const dns = require("node:dns");
 const path = require("node:path");

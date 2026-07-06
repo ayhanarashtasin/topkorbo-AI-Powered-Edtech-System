@@ -178,6 +178,13 @@
   margin-bottom: 8px;
 }
 
+.rb-chapnav__section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .rb-chapnav__book-ai-btn,
 .rb-chapnav__chapter-ai-btn,
 .rb-chapnav__topic-ai-btn,

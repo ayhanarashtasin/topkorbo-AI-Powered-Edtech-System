@@ -14,6 +14,15 @@ export default defineConfig({
     format: 'es'
   },
   build: {
+    modulePreload: {
+      resolveDependencies(_filename, deps, context) {
+        if (context.hostType !== 'html') return deps;
+
+        // The PDF reader is route-only. Preloading it from index.html makes
+        // dashboard/community pay the reader cost before they need it.
+        return deps.filter((dep) => !dep.includes('/pdf-'));
+      }
+    },
     rollupOptions: {
       output: {
         // Split large shared libraries into their own long-term-cacheable

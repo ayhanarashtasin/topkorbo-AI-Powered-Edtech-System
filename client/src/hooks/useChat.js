@@ -18,6 +18,7 @@ export function useChat({
   nodeId,
   pageNumber,
   scope = 'page',
+  enabled = true,
   selectedTopicTitle,
   selectedChapterTitle,
   selectedNodeTitle
@@ -37,7 +38,7 @@ export function useChat({
   }, [pageNumber, scope]);
 
   const refresh = useCallback(async () => {
-    if (!bookId) {
+    if (!enabled || !bookId) {
       setMessages([]);
       return;
     }
@@ -50,7 +51,7 @@ export function useChat({
     } finally {
       setLoading(false);
     }
-  }, [bookId, chapterId, topicId, nodeId, pageNumber, scope]);
+  }, [enabled, bookId, chapterId, topicId, nodeId, pageNumber, scope]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -140,7 +141,7 @@ export function useChat({
   );
 
   const clear = useCallback(async () => {
-    if (!bookId) return;
+    if (!enabled || !bookId) return;
     try {
       const clearPageNumber = scope === 'page' ? pageNumber : null;
       const clearChapterId = scope === 'book' ? '' : chapterId;
@@ -154,7 +155,7 @@ export function useChat({
         err instanceof ApiError ? err.message : err?.message || 'Failed to clear chat';
       toast.error(msg);
     }
-  }, [bookId, chapterId, topicId, nodeId, pageNumber, scope]);
+  }, [enabled, bookId, chapterId, topicId, nodeId, pageNumber, scope]);
 
   return {
     messages,

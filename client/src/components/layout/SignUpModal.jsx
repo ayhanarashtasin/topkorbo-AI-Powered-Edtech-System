@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiX, HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
 import { FcGoogle } from 'react-icons/fc';
 import { useLanguage } from '../../hooks/useLanguage';
+import { clearAuthStorage } from '../../utils/authStorage';
 import './SignUpModal.css';
 
 export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' }) {
@@ -87,18 +88,15 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       const profileAvatar = params.get('avatar');
       const signupRequired = params.get('signupRequired') === 'true';
 
-      if (token) {
-        localStorage.setItem('topkorbo_token', token);
-        if (profileName) localStorage.setItem('topkorbo_name', decodeURIComponent(profileName));
-        if (profileAvatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(profileAvatar));
-        if (profileEmail) localStorage.setItem('topkorbo_email', decodeURIComponent(profileEmail));
-        if (callbackRole) localStorage.setItem('topkorbo_role', callbackRole);
-        if (callbackForumRole) localStorage.setItem('topkorbo_forum_role', decodeURIComponent(callbackForumRole));
+      if (signupRequired) {
+        clearAuthStorage();
+        setMode('signup');
+        setRole(null);
+        setStep('choose');
+        setProfileSubStep(1);
+        setErrorMsg('No existing account found with this email. Please choose how you want to sign up.');
 
-        setRole(callbackRole || 'student');
-        setStep('profile_form');
-
-        // Dynamically pre-populate Google profile details inside the form
+        // Dynamically pre-populate Google profile details for after role selection.
         setFormData(prev => ({
           ...prev,
           fullName: profileName ? decodeURIComponent(profileName) : prev.fullName,
@@ -108,15 +106,16 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
         // Clean up URL query parameters
         window.history.replaceState({}, document.title, window.location.pathname);
-      } else if (signupRequired) {
-        // User tried to log in but has no account; redirect to signup role selection
-        setMode('signup');
-        setStep('choose');
-        setErrorMsg('No existing account found with this email. Let\'s create one! Please choose your role below to sign up:');
-
+      } else if (token) {
+        localStorage.setItem('topkorbo_token', token);
         if (profileName) localStorage.setItem('topkorbo_name', decodeURIComponent(profileName));
         if (profileAvatar) localStorage.setItem('topkorbo_avatar', decodeURIComponent(profileAvatar));
         if (profileEmail) localStorage.setItem('topkorbo_email', decodeURIComponent(profileEmail));
+        if (callbackRole) localStorage.setItem('topkorbo_role', callbackRole);
+        if (callbackForumRole) localStorage.setItem('topkorbo_forum_role', decodeURIComponent(callbackForumRole));
+
+        setRole(callbackRole || 'student');
+        setStep('profile_form');
 
         // Dynamically pre-populate Google profile details inside the form
         setFormData(prev => ({

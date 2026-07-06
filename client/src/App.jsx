@@ -1,7 +1,6 @@
 import { Component, lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
-import { ForumProvider } from './context/ForumContext';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -54,7 +53,7 @@ const IeltsSpeakingPractice = lazy(() => import('./pages/IeltsSpeakingPractice')
 const IeltsSpeakingDemo = lazy(() => import('./pages/IeltsSpeakingDemo'));
 
 // === Forum / Community ===
-const ForumLayout = lazy(() => import('./components/forum/ForumLayout'));
+const ForumShell = lazy(() => import('./components/forum/ForumShell'));
 const Forum = lazy(() => import('./pages/Forum'));
 const ForumPostDetail = lazy(() => import('./pages/ForumPostDetail'));
 const ForumCompose = lazy(() => import('./pages/ForumCompose'));
@@ -67,6 +66,16 @@ import './styles/index.css';
 import './styles/animations.css';
 import './pages/Dashboard.css';
 import './styles/forum.css';
+
+function LandingShell({ initialAuthMode = null }) {
+  return (
+    <>
+      <Navbar initialAuthMode={initialAuthMode} />
+      <LandingPage />
+      <Footer />
+    </>
+  );
+}
 
 function AppContent() {
   return (
@@ -89,14 +98,10 @@ function AppContent() {
         <Routes>
           <Route
             path="/"
-            element={
-              <>
-                <Navbar />
-                <LandingPage />
-                <Footer />
-              </>
-            }
+            element={<LandingShell />}
           />
+          <Route path="/signup" element={<LandingShell initialAuthMode="signup" />} />
+          <Route path="/login" element={<LandingShell initialAuthMode="login" />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/contests" element={<Contests />} />
           <Route path="/qbank" element={<QuestionBank />} />
@@ -143,7 +148,7 @@ function AppContent() {
           {renderAdminRoutes()}
 
           {/* === Forum / Community === */}
-          <Route element={<ForumProvider><ForumLayout /></ForumProvider>}>
+          <Route element={<ForumShell />}>
             <Route path="/forum" element={<Forum />} />
             <Route path="/forum/compose" element={<ForumCompose />} />
             <Route path="/forum/post/:id" element={<ForumPostDetail />} />

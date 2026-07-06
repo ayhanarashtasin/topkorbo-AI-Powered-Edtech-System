@@ -90,6 +90,7 @@ export default function ReadingBookView() {
     nodeId: '',
     pageNumber,
     scope: tutorScope,
+    enabled: isChatSidebarOpen && canReadingAI,
     selectedTopicTitle: '',
     selectedChapterTitle: chapter?.title || '',
     selectedNodeTitle: ''
@@ -319,7 +320,10 @@ export default function ReadingBookView() {
 
   // Poll the book-level AI status while the background processor is still working.
   useEffect(() => {
-    if (!bookId) return undefined;
+    if (!bookId || !canReadingAI) {
+      setKnowledgeLoading(false);
+      return undefined;
+    }
     let cancelled = false;
     let pollTimer = null;
 
@@ -350,7 +354,7 @@ export default function ReadingBookView() {
       cancelled = true;
       if (pollTimer) window.clearTimeout(pollTimer);
     };
-  }, [bookId]);
+  }, [bookId, canReadingAI]);
 
   // Mirror the current page in the URL so the chapter is shareable / restorable.
   useEffect(() => {
@@ -606,6 +610,15 @@ export default function ReadingBookView() {
     setIsChatSidebarOpen(true);
   }, []);
 
+  const handleOpenMindMap = useCallback(() => {
+    if (!canReadingAI) {
+      toast.error('Mind map is a Pro+ feature.');
+      navigate('/pricing');
+      return;
+    }
+    setIsMindMapOpen(true);
+  }, [canReadingAI, navigate]);
+
   // Jump to a node picked in the mind map. Nodes carry the chapter they
   // belong to; if it's a different chapter we navigate to its route, otherwise
   // we just move within the current chapter's PDF.
@@ -829,9 +842,41 @@ export default function ReadingBookView() {
           hasNext={hasNextChapter}
           onPrevChapter={goPrevChapter}
           onNextChapter={goNextChapter}
+          onOpenMindMap={handleOpenMindMap}
+          canReadingAI={canReadingAI}
+          knowledgeStatus={knowledgeStatus}
         />
 
         <div className="rb-reader__main">
+          <div className="rb-reader__topbar">
+            <button
+              type="button"
+              className="rb-reader__menu-btn"
+              onClick={() => setIsNavOpen((open) => !open)}
+              aria-label={isNavOpen ? 'Hide chapters sidebar' : 'Show chapters sidebar'}
+              aria-expanded={isNavOpen}
+            >
+              <HiMenu size={16} />
+              <span>{isNavOpen ? 'Hide chapters' : 'Show chapters'}</span>
+            </button>
+            <button
+              type="button"
+              className="rb-reader__back-btn"
+              onClick={() => navigate('/reading-books')}
+            >
+              <HiArrowLeft size={16} />
+              <span>{t('rb.title')}</span>
+            </button>
+            <div className="rb-reader__topbar-spacer" />
+            <div className="rb-reader__progress" aria-label="Reading progress">
+              <span className="rb-reader__progress-text">
+                Page {pageNumber}{numPages ? ` of ${numPages}` : ''} · {progress}%
+              </span>
+              <div className="rb-reader__progress-bar">
+                <div className="rb-reader__progress-fill" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          </div>
 
           {(knowledgeLoading || knowledgeStatus !== 'completed') && (
             <div className="rb-reader__knowledge-banner">

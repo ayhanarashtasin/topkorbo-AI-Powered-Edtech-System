@@ -293,14 +293,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
-    const role = localStorage.getItem('topkorbo_role');
-    if (token && role === 'teacher') {
-      fetchContests(token, role);
-    }
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('topkorbo_token');
     if (!token) return;
     const role = localStorage.getItem('topkorbo_role');
 

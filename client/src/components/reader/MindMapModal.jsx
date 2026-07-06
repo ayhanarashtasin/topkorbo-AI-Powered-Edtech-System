@@ -44,11 +44,13 @@ export default function MindMapModal({
   onJumpTo
 }) {
   const [selectedNode, setSelectedNode] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Clear the detail panel as we close so the next open starts fresh (the
   // modal stays mounted, so we reset here rather than on open).
   const handleClose = useCallback(() => {
     setSelectedNode(null);
+    setIsExpanded(false);
     onClose?.();
   }, [onClose]);
 
@@ -169,15 +171,28 @@ export default function MindMapModal({
 
   return (
     <div className="rb-mindmap__overlay" onClick={handleClose}>
-      <div className="rb-mindmap" onClick={(e) => e.stopPropagation()}>
+      <div className={`rb-mindmap ${isExpanded ? 'rb-mindmap--expanded' : ''}`} onClick={(e) => e.stopPropagation()}>
         <header className="rb-mindmap__header">
           <div className="rb-mindmap__header-title">
             <HiOutlineShare size={18} />
-            <span>Mind Map{rootNode?.title ? ` · ${rootNode.title}` : ''}</span>
+            <div>
+              <span>Mind Map{rootNode?.title ? ` · ${rootNode.title}` : ''}</span>
+              <small>Click a card to read details. Drag or scroll inside the map to explore.</small>
+            </div>
           </div>
-          <button type="button" className="rb-mindmap__close" onClick={handleClose} aria-label="Close mind map">
-            <HiX size={18} />
-          </button>
+          <div className="rb-mindmap__header-actions">
+            <button
+              type="button"
+              className="rb-mindmap__action"
+              onClick={() => setIsExpanded((value) => !value)}
+              aria-label={isExpanded ? 'Exit expanded mind map' : 'Expand mind map'}
+            >
+              {isExpanded ? 'Exit expand' : 'Expand'}
+            </button>
+            <button type="button" className="rb-mindmap__close" onClick={handleClose} aria-label="Close mind map">
+              <HiX size={18} />
+            </button>
+          </div>
         </header>
         {renderBody()}
       </div>

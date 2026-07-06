@@ -24,7 +24,10 @@ export default function ChapterNav({
   onNextChapter,
   hasPrev,
   hasNext,
-  onAskBookAI
+  onAskBookAI,
+  onOpenMindMap,
+  canReadingAI = false,
+  knowledgeStatus = 'pending'
 }) {
   const { t } = useLanguage();
 
@@ -73,14 +76,25 @@ export default function ChapterNav({
         <div className="rb-chapnav__chapters">
           <div className="rb-chapnav__section-head">
             <h4 className="rb-chapnav__section-title">{t('rb.reader.chapters')}</h4>
-            <button
-              type="button"
-              className="rb-chapnav__book-ai-btn"
-              onClick={onAskBookAI}
-            >
-              <HiOutlineSparkles size={14} />
-              <span>Ask about book</span>
-            </button>
+            <div className="rb-chapnav__section-actions">
+              <button
+                type="button"
+                className="rb-chapnav__book-ai-btn"
+                onClick={onAskBookAI}
+              >
+                <HiOutlineSparkles size={14} />
+                <span>Ask about book</span>
+              </button>
+              <button
+                type="button"
+                className="rb-chapnav__book-ai-btn"
+                onClick={onOpenMindMap}
+                title={canReadingAI ? `Mind map: ${knowledgeStatus}` : 'Mind map is a Pro+ feature'}
+              >
+                <HiOutlineSparkles size={14} />
+                <span>Mind map</span>
+              </button>
+            </div>
           </div>
 
           {sortedChapters.length === 0 ? (

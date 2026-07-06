@@ -3,10 +3,11 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { HiMenuAlt3, HiX } from 'react-icons/hi';
 import { IoGlobeOutline } from 'react-icons/io5';
 import SignUpModal from './SignUpModal';
+import { clearAuthStorage } from '../../utils/authStorage';
 import logo from '../../assets/logo.png';
 import './Navbar.css';
 
-export default function Navbar() {
+export default function Navbar({ initialAuthMode = null }) {
   const { t, language, toggleLanguage } = useLanguage();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -44,7 +45,15 @@ export default function Navbar() {
     const signupRequired = params.get('signupRequired') === 'true';
     const isComplete = params.get('isComplete') === 'true';
 
-    if (token) {
+    if (signupRequired) {
+      clearAuthStorage();
+      setIsLoggedIn(false);
+      setUserName('');
+      setUserAvatar('');
+      setUserRole('');
+      setModalMode('signup');
+      setShowSignUpModal(true);
+    } else if (token) {
       // Save user identity details
       localStorage.setItem('topkorbo_token', token);
       
@@ -70,12 +79,12 @@ export default function Navbar() {
         setModalMode('signup');
         setShowSignUpModal(true);
       }
-    } else if (signupRequired) {
+    } else if (initialAuthMode) {
       // User tried to log in but has no account: show signup modal directly
-      setModalMode('signup');
+      setModalMode(initialAuthMode === 'login' ? 'login' : 'signup');
       setShowSignUpModal(true);
     }
-  }, []);
+  }, [initialAuthMode]);
 
   const navLinks = [
     { label: t('nav.features'), href: '#features' },

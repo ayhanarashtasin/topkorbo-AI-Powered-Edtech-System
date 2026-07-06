@@ -4,6 +4,13 @@ const User = require('../models/User');
 const TeacherApplication = require('../models/TeacherApplication');
 const planService = require('../services/planService');
 
+function buildFrontendRedirect(frontendUrl, path, params = {}) {
+  const base = String(frontendUrl || '').replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const query = new URLSearchParams(params).toString();
+  return `${base}${normalizedPath}${query ? `?${query}` : ''}`;
+}
+
 const authController = {
   /**
    * GET /api/auth/google
@@ -38,10 +45,12 @@ const authController = {
       if (!user) {
         if (info && info.message === 'signup_required' && info.profile) {
           const profile = info.profile;
-          const name = encodeURIComponent(profile.displayName || '');
-          const email = encodeURIComponent(profile.emails[0]?.value || '');
-          const avatar = encodeURIComponent(profile.photos[0]?.value || '');
-          return res.redirect(`${frontendUrl}?signupRequired=true&name=${name}&email=${email}&avatar=${avatar}`);
+          return res.redirect(buildFrontendRedirect(frontendUrl, '/signup', {
+            signupRequired: 'true',
+            name: profile.displayName || '',
+            email: profile.emails[0]?.value || '',
+            avatar: profile.photos[0]?.value || ''
+          }));
         }
         return res.redirect(`${frontendUrl}?error=auth_failed`);
       }
