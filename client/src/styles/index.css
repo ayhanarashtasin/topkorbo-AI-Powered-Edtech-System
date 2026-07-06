@@ -109,6 +109,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -117,6 +118,43 @@ body {
   background: var(--bg-secondary);
   line-height: 1.6;
   overflow-x: hidden;
+  min-width: 320px;
+}
+
+#root {
+  min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+table {
+  max-width: 100%;
+}
+
+p,
+li,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: anywhere;
 }
 
 /* Bengali font override */
@@ -237,6 +275,7 @@ ol {
   transition: var(--transition-base);
   position: relative;
   overflow: hidden;
+  min-height: 44px;
 }
 
 .btn-primary {
@@ -370,5 +409,46 @@ ol {
 @media (max-width: 480px) {
   :root {
     --section-padding: 48px 0;
+  }
+}
+
+/* Shared responsive shell for IELTS route CSS files. */
+[class^="ielts-"][class$="-container"],
+[class^="ielts-"][class$="-page"] {
+  width: 100% !important;
+  height: 100dvh !important;
+}
+
+[class^="ielts-"][class$="-main"],
+[class^="ielts-"][class$="-content"] {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  [class^="ielts-"][class$="-container"],
+  [class^="ielts-"][class$="-page"] {
+    flex-direction: column !important;
+  }
+
+  [class^="ielts-"][class$="-header"] {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    padding: 20px !important;
+    gap: 14px !important;
+  }
+
+  [class^="ielts-"][class$="-workspace"] {
+    padding: 24px 20px !important;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 480px) {
+  [class^="ielts-"][class$="-header"] {
+    padding: 16px !important;
+  }
+
+  [class^="ielts-"][class$="-workspace"] {
+    padding: 20px 16px !important;
   }
 }

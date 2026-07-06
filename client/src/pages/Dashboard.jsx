@@ -797,7 +797,7 @@ export default function Dashboard() {
           <div className="dashboard-panel__header student-section-header">
             <div>
               <h3>Daily problem-solving progress</h3>
-              <p>Each square is one day. Hover a square to see how many problems you solved that day.</p>
+              <p>Each square is one day. Tap or hover a square to see how many problems you solved that day.</p>
             </div>
             <span className="dashboard-stat-pill">Last 12 months</span>
           </div>
@@ -841,6 +841,7 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          <p className="student-heatmap-mobile-hint">Swipe sideways to view all 12 months.</p>
 
           <div className="student-heatmap-legend" aria-hidden="true">
             <span>Less</span>

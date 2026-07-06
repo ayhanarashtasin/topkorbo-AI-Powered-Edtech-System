@@ -772,6 +772,14 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
 
     const matchStage = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
 
+    const shuffleInPlace = (items) => {
+      for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+      return items;
+    };
+
     // 1. Fetch ALL matching questions using find() — reliable and deterministic
     const allMatching = await Question.find(matchStage)
       .select('-teacher -__v')
@@ -800,12 +808,100 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
       }, `Only ${availableCount} questions available, but ${limit} were requested`);
     }
 
-    // 4. Fisher-Yates shuffle for true randomization, then take exactly `limit` questions
-    for (let i = allMatching.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [allMatching[i], allMatching[j]] = [allMatching[j], allMatching[i]];
+    let questions;
+
+    if (context === 'mock') {
+      const bucketMap = new Map();
+      let hasWildcardChapter = false;
+
+      selections.forEach(sel => {
+        if (!sel.subject) return;
+        sel.chapters?.forEach(ch => {
+          if (!ch.name) return;
+          if (ch.name === '*') {
+            hasWildcardChapter = true;
+            return;
+          }
+
+          const key = `${sel.subject}__${sel.paper}__${ch.name}`;
+          const selectedTopicSet = Array.isArray(ch.topics) && ch.topics.length > 0
+            ? new Set(ch.topics)
+            : null;
+
+          if (!bucketMap.has(key)) {
+            bucketMap.set(key, {
+              subject: sel.subject,
+              paper: sel.paper,
+              chapter: ch.name,
+              topics: selectedTopicSet,
+              questions: []
+            });
+            return;
+          }
+
+          const existing = bucketMap.get(key);
+          if (!selectedTopicSet) {
+            existing.topics = null;
+          } else if (existing.topics) {
+            selectedTopicSet.forEach(topic => existing.topics.add(topic));
+          }
+        });
+      });
+
+      const chapterBuckets = hasWildcardChapter ? [] : Array.from(bucketMap.values());
+
+      if (chapterBuckets.length > 0) {
+        allMatching.forEach(question => {
+          const bucket = chapterBuckets.find(item => (
+            item.subject === question.subject &&
+            item.paper === question.paper &&
+            item.chapter === question.chapter &&
+            (!item.topics || item.topics.has(question.topic))
+          ));
+
+          if (bucket) {
+            bucket.questions.push(question);
+          }
+        });
+
+        chapterBuckets.forEach(bucket => shuffleInPlace(bucket.questions));
+
+        const baseQuota = Math.floor(limit / chapterBuckets.length);
+        let remainingSlots = limit;
+        questions = [];
+
+        chapterBuckets.forEach(bucket => {
+          const takeCount = Math.min(baseQuota, bucket.questions.length, remainingSlots);
+          questions.push(...bucket.questions.splice(0, takeCount));
+          remainingSlots -= takeCount;
+        });
+
+        let bucketsWithExtra = shuffleInPlace(chapterBuckets.filter(bucket => bucket.questions.length > 0));
+        while (remainingSlots > 0 && bucketsWithExtra.length > 0) {
+          const nextRound = [];
+          bucketsWithExtra.forEach(bucket => {
+            if (remainingSlots <= 0) return;
+
+            const question = bucket.questions.shift();
+            if (question) {
+              questions.push(question);
+              remainingSlots -= 1;
+            }
+            if (bucket.questions.length > 0) {
+              nextRound.push(bucket);
+            }
+          });
+          bucketsWithExtra = shuffleInPlace(nextRound);
+        }
+
+        shuffleInPlace(questions);
+      }
     }
-    const questions = allMatching.slice(0, limit);
+
+    if (!questions) {
+      // Fisher-Yates shuffle for true randomization, then take exactly `limit` questions
+      questions = shuffleInPlace(allMatching).slice(0, limit);
+    }
 
     // Removed backfill logic as per user request to only serve strictly matched questions
 

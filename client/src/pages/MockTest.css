@@ -68,7 +68,7 @@
 /* ---- Grid Layout & Cards ---- */
 .mock-subjects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 20px;
 }
 
@@ -344,7 +344,7 @@
 
 .mock-chapters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -1458,6 +1458,17 @@
 }
 
 @media (max-width: 480px) {
+  .mock-step-indicator {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mock-step-label {
+    display: none;
+  }
+
   .mock-standard-grid {
     grid-template-columns: 1fr;
   }

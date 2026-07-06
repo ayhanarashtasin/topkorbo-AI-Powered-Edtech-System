@@ -9,11 +9,16 @@
   margin: 0 -24px;
   padding-left: 24px;
   padding-right: 24px;
-  scrollbar-width: none;
+  scrollbar-width: thin;
 }
 
 .mentors__scroll-container::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.mentors__scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(140, 90, 60, 0.24);
+  border-radius: 999px;
 }
 
 .mentors__track {
@@ -23,7 +28,7 @@
 }
 
 .mentors__card {
-  min-width: 280px;
+  min-width: min(280px, calc(100vw - 48px));
   max-width: 300px;
   padding: 28px;
   text-align: center;

@@ -301,7 +301,35 @@
 }
 
 @media (max-width: 768px) {
+  .live-room__header,
+  .live-room__stage-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .live-room__controls {
+    justify-content: flex-start;
+  }
+
   .live-room-shell--student .live-room__sidebar {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .live-room__stage,
+  .live-room__sidebar-block,
+  .live-room__header {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .live-room__stage-fullscreen span {
+    display: none;
+  }
+
+  .live-room__stage-fullscreen,
+  .live-room__control {
+    min-height: 44px;
   }
 }

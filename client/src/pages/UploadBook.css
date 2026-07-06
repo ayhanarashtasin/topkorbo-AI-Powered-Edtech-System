@@ -3,6 +3,7 @@
   max-width: 980px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
   overflow-y: auto;
   min-height: 0;
   flex: 1;
@@ -185,8 +186,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   background: rgba(239, 68, 68, 0.1);
   color: #b91c1c;
   border: 1px solid rgba(239, 68, 68, 0.3);
@@ -258,6 +259,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  min-height: 44px;
 }
 .rb-btn:disabled {
   opacity: 0.6;
@@ -349,6 +351,10 @@
 }
 
 @media (max-width: 768px) {
+  .rb-upload-workspace {
+    padding: 18px;
+  }
+
   .rb-form-grid {
     grid-template-columns: 1fr;
   }
@@ -361,8 +367,26 @@
   .rb-upload-step {
     padding: 18px;
   }
+
+  .rb-step-actions {
+    margin-left: -18px;
+    margin-right: -18px;
+    margin-bottom: -18px;
+    flex-wrap: wrap;
+  }
   .rb-confirm-row {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+}
+
+@media (max-width: 430px) {
+  .rb-upload-workspace {
+    padding: 16px;
+  }
+
+  .rb-step-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 }

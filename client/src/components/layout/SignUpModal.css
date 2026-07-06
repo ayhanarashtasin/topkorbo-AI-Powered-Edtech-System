@@ -34,6 +34,8 @@
   text-align: center;
   transition: max-width var(--transition-smooth);
   margin: auto;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
 }
 
 .signup-modal__dialog--large {
@@ -54,6 +56,8 @@
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .signup-modal__close-btn:hover {
@@ -75,6 +79,8 @@
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .signup-modal__back-btn:hover {
@@ -126,6 +132,7 @@
   text-align: center;
   cursor: pointer;
   transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  min-height: 44px;
 }
 
 .signup-modal__option-card--student {
@@ -350,6 +357,7 @@
   font-size: 0.9rem;
   color: var(--text-primary);
   transition: all var(--transition-fast);
+  min-height: 44px;
 }
 
 .signup-modal__input:focus {
@@ -379,6 +387,7 @@
   color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-height: 44px;
 }
 
 .signup-modal__select:focus {
@@ -446,6 +455,7 @@
   color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-height: 44px;
 }
 
 .signup-modal__checkbox-label:hover {
@@ -513,6 +523,10 @@
 }
 
 @media (max-width: 600px) {
+  .signup-modal__overlay-wrapper {
+    padding: 16px;
+  }
+
   .signup-modal__options-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -533,7 +547,7 @@
   }
 
   .signup-modal__checkbox-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 8px;
   }
 }

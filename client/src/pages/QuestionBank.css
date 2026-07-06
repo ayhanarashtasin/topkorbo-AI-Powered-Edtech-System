@@ -655,7 +655,7 @@
 }
 
 .qbank-grid--college {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
 }
 
 .qbank-locked-card {
@@ -729,6 +729,16 @@
 @media (max-width: 1024px) {
     .qbank-workspace {
         padding: 0 24px 24px 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .qbank-workspace {
+        padding: 0 16px 24px 16px;
+    }
+
+    .qbank-locked-card {
+        padding: 28px 18px;
     }
 }
 
@@ -819,7 +829,7 @@
 
 .qbank-options-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
     gap: 24px;
     margin-top: 32px;
     width: 100%;

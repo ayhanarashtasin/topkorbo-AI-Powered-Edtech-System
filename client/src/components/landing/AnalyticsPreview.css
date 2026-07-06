@@ -45,6 +45,10 @@
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.82rem;
   font-family: monospace;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .analytics__content {
@@ -80,6 +84,16 @@
 .analytics__line-chart {
   width: 100%;
   display: block;
+}
+
+@media (max-width: 480px) {
+  .analytics__browser-url {
+    display: none;
+  }
+
+  .analytics__content {
+    padding: 20px;
+  }
 }
 
 .analytics__rating-label {

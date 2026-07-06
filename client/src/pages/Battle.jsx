@@ -972,7 +972,7 @@ export default function Battle() {
     return (
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
-        <main className="dashboard-main">
+        <main className="dashboard-main battle-dashboard-main">
           <header className="dashboard-header">
             <div className="dashboard-header__welcome">
               <h2>Battle Arena</h2>
@@ -1117,7 +1117,7 @@ export default function Battle() {
     return (
       <div className="dashboard-container">
         <Sidebar activeTab="battle" user={user} />
-        <main className={`dashboard-main ${battleState?.finished ? 'battle-dashboard-main--scroll' : ''}`}>
+        <main className={`dashboard-main battle-dashboard-main ${battleState?.finished ? 'battle-dashboard-main--scroll' : ''}`}>
           <header className="dashboard-header">
             <div className="dashboard-header__welcome">
               <h2>Battle Arena</h2>
@@ -1318,7 +1318,7 @@ export default function Battle() {
     <div className="dashboard-container">
       <Sidebar activeTab="battle" user={user} />
 
-      <main className="dashboard-main">
+      <main className="dashboard-main battle-dashboard-main">
         <header className="dashboard-header">
           <div className="dashboard-header__welcome">
             <h2>Battle Arena</h2>

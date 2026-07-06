@@ -165,7 +165,7 @@
 
 .rb-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 20px;
 }
 
@@ -420,10 +420,28 @@
 
 .rb-chapter-title {
   flex: 1;
+  min-width: 0;
   color: var(--text-primary, #251817);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  .rb-chapter-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .rb-chapter-title {
+    white-space: normal;
+  }
+
+  .rb-chapter-open-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
 }
 
 .rb-chapter-open-btn {

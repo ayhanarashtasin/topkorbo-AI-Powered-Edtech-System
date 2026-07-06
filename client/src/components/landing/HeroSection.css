@@ -1,5 +1,5 @@
 .hero {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-hero-fade);
   position: relative;
   overflow: hidden;
@@ -187,6 +187,7 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .hero__rating-label {
@@ -207,6 +208,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .hero__delta-positive {
@@ -247,11 +249,14 @@
   font-size: 0.85rem;
   color: var(--text-secondary);
   font-weight: 600;
+  gap: 10px;
 }
 
 .hero__streak-grid {
   display: flex;
   gap: 3px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .hero__streak-dot {
@@ -287,6 +292,29 @@
   .hero__visual {
     max-width: 400px;
     margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    overflow: clip;
+  }
+
+  .hero__title {
+    font-size: clamp(2.15rem, 13vw, 3rem);
+  }
+
+  .hero__rating-card {
+    padding: 20px;
+  }
+
+  .hero__streak {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hero__streak-grid {
+    justify-content: flex-start;
   }
 }
 

@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: row;
   padding: 0 !important;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg-primary, #FFF8F0);
 }
@@ -25,6 +25,7 @@
   background: #FFFFFF;
   border-bottom: 1px solid var(--bg-accent-warm, #F7EBE1);
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .rb-reader__knowledge-banner {
@@ -148,6 +149,10 @@
 }
 
 @media (max-width: 1023px) {
+  .rb-reader__viewport {
+    padding-right: 0;
+  }
+
   .rb-reader__back-btn span {
     display: none;
   }
@@ -156,16 +161,19 @@
 @media (max-width: 600px) {
   .rb-reader__topbar {
     padding: 8px 12px;
+    gap: 8px;
   }
   .rb-reader__knowledge-banner {
     margin: 10px 12px 0;
     flex-direction: column;
   }
   .rb-reader__progress {
-    min-width: 100px;
+    min-width: 0;
+    flex: 1 1 100%;
+    align-items: stretch;
   }
   .rb-reader__progress-bar {
-    width: 100px;
+    width: 100%;
   }
   .rb-reader__viewport {
     padding-right: 0;

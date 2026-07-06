@@ -2,7 +2,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 320px;
+  width: min(320px, 100vw);
   height: 100%;
   background: white;
   border-left: 1px solid #e5e7eb;
@@ -32,6 +32,8 @@
   cursor: pointer;
   color: #6b7280;
   padding: 4px;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .rb-highlight-sidebar-header button:hover {

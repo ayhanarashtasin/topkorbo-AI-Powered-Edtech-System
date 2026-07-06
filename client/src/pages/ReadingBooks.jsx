@@ -543,6 +543,9 @@ export default function ReadingBooks() {
             borderRadius: '16px',
             padding: '32px',
             maxWidth: '440px',
+            boxSizing: 'border-box',
+            maxHeight: 'calc(100dvh - 32px)',
+            overflowY: 'auto',
             width: '90%',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
             border: '1px solid var(--border-color, #F3F4F6)',
@@ -587,6 +590,7 @@ export default function ReadingBooks() {
 
             <div style={{
               display: 'flex',
+              flexWrap: 'wrap',
               gap: '12px',
               width: '100%'
             }}>

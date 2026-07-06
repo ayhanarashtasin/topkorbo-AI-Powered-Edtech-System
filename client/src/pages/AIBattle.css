@@ -92,6 +92,17 @@
 .aibattle-final-side--ai strong { color: #ef4444; }
 .aibattle-final-dash { font-size: 2rem; font-weight: 700; opacity: 0.5; }
 
+@media (max-width: 480px) {
+  .aibattle-banner {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .aibattle-pick-tag {
+    margin-left: 0;
+  }
+}
+
 @keyframes aibattle-pop {
   from { transform: translateY(6px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }

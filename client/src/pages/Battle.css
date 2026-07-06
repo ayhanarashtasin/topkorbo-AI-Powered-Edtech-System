@@ -2,6 +2,15 @@
   background:
     linear-gradient(180deg, rgba(255, 248, 240, 0.92), rgba(247, 235, 225, 0.8)),
     #FAF4EE;
+  min-width: 0;
+}
+
+.dashboard-main.battle-dashboard-main {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .battle-step-indicator .mock-step-connector {
@@ -378,9 +387,11 @@
 }
 
 .battle-waiting-room {
-  min-height: calc(100vh - 98px);
+  min-height: auto;
   padding: 24px 42px;
   background: #FAF4EE;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .battle-invite-card {
@@ -391,6 +402,8 @@
   border-radius: var(--radius-lg);
   background: var(--white);
   box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .battle-room-code {
@@ -705,16 +718,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
-  min-height: calc(100vh - 110px);
+  min-height: auto;
   padding: 32px;
   background: #FAF4EE;
-}
-
-.dashboard-main.battle-dashboard-main--scroll {
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .battle-room--finished {
@@ -728,6 +737,7 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
+  min-width: 0;
 }
 
 .battle-score-strip {
@@ -788,6 +798,8 @@
   border: 1px solid rgba(75, 46, 43, 0.08);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .battle-question-card {
@@ -818,6 +830,7 @@
   line-height: 1.65;
   margin-bottom: 24px;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .battle-question-text .katex-display {
@@ -863,6 +876,7 @@
   text-align: left;
   color: var(--text-primary);
   transition: all var(--transition-fast);
+  min-width: 0;
 }
 
 .battle-option:hover:not(:disabled) {
@@ -995,6 +1009,12 @@
   gap: 12px;
   width: min(440px, 100%);
   margin: 14px 0 8px;
+}
+
+@media (max-width: 480px) {
+  .battle-result-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 .battle-result-stats div {
@@ -1188,6 +1208,7 @@
   align-self: start;
   position: sticky;
   top: 24px;
+  min-width: 0;
 }
 
 .battle-rank-list {
@@ -1328,7 +1349,12 @@
   }
 
   .battle-room {
-    padding: 18px;
+    gap: 16px;
+    padding: 14px 12px 24px;
+  }
+
+  .battle-waiting-room {
+    padding: 14px 12px 24px;
   }
 
   .battle-hero-panel__players,
@@ -1348,7 +1374,49 @@
 
   .battle-invite-card,
   .battle-question-card {
-    padding: 20px;
+    padding: 16px;
+  }
+
+  .battle-finish-card,
+  .battle-leaderboard {
+    padding: 16px;
+  }
+
+  .battle-score-strip {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .battle-score-strip strong {
+    font-size: 1.65rem;
+  }
+
+  .battle-vs-core {
+    width: 48px;
+    height: 48px;
+    justify-self: center;
+  }
+
+  .battle-question-text {
+    font-size: 1rem;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+
+  .battle-option {
+    min-height: 58px;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .battle-option-prefix {
+    width: 30px;
+    height: 30px;
+  }
+
+  .battle-answer-footer {
+    margin-top: 18px;
+    padding-top: 16px;
   }
 
   .battle-invite-link,
@@ -1371,5 +1439,68 @@
 
   .battle-waiting-player span {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .battle-hero-panel {
+    padding: 24px 16px;
+  }
+
+  .battle-avatar,
+  .battle-vs-orb {
+    width: 64px;
+    height: 64px;
+  }
+
+  .battle-invite-card h3 {
+    font-size: 1.35rem;
+  }
+
+  .battle-invite-link button,
+  .battle-outline-btn,
+  .battle-ready-panel .btn,
+  .battle-answer-footer .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .battle-ready-panel {
+    padding: 12px;
+  }
+
+  .battle-waiting-player {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .battle-waiting-player strong,
+  .battle-waiting-player span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .battle-room-settings-strip span {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .battle-question-meta {
+    gap: 8px;
+  }
+
+  .battle-question-meta span,
+  .battle-auto-next-note {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .battle-rank-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    padding: 10px;
   }
 }

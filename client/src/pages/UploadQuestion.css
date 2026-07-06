@@ -169,8 +169,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 38px;
-  height: 34px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0 10px;
   background: var(--white);
   border: 1px solid rgba(75, 46, 43, 0.12);
@@ -179,6 +179,12 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 768px) {
+  .uq-editor-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .uq-math-btn:hover {

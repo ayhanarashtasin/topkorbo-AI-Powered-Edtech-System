@@ -4,8 +4,25 @@
 }
 
 .testimonials__scroll-wrapper {
-  overflow: hidden;
+  overflow-x: auto;
   padding: 8px 0 16px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.testimonials__scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.testimonials__scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(140, 90, 60, 0.24);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testimonials__track {
+    animation: none !important;
+  }
 }
 
 .testimonials__track {

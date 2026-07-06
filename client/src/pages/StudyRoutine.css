@@ -306,6 +306,22 @@
 .routine-calendar-wrap .rbc-month-view, .routine-calendar-wrap .rbc-time-view {
   border: 1px solid rgba(75,46,43,0.1); border-radius: 8px; overflow: hidden;
 }
+
+@media (max-width: 980px) {
+  .routine-tracker-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .routine-calendar-wrap {
+    overflow-x: auto;
+  }
+
+  .routine-calendar-wrap .rbc-calendar {
+    min-width: 520px;
+  }
+}
 .routine-calendar-wrap .rbc-day-bg + .rbc-day-bg,
 .routine-calendar-wrap .rbc-month-row + .rbc-month-row,
 .routine-calendar-wrap .rbc-day-slot .rbc-time-slot { border-color: rgba(75,46,43,0.06); }

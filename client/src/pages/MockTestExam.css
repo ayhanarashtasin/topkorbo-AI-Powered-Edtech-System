@@ -6,7 +6,7 @@
 }
 
 .exam-room-container {
-    min-height: 100vh;
+    min-height: 100dvh;
     background-color: #f2ebe0;
     padding: 40px 20px;
     font-family: var(--font-body), sans-serif;
@@ -40,8 +40,8 @@
     position: absolute;
     top: 22px;
     left: 22px;
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: transparent;
     color: #111;
@@ -1443,8 +1443,8 @@
 }
 
 .exam-mini-box {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
     border: 1.5px solid #cbd5e1;
     background: #fff;

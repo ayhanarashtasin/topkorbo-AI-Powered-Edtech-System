@@ -1,7 +1,7 @@
 .contests-page {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+  width: 100%;
   overflow: hidden;
   background-color: #FFF8F0;
   color: var(--text-primary);
@@ -509,6 +509,14 @@
 
   .contests-filters {
     justify-content: flex-start;
+    width: 100%;
+  }
+
+  .contests-search-wrapper,
+  .contests-select-group,
+  .contests-select {
+    min-width: 0;
+    width: 100%;
   }
 
   .contests-select {
@@ -702,8 +710,8 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100dvh;
   background-color: rgba(75, 46, 43, 0.4);
   backdrop-filter: blur(5px);
   display: flex;
@@ -711,6 +719,7 @@
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
+  padding: 16px;
 }
 
 /* Modal Card */
@@ -998,4 +1007,12 @@
 .btn-confirm:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 430px) {
+  .contests-filter-bar,
+  .contests-card .contests-filter-bar {
+    padding: 14px;
+    gap: 12px;
+  }
 }
