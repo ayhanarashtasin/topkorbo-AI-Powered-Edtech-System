@@ -861,3 +861,26 @@
     opacity: 0;
   }
 }
+
+/* Responsive grid collapsing for mobile viewports */
+@media (max-width: 768px) {
+  .dashboard-teacher-body {
+    padding: 20px 16px;
+  }
+
+  .teacher-form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .teacher-card-section {
+    padding: 20px;
+    min-height: unset;
+  }
+
+  .preview-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

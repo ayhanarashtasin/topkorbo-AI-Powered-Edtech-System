@@ -30,14 +30,7 @@ function buildApprovedOrLegacyMatch() {
 
 function buildSetQueryForUser(user) {
   if (user?.role === 'admin') return {};
-  if (user?.role === 'teacher') {
-    return {
-      $or: [
-        buildApprovedOrLegacyMatch(),
-        { creator: user.id }
-      ]
-    };
-  }
+  if (user?.role === 'teacher') return {};
   return buildApprovedOrLegacyMatch();
 }
 
@@ -433,7 +426,7 @@ router.patch('/appointments/:appointmentId/status', auth, async (req, res) => {
     }
 
     const { appointmentId } = req.params;
-    const { status } = req.body;
+    const { status, meetingLink } = req.body;
 
     if (!['accepted', 'rejected'].includes(status)) {
       return errorResponse(res, 'Invalid status update value.');
@@ -446,6 +439,13 @@ router.patch('/appointments/:appointmentId/status', auth, async (req, res) => {
 
     if (!appointment) {
       return errorResponse(res, 'Appointment not found or you are not authorized to manage it.', 404);
+    }
+
+    if (status === 'accepted') {
+      if (!meetingLink || !meetingLink.trim()) {
+        return errorResponse(res, 'Please provide a meeting link to accept the appointment.');
+      }
+      appointment.meetingLink = meetingLink.trim();
     }
 
     appointment.status = status;
@@ -562,7 +562,7 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
         textPrompt: task2Type === 'text' ? task2Text.trim() : undefined,
         cleanPrompt: cleanTask2Prompt
       },
-      approvalStatus: 'pending',
+      approvalStatus: 'approved',
       rejectionReason: '',
       reviewedBy: null,
       reviewedAt: null
@@ -596,6 +596,51 @@ router.get('/writing/sets', auth, async (req, res) => {
       }))
     });
   } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// DELETE IELTS Writing set
+router.delete('/writing/sets/:id', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const set = await IeltsWritingSet.findById(req.params.id);
+    if (!set) {
+      return res.status(404).json({ success: false, message: 'Question set not found.' });
+    }
+
+    if (set.creator.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. You can only delete your own question sets.' });
+    }
+
+    // Delete files
+    const deleteFile = (urlPath) => {
+      if (!urlPath) return;
+      try {
+        const filePath = path.join(__dirname, '..', urlPath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (e) {
+        console.error('Error deleting file:', e);
+      }
+    };
+    deleteFile(set.task1?.pdfUrl);
+    deleteFile(set.task1?.imageUrl);
+    deleteFile(set.task2?.pdfUrl);
+    deleteFile(set.task2?.imageUrl);
+
+    await IeltsWritingSet.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'IELTS Writing question set deleted successfully.'
+    });
+  } catch (err) {
+    console.error('Error deleting IELTS Writing set:', err);
     res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
   }
 });
@@ -646,34 +691,34 @@ router.post('/reading/upload', auth, upload.any(), async (req, res) => {
 
     // Validate Passage 1
     if (passage1Type === 'pdf' && !passage1PdfUrl) {
-      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
       return errorResponse(res, 'Please upload a PDF file for Passage 1.');
     }
     if (passage1Type === 'image' && !passage1ImageUrl) {
-      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
       return errorResponse(res, 'Please upload an image file for Passage 1.');
     }
     if (passage1Type === 'text' && (!passage1Text || !passage1Text.trim())) {
-      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
       return errorResponse(res, 'Please enter a text prompt for Passage 1.');
     }
 
     // Validate Passage 2 (only if passage2Type is selected)
     if (passage2Type) {
       if (!['pdf', 'text', 'image'].includes(passage2Type)) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Invalid passage 2 upload type.');
       }
       if (passage2Type === 'pdf' && !passage2PdfUrl) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Please upload a PDF file for Passage 2.');
       }
       if (passage2Type === 'image' && !passage2ImageUrl) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Please upload an image file for Passage 2.');
       }
       if (passage2Type === 'text' && (!passage2Text || !passage2Text.trim())) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Please enter a text prompt for Passage 2.');
       }
     }
@@ -681,19 +726,19 @@ router.post('/reading/upload', auth, upload.any(), async (req, res) => {
     // Validate Passage 3 (only if passage3Type is selected)
     if (passage3Type) {
       if (!['pdf', 'text', 'image'].includes(passage3Type)) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Invalid passage 3 upload type.');
       }
       if (passage3Type === 'pdf' && !passage3PdfUrl) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Please upload a PDF file for Passage 3.');
       }
       if (passage3Type === 'image' && !passage3ImageUrl) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Please upload an image file for Passage 3.');
       }
       if (passage3Type === 'text' && (!passage3Text || !passage3Text.trim())) {
-        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) { } });
         return errorResponse(res, 'Please enter a text prompt for Passage 3.');
       }
     }
@@ -753,5 +798,129 @@ router.get('/reading/sets', auth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
   }
 });
+
+// POST Evaluate IELTS Writing set responses using AI tutor
+router.post('/writing/evaluate', auth, async (req, res) => {
+  try {
+    const { setId, task1Answer, task2Answer } = req.body;
+    if (!setId) {
+      return errorResponse(res, 'Writing set ID is required.');
+    }
+
+    const set = await IeltsWritingSet.findById(setId);
+    if (!set) {
+      return errorResponse(res, 'IELTS Writing set not found.', 404);
+    }
+
+    const evaluateTask = async (task, taskLabel, studentAnswer) => {
+      if (!task || !studentAnswer || !studentAnswer.trim()) {
+        return null;
+      }
+
+      const taskPromptText = task.cleanPrompt || task.textPrompt || `${taskLabel} prompt.`;
+
+      const promptText = `You are an expert IELTS Writing examiner. Evaluate the student's response for the following task:
+
+Task Type: ${taskLabel}
+Task Prompt / Question:
+${taskPromptText}
+
+Student's Answer:
+${studentAnswer}
+
+Please grade the response according to the official IELTS assessment criteria:
+1. Task Achievement / Response (0-9)
+2. Coherence and Cohesion (0-9)
+3. Lexical Resource (0-9)
+4. Grammatical Range and Accuracy (0-9)
+
+Provide an overall band score for this task (0-9, can be in 0.5 increments, e.g. 6.5, 7.0).
+Provide detailed feedback and specific suggestions for improvement.
+
+Return ONLY a valid JSON object in this exact format:
+{
+  "bandScore": 6.5,
+  "criteria": {
+    "taskAchievement": { "score": 6.5, "comments": "Explanation for task achievement." },
+    "coherenceCohesion": { "score": 6.0, "comments": "Explanation for coherence and cohesion." },
+    "lexicalResource": { "score": 7.0, "comments": "Explanation for lexical resource." },
+    "grammaticalRangeAccuracy": { "score": 6.5, "comments": "Explanation for grammatical range and accuracy." }
+  },
+  "feedback": "Overall narrative feedback on the writing response.",
+  "suggestions": [
+    "Suggestion 1",
+    "Suggestion 2"
+  ]
+}
+Do not return any other text, markdown formatting (outside the JSON structure), or explanations.`;
+
+      try {
+        const completion = await groqClient.chat.completions.create({
+          model: TEXT_MODEL,
+          messages: [
+            { role: 'system', content: 'You are an IELTS exam evaluator. Evaluate written responses and output JSON.' },
+            { role: 'user', content: promptText }
+          ],
+          temperature: 0.3,
+          response_format: { type: 'json_object' }
+        });
+
+        const contentText = completion.choices[0].message.content;
+        return JSON.parse(contentText);
+      } catch (err) {
+        console.error(`Error evaluating ${taskLabel}:`, err);
+        return {
+          bandScore: 0,
+          criteria: {
+            taskAchievement: { score: 0, comments: err.message },
+            coherenceCohesion: { score: 0, comments: err.message },
+            lexicalResource: { score: 0, comments: err.message },
+            grammaticalRangeAccuracy: { score: 0, comments: err.message }
+          },
+          feedback: `Failed to evaluate: ${err.message}`,
+          suggestions: []
+        };
+      }
+    };
+
+    const [eval1, eval2] = await Promise.all([
+      evaluateTask(set.task1, 'Task 1', task1Answer),
+      evaluateTask(set.task2, 'Task 2', task2Answer)
+    ]);
+
+    let overallBandScore = 0;
+    if (eval1 && eval2) {
+      // IELTS weighting: Task 2 is worth twice as much as Task 1
+      const weightedAverage = (eval1.bandScore + 2 * eval2.bandScore) / 3;
+      overallBandScore = roundToIeltsBand(weightedAverage);
+    } else if (eval1) {
+      overallBandScore = eval1.bandScore;
+    } else if (eval2) {
+      overallBandScore = eval2.bandScore;
+    }
+
+    res.json({
+      success: true,
+      overallBandScore,
+      task1Evaluation: eval1,
+      task2Evaluation: eval2
+    });
+
+  } catch (err) {
+    console.error('Error in IELTS Writing evaluation route:', err);
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+function roundToIeltsBand(score) {
+  const fraction = score - Math.floor(score);
+  if (fraction < 0.25) {
+    return Math.floor(score);
+  } else if (fraction < 0.75) {
+    return Math.floor(score) + 0.5;
+  } else {
+    return Math.ceil(score);
+  }
+}
 
 module.exports = router;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiPencilAlt, HiArrowLeft, HiUpload, HiCheckCircle, HiX, HiDocumentText, HiPhotograph } from 'react-icons/hi';
+import { HiPencilAlt, HiArrowLeft, HiUpload, HiCheckCircle, HiX, HiDocumentText, HiPhotograph, HiTrash } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import './IeltsWritingUpload.css';
@@ -11,6 +11,7 @@ export default function IeltsWritingUpload() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState({
+    id: localStorage.getItem('topkorbo_id') || '',
     name: localStorage.getItem('topkorbo_name') || 'Teacher',
     avatar: localStorage.getItem('topkorbo_avatar') || '',
     email: localStorage.getItem('topkorbo_email') || '',
@@ -42,7 +43,7 @@ export default function IeltsWritingUpload() {
   const [task2Pdf, setTask2Pdf] = useState(null);
   const [task2Image, setTask2Image] = useState(null);
 
-  // Auth Guard
+  // Auth Guard & User Identity Fetch
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) {
@@ -54,6 +55,40 @@ export default function IeltsWritingUpload() {
       navigate('/dashboard');
       return;
     }
+
+    const fetchUserData = async () => {
+      try {
+        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${backendBaseUrl}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('topkorbo_token');
+          navigate('/');
+          return;
+        }
+
+        const resData = await response.json();
+        if (resData.success && resData.data) {
+          const u = resData.data;
+          setUser({
+            id: u._id,
+            name: u.name,
+            avatar: u.avatar || '',
+            email: u.email,
+            role: u.role,
+          });
+          localStorage.setItem('topkorbo_id', u._id);
+        }
+      } catch (err) {
+        console.error('Error fetching user data in IELTS Writing Upload:', err);
+      }
+    };
+
+    fetchUserData();
   }, [navigate]);
 
   // Fetch writing sets
@@ -83,6 +118,48 @@ export default function IeltsWritingUpload() {
       fetchSets();
     }
   }, [viewMode]);
+
+  const handleDeleteSet = async (setId, e) => {
+    e.stopPropagation(); // Prevent opening details modal
+
+    const confirmMsg = language === 'en'
+      ? 'Are you sure you want to delete this question set?'
+      : 'আপনি কি নিশ্চিত যে আপনি এই প্রশ্ন সেটটি মুছে ফেলতে চান?';
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+      const response = await fetch(`${backendBaseUrl}/ielts/writing/sets/${setId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const resData = await response.json();
+
+      if (response.ok && resData.success) {
+        toast.success(
+          language === 'en'
+            ? 'Question set deleted successfully!'
+            : 'প্রশ্ন সেট সফলভাবে মুছে ফেলা হয়েছে!'
+        );
+        // Refresh list
+        fetchSets();
+      } else {
+        toast.error(
+          resData.message || (language === 'en' ? 'Failed to delete question set.' : 'প্রশ্ন সেট মুছতে ব্যর্থ হয়েছে।')
+        );
+      }
+    } catch (err) {
+      console.error('Error deleting writing set:', err);
+      toast.error(
+        language === 'en' ? 'Network error. Please try again.' : 'নেটওয়ার্ক সমস্যা। আবার চেষ্টা করুন।'
+      );
+    }
+  };
 
   const handleFileChange = (task, type, file) => {
     if (!file) return;
@@ -337,28 +414,54 @@ export default function IeltsWritingUpload() {
                             <span>📅 {new Date(set.createdAt).toLocaleDateString()}</span>
                             <span>📝 Task 1 ({set.task1?.type}), Task 2 ({set.task2?.type})</span>
                           </div>
-                          <button 
-                            type="button"
-                            className="ielts-view-clean-btn"
-                            style={{
-                              marginTop: '12px',
-                              background: 'rgba(192, 133, 82, 0.08)',
-                              border: '1px solid rgba(192, 133, 82, 0.15)',
-                              color: 'var(--text-primary)',
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              fontSize: '0.82rem',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              transition: 'all 0.2s',
-                              alignSelf: 'flex-start'
-                            }}
-                          >
-                            <span>{language === 'en' ? 'View Question Set' : 'প্রশ্ন বিবরণী দেখুন'}</span>
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                            <button 
+                              type="button"
+                              className="ielts-view-clean-btn"
+                              style={{
+                                background: 'rgba(192, 133, 82, 0.08)',
+                                border: '1px solid rgba(192, 133, 82, 0.15)',
+                                color: 'var(--text-primary)',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                fontSize: '0.82rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              <span>{language === 'en' ? 'View Question Set' : 'প্রশ্ন বিবরণী দেখুন'}</span>
+                            </button>
+
+                            {(set.creator?._id === user.id || set.creator === user.id) && (
+                              <button 
+                                type="button"
+                                className="ielts-delete-set-btn"
+                                onClick={(e) => handleDeleteSet(set._id, e)}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.08)',
+                                  border: '1px solid rgba(239, 68, 68, 0.15)',
+                                  color: '#ef4444',
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  fontSize: '0.82rem',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  transition: 'all 0.2s',
+                                }}
+                                title={language === 'en' ? 'Delete' : 'মুছে ফেলুন'}
+                              >
+                                <HiTrash size={15} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

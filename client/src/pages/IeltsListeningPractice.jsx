@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiVolumeUp, HiArrowLeft, HiArrowRight } from 'react-icons/hi';
@@ -134,6 +134,34 @@ export default function IeltsListeningPractice() {
 
       <main className="ielts-listening-practice-content">
         {/* Header */}
+        <header className="ielts-listening-practice-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(75, 46, 43, 0.08)' }}>
+          <button
+            onClick={() => navigate('/ielts-prep', { state: { step: 2 } })}
+            className="ielts-listening-back-btn"
+            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '8px',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s',
+              color: 'var(--text-primary)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(75, 46, 43, 0.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <HiArrowLeft size={20} />
+          </button>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+              {language === 'en' ? 'IELTS Listening Practice' : 'আইইএলটিএস লিসেনিং প্র্যাকটিস'}
+            </h2>
+          </div>
+        </header>
 
         {/* Workspace */}
         <div className="ielts-listening-practice-workspace">

@@ -732,7 +732,7 @@ export default function Setting() {
 
                       <div className="settings-field-group" style={{ marginBottom: '16px' }}>
                         <label className="settings-field-label">Interested to Guide</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '6px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginTop: '6px' }}>
                           {['Medical', 'Engineering', 'University', 'Academic', 'IELTS'].map((guideArea) => (
                             <label key={guideArea} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 248, 240, 0.6)', border: '1px solid rgba(230, 204, 178, 0.3)', cursor: 'pointer', fontSize: '0.88rem', fontWeight: '600' }}>
                               <input
@@ -763,7 +763,7 @@ export default function Setting() {
 
                           <div className="settings-field-group">
                             <label className="settings-field-label" style={{ color: 'var(--sky-blue)' }}>IELTS Test Report Form (TRF) PDF</label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '40px', height: 'auto', flexWrap: 'wrap' }}>
                               <label htmlFor="settings-trf-pdf-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
                                 {settingsForm.ieltsTrf ? 'Change PDF' : 'Upload TRF PDF'}
                               </label>

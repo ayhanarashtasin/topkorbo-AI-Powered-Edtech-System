@@ -903,7 +903,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                           <h4 className="signup-modal__form-section-title">3. Interested to Guide</h4>
                           <div className="signup-modal__form-group" style={{ marginBottom: '16px' }}>
-                            <div className="signup-modal__checkbox-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                            <div className="signup-modal__checkbox-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
                               {['Medical', 'Engineering', 'University', 'Academic', 'IELTS'].map((guideArea) => (
                                 <label className="signup-modal__checkbox-label" key={guideArea}>
                                   <input
@@ -1036,7 +1036,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
                               <div className="signup-modal__form-group">
                                 <label className="signup-modal__label" style={{ color: 'var(--sky-blue)' }}>IELTS Test Report Form (TRF) PDF</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '40px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '40px', height: 'auto', flexWrap: 'wrap' }}>
                                   <label htmlFor="trf-pdf-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', background: 'rgba(230, 204, 178, 0.15)', border: '1px solid rgba(230, 204, 178, 0.4)', color: 'var(--text-primary)', display: 'inline-flex', padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontWeight: '600', fontSize: '0.85rem' }}>
                                     {formData.ieltsTrf ? 'Change PDF' : 'Upload TRF PDF'}
                                   </label>

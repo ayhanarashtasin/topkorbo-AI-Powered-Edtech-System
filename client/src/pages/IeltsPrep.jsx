@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -29,6 +29,7 @@ export default function IeltsPrep() {
   });
 
   const [step, setStep] = useState(location.state?.step || 1);
+  const segmentsRef = useRef(null);
 
   // Auth Guard
   useEffect(() => {
@@ -86,6 +87,9 @@ export default function IeltsPrep() {
 
   const handleStartPrep = () => {
     setStep(2);
+    setTimeout(() => {
+      segmentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleBack = () => {
@@ -111,94 +115,96 @@ export default function IeltsPrep() {
         <div className="ielts-prep-workspace">
           <div className="ielts-prep-workspace__body">
 
-            {step === 1 ? (
-              /* ================= STEP 1: Overview & Info ================= */
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="ielts-overview-card"
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                  <HiAcademicCap size={32} style={{ color: 'var(--sky-blue)' }} />
-                  <h1 className="ielts-title">
-                    {language === 'en' ? 'IELTS Academic & General' : 'আইইএলটিএস একাডেমিক ও জেনারেল'}
-                  </h1>
-                </div>
+            {/* ================= STEP 1: Overview & Info ================= */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="ielts-overview-card"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                <HiAcademicCap size={32} style={{ color: 'var(--sky-blue)' }} />
+                <h1 className="ielts-title">
+                  {language === 'en' ? 'IELTS Academic & General' : 'আইইএলটিএস একাডেমিক ও জেনারেল'}
+                </h1>
+              </div>
 
-                <p className="ielts-description">
-                  {language === 'en'
-                    ? "The International English Language Testing System (IELTS) is the world's most popular high-stakes English language proficiency test for study, work, and migration. It assesses your abilities in four key communication areas: Listening, Reading, Writing, and Speaking."
-                    : "ইন্টারন্যাশনাল ইংলিশ ল্যাঙ্গুয়েজ টেস্টিং সিস্টেম (IELTS) পড়াশোনা, কর্মসংস্থান বা অভিবাসনের জন্য বিশ্বের সর্বাধিক জনপ্রিয় উচ্চ-মানের ইংরেজি ভাষা দক্ষতা পরীক্ষা। এটি চারটি প্রধান যোগাযোগের ক্ষেত্রে আপনার দক্ষতা মূল্যায়ন করে: লিসেনিং, রিডিং, রাইটিং এবং স্পিকিং।"}
-                </p>
+              <p className="ielts-description">
+                {language === 'en'
+                  ? "The International English Language Testing System (IELTS) is the world's most popular high-stakes English language proficiency test for study, work, and migration. It assesses your abilities in four key communication areas: Listening, Reading, Writing, and Speaking."
+                  : "ইন্টারন্যাশনাল ইংলিশ ল্যাঙ্গুয়েজ টেস্টিং সিস্টেম (IELTS) পড়াশোনা, কর্মসংস্থান বা অভিবাসনের জন্য বিশ্বের সর্বাধিক জনপ্রিয় উচ্চ-মানের ইংরেজি ভাষা দক্ষতা পরীক্ষা। এটি চারটি প্রধান যোগাযোগের ক্ষেত্রে আপনার দক্ষতা মূল্যায়ন করে: লিসেনিং, রিডিং, রাইটিং এবং স্পিকিং।"}
+              </p>
 
-                {/* Mark Distribution Section */}
-                <div className="ielts-distribution-section">
-                  <h3 className="ielts-section-title">
-                    {language === 'en' ? 'Mark Distribution & Exam Structure' : 'নম্বর বন্টন ও পরীক্ষার গঠন'}
-                  </h3>
+              {/* Mark Distribution Section */}
+              <div className="ielts-distribution-section">
+                <h3 className="ielts-section-title">
+                  {language === 'en' ? 'Mark Distribution & Exam Structure' : 'নম্বর বন্টন ও পরীক্ষার গঠন'}
+                </h3>
 
-                  <div className="ielts-grid-4">
-                    {/* Writing */}
-                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/writing')} style={{ cursor: 'pointer' }}>
-                      <div className="ielts-dist-icon"><HiPencilAlt size={24} /></div>
-                      <h4>{language === 'en' ? 'Writing' : 'রাইটিং'}</h4>
-                      <span className="ielts-dist-detail">
-                        {language === 'en' ? '2 Tasks (Report/Essay)' : '২টি টাস্ক (রিপোর্ট/রচনা)'}
-                      </span>
-                      <span className="ielts-dist-duration">
-                        {language === 'en' ? '60 Mins' : '৬০ মিনিট'}
-                      </span>
-                    </div>
+                <div className="ielts-grid-4">
+                  {/* Writing */}
+                  <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/writing')} style={{ cursor: 'pointer' }}>
+                    <div className="ielts-dist-icon"><HiPencilAlt size={24} /></div>
+                    <h4>{language === 'en' ? 'Writing' : 'রাইটিং'}</h4>
+                    <span className="ielts-dist-detail">
+                      {language === 'en' ? '2 Tasks (Report/Essay)' : '২টি টাস্ক (রিপোর্ট/রচনা)'}
+                    </span>
+                    <span className="ielts-dist-duration">
+                      {language === 'en' ? '60 Mins' : '৬০ মিনিট'}
+                    </span>
+                  </div>
 
-                    {/* Speaking */}
-                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/speaking')} style={{ cursor: 'pointer' }}>
-                      <div className="ielts-dist-icon"><HiChatAlt2 size={24} /></div>
-                      <h4>{language === 'en' ? 'Speaking' : 'স্পিকিং'}</h4>
-                      <span className="ielts-dist-detail">
-                        {language === 'en' ? '3 Parts (Face-to-Face)' : '৩টি পার্ট (সাক্ষাৎকার)'}
-                      </span>
-                      <span className="ielts-dist-duration">
-                        {language === 'en' ? '11-14 Mins' : '১১-১৪ মিনিট'}
-                      </span>
-                    </div>
+                  {/* Speaking */}
+                  <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/speaking')} style={{ cursor: 'pointer' }}>
+                    <div className="ielts-dist-icon"><HiChatAlt2 size={24} /></div>
+                    <h4>{language === 'en' ? 'Speaking' : 'স্পিকিং'}</h4>
+                    <span className="ielts-dist-detail">
+                      {language === 'en' ? '3 Parts (Face-to-Face)' : '৩টি পার্ট (সাক্ষাৎকার)'}
+                    </span>
+                    <span className="ielts-dist-duration">
+                      {language === 'en' ? '11-14 Mins' : '১১-১৪ মিনিট'}
+                    </span>
+                  </div>
 
-                    {/* Listening */}
-                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/listening')} style={{ cursor: 'pointer' }}>
-                      <div className="ielts-dist-icon"><HiVolumeUp size={24} /></div>
-                      <h4>{language === 'en' ? 'Listening' : 'লিসেনিং'}</h4>
-                      <span className="ielts-dist-detail">
-                        {language === 'en' ? '4 Sections | 40 Questions' : '৪টি সেকশন | ৪০টি প্রশ্ন'}
-                      </span>
-                      <span className="ielts-dist-duration">
-                        {language === 'en' ? '30 Mins' : '৩০ মিনিট'}
-                      </span>
-                    </div>
+                  {/* Listening */}
+                  <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/listening')} style={{ cursor: 'pointer' }}>
+                    <div className="ielts-dist-icon"><HiVolumeUp size={24} /></div>
+                    <h4>{language === 'en' ? 'Listening' : 'লিসেনিং'}</h4>
+                    <span className="ielts-dist-detail">
+                      {language === 'en' ? '4 Sections | 40 Questions' : '৪টি সেকশন | ৪০টি প্রশ্ন'}
+                    </span>
+                    <span className="ielts-dist-duration">
+                      {language === 'en' ? '30 Mins' : '৩০ মিনিট'}
+                    </span>
+                  </div>
 
-                    {/* Reading */}
-                    <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/reading')} style={{ cursor: 'pointer' }}>
-                      <div className="ielts-dist-icon"><HiBookOpen size={24} /></div>
-                      <h4>{language === 'en' ? 'Reading' : 'রিডিং'}</h4>
-                      <span className="ielts-dist-detail">
-                        {language === 'en' ? '3 Passages | 40 Questions' : '৩টি প্যাসেজ | ৪০টি প্রশ্ন'}
-                      </span>
-                      <span className="ielts-dist-duration">
-                        {language === 'en' ? '60 Mins' : '৬০ মিনিট'}
-                      </span>
-                    </div>
+                  {/* Reading */}
+                  <div className="ielts-dist-card" onClick={() => navigate('/ielts-prep/reading')} style={{ cursor: 'pointer' }}>
+                    <div className="ielts-dist-icon"><HiBookOpen size={24} /></div>
+                    <h4>{language === 'en' ? 'Reading' : 'রিডিং'}</h4>
+                    <span className="ielts-dist-detail">
+                      {language === 'en' ? '3 Passages | 40 Questions' : '৩টি প্যাসেজ | ৪০টি প্রশ্ন'}
+                    </span>
+                    <span className="ielts-dist-duration">
+                      {language === 'en' ? '60 Mins' : '৬০ মিনিট'}
+                    </span>
                   </div>
                 </div>
+              </div>
 
-
-                {/* Start Button */}
+              {/* Start Button */}
+              {step !== 2 && (
                 <button onClick={handleStartPrep} className="ielts-btn-primary">
                   <span>{language === 'en' ? 'Start Preparation' : 'প্রস্তুতি শুরু করুন'}</span>
                   <HiArrowRight size={18} />
                 </button>
-              </motion.div>
-            ) : (
-              /* ================= STEP 2: The 4 Segments ================= */
+              )}
+            </motion.div>
+
+            {/* ================= STEP 2: The 4 Segments ================= */}
+            {step === 2 && (
               <motion.div
+                ref={segmentsRef}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}

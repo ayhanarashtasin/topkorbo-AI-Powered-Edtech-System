@@ -4,12 +4,9 @@ import { useLanguage } from '../hooks/useLanguage';
 import {
   HiBookOpen,
   HiArrowLeft,
-  HiArrowRight,
-  HiPlay,
 } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 import './IeltsReading.css';
 
 export default function IeltsReading() {
@@ -76,14 +73,6 @@ export default function IeltsReading() {
       </div>
     );
   }
-
-  const handleStartDemo = () => {
-    toast.success(
-      language === 'en'
-        ? 'Launching Reading demo session...'
-        : 'রিডিং ডেমো সেশন শুরু করা হচ্ছে...'
-    );
-  };
 
   return (
     <div className="ielts-reading-container">
@@ -205,36 +194,6 @@ export default function IeltsReading() {
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Demo Question Action Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.15 }}
-              className="ielts-reading-actions"
-            >
-              <div
-                className="ielts-reading-action-card"
-                onClick={handleStartDemo}
-              >
-                <div className="ielts-reading-action-card__left">
-                  <div className="ielts-reading-action-card__icon">
-                    <HiPlay size={28} />
-                  </div>
-                  <div className="ielts-reading-action-card__text">
-                    <h3>{language === 'en' ? 'Demo Question' : 'ডেমো প্রশ্ন'}</h3>
-                    <p>
-                      {language === 'en'
-                        ? 'Try a sample reading comprehension passage to familiarize yourself with the interface.'
-                        : 'ইন্টারফেসের সাথে পরিচিত হতে একটি নমুনা রিডিং কম্প্রিহেনশন প্যাসেজ চেষ্টা করুন।'}
-                    </p>
-                  </div>
-                </div>
-                <div className="ielts-reading-action-card__arrow">
-                  <HiArrowRight size={22} />
                 </div>
               </div>
             </motion.div>

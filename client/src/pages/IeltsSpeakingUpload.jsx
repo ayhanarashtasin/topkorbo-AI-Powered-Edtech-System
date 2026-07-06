@@ -39,6 +39,7 @@ export default function IeltsSpeakingUpload() {
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [speakingViewMode, setSpeakingViewMode] = useState('bank'); // 'bank' or 'upload'
+  const [meetingLinks, setMeetingLinks] = useState({});
 
   // Auth Guard
   useEffect(() => {
@@ -80,8 +81,22 @@ export default function IeltsSpeakingUpload() {
       fetchRequests();
     }
   }, [activeSubOption, language]);
-
   const handleUpdateStatus = async (appointmentId, status) => {
+    let meetingLink = '';
+    if (status === 'accepted') {
+      const link = meetingLinks[appointmentId] || '';
+      const trimmed = link.trim();
+      if (!trimmed) {
+        toast.error(language === 'en' ? 'Meeting link is required to accept this appointment.' : 'অ্যাপয়েন্টমেন্ট গ্রহণ করতে মিটিং লিঙ্ক আবশ্যক।');
+        return;
+      }
+      if (!/^https?:\/\/\S+/i.test(trimmed)) {
+        toast.error(language === 'en' ? 'Please enter a valid URL (starting with http:// or https://) in the meeting link field.' : 'অনুগ্রহ করে মিটিং লিঙ্ক ফিল্ডে একটি সঠিক ইউআরএল প্রবেশ করান (http:// বা https:// দিয়ে শুরু)।');
+        return;
+      }
+      meetingLink = trimmed;
+    }
+
     try {
       const token = localStorage.getItem('topkorbo_token');
       const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -92,7 +107,7 @@ export default function IeltsSpeakingUpload() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, meetingLink })
       });
 
       const resData = await res.json();
@@ -105,7 +120,7 @@ export default function IeltsSpeakingUpload() {
         
         // Update state locally
         setRequests(prev => 
-          prev.map(app => app._id === appointmentId ? { ...app, status } : app)
+          prev.map(app => app._id === appointmentId ? { ...app, status, meetingLink } : app)
         );
       } else {
         toast.error(resData.message || (language === 'en' ? 'Failed to update request.' : 'অনুরোধ আপডেট করতে ব্যর্থ হয়েছে।'));
@@ -340,6 +355,29 @@ export default function IeltsSpeakingUpload() {
                                   <strong>{language === 'en' ? 'Message:' : 'বার্তা:'}</strong> {req.message}
                                 </p>
                               )}
+
+                              <div className="ielts-meeting-link-input-wrapper" style={{ marginTop: '12px', marginBottom: '16px' }}>
+                                <label htmlFor={`link-input-${req._id}`} style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                                  {language === 'en' ? 'Meeting Link (Required to Accept):' : 'মিটিং লিঙ্ক (গ্রহণের জন্য আবশ্যক):'}
+                                </label>
+                                <input 
+                                  id={`link-input-${req._id}`}
+                                  type="text" 
+                                  placeholder="e.g. https://meet.google.com/abc-defg-hij" 
+                                  value={meetingLinks[req._id] || ''}
+                                  onChange={(e) => setMeetingLinks(prev => ({ ...prev, [req._id]: e.target.value }))}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(75, 46, 43, 0.15)',
+                                    fontSize: '0.88rem',
+                                    boxSizing: 'border-box',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s'
+                                  }}
+                                />
+                              </div>
                               
                               <div className="ielts-request-actions">
                                 <button 
