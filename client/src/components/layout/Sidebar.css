@@ -193,39 +193,52 @@
 /* ============================================
    Collapsible Sidebar Premium Styling Overrides
    ============================================ */
-.dashboard-sidebar--collapsed {
-  width: 80px !important;
-}
+@media (min-width: 769px) {
+  .dashboard-sidebar--collapsed {
+    width: 80px !important;
+  }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar__logo-container {
-  flex-direction: column-reverse;
-  gap: 16px;
-  padding: 24px 8px;
-  align-items: center;
-}
+  .dashboard-sidebar--collapsed .dashboard-sidebar__logo-container {
+    flex-direction: column-reverse;
+    gap: 16px;
+    padding: 24px 8px;
+    align-items: center;
+  }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar__logo {
-  justify-content: center;
-  width: 100%;
-}
+  .dashboard-sidebar--collapsed .dashboard-sidebar__logo {
+    justify-content: center;
+    width: 100%;
+  }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar__menu-btn {
-  justify-content: center;
-  padding: 12px;
-}
+  .dashboard-sidebar--collapsed .dashboard-sidebar__menu-btn {
+    justify-content: center;
+    padding: 12px;
+  }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar__menu-icon {
-  margin: 0;
-}
+  .dashboard-sidebar--collapsed .dashboard-sidebar__menu-icon {
+    margin: 0;
+  }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar__footer {
-  padding: 20px 8px;
-  align-items: center;
-}
+  .dashboard-sidebar--collapsed .dashboard-sidebar__footer {
+    padding: 20px 8px;
+    align-items: center;
+  }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar__profile {
-  justify-content: center;
-  width: 100%;
+  .dashboard-sidebar--collapsed .dashboard-sidebar__profile {
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Custom premium hover tooltips */
+  .dashboard-sidebar--collapsed .dashboard-sidebar__toggle-tooltip {
+    left: 125%;
+  }
+  
+  .dashboard-sidebar--collapsed .dashboard-sidebar__menu-label,
+  .dashboard-sidebar--collapsed .dashboard-sidebar__user-info,
+  .dashboard-sidebar--collapsed .dashboard-sidebar__logo-text {
+    display: none;
+  }
 }
 
 /* Sidebar Toggle Button styling matching uploaded screen */
@@ -298,11 +311,6 @@
 /* Yellow highlighted target for 'sidebar' keyword */
 .dashboard-sidebar__toggle-tooltip .tooltip-target {
   color: #D4A373;
-}
-
-/* If collapsed, adjust tooltip positions to remain perfectly visible */
-.dashboard-sidebar--collapsed .dashboard-sidebar__toggle-tooltip {
-  left: 125%;
 }
 
 /* ============================================
