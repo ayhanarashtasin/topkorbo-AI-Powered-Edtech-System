@@ -24,6 +24,15 @@ const ACTION_OPTIONS = [
   'QUESTION_REPORT_VALID',
   'QUESTION_REPORT_DISMISSED',
   'QUESTION_REPORT_RESOLVED',
+  'REPORT_UNDER_REVIEW',
+  'REPORT_DISMISSED',
+  'REPORT_RESOLVED',
+  'REPORT_NOTE_ADDED',
+  'USER_WARNED',
+  'CONTENT_HIDDEN',
+  'APPEAL_APPROVED',
+  'APPEAL_REJECTED',
+  'APPEAL_NOTE_ADDED',
   'BOOK_APPROVED',
   'BOOK_REJECTED',
   'IELTS_SET_APPROVED',
@@ -34,6 +43,15 @@ const ACTION_OPTIONS = [
   'NOTICE_DELETED',
   'WAITLIST_EXPORTED',
   'WAITLIST_MARKED_CONTACTED',
+  'BROADCAST_SENT',
+  'BROADCAST_FAILED',
+  'SUPPORT_TICKET_UPDATED',
+  'SUPPORT_TICKET_RESOLVED',
+  'SUPPORT_TICKET_CLOSED',
+  'SUPPORT_TICKET_REPLIED',
+  'FEEDBACK_REVIEWED',
+  'FEEDBACK_DISMISSED',
+  'FEEDBACK_RESOLVED',
   'SUBJECT_CREATED',
   'SUBJECT_UPDATED',
   'SUBJECT_ARCHIVED',
@@ -57,8 +75,9 @@ function formatDate(value) {
 }
 
 function toneForAction(action) {
-  if (action.includes('UNBANNED') || action.includes('REACTIVATED') || action.includes('APPROVED') || action.includes('VERIFIED') || action.includes('CREATED')) return 'success';
-  if (action.includes('REJECTED') || action.includes('ARCHIVED') || action === 'USER_BANNED') return 'danger';
+  if (action.includes('UNBANNED') || action.includes('REACTIVATED') || action.includes('APPROVED') || action.includes('VERIFIED') || action.includes('CREATED') || action.includes('RESOLVED')) return 'success';
+  if (action.includes('FAILED') || action.includes('REJECTED') || action.includes('ARCHIVED') || action === 'USER_BANNED') return 'danger';
+  if (action.includes('DISMISSED')) return 'neutral';
   if (action.includes('SUSPENDED')) return 'warning';
   return 'info';
 }
@@ -100,7 +119,7 @@ export default function AdminAuditLogsPage() {
     <section className="admin-page">
       <AdminPageHeader
         title="Audit Logs"
-        description="Review sensitive admin actions across users, teachers, questions, books, and academic taxonomy changes."
+        description="Review sensitive admin actions across users, teachers, notifications, support, moderation, appeals, questions, books, and academic taxonomy changes."
         badge={{ label: `${pagination.total} events`, tone: 'info' }}
       />
 

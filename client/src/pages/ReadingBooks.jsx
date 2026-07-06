@@ -362,7 +362,6 @@ export default function ReadingBooks() {
     <div className="dashboard-container">
       <Sidebar activeTab={activeTab} user={user} />
       <main className="dashboard-main">
-
         <div className="rb-workspace animate-fade-in">
           <div className="rb-filters">
             <div className="rb-filter-group">
@@ -454,14 +453,24 @@ export default function ReadingBooks() {
             )}
 
             {user.role === 'teacher' && (
-              <button
-                type="button"
-                className={`rb-mine-toggle ${myUploadsOnly ? 'rb-mine-toggle--active' : ''}`}
-                onClick={() => setMyUploadsOnly((v) => !v)}
-              >
-                <HiCog size={14} />
-                <span>{language === 'en' ? 'My uploads' : 'আমার আপলোড'}</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="rb-upload-cta rb-upload-cta--toolbar"
+                  onClick={handleUploadClick}
+                >
+                  <HiPlusCircle size={16} />
+                  <span>{t('rb.upload_cta')}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`rb-mine-toggle ${myUploadsOnly ? 'rb-mine-toggle--active' : ''}`}
+                  onClick={() => setMyUploadsOnly((v) => !v)}
+                >
+                  <HiCog size={14} />
+                  <span>{language === 'en' ? 'My uploads' : 'আমার আপলোড'}</span>
+                </button>
+              </>
             )}
           </div>
 
@@ -478,6 +487,16 @@ export default function ReadingBooks() {
                   ? t('rb.empty')
                   : t('rb.empty.first')}
               </p>
+              {user.role === 'teacher' && (
+                <button
+                  type="button"
+                  className="rb-upload-cta rb-empty-upload-cta"
+                  onClick={handleUploadClick}
+                >
+                  <HiPlusCircle size={18} />
+                  <span>{t('rb.upload_cta')}</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="rb-grid">

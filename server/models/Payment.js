@@ -38,9 +38,10 @@ const paymentSchema = new mongoose.Schema({
   },
   // The SSLCommerz val_id that validated this transaction. Unique so the same
   // gateway validation cannot be replayed against a second local payment row.
+  // Keep it absent until validation succeeds; a unique sparse index still treats
+  // explicit null values as indexed values in MongoDB.
   valId: {
     type: String,
-    default: null,
     unique: true,
     sparse: true,
     index: true

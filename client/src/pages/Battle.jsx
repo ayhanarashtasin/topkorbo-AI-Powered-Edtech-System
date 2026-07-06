@@ -219,6 +219,8 @@ export default function Battle() {
   const [selectedMode, setSelectedMode] = useState(() => sessionStorage.getItem('battle_mode') || 'duel');
   const [selectedSubjectIds, setSelectedSubjectIds] = useState(() => JSON.parse(sessionStorage.getItem('battle_subject_ids') || '[]'));
   const [selectedChapters, setSelectedChapters] = useState(() => JSON.parse(sessionStorage.getItem('battle_chapters') || '{}'));
+  const [topicsMap, setTopicsMap] = useState({});
+  const [selectedTopics, setSelectedTopics] = useState(() => JSON.parse(sessionStorage.getItem('battle_selected_topics') || '{}'));
   const [selectedStandards, setSelectedStandards] = useState(() => JSON.parse(sessionStorage.getItem('battle_standards') || '[]'));
   const [selectedEngineeringUnis, setSelectedEngineeringUnis] = useState(() => JSON.parse(sessionStorage.getItem('battle_engineering_unis') || '[]'));
   const [selectedGeneralUnis, setSelectedGeneralUnis] = useState(() => JSON.parse(sessionStorage.getItem('battle_general_unis') || '[]'));
@@ -288,6 +290,7 @@ export default function Battle() {
   useEffect(() => { sessionStorage.setItem('battle_mode', selectedMode); }, [selectedMode]);
   useEffect(() => { sessionStorage.setItem('battle_subject_ids', JSON.stringify(selectedSubjectIds)); }, [selectedSubjectIds]);
   useEffect(() => { sessionStorage.setItem('battle_chapters', JSON.stringify(selectedChapters)); }, [selectedChapters]);
+  useEffect(() => { sessionStorage.setItem('battle_selected_topics', JSON.stringify(selectedTopics)); }, [selectedTopics]);
   useEffect(() => { sessionStorage.setItem('battle_standards', JSON.stringify(selectedStandards)); }, [selectedStandards]);
   useEffect(() => { sessionStorage.setItem('battle_engineering_unis', JSON.stringify(selectedEngineeringUnis)); }, [selectedEngineeringUnis]);
   useEffect(() => { sessionStorage.setItem('battle_general_unis', JSON.stringify(selectedGeneralUnis)); }, [selectedGeneralUnis]);
@@ -402,6 +405,15 @@ export default function Battle() {
         }
         return next;
       });
+      if (isRemoving) {
+        setSelectedTopics((prevTopics) => {
+          const copy = { ...prevTopics };
+          Object.keys(copy).forEach((key) => {
+            if (key.startsWith(`${id}__`)) delete copy[key];
+          });
+          return copy;
+        });
+      }
       return isRemoving ? prev.filter((x) => x !== id) : [...prev, id];
     });
   };
@@ -409,6 +421,7 @@ export default function Battle() {
   const toggleAllSubjects = () => {
     setSelectedSubjectIds((prev) => {
       const shouldClear = prev.length === SUBJECTS.length;
+      if (shouldClear) setSelectedTopics({});
       setSelectedChapters((current) => {
         if (shouldClear) return {};
         return SUBJECTS.reduce((next, subject) => ({
@@ -420,15 +433,54 @@ export default function Battle() {
     });
   };
 
+  const fetchTopicsForChapter = async (subId, paper, chapter) => {
+    const key = `${subId}__${paper}__${chapter}`;
+    if (topicsMap[key]) return;
+
+    try {
+      const token = localStorage.getItem('topkorbo_token');
+      const dbSubject = SUBJECT_DB_MAP[subId] || subId;
+      const res = await fetch(`${apiBase}/questions/topics?subject=${encodeURIComponent(dbSubject)}&paper=${paper}&chapter=${encodeURIComponent(chapter)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setTopicsMap((prev) => ({ ...prev, [key]: data.data }));
+        setSelectedTopics((prev) => {
+          if (key in prev) return prev;
+          return { ...prev, [key]: data.data.map((t) => t.name) };
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching battle topics:', err);
+    }
+  };
+
+  const clearTopicsForChapter = (subId, paper, chapter) => {
+    const key = `${subId}__${paper}__${chapter}`;
+    setSelectedTopics((prev) => {
+      if (!(key in prev)) return prev;
+      const copy = { ...prev };
+      delete copy[key];
+      return copy;
+    });
+  };
+
   const toggleChapterSelection = (subId, paper, chapter) => {
     setSelectedChapters((prev) => {
       const subMap = prev[subId] || { '1st': [], '2nd': [] };
       const list = subMap[paper] || [];
+      const isSelecting = !list.includes(chapter);
+      if (isSelecting) {
+        fetchTopicsForChapter(subId, paper, chapter);
+      } else {
+        clearTopicsForChapter(subId, paper, chapter);
+      }
       return {
         ...prev,
         [subId]: {
           ...subMap,
-          [paper]: list.includes(chapter) ? list.filter((item) => item !== chapter) : [...list, chapter]
+          [paper]: isSelecting ? [...list, chapter] : list.filter((item) => item !== chapter)
         }
       };
     });
@@ -439,11 +491,17 @@ export default function Battle() {
     setSelectedChapters((prev) => {
       const subMap = prev[subId] || { '1st': [], '2nd': [] };
       const selected = subMap[paper] || [];
+      const isAllChecked = selected.length === allChapters.length;
+      if (isAllChecked) {
+        allChapters.forEach((chapter) => clearTopicsForChapter(subId, paper, chapter));
+      } else {
+        allChapters.forEach((chapter) => fetchTopicsForChapter(subId, paper, chapter));
+      }
       return {
         ...prev,
         [subId]: {
           ...subMap,
-          [paper]: selected.length === allChapters.length ? [] : allChapters
+          [paper]: isAllChecked ? [] : allChapters
         }
       };
     });
@@ -459,20 +517,35 @@ export default function Battle() {
         selections.push({
           subject: SUBJECT_DB_MAP[subId] || subId,
           paper,
-          chapters: chapters.map((name) => ({ name, topics: [] }))
+          chapters: chapters.map((name) => ({ name, topics: selectedTopics[`${subId}__${paper}__${name}`] || [] }))
         });
       });
     });
     return selections;
   };
 
+  // Re-hydrate topic lists for chapters that were already selected (e.g. after a
+  // page reload lands directly on the chapter step from sessionStorage).
+  useEffect(() => {
+    if (step !== 3) return;
+    selectedSubjectIds.forEach((subId) => {
+      const subMap = selectedChapters[subId] || { '1st': [], '2nd': [] };
+      ['1st', '2nd'].forEach((paper) => {
+        (subMap[paper] || []).forEach((chapter) => fetchTopicsForChapter(subId, paper, chapter));
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   const summary = useMemo(() => {
     let chapterCount = 0;
     Object.values(selectedChapters).forEach((subMap) => {
       Object.values(subMap).forEach((chapters) => { chapterCount += chapters.length; });
     });
-    return { subjectCount: selectedSubjectIds.length, chapterCount };
-  }, [selectedChapters, selectedSubjectIds.length]);
+    let topicCount = 0;
+    Object.values(selectedTopics).forEach((topics) => { topicCount += topics.length; });
+    return { subjectCount: selectedSubjectIds.length, chapterCount, topicCount };
+  }, [selectedChapters, selectedTopics, selectedSubjectIds.length]);
 
   const validateSettings = () => {
     if (selectedStandards.length === 0) return 'Please select at least one question standard.';
@@ -1531,17 +1604,57 @@ export default function Battle() {
                               <div className="mock-paper-chapters-list">
                                 {allChapters.map((chapter) => {
                                   const isSelected = selectedList.includes(chapter);
+                                  const topicKey = `${subId}__${paper}__${chapter}`;
+                                  const topics = topicsMap[topicKey] || [];
+                                  const selectedTopicList = selectedTopics[topicKey] || [];
                                   return (
-                                    <button
-                                      key={chapter}
-                                      type="button"
-                                      className={`mock-chapter-pill-item ${isSelected ? 'mock-chapter-pill-item--selected' : ''}`}
-                                      onClick={() => toggleChapterSelection(subId, paper, chapter)}
-                                      style={{ '--hover-color': subject.color }}
-                                    >
-                                      <div className="mock-chapter-pill-check">{isSelected && <HiCheckCircle size={18} />}</div>
-                                      <span className="mock-chapter-pill-name">{chapter}</span>
-                                    </button>
+                                    <div key={chapter} className="mock-chapter-pill-wrapper">
+                                      <button
+                                        type="button"
+                                        className={`mock-chapter-pill-item ${isSelected ? 'mock-chapter-pill-item--selected' : ''}`}
+                                        onClick={() => toggleChapterSelection(subId, paper, chapter)}
+                                        style={{ '--hover-color': subject.color }}
+                                      >
+                                        <div className="mock-chapter-pill-check">{isSelected && <HiCheckCircle size={18} />}</div>
+                                        <span className="mock-chapter-pill-name">{chapter}</span>
+                                      </button>
+
+                                      {isSelected && topics.length > 0 && (
+                                        <div className="mock-chapter-topics-sublist animate-slide-down">
+                                          <span className="mock-topics-label">{language === 'en' ? 'Topics:' : 'টপিকসমূহ:'}</span>
+                                          <div className="mock-topics-tags-grid">
+                                            {topics.map((topic) => {
+                                              const isTopicSelected = selectedTopicList.includes(topic.name);
+                                              return (
+                                                <button
+                                                  key={topic.name}
+                                                  type="button"
+                                                  className={`mock-topic-tag ${isTopicSelected ? 'mock-topic-tag--selected' : ''}`}
+                                                  onClick={() => {
+                                                    setSelectedTopics((prev) => {
+                                                      const current = prev[topicKey] || [];
+                                                      const updated = current.includes(topic.name)
+                                                        ? current.filter((t) => t !== topic.name)
+                                                        : [...current, topic.name];
+                                                      return { ...prev, [topicKey]: updated };
+                                                    });
+                                                  }}
+                                                  style={{ '--theme-color': subject.color }}
+                                                >
+                                                  {isTopicSelected ? (
+                                                    <HiCheck size={12} className="mock-topic-tag-icon" />
+                                                  ) : (
+                                                    <span className="mock-topic-tag-checkbox"></span>
+                                                  )}
+                                                  <span className="mock-topic-tag-name">{topic.name}</span>
+                                                  <span className="mock-topic-tag-count">{topic.count}</span>
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -1582,6 +1695,7 @@ export default function Battle() {
                     <span>{activeMode.id === 'custom-squad' ? `${customSquadSize}v${customSquadSize} Custom Squad` : activeMode.label}</span>
                     <span>{summary.subjectCount} subjects</span>
                     <span>{summary.chapterCount} chapters</span>
+                    <span>{summary.topicCount} topics</span>
                     <span>{questionTimeSeconds}s per question</span>
                   </div>
                 )}

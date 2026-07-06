@@ -117,6 +117,18 @@
   animation: pulseGlow 2.5s ease-in-out infinite;
 }
 
+.hero__cta-primary--disabled {
+  animation: none;
+  cursor: not-allowed;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.hero__cta-primary--disabled:hover {
+  box-shadow: var(--shadow-md);
+  transform: none;
+}
+
 .hero__trust {
   display: flex;
   gap: 32px;

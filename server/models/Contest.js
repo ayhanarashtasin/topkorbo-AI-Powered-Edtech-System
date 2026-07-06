@@ -187,10 +187,45 @@ const contestSchema = new mongoose.Schema({
       registeredAt: { type: Date, default: Date.now }
     }
   ],
+  adminStatus: {
+    type: String,
+    enum: ['active', 'archived', 'cancelled'],
+    default: 'active'
+  },
+  adminStatusReason: {
+    type: String,
+    default: ''
+  },
+  adminReviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  adminReviewedAt: {
+    type: Date,
+    default: null
+  },
+  adminCancelledAt: {
+    type: Date,
+    default: null
+  },
+  adminArchivedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
     type: Date,
     default: Date.now
   }
 }, { collection: 'contest_questions' });
+
+contestSchema.pre('save', function saveHook(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
 module.exports = mongoose.model('Contest', contestSchema);

@@ -41,6 +41,38 @@ const contestResultSchema = new mongoose.Schema(
     disqualificationReason: {
       type: String,
       default: ''
+    },
+    antiCheatStatus: {
+      type: String,
+      enum: ['none', 'flagged', 'cleared'],
+      default: 'none',
+      index: true
+    },
+    antiCheatReason: {
+      type: String,
+      default: ''
+    },
+    antiCheatReviewNote: {
+      type: String,
+      default: ''
+    },
+    antiCheatFlaggedAt: {
+      type: Date,
+      default: null
+    },
+    antiCheatReviewedAt: {
+      type: Date,
+      default: null
+    },
+    antiCheatFlaggedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    antiCheatReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
     }
   },
   { timestamps: { createdAt: 'submittedAt', updatedAt: 'updatedAt' } }

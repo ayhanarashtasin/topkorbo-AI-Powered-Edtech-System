@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../../hooks/useLanguage';
+import { getAuthToken } from '../../utils/authStorage';
 import { HiArrowRight, HiPlay } from 'react-icons/hi';
 import { FiUsers, FiBookOpen, FiAward } from 'react-icons/fi';
 import './HeroSection.css';
 
 export default function HeroSection() {
   const { t } = useLanguage();
+  const isLoggedIn = Boolean(getAuthToken());
 
   const wordVariants = {
     hidden: { opacity: 0, y: 30 },
@@ -70,10 +73,21 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9, duration: 0.6 }}
           >
-            <a href="#cta" className="btn btn-primary btn-lg hero__cta-primary">
-              {t('hero.cta_primary')}
-              <HiArrowRight />
-            </a>
+            {isLoggedIn ? (
+              <button
+                type="button"
+                className="btn btn-primary btn-lg hero__cta-primary hero__cta-primary--disabled"
+                disabled
+              >
+                {t('hero.cta_primary')}
+                <HiArrowRight />
+              </button>
+            ) : (
+              <Link to="/signup" className="btn btn-primary btn-lg hero__cta-primary">
+                {t('hero.cta_primary')}
+                <HiArrowRight />
+              </Link>
+            )}
             <button className="btn btn-secondary btn-lg hero__cta-secondary">
               <HiPlay />
               {t('hero.cta_secondary')}
