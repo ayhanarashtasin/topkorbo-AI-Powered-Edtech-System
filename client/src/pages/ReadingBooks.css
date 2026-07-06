@@ -24,6 +24,11 @@
   box-shadow: 0 6px 16px rgba(192, 133, 82, 0.4);
 }
 
+.rb-upload-cta--toolbar {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
 .rb-workspace {
   margin-top: 16px;
   padding: 24px;
@@ -161,6 +166,10 @@
   padding: 64px 20px;
   text-align: center;
   color: var(--text-secondary, #5c4d4c);
+}
+
+.rb-empty-upload-cta {
+  margin-top: 16px;
 }
 
 .rb-grid {

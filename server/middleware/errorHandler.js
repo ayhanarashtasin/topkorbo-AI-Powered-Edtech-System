@@ -33,7 +33,22 @@ const errorHandler = (err, req, res, next) => {
 
   // Mongoose duplicate key error
   if (err.code === 11000) {
-    return ApiResponse.error(res, 'This email is already on the waitlist!', 409);
+    const collection = String(err.collection || '');
+    const keyPattern = err.keyPattern || {};
+
+    if (req.path === '/api/landing/waitlist' || collection.includes('waitlist')) {
+      return ApiResponse.error(res, 'This email is already on the waitlist!', 409);
+    }
+
+    if (req.path.startsWith('/api/payments') || collection.includes('payment')) {
+      return ApiResponse.error(res, 'Payment request already exists. Please try again.', 409);
+    }
+
+    if (keyPattern.email) {
+      return ApiResponse.error(res, 'This email is already registered.', 409);
+    }
+
+    return ApiResponse.error(res, 'Duplicate record already exists.', 409);
   }
 
   // Mongoose CastError (invalid ObjectId)
