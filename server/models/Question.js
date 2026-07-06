@@ -39,20 +39,7 @@ const questionSchema = new mongoose.Schema({
   subject: {
     type: String,
     required: [true, 'Subject is required'],
-    enum: [
-      'Physics',
-      'Chemistry',
-      'Higher Math',
-      'Biology',
-      'Bangla',
-      'English',
-      'ICT',
-      'Statistics',
-      'Accounting',
-      'Finance',
-      'Economics',
-      'Management'
-    ]
+    trim: true
   },
   paper: {
     type: String,
@@ -66,6 +53,11 @@ const questionSchema = new mongoose.Schema({
   topic: {
     type: String,
     required: [true, 'Topic is required']
+  },
+  difficulty: {
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+    default: 'medium'
   },
   solution: {
     type: String,
@@ -95,6 +87,29 @@ const questionSchema = new mongoose.Schema({
       year: { type: String }
     }
   ],
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved',
+    index: true
+  },
+  reviewReason: {
+    type: String,
+    default: ''
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  reviewedAt: {
+    type: Date,
+    default: null
+  },
+  adminEditedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

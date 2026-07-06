@@ -1,7 +1,22 @@
 const Question = require('../models/Question');
+const Report = require('../models/Report');
 const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const planService = require('../services/planService');
+const adminAcademicTaxonomyService = require('../services/admin/adminAcademicTaxonomyService');
+
+function withApprovedStatus(match = {}) {
+  return {
+    ...match,
+    approvalStatus: 'approved'
+  };
+}
+
+const QUESTION_REPORT_REASONS = ['wrong_answer', 'wrong_explanation', 'typo', 'duplicate', 'outdated', 'other'];
+
+function normalizeQuestionTaxonomyInput(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
 
 /**
  * @desc    Create a new question (teacher only)
@@ -24,6 +39,7 @@ exports.createQuestion = async (req, res, next) => {
       paper,
       chapter,
       topic,
+      difficulty,
       tags,
       solution,
       solutionImageUrl
@@ -48,18 +64,30 @@ exports.createQuestion = async (req, res, next) => {
       return ApiResponse.error(res, 'Topic is required', 400);
     }
 
+    const validatedTaxonomy = await adminAcademicTaxonomyService.validateTaxonomySelection({
+      subject: normalizeQuestionTaxonomyInput(subject),
+      paper: normalizeQuestionTaxonomyInput(paper),
+      chapter: normalizeQuestionTaxonomyInput(chapter),
+      topic: normalizeQuestionTaxonomyInput(topic)
+    });
+
     const questionData = {
       teacher: user._id,
       questionText: questionText.trim(),
       imageUrl: imageUrl || '',
       type,
-      subject,
-      paper,
-      chapter,
-      topic,
+      subject: validatedTaxonomy.subject,
+      paper: validatedTaxonomy.paper,
+      chapter: validatedTaxonomy.chapter,
+      topic: validatedTaxonomy.topic,
+      difficulty: ['easy', 'medium', 'hard'].includes(difficulty) ? difficulty : 'medium',
       solution: solution || '',
       solutionImageUrl: solutionImageUrl || '',
       tags: tags || [],
+      approvalStatus: 'pending',
+      reviewReason: '',
+      reviewedBy: null,
+      reviewedAt: null,
       options: (type === 'mcq' || type === 'written') ? (options || []) : [],
       cq: type === 'cq' ? req.body.cq : undefined
     };
@@ -126,11 +154,11 @@ exports.getTopicsForMockTest = async (req, res, next) => {
 
     const topics = await Question.aggregate([
       {
-        $match: {
+        $match: withApprovedStatus({
           subject,
           paper,
           chapter
-        }
+        })
       },
       {
         $group: {
@@ -157,6 +185,20 @@ exports.getTopicsForMockTest = async (req, res, next) => {
 };
 
 /**
+ * @desc    Get the synced academic taxonomy tree used by question flows
+ * @route   GET /api/questions/taxonomy
+ * @access  Private
+ */
+exports.getAcademicTaxonomy = async (req, res, next) => {
+  try {
+    const data = await adminAcademicTaxonomyService.getPublicTaxonomy();
+    return ApiResponse.success(res, data, 'Academic taxonomy fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * @desc    Get distinct available question sources (Board/College) for a given
  *          subject + paper + type combination.
  * @route   GET /api/questions/sources
@@ -173,6 +215,7 @@ exports.getQuestionSources = async (req, res, next) => {
     }
 
     const baseMatch = { subject };
+    baseMatch.approvalStatus = 'approved';
     if (paper) baseMatch.paper = paper;
     if (type && ['mcq', 'cq', 'written'].includes(type)) {
       baseMatch.type = type;
@@ -298,7 +341,7 @@ exports.getQuestionsBySource = async (req, res, next) => {
       match.type = type;
     }
 
-    const questions = await Question.find(match)
+    const questions = await Question.find(withApprovedStatus(match))
       .select('-teacher -__v')
       .sort({ createdAt: -1 })
       .lean();
@@ -326,7 +369,7 @@ exports.getVarsityAdmissionSources = async (req, res, next) => {
       return ApiResponse.error(res, 'subject and paper are required query params', 400);
     }
 
-    const baseMatch = { subject, paper };
+    const baseMatch = { subject, paper, approvalStatus: 'approved' };
     if (type && ['mcq', 'cq', 'written'].includes(type)) {
       baseMatch.type = type;
     }
@@ -395,7 +438,7 @@ exports.getVarsityWrittenQuestions = async (req, res, next) => {
       match['tags.university'] = university.toUpperCase();
     }
 
-    const questions = await Question.find(match)
+    const questions = await Question.find(withApprovedStatus(match))
       .select('-teacher -__v')
       .sort({ createdAt: -1 })
       .lean();
@@ -424,6 +467,7 @@ exports.getAdmissionQuestionCards = async (req, res, next) => {
     }
 
     const baseMatch = {
+      approvalStatus: 'approved',
       'tags.category': 'admission',
       'tags.university': university.toUpperCase()
     };
@@ -501,6 +545,7 @@ exports.updateQuestion = async (req, res, next) => {
       paper,
       chapter,
       topic,
+      difficulty,
       tags,
       solution,
       solutionImageUrl,
@@ -519,18 +564,35 @@ exports.updateQuestion = async (req, res, next) => {
     if (imageUrl !== undefined) question.imageUrl = imageUrl || '';
     if (solutionImageUrl !== undefined) question.solutionImageUrl = solutionImageUrl || '';
     if (solution !== undefined) question.solution = solution || '';
-    if (subject !== undefined) question.subject = subject;
-    if (paper !== undefined) question.paper = paper;
-    if (chapter !== undefined) question.chapter = chapter;
-    if (topic !== undefined) question.topic = topic;
+    if (difficulty !== undefined && ['easy', 'medium', 'hard'].includes(difficulty)) {
+      question.difficulty = difficulty;
+    }
     if (type !== undefined) question.type = type;
     if (tags !== undefined) question.tags = tags || [];
+
+    const nextTaxonomy = {
+      subject: subject !== undefined ? normalizeQuestionTaxonomyInput(subject) : question.subject,
+      paper: paper !== undefined ? normalizeQuestionTaxonomyInput(paper) : question.paper,
+      chapter: chapter !== undefined ? normalizeQuestionTaxonomyInput(chapter) : question.chapter,
+      topic: topic !== undefined ? normalizeQuestionTaxonomyInput(topic) : question.topic
+    };
+
+    const validatedTaxonomy = await adminAcademicTaxonomyService.validateTaxonomySelection(nextTaxonomy);
+    question.subject = validatedTaxonomy.subject;
+    question.paper = validatedTaxonomy.paper;
+    question.chapter = validatedTaxonomy.chapter;
+    question.topic = validatedTaxonomy.topic;
 
     if (type === 'mcq' || type === 'written') {
       if (options !== undefined) question.options = options || [];
     } else if (type === 'cq') {
       if (cq !== undefined) question.cq = cq;
     }
+
+    question.approvalStatus = 'pending';
+    question.reviewReason = '';
+    question.reviewedBy = null;
+    question.reviewedAt = null;
 
     await question.save();
 
@@ -564,6 +626,37 @@ exports.deleteQuestion = async (req, res, next) => {
     await question.deleteOne();
 
     return ApiResponse.success(res, { id: req.params.id }, 'Question deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Report a wrong question
+ * @route   POST /api/questions/:id/report
+ * @access  Private
+ */
+exports.reportQuestion = async (req, res, next) => {
+  try {
+    const { reason, description } = req.body;
+    if (!QUESTION_REPORT_REASONS.includes(reason)) {
+      return ApiResponse.error(res, 'Invalid report reason', 400);
+    }
+
+    const question = await Question.findById(req.params.id).select('_id approvalStatus');
+    if (!question || question.approvalStatus !== 'approved') {
+      return ApiResponse.error(res, 'Question not found', 404);
+    }
+
+    const report = await Report.create({
+      reporter: req.user.id,
+      targetType: 'question',
+      target: question._id,
+      reason,
+      description: description ? String(description).slice(0, 1000) : ''
+    });
+
+    return ApiResponse.success(res, report, 'Question report submitted successfully.', 201);
   } catch (err) {
     next(err);
   }
@@ -777,7 +870,7 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
     };
 
     // 1. Fetch ALL matching questions using find() — reliable and deterministic
-    const allMatching = await Question.find(matchStage)
+    const allMatching = await Question.find(withApprovedStatus(matchStage))
       .select('-teacher -__v')
       .lean();
 
@@ -946,7 +1039,7 @@ exports.fetchQBankQuestions = async (req, res, next) => {
       return ApiResponse.error(res, 'No valid chapter selections found', 400);
     }
 
-    const questions = await Question.find({ $or: subjectConditions })
+    const questions = await Question.find(withApprovedStatus({ $or: subjectConditions }))
       .select('-teacher -__v')
       .sort({ subject: 1, paper: 1, chapter: 1, createdAt: -1 })
       .lean();

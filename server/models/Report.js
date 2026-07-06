@@ -10,7 +10,7 @@ const reportSchema = new mongoose.Schema(
     },
     targetType: {
       type: String,
-      enum: ['post', 'comment', 'user'],
+      enum: ['post', 'comment', 'user', 'question'],
       required: true
     },
     target: {
@@ -27,6 +27,11 @@ const reportSchema = new mongoose.Schema(
         'nudity',
         'misinformation',
         'cheating',
+        'wrong_answer',
+        'wrong_explanation',
+        'typo',
+        'duplicate',
+        'outdated',
         'other'
       ],
       required: true
@@ -34,7 +39,7 @@ const reportSchema = new mongoose.Schema(
     description: { type: String, default: '', maxlength: 1000 },
     status: {
       type: String,
-      enum: ['open', 'dismissed', 'action_taken'],
+      enum: ['open', 'under_review', 'resolved', 'dismissed', 'action_taken'],
       default: 'open',
       index: true
     },

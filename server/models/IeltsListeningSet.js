@@ -28,10 +28,31 @@ const ieltsListeningSetSchema = new mongoose.Schema({
       }
     }
   ],
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved',
+    index: true
+  },
+  rejectionReason: {
+    type: String,
+    default: ''
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  reviewedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
+
+ieltsListeningSetSchema.index({ approvalStatus: 1, createdAt: -1 });
 
 module.exports = mongoose.model('IeltsListeningSet', ieltsListeningSetSchema);

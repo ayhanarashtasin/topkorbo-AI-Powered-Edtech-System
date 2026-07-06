@@ -571,9 +571,12 @@ exports.streamChapterPdf = async (req, res, next) => {
 
     const book = await Book.findOne(
       { _id: req.params.id, 'chapters._id': req.params.cid },
-      { 'chapters.$': 1, isPublished: 1, uploadedBy: 1 }
+      { 'chapters.$': 1, uploadedBy: 1, isPublished: 1, approvalStatus: 1 }
     ).lean();
     if (!book || !book.chapters || book.chapters.length === 0) {
+      return ApiResponse.error(res, 'Book or Chapter not found', 404);
+    }
+    if (!canAccessBook(book, req.user)) {
       return ApiResponse.error(res, 'Book or Chapter not found', 404);
     }
 

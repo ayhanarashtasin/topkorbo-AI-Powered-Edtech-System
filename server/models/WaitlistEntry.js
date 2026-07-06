@@ -29,6 +29,20 @@ const waitlistEntrySchema = new mongoose.Schema({
     type: String,
     enum: ['en', 'bn'],
     default: 'en'
+  },
+  contacted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  contactedAt: {
+    type: Date,
+    default: null
+  },
+  contactedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, {
   timestamps: true

@@ -15,6 +15,10 @@ router.get('/mine', auth, questionController.getMyQuestions);
 // @route   GET /api/questions/topics
 router.get('/topics', auth, questionController.getTopicsForMockTest);
 
+// @desc    Get the synced academic taxonomy tree for question-based flows
+// @route   GET /api/questions/taxonomy
+router.get('/taxonomy', auth, questionController.getAcademicTaxonomy);
+
 // @desc    Get distinct board/college question sources for a subject/paper/type
 // @route   GET /api/questions/sources
 router.get('/sources', auth, questionController.getQuestionSources);
@@ -46,6 +50,10 @@ router.post('/mock-test', auth, questionController.fetchMockTestQuestions);
 // @desc    Update a question (teacher owner only)
 // @route   PUT /api/questions/:id
 router.put('/:id', auth, questionController.updateQuestion);
+
+// @desc    Report a wrong question
+// @route   POST /api/questions/:id/report
+router.post('/:id/report', auth, questionController.reportQuestion);
 
 // @desc    Delete a question (teacher owner only)
 // @route   DELETE /api/questions/:id

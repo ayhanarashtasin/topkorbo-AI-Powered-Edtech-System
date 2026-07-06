@@ -48,10 +48,31 @@ const ieltsWritingSetSchema = new mongoose.Schema({
       type: String
     }
   },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved',
+    index: true
+  },
+  rejectionReason: {
+    type: String,
+    default: ''
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  reviewedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
+
+ieltsWritingSetSchema.index({ approvalStatus: 1, createdAt: -1 });
 
 module.exports = mongoose.model('IeltsWritingSet', ieltsWritingSetSchema);

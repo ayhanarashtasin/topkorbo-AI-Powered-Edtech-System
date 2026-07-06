@@ -17,7 +17,35 @@ const ACTION_OPTIONS = [
   'TEACHER_REJECTED',
   'TEACHER_VERIFIED',
   'TEACHER_VERIFICATION_REJECTED',
-  'TEACHER_MORE_INFO_REQUESTED'
+  'TEACHER_MORE_INFO_REQUESTED',
+  'QUESTION_APPROVED',
+  'QUESTION_REJECTED',
+  'QUESTION_EDITED',
+  'QUESTION_REPORT_VALID',
+  'QUESTION_REPORT_DISMISSED',
+  'QUESTION_REPORT_RESOLVED',
+  'BOOK_APPROVED',
+  'BOOK_REJECTED',
+  'IELTS_SET_APPROVED',
+  'IELTS_SET_REJECTED',
+  'NOTICE_CREATED',
+  'NOTICE_UPDATED',
+  'NOTICE_ARCHIVED',
+  'NOTICE_DELETED',
+  'WAITLIST_EXPORTED',
+  'WAITLIST_MARKED_CONTACTED',
+  'SUBJECT_CREATED',
+  'SUBJECT_UPDATED',
+  'SUBJECT_ARCHIVED',
+  'PAPER_CREATED',
+  'PAPER_UPDATED',
+  'PAPER_ARCHIVED',
+  'CHAPTER_CREATED',
+  'CHAPTER_UPDATED',
+  'CHAPTER_ARCHIVED',
+  'TOPIC_CREATED',
+  'TOPIC_UPDATED',
+  'TOPIC_ARCHIVED'
 ];
 
 function formatDate(value) {
@@ -29,8 +57,8 @@ function formatDate(value) {
 }
 
 function toneForAction(action) {
-  if (action.includes('UNBANNED') || action.includes('REACTIVATED') || action.includes('APPROVED') || action.includes('VERIFIED')) return 'success';
-  if (action.includes('REJECTED') || action === 'USER_BANNED') return 'danger';
+  if (action.includes('UNBANNED') || action.includes('REACTIVATED') || action.includes('APPROVED') || action.includes('VERIFIED') || action.includes('CREATED')) return 'success';
+  if (action.includes('REJECTED') || action.includes('ARCHIVED') || action === 'USER_BANNED') return 'danger';
   if (action.includes('SUSPENDED')) return 'warning';
   return 'info';
 }
@@ -72,7 +100,7 @@ export default function AdminAuditLogsPage() {
     <section className="admin-page">
       <AdminPageHeader
         title="Audit Logs"
-        description="Review sensitive admin actions across user management and teacher operations."
+        description="Review sensitive admin actions across users, teachers, questions, books, and academic taxonomy changes."
         badge={{ label: `${pagination.total} events`, tone: 'info' }}
       />
 
@@ -92,11 +120,11 @@ export default function AdminAuditLogsPage() {
         {loading ? (
           <div className="admin-page-loader"><div className="admin-spinner" /><p>Loading audit history...</p></div>
         ) : logs.length === 0 ? (
-          <AdminEmptyState title="No audit events found" description="Audit entries will appear here as admins change roles, statuses, and teacher decisions." />
+          <AdminEmptyState title="No audit events found" description="Audit entries will appear here as admins change roles, statuses, and taxonomy structures." />
         ) : (
           <>
             <AdminTable
-              columns={['Action', 'Admin', 'Target user', 'Reason', 'Timestamp']}
+              columns={['Action', 'Admin', 'Target', 'Reason', 'Timestamp']}
               minWidth={1040}
             >
               {logs.map((entry) => (
@@ -107,8 +135,10 @@ export default function AdminAuditLogsPage() {
                     <div className="admin-table__muted">{entry.admin?.email || 'N/A'}</div>
                   </td>
                   <td>
-                    <strong>{entry.targetUser?.name || 'Unknown user'}</strong>
-                    <div className="admin-table__muted">{entry.targetUser?.email || 'N/A'}</div>
+                    <strong>{entry.target?.name || entry.targetUser?.name || entry.targetQuestion?.questionText || 'Unknown target'}</strong>
+                    <div className="admin-table__muted">
+                      {entry.targetUser?.email || [entry.target?.type, entry.targetQuestion?.subject, entry.targetQuestion?.chapter].filter(Boolean).join(' | ') || 'N/A'}
+                    </div>
                   </td>
                   <td>{entry.reason || 'No reason recorded'}</td>
                   <td>{formatDate(entry.createdAt)}</td>
