@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -83,6 +83,7 @@ export default function IeltsWriting() {
         ? 'Launching Writing practice prompt...'
         : 'রাইটিং প্র্যাকটিস প্রম্পট লোড করা হচ্ছে...'
     );
+    navigate('/ielts-prep/writing/demo');
   };
 
   return (
@@ -91,6 +92,22 @@ export default function IeltsWriting() {
 
       <main className="ielts-writing-main">
         {/* Header */}
+        <header className="ielts-writing-header">
+          <div className="ielts-writing-header__left">
+            <button
+              onClick={() => navigate('/ielts-prep')}
+              className="ielts-writing-back-btn"
+              title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+            >
+              <HiArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                {language === 'en' ? 'IELTS Writing' : 'আইইএলটিএস রাইটিং'}
+              </h2>
+            </div>
+          </div>
+        </header>
 
         {/* Content */}
         <div className="ielts-writing-workspace">

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiPencilAlt, HiArrowLeft, HiUpload, HiCheckCircle, HiX, HiDocumentText, HiPhotograph } from 'react-icons/hi';
@@ -274,6 +274,24 @@ export default function IeltsWritingUpload() {
 
       <main className="ielts-writing-upload-content">
         {/* Header */}
+        <div className="ielts-writing-upload-header">
+          <button
+            type="button"
+            onClick={() => navigate('/ielts-teacher')}
+            className="ielts-writing-upload-back-btn"
+            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+          >
+            <HiArrowLeft size={20} />
+          </button>
+          <div className="ielts-writing-upload-header-text">
+            <h2>{language === 'en' ? 'Writing Question Designer' : 'রাইটিং প্রশ্ন ডিজাইনার'}</h2>
+            <p>
+              {language === 'en'
+                ? 'Create, manage, and upload question sets to the Writing Question Bank.'
+                : 'রাইটিং প্রশ্ন ব্যাংকে প্রশ্ন সেট তৈরি, পরিচালনা এবং আপলোড করুন।'}
+            </p>
+          </div>
+        </div>
 
         {/* Workspace */}
         <div className="ielts-writing-upload-workspace">

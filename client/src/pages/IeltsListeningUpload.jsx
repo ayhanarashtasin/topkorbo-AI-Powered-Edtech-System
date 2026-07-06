@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -203,6 +203,24 @@ export default function IeltsListeningUpload() {
 
       <main className="ielts-upload-content">
         {/* Header */}
+        <div className="ielts-upload-header">
+          <button
+            type="button"
+            onClick={() => navigate('/ielts-teacher')}
+            className="ielts-upload-back-btn"
+            title={language === 'en' ? 'Go Back' : 'পিছনে যান'}
+          >
+            <HiArrowLeft size={20} />
+          </button>
+          <div className="ielts-upload-header-text">
+            <h2>{language === 'en' ? 'Listening Question Designer' : 'লিসেনিং প্রশ্ন ডিজাইনার'}</h2>
+            <p>
+              {language === 'en'
+                ? 'Create, manage, and upload question sets to the Listening Question Bank.'
+                : 'লিসেনিং প্রশ্ন ব্যাংকে প্রশ্ন সেট তৈরি, পরিচালনা এবং আপলোড করুন।'}
+            </p>
+          </div>
+        </div>
 
         {/* Workspace */}
         <div className="ielts-upload-workspace">
@@ -212,8 +230,7 @@ export default function IeltsListeningUpload() {
                 <h3>{language === 'en' ? 'Available Question Sets' : 'বিদ্যমান প্রশ্ন সেটসমূহ'}</h3>
                 <button 
                   type="button" 
-                  className="ielts-btn-submit-set" 
-                  style={{ padding: '12px 24px', fontSize: '0.95rem', margin: 0 }} 
+                  className="ielts-listening-submit-btn-cta" 
                   onClick={() => setViewMode('upload')}
                 >
                   <HiUpload size={16} style={{ marginRight: '6px' }} />
@@ -364,17 +381,25 @@ export default function IeltsListeningUpload() {
                   </div>
                 </div>
 
-                {/* Submit Question Set Button */}
-                <div className="ielts-submit-set-container">
+                {/* Form Actions */}
+                <div className="ielts-listening-form-actions">
+                  <button
+                    type="button"
+                    className="ielts-listening-cancel-btn"
+                    onClick={() => setViewMode('bank')}
+                    disabled={isSubmitting}
+                  >
+                    {language === 'en' ? 'Cancel' : 'বাতিল'}
+                  </button>
                   <button
                     type="submit"
+                    className="ielts-listening-submit-btn"
                     disabled={isSubmitting}
-                    className="ielts-btn-submit-set"
                   >
-                    <HiCheckCircle size={22} />
+                    <HiCheckCircle size={20} style={{ marginRight: '6px' }} />
                     <span>
                       {isSubmitting
-                        ? (language === 'en' ? 'Submitting Question Set...' : 'সাবমিট হচ্ছে...')
+                        ? (language === 'en' ? 'Submitting...' : 'সাবমিট হচ্ছে...')
                         : (language === 'en' ? 'Submit Question Set' : 'প্রশ্ন সেট সাবমিট করুন')}
                     </span>
                   </button>

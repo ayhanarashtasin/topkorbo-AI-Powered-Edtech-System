@@ -6,6 +6,7 @@ const multer = require('multer');
 const auth = require('../middleware/auth');
 const IeltsListeningSet = require('../models/IeltsListeningSet');
 const IeltsWritingSet = require('../models/IeltsWritingSet');
+const IeltsReadingSet = require('../models/IeltsReadingSet');
 const Groq = require('groq-sdk');
 const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.LLM_API_KEY });
 const VISION_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
@@ -542,6 +543,160 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
 router.get('/writing/sets', auth, async (req, res) => {
   try {
     const sets = await IeltsWritingSet.find()
+      .populate('creator', 'name email')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: sets });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// POST Upload IELTS Reading set
+router.post('/reading/upload', auth, upload.any(), async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher') {
+      return errorResponse(res, 'Access denied. Only teachers can upload IELTS question sets.', 403);
+    }
+
+    const { setName, passage1Type, passage2Type, passage3Type, passage1Text, passage2Text, passage3Text } = req.body;
+    if (!setName || !setName.trim()) {
+      return errorResponse(res, 'Please provide a name for the question set.');
+    }
+
+    if (!['pdf', 'text', 'image'].includes(passage1Type)) {
+      return errorResponse(res, 'Invalid passage 1 upload type.');
+    }
+
+    const files = req.files || [];
+    let passage1PdfUrl, passage2PdfUrl, passage3PdfUrl;
+    let passage1ImageUrl, passage2ImageUrl, passage3ImageUrl;
+    let passage1FilePath, passage2FilePath, passage3FilePath;
+    const userId = req.user.id;
+
+    files.forEach(file => {
+      if (file.fieldname === 'passage1Pdf') {
+        passage1PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        passage1FilePath = file.path;
+      } else if (file.fieldname === 'passage2Pdf') {
+        passage2PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        passage2FilePath = file.path;
+      } else if (file.fieldname === 'passage3Pdf') {
+        passage3PdfUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        passage3FilePath = file.path;
+      } else if (file.fieldname === 'passage1Image') {
+        passage1ImageUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        passage1FilePath = file.path;
+      } else if (file.fieldname === 'passage2Image') {
+        passage2ImageUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        passage2FilePath = file.path;
+      } else if (file.fieldname === 'passage3Image') {
+        passage3ImageUrl = `/uploads/ielts/${userId}/${file.filename}`;
+        passage3FilePath = file.path;
+      }
+    });
+
+    // Validate Passage 1
+    if (passage1Type === 'pdf' && !passage1PdfUrl) {
+      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+      return errorResponse(res, 'Please upload a PDF file for Passage 1.');
+    }
+    if (passage1Type === 'image' && !passage1ImageUrl) {
+      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+      return errorResponse(res, 'Please upload an image file for Passage 1.');
+    }
+    if (passage1Type === 'text' && (!passage1Text || !passage1Text.trim())) {
+      files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+      return errorResponse(res, 'Please enter a text prompt for Passage 1.');
+    }
+
+    // Validate Passage 2 (only if passage2Type is selected)
+    if (passage2Type) {
+      if (!['pdf', 'text', 'image'].includes(passage2Type)) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Invalid passage 2 upload type.');
+      }
+      if (passage2Type === 'pdf' && !passage2PdfUrl) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Please upload a PDF file for Passage 2.');
+      }
+      if (passage2Type === 'image' && !passage2ImageUrl) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Please upload an image file for Passage 2.');
+      }
+      if (passage2Type === 'text' && (!passage2Text || !passage2Text.trim())) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Please enter a text prompt for Passage 2.');
+      }
+    }
+
+    // Validate Passage 3 (only if passage3Type is selected)
+    if (passage3Type) {
+      if (!['pdf', 'text', 'image'].includes(passage3Type)) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Invalid passage 3 upload type.');
+      }
+      if (passage3Type === 'pdf' && !passage3PdfUrl) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Please upload a PDF file for Passage 3.');
+      }
+      if (passage3Type === 'image' && !passage3ImageUrl) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Please upload an image file for Passage 3.');
+      }
+      if (passage3Type === 'text' && (!passage3Text || !passage3Text.trim())) {
+        files.forEach(file => { try { fs.unlinkSync(file.path); } catch (e) {} });
+        return errorResponse(res, 'Please enter a text prompt for Passage 3.');
+      }
+    }
+
+    const cleanPassage1Prompt = await generateCleanPrompt(passage1Type, passage1FilePath, passage1Text);
+    const cleanPassage2Prompt = passage2Type ? await generateCleanPrompt(passage2Type, passage2FilePath, passage2Text) : undefined;
+    const cleanPassage3Prompt = passage3Type ? await generateCleanPrompt(passage3Type, passage3FilePath, passage3Text) : undefined;
+
+    const newReadingSet = new IeltsReadingSet({
+      creator: userId,
+      setName: setName.trim(),
+      passage1: {
+        type: passage1Type,
+        pdfUrl: passage1Type === 'pdf' ? passage1PdfUrl : undefined,
+        imageUrl: passage1Type === 'image' ? passage1ImageUrl : undefined,
+        textPrompt: passage1Type === 'text' ? passage1Text.trim() : undefined,
+        cleanPrompt: cleanPassage1Prompt
+      },
+      passage2: passage2Type ? {
+        type: passage2Type,
+        pdfUrl: passage2Type === 'pdf' ? passage2PdfUrl : undefined,
+        imageUrl: passage2Type === 'image' ? passage2ImageUrl : undefined,
+        textPrompt: passage2Type === 'text' ? passage2Text.trim() : undefined,
+        cleanPrompt: cleanPassage2Prompt
+      } : undefined,
+      passage3: passage3Type ? {
+        type: passage3Type,
+        pdfUrl: passage3Type === 'pdf' ? passage3PdfUrl : undefined,
+        imageUrl: passage3Type === 'image' ? passage3ImageUrl : undefined,
+        textPrompt: passage3Type === 'text' ? passage3Text.trim() : undefined,
+        cleanPrompt: cleanPassage3Prompt
+      } : undefined
+    });
+
+    await newReadingSet.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'IELTS Reading question set uploaded successfully!',
+      data: newReadingSet
+    });
+
+  } catch (err) {
+    console.error('Error in IELTS Reading upload route:', err);
+    res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
+  }
+});
+
+// GET Fetch all IELTS Reading sets
+router.get('/reading/sets', auth, async (req, res) => {
+  try {
+    const sets = await IeltsReadingSet.find()
       .populate('creator', 'name email')
       .sort({ createdAt: -1 });
     res.json({ success: true, data: sets });
