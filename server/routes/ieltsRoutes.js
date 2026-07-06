@@ -12,6 +12,35 @@ const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.LL
 const VISION_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 const TEXT_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
 
+function normalizeApprovalStatus(doc) {
+  return ['pending', 'approved', 'rejected'].includes(doc?.approvalStatus)
+    ? doc.approvalStatus
+    : 'approved';
+}
+
+function buildApprovedOrLegacyMatch() {
+  return {
+    $or: [
+      { approvalStatus: 'approved' },
+      { approvalStatus: { $exists: false } },
+      { approvalStatus: null }
+    ]
+  };
+}
+
+function buildSetQueryForUser(user) {
+  if (user?.role === 'admin') return {};
+  if (user?.role === 'teacher') {
+    return {
+      $or: [
+        buildApprovedOrLegacyMatch(),
+        { creator: user.id }
+      ]
+    };
+  }
+  return buildApprovedOrLegacyMatch();
+}
+
 async function generateCleanPrompt(type, filePath, textContent) {
   if (type === 'text') {
     return textContent ? textContent.trim() : '';
@@ -209,7 +238,11 @@ router.post('/listening/upload', auth, upload.any(), async (req, res) => {
     const newSet = new IeltsListeningSet({
       creator: userId,
       setName: setName.trim(),
-      sections: sectionsArray
+      sections: sectionsArray,
+      approvalStatus: 'pending',
+      rejectionReason: '',
+      reviewedBy: null,
+      reviewedAt: null
     });
 
     await newSet.save();
@@ -229,10 +262,16 @@ router.post('/listening/upload', auth, upload.any(), async (req, res) => {
 // GET Fetch all uploaded sets (for verification or display)
 router.get('/listening/sets', auth, async (req, res) => {
   try {
-    const sets = await IeltsListeningSet.find()
+    const sets = await IeltsListeningSet.find(buildSetQueryForUser(req.user))
       .populate('creator', 'name email')
       .sort({ createdAt: -1 });
-    res.json({ success: true, data: sets });
+    res.json({
+      success: true,
+      data: sets.map((set) => ({
+        ...set.toObject(),
+        approvalStatus: normalizeApprovalStatus(set)
+      }))
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
   }
@@ -522,7 +561,11 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
         imageUrl: task2Type === 'image' ? task2ImageUrl : undefined,
         textPrompt: task2Type === 'text' ? task2Text.trim() : undefined,
         cleanPrompt: cleanTask2Prompt
-      }
+      },
+      approvalStatus: 'pending',
+      rejectionReason: '',
+      reviewedBy: null,
+      reviewedAt: null
     });
 
     await newWritingSet.save();
@@ -542,10 +585,16 @@ router.post('/writing/upload', auth, upload.any(), async (req, res) => {
 // GET Fetch all IELTS Writing sets
 router.get('/writing/sets', auth, async (req, res) => {
   try {
-    const sets = await IeltsWritingSet.find()
+    const sets = await IeltsWritingSet.find(buildSetQueryForUser(req.user))
       .populate('creator', 'name email')
       .sort({ createdAt: -1 });
-    res.json({ success: true, data: sets });
+    res.json({
+      success: true,
+      data: sets.map((set) => ({
+        ...set.toObject(),
+        approvalStatus: normalizeApprovalStatus(set)
+      }))
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Internal server error: ' + err.message });
   }

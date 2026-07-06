@@ -77,7 +77,7 @@ async function fetchDashboardStats() {
     User.countDocuments({ role: 'teacher' }),
     TeacherApplication.countDocuments({ status: 'pending' }),
     Question.countDocuments({ approvalStatus: 'pending' }),
-    Book.countDocuments({ isPublished: false }),
+    Book.countDocuments({ approvalStatus: 'pending' }),
     Report.countDocuments({ status: 'open' }),
     Promise.resolve(0),
     Contest.countDocuments(),

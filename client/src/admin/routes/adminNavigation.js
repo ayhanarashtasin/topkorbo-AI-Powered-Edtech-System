@@ -14,6 +14,7 @@ import {
   HiMiniShieldCheck,
   HiMiniSquares2X2,
   HiMiniTicket,
+  HiMiniUserGroup,
   HiMiniUsers
 } from 'react-icons/hi2';
 
@@ -25,6 +26,9 @@ export const adminNavigation = [
   { label: 'Academic Taxonomy', to: '/admin/academic-taxonomy', icon: HiMiniSquares2X2 },
   { label: 'Contests', to: '/admin/contests', icon: HiMiniTicket },
   { label: 'Books', to: '/admin/books', icon: HiMiniBookOpen },
+  { label: 'IELTS Sets', to: '/admin/content/ielts-sets', icon: HiMiniQueueList },
+  { label: 'Notices', to: '/admin/content/notices', icon: HiMiniMegaphone },
+  { label: 'Waitlist', to: '/admin/content/waitlist', icon: HiMiniUserGroup },
   { label: 'Content Approval', to: '/admin/content-approval', icon: HiMiniQueueList },
   { label: 'Moderation', to: '/admin/reports', icon: HiMiniShieldCheck },
   { label: 'Notifications', to: '/admin/notifications', icon: HiMiniMegaphone },

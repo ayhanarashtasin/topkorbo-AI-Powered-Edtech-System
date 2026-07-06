@@ -469,6 +469,7 @@ export default function UploadQuestion() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uqToast, setUqToast] = useState(null);
   const [recentQuestions, setRecentQuestions] = useState([]);
+  const [taxonomyTree, setTaxonomyTree] = useState([]);
 
   // Edit / Delete / Solution modal state for Recently Uploaded cards
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -933,15 +934,55 @@ export default function UploadQuestion() {
     if (user.role === 'teacher') fetchRecentQuestions();
   }, [user.role, fetchRecentQuestions]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('topkorbo_token');
+    if (!token) return;
+
+    const fetchTaxonomy = async () => {
+      try {
+        const res = await fetch(`${API_URL}/questions/taxonomy`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data?.tree)) {
+          setTaxonomyTree(data.data.tree);
+        }
+      } catch (err) {
+        console.error('Error fetching academic taxonomy:', err);
+      }
+    };
+
+    fetchTaxonomy();
+  }, [API_URL]);
+
+  const taxonomySubjects = useMemo(() => (
+    (taxonomyTree || []).map((subjectNode) => ({
+      id: subjectNode.name,
+      labelEn: subjectNode.name,
+      labelBn: subjectNode.name,
+      papers: (subjectNode.children || []).map((paperNode) => paperNode.name)
+    }))
+  ), [taxonomyTree]);
+
+  const taxonomyChapterMap = useMemo(() => {
+    const map = {};
+    (taxonomyTree || []).forEach((subjectNode) => {
+      (subjectNode.children || []).forEach((paperNode) => {
+        map[`${subjectNode.name}__${paperNode.name}`] = (paperNode.children || []).map((chapterNode) => chapterNode.name);
+      });
+    });
+    return map;
+  }, [taxonomyTree]);
+
+  const subjectOptions = taxonomySubjects.length ? taxonomySubjects : HSC_SUBJECTS;
+
   // Derived: available papers/chapters
-  const selectedSubjectData = HSC_SUBJECTS.find(s => s.id === subject);
+  const selectedSubjectData = subjectOptions.find(s => s.id === subject);
   const availablePapers = selectedSubjectData?.papers || [];
   const chapterKey = `${subject}__${paper}`;
-  const availableChapters = CHAPTERS_MAP[chapterKey] || [];
-
-  // Reset dependent fields on subject change
-  useEffect(() => { setPaper(''); setChapter(''); setTopic(''); }, [subject]);
-  useEffect(() => { setChapter(''); setTopic(''); }, [paper]);
+  const availableChapters = taxonomySubjects.length
+    ? (taxonomyChapterMap[chapterKey] || [])
+    : (CHAPTERS_MAP[chapterKey] || []);
 
   // ── Image Upload Helpers ──
   const handleImageUpload = (e) => {
@@ -1955,9 +1996,18 @@ export default function UploadQuestion() {
               {/* Subject */}
               <div className="uq-form-group">
                 <label className="uq-label">{t('uq.field.subject')}</label>
-                <select className="uq-select" value={subject} onChange={e => setSubject(e.target.value)}>
+                <select
+                  className="uq-select"
+                  value={subject}
+                  onChange={(e) => {
+                    setSubject(e.target.value);
+                    setPaper('');
+                    setChapter('');
+                    setTopic('');
+                  }}
+                >
                   <option value="">{t('uq.field.subject.placeholder')}</option>
-                  {HSC_SUBJECTS.map(s => (
+                  {subjectOptions.map(s => (
                     <option key={s.id} value={s.id}>{language === 'en' ? s.labelEn : s.labelBn}</option>
                   ))}
                 </select>
@@ -1969,7 +2019,11 @@ export default function UploadQuestion() {
                 <select
                   className="uq-select"
                   value={paper}
-                  onChange={e => setPaper(e.target.value)}
+                  onChange={(e) => {
+                    setPaper(e.target.value);
+                    setChapter('');
+                    setTopic('');
+                  }}
                   disabled={!subject}
                 >
                   <option value="">{t('uq.field.paper.placeholder')}</option>
@@ -2292,9 +2346,11 @@ export default function UploadQuestion() {
           {/* ── Edit Question Modal ── */}
           {editingQuestion && editForm && (() => {
             // Inline derivations for the edit modal's classification dropdowns
-            const editSubjectData = HSC_SUBJECTS.find(s => s.id === editForm.subject);
+            const editSubjectData = subjectOptions.find(s => s.id === editForm.subject);
             const editPapers = editSubjectData?.papers || [];
-            const editChapters = CHAPTERS_MAP[`${editForm.subject}__${editForm.paper}`] || [];
+            const editChapters = taxonomySubjects.length
+              ? (taxonomyChapterMap[`${editForm.subject}__${editForm.paper}`] || [])
+              : (CHAPTERS_MAP[`${editForm.subject}__${editForm.paper}`] || []);
             return (
               <div className="uq-modal-backdrop" onClick={closeEditModal}>
                 <div className="uq-modal uq-modal--edit" onClick={(e) => e.stopPropagation()}>
@@ -2497,10 +2553,11 @@ export default function UploadQuestion() {
                               subject: e.target.value,
                               paper: '',
                               chapter: '',
+                              topic: '',
                             }))}
                           >
                             <option value="">{t('uq.field.subject.placeholder')}</option>
-                            {HSC_SUBJECTS.map(s => (
+                            {subjectOptions.map(s => (
                               <option key={s.id} value={s.id}>
                                 {language === 'en' ? s.labelEn : s.labelBn}
                               </option>
@@ -2517,6 +2574,7 @@ export default function UploadQuestion() {
                               ...p,
                               paper: e.target.value,
                               chapter: '',
+                              topic: '',
                             }))}
                           >
                             <option value="">{t('uq.field.paper.placeholder')}</option>

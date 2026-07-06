@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import {
@@ -83,6 +83,7 @@ export default function UploadBook() {
   const [chapterTitle, setChapterTitle] = useState('Chapter 1');
   const [firstPdf, setFirstPdf] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [taxonomyTree, setTaxonomyTree] = useState([]);
 
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   const activeTab = 'reading-books';
@@ -149,6 +150,83 @@ export default function UploadBook() {
     };
     fetchBookDetails();
   }, [bookId, apiBase, language]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('topkorbo_token');
+    if (!token) return;
+
+    const fetchTaxonomy = async () => {
+      try {
+        const res = await fetch(`${apiBase}/books/taxonomy`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data?.tree)) {
+          setTaxonomyTree(data.data.tree);
+        }
+      } catch (err) {
+        console.error('Error fetching book taxonomy:', err);
+      }
+    };
+
+    fetchTaxonomy();
+  }, [apiBase]);
+
+  const taxonomySubjectOptions = useMemo(() => (
+    (taxonomyTree || []).map((subjectNode) => ({
+      id: subjectNode.name,
+      labelEn: subjectNode.name,
+      labelBn: subjectNode.name,
+      papers: (subjectNode.children || []).map((paperNode) => paperNode.name)
+    }))
+  ), [taxonomyTree]);
+
+  const fallbackSubjectOptions = useMemo(
+    () => (group ? (SUBJECT_OPTIONS_BY_GROUP[group] || []) : []),
+    [group]
+  );
+  const availableSubjectOptions = useMemo(() => {
+    if (!group) return [];
+    if (!taxonomySubjectOptions.length) return fallbackSubjectOptions;
+
+    const fallbackById = new Map(fallbackSubjectOptions.map((item) => [item.id, item]));
+    const filtered = taxonomySubjectOptions
+      .filter((item) => fallbackById.size === 0 || fallbackById.has(item.id))
+      .map((item) => ({
+        ...item,
+        labelEn: fallbackById.get(item.id)?.labelEn || item.labelEn,
+        labelBn: fallbackById.get(item.id)?.labelBn || item.labelBn
+      }));
+
+    if (filtered.length) return filtered;
+
+    if (subject && !fallbackById.has(subject)) {
+      return [
+        ...fallbackSubjectOptions,
+        {
+          id: subject,
+          labelEn: subject,
+          labelBn: subject,
+          papers: taxonomySubjectOptions.find((item) => item.id === subject)?.papers || []
+        }
+      ];
+    }
+
+    return fallbackSubjectOptions;
+  }, [fallbackSubjectOptions, group, subject, taxonomySubjectOptions]);
+
+  const selectedTaxonomySubject = availableSubjectOptions.find((item) => item.id === subject);
+  const availablePaperOptions = useMemo(() => {
+    const paperIds = selectedTaxonomySubject?.papers?.length
+      ? Array.from(new Set([...selectedTaxonomySubject.papers, 'N/A']))
+      : PAPER_OPTIONS.map((item) => item.id);
+
+    return paperIds.map((paperId) => PAPER_OPTIONS.find((item) => item.id === paperId) || {
+      id: paperId,
+      labelEn: paperId,
+      labelBn: paperId
+    });
+  }, [selectedTaxonomySubject]);
 
   const isTeacher = user.role === 'teacher';
 
@@ -263,6 +341,15 @@ export default function UploadBook() {
     <div className="dashboard-container">
       <Sidebar activeTab={activeTab} user={user} />
       <main className="dashboard-main">
+        <header className="dashboard-header rb-header">
+          <div className="dashboard-header__welcome">
+            <h2>
+              <HiDocumentText style={{ verticalAlign: 'middle', marginRight: 8 }} />
+              {bookId ? (language === 'en' ? 'Edit Book Information' : 'বইয়ের তথ্য পরিবর্তন') : t('rb.upload.title')}
+            </h2>
+            <p>{bookId ? (language === 'en' ? 'Update the metadata for this book.' : 'এই বইটির বিবরণ পরিবর্তন করুন।') : t('rb.upload.subtitle')}</p>
+          </div>
+        </header>
 
         <div className="rb-workspace rb-upload-workspace animate-fade-in">
           <div className="rb-upload-step">
@@ -316,6 +403,7 @@ export default function UploadBook() {
                     setGroup(e.target.value);
                     // Clear the subject so it doesn't reference a group that no longer matches.
                     setSubject('');
+                    setPaper('');
                   }}
                 >
                   <option value="">{language === 'en' ? 'Select…' : 'নির্বাচন করুন…'}</option>
@@ -333,7 +421,10 @@ export default function UploadBook() {
                 <select
                   className="rb-form-select"
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  onChange={(e) => {
+                    setSubject(e.target.value);
+                    setPaper('');
+                  }}
                   disabled={!group}
                 >
                   <option value="">
@@ -341,7 +432,7 @@ export default function UploadBook() {
                       ? (language === 'en' ? 'Select group first…' : 'প্রথমে গ্রুপ নির্বাচন করুন…')
                       : (language === 'en' ? 'Select Subject…' : 'বিষয় নির্বাচন করুন…')}
                   </option>
-                  {group && SUBJECT_OPTIONS_BY_GROUP[group]?.map((s) => (
+                  {availableSubjectOptions.map((s) => (
                     <option key={s.id} value={s.id}>
                       {language === 'en' ? s.labelEn : s.labelBn}
                     </option>
@@ -354,7 +445,7 @@ export default function UploadBook() {
                 <label className="rb-form-label">{t('rb.upload.field.paper')} *</label>
                 <select className="rb-form-select" value={paper} onChange={(e) => setPaper(e.target.value)}>
                   <option value="">{language === 'en' ? 'Select…' : 'নির্বাচন করুন…'}</option>
-                  {PAPER_OPTIONS.map((p) => (
+                  {availablePaperOptions.map((p) => (
                     <option key={p.id} value={p.id}>
                       {language === 'en' ? p.labelEn : p.labelBn}
                     </option>
@@ -427,8 +518,7 @@ export default function UploadBook() {
 }
 
 function FileInput({ onFile, file, id }) {
-  const [filename, setFilename] = useState(file ? file.name : '');
-  useEffect(() => { setFilename(file ? file.name : ''); }, [file]);
+  const filename = file ? file.name : '';
   return (
     <div className="rb-file-input">
       <input

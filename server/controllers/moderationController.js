@@ -2,10 +2,25 @@ const Report = require('../models/Report');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const User = require('../models/User');
+const Question = require('../models/Question');
 const { notify } = require('../services/notificationService');
 const { getIO } = require('../socket');
 
-const REPORT_TARGETS = ['post', 'comment', 'user'];
+const REPORT_TARGETS = ['post', 'comment', 'user', 'question'];
+const VALID_REASONS = [
+  'spam',
+  'harassment',
+  'hate',
+  'nudity',
+  'misinformation',
+  'cheating',
+  'wrong_answer',
+  'wrong_explanation',
+  'typo',
+  'duplicate',
+  'outdated',
+  'other'
+];
 
 const moderationController = {
   /**
@@ -19,8 +34,7 @@ const moderationController = {
         return res.status(400).json({ success: false, message: 'Invalid targetType' });
       }
       if (!target) return res.status(400).json({ success: false, message: 'target required' });
-      const validReasons = ['spam', 'harassment', 'hate', 'nudity', 'misinformation', 'cheating', 'other'];
-      if (!validReasons.includes(reason)) {
+      if (!VALID_REASONS.includes(reason)) {
         return res.status(400).json({ success: false, message: 'Invalid reason' });
       }
 
@@ -29,6 +43,7 @@ const moderationController = {
       if (targetType === 'post') exists = !!(await Post.exists({ _id: target }));
       else if (targetType === 'comment') exists = !!(await Comment.exists({ _id: target }));
       else if (targetType === 'user') exists = !!(await User.exists({ _id: target }));
+      else if (targetType === 'question') exists = !!(await Question.exists({ _id: target }));
       if (!exists) return res.status(404).json({ success: false, message: 'Target not found' });
 
       const report = await Report.create({

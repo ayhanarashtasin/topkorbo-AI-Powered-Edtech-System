@@ -1,25 +1,19 @@
 import { Fragment } from 'react';
 import { Navigate, Route } from 'react-router-dom';
+import AdminAcademicTaxonomyPage from '../pages/AdminAcademicTaxonomyPage';
 import AdminRoute from '../components/AdminRoute';
 import AdminAuditLogsPage from '../pages/AdminAuditLogsPage';
+import AdminBooksPage from '../pages/AdminBooksPage';
 import AdminDashboard from '../pages/AdminDashboard';
+import AdminIeltsSetsPage from '../pages/AdminIeltsSetsPage';
+import AdminNoticesPage from '../pages/AdminNoticesPage';
 import AdminPlaceholderPage from '../pages/AdminPlaceholderPage';
+import AdminQuestionsPage from '../pages/AdminQuestionsPage';
 import AdminTeachersPage from '../pages/AdminTeachersPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
+import AdminWaitlistPage from '../pages/AdminWaitlistPage';
 
 const placeholderRoutes = [
-  {
-    path: 'questions',
-    title: 'Question Bank',
-    description: 'Question approval, curation, and administrative taxonomy management will be added in a later phase.',
-    bullets: ['Pending question review', 'Source quality checks', 'Bulk moderation tools']
-  },
-  {
-    path: 'books',
-    title: 'Books',
-    description: 'Reading content approval, publishing review, and book governance tools are reserved for the next phase.',
-    bullets: ['Book approval queue', 'Publishing controls', 'Content metadata review']
-  },
   {
     path: 'contests',
     title: 'Contests',
@@ -49,12 +43,6 @@ const placeholderRoutes = [
     title: 'Settings',
     description: 'System configuration, policy toggles, and platform-wide admin preferences will live here.',
     bullets: ['General settings', 'Policy controls', 'Operational defaults']
-  },
-  {
-    path: 'academic-taxonomy',
-    title: 'Academic Taxonomy',
-    description: 'Central taxonomy governance for subjects, papers, chapters, and topics will be managed here.',
-    bullets: ['Subject hierarchy', 'Chapter structure', 'Taxonomy cleanup']
   },
   {
     path: 'content-approval',
@@ -92,6 +80,16 @@ export function renderAdminRoutes() {
         <Route path="teachers" element={<AdminTeachersPage />} />
         <Route path="teachers/applications" element={<AdminTeachersPage />} />
         <Route path="teachers/verification" element={<AdminTeachersPage />} />
+        <Route path="questions" element={<AdminQuestionsPage />} />
+        <Route path="questions/pending" element={<AdminQuestionsPage />} />
+        <Route path="questions/reports" element={<AdminQuestionsPage />} />
+        <Route path="questions/quality" element={<AdminQuestionsPage />} />
+        <Route path="questions/import-export" element={<AdminQuestionsPage />} />
+        <Route path="books" element={<AdminBooksPage />} />
+        <Route path="content/ielts-sets" element={<AdminIeltsSetsPage />} />
+        <Route path="content/notices" element={<AdminNoticesPage />} />
+        <Route path="content/waitlist" element={<AdminWaitlistPage />} />
+        <Route path="academic-taxonomy" element={<AdminAcademicTaxonomyPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
         {placeholderRoutes.map((route) => (
           <Route

@@ -13,6 +13,7 @@ async function listAuditLogs({ action = '', page = 1, limit = 20 }) {
     AdminAuditLog.find(query)
       .populate('adminId', 'name email')
       .populate('targetUserId', 'name email role')
+      .populate('targetQuestionId', 'questionText subject chapter topic approvalStatus')
       .sort({ createdAt: -1 })
       .skip((safePage - 1) * safeLimit)
       .limit(safeLimit)
@@ -28,6 +29,11 @@ async function listAuditLogs({ action = '', page = 1, limit = 20 }) {
       previousValue: entry.previousValue || null,
       newValue: entry.newValue || null,
       createdAt: entry.createdAt || null,
+      target: {
+        id: entry.targetEntityId || String(entry.targetUserId?._id || entry.targetQuestionId?._id || ''),
+        type: entry.targetEntityType || (entry.targetUserId ? 'user' : entry.targetQuestionId ? 'question' : ''),
+        name: entry.targetEntityName || entry.targetUserId?.name || entry.targetQuestionId?.questionText || 'N/A'
+      },
       admin: entry.adminId
         ? {
             id: String(entry.adminId._id),
@@ -41,6 +47,16 @@ async function listAuditLogs({ action = '', page = 1, limit = 20 }) {
             name: entry.targetUserId.name || '',
             email: entry.targetUserId.email || '',
             role: entry.targetUserId.role || ''
+          }
+        : null,
+      targetQuestion: entry.targetQuestionId
+        ? {
+            id: String(entry.targetQuestionId._id),
+            questionText: entry.targetQuestionId.questionText || '',
+            subject: entry.targetQuestionId.subject || '',
+            chapter: entry.targetQuestionId.chapter || '',
+            topic: entry.targetQuestionId.topic || '',
+            approvalStatus: entry.targetQuestionId.approvalStatus || ''
           }
         : null
     })),
