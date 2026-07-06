@@ -370,3 +370,10 @@
   font-weight: 700;
   color: var(--text-accent);
 }
+
+@media (max-width: 768px) {
+  .ielts-listening-container {
+    flex-direction: column;
+  }
+}
+

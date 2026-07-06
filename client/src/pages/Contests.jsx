@@ -653,6 +653,17 @@ export default function Contests() {
       );
     }
 
+    const colLabels = {
+      contest: language === 'en' ? 'Contest' : 'কনটেস্ট',
+      level: language === 'en' ? 'Level & Format' : 'লেভেল ও ফরম্যাট',
+      subjects: language === 'en' ? 'Subjects / Units' : 'বিষয় / ইউনিট',
+      duration: language === 'en' ? 'Duration' : 'সময়কাল',
+      hostedBy: language === 'en' ? 'Hosted By' : 'আয়োজক',
+      startTime: language === 'en' ? 'Start Time' : 'শুরুর সময়',
+      countdown: language === 'en' ? 'Countdown / Status' : 'কাউন্টডাউন / স্ট্যাটাস',
+      action: language === 'en' ? 'Action' : 'অ্যাকশন'
+    };
+
     return (
       <div className="contests-table-container">
         <table className="contests-table">
@@ -681,7 +692,7 @@ export default function Contests() {
                   transition={{ duration: 0.2, delay: index * 0.03 }}
                 >
                   {/* Title & Badge */}
-                  <td>
+                  <td data-label={colLabels.contest}>
                     <div className="contest-name-cell">
                       <span className={`status-dot status-dot--${timeInfo.status}`}></span>
                       <div className="contest-title-wrap">
@@ -696,7 +707,7 @@ export default function Contests() {
                   </td>
 
                   {/* Level & Format */}
-                  <td>
+                  <td data-label={colLabels.level}>
                     <div className="contest-level-format-cell">
                       <span className="capitalize-level">{contest.level}</span>
                       <span className="format-subtext">{getFormatLabel(contest.questionType)}</span>
@@ -704,7 +715,7 @@ export default function Contests() {
                   </td>
 
                   {/* Subjects / Units */}
-                  <td>
+                  <td data-label={colLabels.subjects}>
                     <div className="contest-level-format-cell">
                       {contest.level === 'hsc' && (
                         <>
@@ -729,21 +740,21 @@ export default function Contests() {
                   </td>
 
                   {/* Duration */}
-                  <td>
+                  <td data-label={colLabels.duration}>
                     <span className="duration-text">
                       {contest.duration.hours}h {contest.duration.minutes}m
                     </span>
                   </td>
 
                   {/* Hosted By */}
-                  <td>
+                  <td data-label={colLabels.hostedBy}>
                     <span className="organizer-name">
                       {contest.creator ? contest.creator.name : '—'}
                     </span>
                   </td>
 
                   {/* Start Time */}
-                  <td>
+                  <td data-label={colLabels.startTime}>
                     <div className="start-time-cell">
                       <span className="start-date">{formatDate(contest.date)}</span>
                       <span className="start-time-sub">
@@ -753,7 +764,7 @@ export default function Contests() {
                   </td>
 
                   {/* Countdown */}
-                  <td>
+                  <td data-label={colLabels.countdown}>
                     <div className="countdown-cell">
                       <span className={`countdown-value countdown-value--${timeInfo.status}`}>
                         {timeInfo.remainingText}
@@ -762,7 +773,7 @@ export default function Contests() {
                   </td>
 
                   {/* CTA */}
-                  <td className="text-right">
+                  <td className="text-right contest-action-cell" data-label={colLabels.action}>
                     {renderActionButton(contest, timeInfo)}
                   </td>
                 </motion.tr>

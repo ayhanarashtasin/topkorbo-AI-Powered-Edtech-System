@@ -789,3 +789,10 @@
     min-height: 44px;
   }
 }
+
+@media (max-width: 768px) {
+  .ielts-speaking-practice-page {
+    flex-direction: column;
+  }
+}
+

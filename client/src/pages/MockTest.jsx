@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { HiFire, HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiMinusCircle, HiAcademicCap, HiBeaker, HiBookOpen, HiCollection, HiPencil, HiDocumentText, HiPhotograph, HiLightningBolt, HiChevronDown, HiChevronUp, HiX } from 'react-icons/hi';
@@ -702,22 +702,24 @@ export default function MockTest() {
         <div className="mock-workspace animate-fade-in">
           <div className="mock-step-indicator">
             {STEP_LABELS.map((s, idx) => (
-              <div key={s.num} className="mock-step-indicator-item">
-                <button
-                  type="button"
-                  className={`mock-step-dot ${step >= s.num ? 'mock-step-dot--active' : ''} ${step === s.num ? 'mock-step-dot--current' : ''}`}
-                  onClick={() => { if (s.num < step) setStep(s.num); }}
-                  disabled={s.num > step}
-                >
-                  {step > s.num ? <HiCheck size={14} /> : s.num}
-                </button>
-                <span className={`mock-step-label ${step >= s.num ? 'mock-step-label--active' : ''}`}>
-                  {language === 'en' ? s.labelEn : s.labelBn}
-                </span>
+              <Fragment key={s.num}>
+                <div className="mock-step-indicator-item">
+                  <button
+                    type="button"
+                    className={`mock-step-dot ${step >= s.num ? 'mock-step-dot--active' : ''} ${step === s.num ? 'mock-step-dot--current' : ''}`}
+                    onClick={() => { if (s.num < step) setStep(s.num); }}
+                    disabled={s.num > step}
+                  >
+                    {step > s.num ? <HiCheck size={14} /> : s.num}
+                  </button>
+                  <span className={`mock-step-label ${step >= s.num ? 'mock-step-label--active' : ''}`}>
+                    {language === 'en' ? s.labelEn : s.labelBn}
+                  </span>
+                </div>
                 {idx < STEP_LABELS.length - 1 && (
                   <div className={`mock-step-connector ${step > s.num ? 'mock-step-connector--done' : ''}`} />
                 )}
-              </div>
+              </Fragment>
             ))}
           </div>
           {step === 1 ? (

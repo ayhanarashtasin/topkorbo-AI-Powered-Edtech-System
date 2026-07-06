@@ -506,3 +506,10 @@
   border-radius: 50px;
   font-weight: 500;
 }
+
+@media (max-width: 768px) {
+  .ielts-speaking-upload-page {
+    flex-direction: column;
+  }
+}
+

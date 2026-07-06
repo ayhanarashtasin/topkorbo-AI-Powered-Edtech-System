@@ -334,3 +334,10 @@
     max-height: 400px;
   }
 }
+
+@media (max-width: 768px) {
+  .ielts-reading-practice-page {
+    flex-direction: column;
+  }
+}
+

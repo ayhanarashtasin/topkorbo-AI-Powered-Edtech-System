@@ -281,3 +281,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .ielts-writing-practice-page {
+    flex-direction: column;
+  }
+}
+

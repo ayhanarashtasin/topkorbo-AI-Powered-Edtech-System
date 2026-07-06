@@ -355,3 +355,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .ielts-speaking-container {
+    flex-direction: column;
+  }
+}
+

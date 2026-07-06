@@ -497,6 +497,10 @@
 
 /* Responsiveness */
 @media (max-width: 768px) {
+  .contests-page {
+    flex-direction: column;
+  }
+
   .contests-content {
     padding: 24px;
   }
@@ -1009,10 +1013,159 @@
   cursor: not-allowed;
 }
 
+/* ── Mobile: convert wide contest table into stacked cards ── */
+@media (max-width: 768px) {
+  .contests-table-container,
+  .contests-card .contests-table-container {
+    overflow-x: visible;
+  }
+
+  .contests-table,
+  .contests-card .contests-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .contests-table thead {
+    display: none;
+  }
+
+  .contests-table tbody {
+    display: block;
+  }
+
+  .contests-table tr,
+  .contest-row {
+    display: block;
+    margin: 14px;
+    padding: 4px 6px;
+    background: var(--white);
+    border: 1.5px solid rgba(75, 46, 43, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 10px rgba(140, 90, 60, 0.04);
+  }
+
+  .contests-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 11px 12px;
+    border-right: none;
+    border-bottom: 1px solid rgba(75, 46, 43, 0.06);
+    text-align: right;
+  }
+
+  .contests-table tr td:last-child {
+    border-bottom: none;
+  }
+
+  /* Inject the column name as a label on the left of each row */
+  .contests-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8C5A3C;
+    text-align: left;
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+
+  /* Push the actual cell content to the right, opposite the label */
+  .contests-table td > * {
+    margin-left: auto;
+  }
+
+  .contest-name-cell {
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+
+  .contest-title-wrap,
+  .contest-level-format-cell,
+  .start-time-cell,
+  .countdown-cell {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .contest-row-title,
+  .contests-card .contest-row-title {
+    max-width: 62vw;
+    white-space: normal;
+    text-align: right;
+  }
+
+  .countdown-cell {
+    white-space: normal;
+  }
+
+  /* Full-width primary action inside the card */
+  .contest-action-cell {
+    text-align: center;
+  }
+
+  .contest-action-cell::before {
+    align-self: center;
+  }
+
+  .contest-action-cell .contest-table-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  /* Section header stacks nicely */
+  .contests-section-header {
+    flex-wrap: wrap;
+  }
+
+  .contests-section-count {
+    margin-left: 52px;
+  }
+}
+
 @media (max-width: 430px) {
+  .contests-content {
+    padding: 16px;
+  }
+
   .contests-filter-bar,
   .contests-card .contests-filter-bar {
     padding: 14px;
     gap: 12px;
+  }
+
+  .contests-table tr,
+  .contest-row {
+    margin: 12px 0;
+  }
+
+  .contests-section-title {
+    font-size: 1.15rem;
+  }
+
+  .contest-modal-card {
+    padding: 24px 18px;
+  }
+
+  .contest-metrics-grid {
+    gap: 12px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions .btn-cancel,
+  .form-actions .btn-confirm {
+    width: 100%;
+    text-align: center;
   }
 }

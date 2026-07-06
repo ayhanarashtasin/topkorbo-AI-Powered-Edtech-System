@@ -680,3 +680,10 @@
     gap: 16px;
   }
 }
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+}
+

@@ -1357,9 +1357,35 @@
     padding: 14px 12px 24px;
   }
 
-  .battle-hero-panel__players,
   .battle-score-strip {
     grid-template-columns: 1fr;
+  }
+
+  .battle-hero-panel {
+    padding: 28px 18px;
+  }
+
+  .battle-hero-panel__players {
+    gap: 14px;
+    max-width: 360px;
+    margin-bottom: 20px;
+  }
+
+  .battle-avatar,
+  .battle-vs-orb {
+    width: 68px;
+    height: 68px;
+  }
+
+  .battle-vs-orb {
+    font-size: 1.3rem;
+    box-shadow: 0 0 0 6px rgba(192, 133, 82, 0.12), 0 10px 24px rgba(140, 90, 60, 0.24);
+  }
+
+  .battle-avatar svg,
+  .battle-hero-panel__players svg {
+    width: 26px;
+    height: 26px;
   }
 
   .battle-selection-title,
@@ -1444,13 +1470,37 @@
 
 @media (max-width: 430px) {
   .battle-hero-panel {
-    padding: 24px 16px;
+    padding: 22px 14px;
+  }
+
+  .battle-hero-panel__players {
+    gap: 8px;
+    max-width: 100%;
   }
 
   .battle-avatar,
   .battle-vs-orb {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
+  }
+
+  .battle-vs-orb {
+    font-size: 1.1rem;
+    box-shadow: 0 0 0 4px rgba(192, 133, 82, 0.12), 0 8px 18px rgba(140, 90, 60, 0.22);
+  }
+
+  .battle-avatar svg,
+  .battle-hero-panel__players svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .battle-hero-panel h3 {
+    font-size: 1.25rem;
+  }
+
+  .battle-hero-panel p {
+    font-size: 0.88rem;
   }
 
   .battle-invite-card h3 {

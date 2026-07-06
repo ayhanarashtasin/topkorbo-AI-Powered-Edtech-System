@@ -119,7 +119,7 @@ export default function IeltsPrep() {
                 transition={{ duration: 0.4 }}
                 className="ielts-overview-card"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
                   <HiAcademicCap size={32} style={{ color: 'var(--sky-blue)' }} />
                   <h1 className="ielts-title">
                     {language === 'en' ? 'IELTS Academic & General' : 'আইইএলটিএস একাডেমিক ও জেনারেল'}

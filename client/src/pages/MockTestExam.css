@@ -1775,3 +1775,10 @@
         margin-top: 20px;
     }
 }
+
+@media (max-width: 600px) {
+    .exam-contest-actions {
+        padding-bottom: 40px;
+        margin-bottom: 20px;
+    }
+}
