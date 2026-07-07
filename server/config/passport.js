@@ -72,9 +72,9 @@ passport.use(new GoogleStrategy({
       let user = await User.findOne({ email });
 
       if (action === 'login') {
-        if (!user || !(await hasCompletedProfile(user))) {
-          // Login is only for completed accounts. Missing or abandoned signup
-          // records must restart at role selection, not the profile form.
+        if (!user) {
+          // Missing accounts must sign up first. Existing incomplete accounts
+          // are allowed through so they can continue profile completion.
           return done(null, false, { message: 'signup_required', profile });
         }
 

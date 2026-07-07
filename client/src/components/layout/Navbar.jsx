@@ -275,7 +275,7 @@ export default function Navbar({ initialAuthMode = null }) {
       )}
 
       {/* Render the beautiful choices Modal */}
-      <SignUpModal isOpen={showSignUpModal} onClose={() => setShowSignUpModal(false)} initialMode={modalMode} />
+      <SignUpModal key={modalMode} isOpen={showSignUpModal} onClose={() => setShowSignUpModal(false)} initialMode={modalMode} />
     </nav>
   );
 }

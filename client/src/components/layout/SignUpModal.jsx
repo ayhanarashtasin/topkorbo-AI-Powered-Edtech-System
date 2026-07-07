@@ -87,7 +87,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         setRole(null);
         setStep('choose');
         setProfileSubStep(1);
-        setErrorMsg('No existing account found with this email. Please choose how you want to sign up.');
+        setErrorMsg('');
 
         // Dynamically pre-populate Google profile details for after role selection.
         setFormData(prev => ({
@@ -706,7 +706,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                     onClick={handleGoogleLogIn}
                   >
                     <FcGoogle className="signup-modal__google-icon" />
-                    <span>{oauthLoading ? 'Starting server...' : 'Continue with Google'}</span>
+                    <span>Continue with Google</span>
                   </motion.button>
                 </div>
 
@@ -749,7 +749,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                     onClick={handleGoogleSignIn}
                   >
                     <FcGoogle className="signup-modal__google-icon" />
-                    <span>{oauthLoading ? 'Starting server...' : t('signup.google')}</span>
+                    <span>{t('signup.google')}</span>
                   </motion.button>
                 </div>
               </motion.div>
