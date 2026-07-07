@@ -6,10 +6,10 @@ const mongoose = require('mongoose');
  * One document per (student, contest) — the persisted, real rating change a
  * student earned by participating in a contest that has ended. A student's
  * current rating is the `newRating` of their most recent entry; a student
- * with zero entries is "Unrated" (they have never given a rated contest).
+ * with zero entries starts at rating 0.
  *
  * This is derived entirely from real ContestResult standings, never from
- * practice data, and is idempotent: an entry, once written, is not recomputed.
+ * practice data, and is idempotent once written under the current rating rules.
  */
 const ratingHistorySchema = new mongoose.Schema(
   {

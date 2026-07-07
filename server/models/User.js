@@ -98,9 +98,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['Math', 'Biology', 'Statistics']
   },
-  // Contest rating (null until the student has given at least one rated contest)
-  rating: { type: Number, default: null },
-  maxRating: { type: Number, default: null },
+  // Contest rating starts at 0 and changes after finished rated contests.
+  rating: { type: Number, default: 0 },
+  maxRating: { type: Number, default: 0 },
   // ============ Forum / Community additions ============
   username: { type: String, unique: true, sparse: true, index: true, lowercase: true, trim: true },
   bio: { type: String, default: '', maxlength: 280 },

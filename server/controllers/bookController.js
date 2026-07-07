@@ -67,6 +67,13 @@ function storagePathFromUrl(fileUrl) {
   return '';
 }
 
+function canAccessBook(book, user) {
+  if (!book || !user) return false;
+  const isOwner = book.uploadedBy && String(book.uploadedBy) === String(user.id);
+  const isAdmin = user.role === 'admin';
+  return isOwner || isAdmin || book.isPublished !== false;
+}
+
 function parseRange(rangeHeader, size) {
   if (!rangeHeader) return null;
   const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);

@@ -13,8 +13,10 @@ const { request, buildHeaders } = httpClient;
  * Fetch the current student's contest rating history.
  *
  * @returns {Promise<{
- *   current: number|null,
- *   max: number|null,
+ *   current: number,
+ *   max: number,
+ *   rankTitle: string,
+ *   maxRankTitle: string,
  *   unrated: boolean,
  *   history: Array<{
  *     contestName: string,
@@ -23,6 +25,7 @@ const { request, buildHeaders } = httpClient;
  *     participants: number,
  *     oldRating: number,
  *     newRating: number,
+ *     rankTitle: string,
  *     delta: number
  *   }>
  * }>}

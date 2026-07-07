@@ -51,8 +51,7 @@ function parseDateKey(key) {
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Codeforces-style rating tiers. A student's rating is derived from how well
-// they perform in mock tests / practice, mapped onto this scale.
+// Codeforces-style contest rating titles.
 const RATING_TIERS = [
   { name: 'Newbie', min: 0, color: '#9aa0a6' },
   { name: 'Pupil', min: 1200, color: '#1aa334' },
@@ -60,6 +59,7 @@ const RATING_TIERS = [
   { name: 'Expert', min: 1600, color: '#3b5bdb' },
   { name: 'Candidate Master', min: 1900, color: '#a11bbf' },
   { name: 'Master', min: 2100, color: '#ff8c00' },
+  { name: 'International Master', min: 2300, color: '#ff8c00' },
   { name: 'Grandmaster', min: 2400, color: '#e8462c' }
 ];
 
@@ -108,7 +108,7 @@ export default function Dashboard() {
   });
   const [practiceStats, setPracticeStats] = useState(null);
   const [studentAttempts, setStudentAttempts] = useState([]);
-  const [ratingData, setRatingData] = useState({ current: null, max: null, unrated: true, history: [] });
+  const [ratingData, setRatingData] = useState({ current: 0, max: 0, unrated: false, history: [] });
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState('');
   const [requestingMentorId, setRequestingMentorId] = useState('');
@@ -588,23 +588,23 @@ export default function Dashboard() {
     const attemptedTotal = overall.attemptedQuestions || 0;
     const sessionCount = overall.totalAttempts || 0;
 
-    // Real, DB-backed contest rating history. Empty until the student has
-    // taken part in a contest that has ended.
+    // Real, DB-backed contest rating history. Students start at 0 before their
+    // first finished contest.
     const ratingHistory = ratingData.history || [];
-    const hasRating = ratingHistory.length > 0;
-    const currentRating = ratingData.current;
-    const maxRating = ratingData.max;
-    const currentTier = hasRating ? getRatingTier(currentRating) : null;
-    const lastDelta = hasRating ? ratingHistory[ratingHistory.length - 1].delta : 0;
+    const hasRatingHistory = ratingHistory.length > 0;
+    const currentRating = Number.isFinite(Number(ratingData.current)) ? Number(ratingData.current) : 0;
+    const maxRating = Number.isFinite(Number(ratingData.max)) ? Number(ratingData.max) : currentRating;
+    const currentTier = getRatingTier(currentRating);
+    const lastDelta = hasRatingHistory ? ratingHistory[ratingHistory.length - 1].delta : 0;
     const shortDate = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     // Codeforces-style chart geometry. Aspect ratio is preserved (no stretch),
     // so markers stay round and the line stays crisp.
     const plot = { left: 60, right: 984, top: 20, bottom: 314 };
     const ratingValues = ratingHistory.map((point) => point.newRating);
-    const dataMin = ratingValues.length ? Math.min(...ratingValues) : 1200;
-    const dataMax = ratingValues.length ? Math.max(...ratingValues) : 1600;
-    const yMin = Math.max(600, Math.floor((dataMin - 90) / 100) * 100);
+    const dataMin = ratingValues.length ? Math.min(...ratingValues) : 0;
+    const dataMax = ratingValues.length ? Math.max(...ratingValues) : 400;
+    const yMin = Math.max(0, Math.floor((dataMin - 90) / 100) * 100);
     let yMax = Math.ceil((dataMax + 90) / 100) * 100;
     if (yMax - yMin < 400) yMax = yMin + 400;
     const xOf = (index) => (ratingHistory.length <= 1
@@ -630,12 +630,12 @@ export default function Dashboard() {
     const metricCards = [
       {
         name: 'Rating',
-        subtitle: currentTier ? currentTier.name : 'Unrated',
+        subtitle: currentTier.name,
         primaryLabel: 'Current',
-        primaryValue: hasRating ? currentRating : '—',
+        primaryValue: currentRating,
         secondaryLabel: 'Max',
-        secondaryValue: hasRating ? maxRating : '—',
-        accent: currentTier ? currentTier.color : '#9aa0a6'
+        secondaryValue: maxRating,
+        accent: currentTier.color
       },
       {
         name: 'Problems solved',
@@ -696,20 +696,20 @@ export default function Dashboard() {
               <h3>Contest rating</h3>
               <p>Your rating changes only when you participate in a contest.</p>
             </div>
-            {hasRating && (
-              <div className="student-graph-summary">
-                <span className="cf-rank-pill" style={{ '--rank-color': currentTier.color }}>
-                  {currentTier.name} {currentRating}
-                </span>
-                <span className="dashboard-stat-pill">Max {maxRating}</span>
+            <div className="student-graph-summary">
+              <span className="cf-rank-pill" style={{ '--rank-color': currentTier.color }}>
+                {currentTier.name} {currentRating}
+              </span>
+              <span className="dashboard-stat-pill">Max {maxRating}</span>
+              {hasRatingHistory && (
                 <span className={`student-rating-change ${lastDelta >= 0 ? 'student-rating-change--up' : 'student-rating-change--down'}`}>
                   {lastDelta >= 0 ? '+' : ''}{lastDelta}
                 </span>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {hasRating ? (
+          {hasRatingHistory ? (
             <>
               <div className="cf-rating-chart" role="img" aria-label="Student rating progression chart">
                 <svg viewBox="0 0 1000 344">
@@ -780,7 +780,7 @@ export default function Dashboard() {
             </>
           ) : (
             <div className="dashboard-empty">
-              You are unrated. Register for a contest and participate — your rating appears here once the contest ends.
+              You start at 0 as a Newbie. Register for a contest and participate — your rating graph appears here once the contest ends.
             </div>
           )}
         </section>
