@@ -27,6 +27,27 @@ function resolveAdminRoleLabel(user) {
   return user.role;
 }
 
+function isActiveAdmin(user) {
+  return user?.forumRole === 'admin' && resolveAccountStatus(user) === 'active';
+}
+
+async function assertAnotherActiveAdminExists(excludingUserId) {
+  const otherActiveAdmins = await User.countDocuments({
+    _id: { $ne: excludingUserId },
+    forumRole: 'admin',
+    $or: [
+      { accountStatus: 'active' },
+      { accountStatus: { $exists: false }, isBanned: { $ne: true } }
+    ]
+  });
+
+  if (otherActiveAdmins < 1) {
+    const err = new Error('This action would remove the last active admin account.');
+    err.statusCode = 409;
+    throw err;
+  }
+}
+
 function sanitizeUserListItem(user) {
   return {
     id: String(user._id),
@@ -268,6 +289,10 @@ async function updateUserRole({ adminUser, targetUserId, nextRole, reason = '', 
     return sanitizeUserListItem(user);
   }
 
+  if (isActiveAdmin(user) && nextValue.forumRole !== 'admin') {
+    await assertAnotherActiveAdminExists(user._id);
+  }
+
   user.role = nextValue.role;
   user.forumRole = nextValue.forumRole;
   await user.save();
@@ -309,6 +334,10 @@ async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = 
     isBanned: !!user.isBanned,
     statusReason: user.statusReason || user.banReason || ''
   };
+
+  if (isActiveAdmin(user) && nextStatus !== 'active') {
+    await assertAnotherActiveAdminExists(user._id);
+  }
 
   const now = new Date();
   user.accountStatus = nextStatus;

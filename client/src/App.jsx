@@ -4,6 +4,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import BackendStatusBanner from './components/system/BackendStatusBanner';
 // The landing page is the LCP element for first-time visitors, so it stays in
 // the entry bundle. Every other route is code-split with React.lazy so a given
 // page only downloads its own JS/CSS (and heavy deps like react-pdf, katex,
@@ -80,6 +81,7 @@ function LandingShell({ initialAuthMode = null }) {
 function AppContent() {
   return (
     <>
+      <BackendStatusBanner />
       <Toaster
         position="top-right"
         toastOptions={{

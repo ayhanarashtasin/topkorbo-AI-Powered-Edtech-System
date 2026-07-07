@@ -4,6 +4,115 @@ export async function fetchAdminDashboardStats() {
   return httpClient.request('/admin/dashboard/stats');
 }
 
+export async function fetchAdminAnalyticsOverview(params = {}) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/analytics/overview${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminPaymentHistory(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/payments${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminPaymentPlans(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/payments/plans${query ? `?${query}` : ''}`);
+}
+
+export async function createAdminPaymentPlan(payload) {
+  return httpClient.request('/admin/payments/plans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAdminPaymentPlan(planId, payload) {
+  return httpClient.request(`/admin/payments/plans/${planId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function archiveAdminPaymentPlan(planId, payload) {
+  return httpClient.request(`/admin/payments/plans/${planId}/archive`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+}
+
+export async function grantAdminPremiumAccess(userId, payload) {
+  return httpClient.request(`/admin/payments/users/${userId}/grant-premium`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function revokeAdminPremiumAccess(userId, payload) {
+  return httpClient.request(`/admin/payments/users/${userId}/revoke-premium`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchAdminLoginHistory(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/security/logins${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminSecuritySignals(params = {}) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value) !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return httpClient.request(`/admin/security/suspicious-activity${query ? `?${query}` : ''}`);
+}
+
+export async function fetchAdminPlatformSettings() {
+  return httpClient.request('/admin/settings/platform');
+}
+
+export async function updateAdminPlatformSettings(payload) {
+  return httpClient.request('/admin/settings/platform', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function fetchAdminSession() {
   return httpClient.request('/admin/session');
 }

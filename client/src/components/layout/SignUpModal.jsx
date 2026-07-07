@@ -3,22 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiX, HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
 import { FcGoogle } from 'react-icons/fc';
 import { useLanguage } from '../../hooks/useLanguage';
+import httpClient from '../../services/httpClient';
 import { clearAuthStorage } from '../../utils/authStorage';
 import './SignUpModal.css';
 
 export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' }) {
   const { t } = useLanguage();
-  const [mode, setMode] = useState(initialMode);
   const [step, setStep] = useState(initialMode === 'login' ? 'login' : 'choose'); // 'choose', 'login', 'google', 'profile_form', 'success'
   const [role, setRole] = useState(null); // 'student' or 'tutor'
-
-  // Reset or initialize mode on open
-  useEffect(() => {
-    if (isOpen) {
-      setMode(initialMode);
-      setStep(initialMode === 'login' ? 'login' : 'choose');
-    }
-  }, [isOpen, initialMode]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -51,6 +43,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
   });
 
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [profileSubStep, setProfileSubStep] = useState(1);
 
@@ -66,7 +59,6 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       document.body.style.height = '';
       document.documentElement.style.overflow = '';
       document.documentElement.style.height = '';
-      setProfileSubStep(1);
     }
     return () => {
       document.body.style.overflow = '';
@@ -76,7 +68,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     };
   }, [isOpen]);
 
-  // Handle URL callback token in real life production
+  // Handle URL callback token in real life production.
+  // This effect intentionally hydrates modal/auth state from OAuth redirect params.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       const params = new URLSearchParams(window.location.search);
@@ -90,7 +84,6 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
       if (signupRequired) {
         clearAuthStorage();
-        setMode('signup');
         setRole(null);
         setStep('choose');
         setProfileSubStep(1);
@@ -130,6 +123,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       }
     }
   }, [isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!isOpen) return null;
 
@@ -150,8 +144,8 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     onClose();
     setTimeout(() => {
       setStep(initialMode === 'login' ? 'login' : 'choose');
-      setMode(initialMode);
       setRole(null);
+      setOauthLoading(false);
       setErrorMsg('');
       setFormData({
         fullName: 'Ayhan Arash Tasin',
@@ -188,16 +182,26 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     setStep('google');
   };
 
-  const handleGoogleSignIn = () => {
-    // Redirects browser to Google Account chooser via passport API in signup mode
-    const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    window.location.href = `${backendBaseUrl}/auth/google?role=${role}&action=signup`;
+  const continueToGoogleAuth = async (targetUrl) => {
+    setErrorMsg('');
+    setOauthLoading(true);
+    try {
+      await httpClient.warmupBackend({ timeoutMs: 15000 });
+      window.location.href = targetUrl;
+    } catch (err) {
+      setErrorMsg(err?.message || httpClient.BACKEND_DELAYED_MESSAGE);
+      setOauthLoading(false);
+    }
   };
 
-  const handleGoogleLogIn = () => {
-    // Redirects browser to Google Account chooser via passport API in login mode
+  const handleGoogleSignIn = async () => {
     const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    window.location.href = `${backendBaseUrl}/auth/google?action=login`;
+    await continueToGoogleAuth(`${backendBaseUrl}/auth/google?role=${role}&action=signup`);
+  };
+
+  const handleGoogleLogIn = async () => {
+    const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    await continueToGoogleAuth(`${backendBaseUrl}/auth/google?action=login`);
   };
 
   const handleInputChange = (e) => {
@@ -237,17 +241,6 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     }
   };
 
-  const handleNidUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, nidPhoto: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleTrfUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -278,7 +271,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     setLoading(true);
     setErrorMsg('');
 
-    let requestBody = {};
+    let requestBody;
 
     if (role === 'tutor') {
       if (profileSubStep === 1) {
@@ -680,7 +673,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => { setMode('login'); setStep('login'); setErrorMsg(''); }}
+                    onClick={() => { setStep('login'); setErrorMsg(''); }}
                     style={{ background: 'none', border: 'none', color: 'var(--sky-blue)', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline', padding: '0' }}
                   >
                     Log In
@@ -709,10 +702,11 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                     className="signup-modal__google-btn"
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.97 }}
+                    disabled={oauthLoading}
                     onClick={handleGoogleLogIn}
                   >
                     <FcGoogle className="signup-modal__google-icon" />
-                    <span>Continue with Google</span>
+                    <span>{oauthLoading ? 'Starting server...' : 'Continue with Google'}</span>
                   </motion.button>
                 </div>
 
@@ -720,7 +714,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   New to TopKorbo?{' '}
                   <button
                     type="button"
-                    onClick={() => { setMode('signup'); setStep('choose'); setErrorMsg(''); }}
+                    onClick={() => { setStep('choose'); setErrorMsg(''); }}
                     style={{ background: 'none', border: 'none', color: 'var(--sky-blue)', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline', padding: '0' }}
                   >
                     Sign Up
@@ -751,10 +745,11 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                     className="signup-modal__google-btn"
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.97 }}
+                    disabled={oauthLoading}
                     onClick={handleGoogleSignIn}
                   >
                     <FcGoogle className="signup-modal__google-icon" />
-                    <span>{t('signup.google')}</span>
+                    <span>{oauthLoading ? 'Starting server...' : t('signup.google')}</span>
                   </motion.button>
                 </div>
               </motion.div>

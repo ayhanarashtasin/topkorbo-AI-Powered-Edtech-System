@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   HiMiniAcademicCap,
+  HiMiniBell,
   HiMiniBookOpen,
   HiMiniChartBarSquare,
   HiMiniChatBubbleLeftRight,
@@ -8,6 +9,7 @@ import {
   HiMiniDocumentText,
   HiMiniExclamationTriangle,
   HiMiniQueueList,
+  HiMiniShieldCheck,
   HiMiniTrophy,
   HiMiniUsers
 } from 'react-icons/hi2';
@@ -22,11 +24,18 @@ const DEFAULT_DATA = {
     totalUsers: 0,
     students: 0,
     teachers: 0,
+    premiumUsers: 0,
     pendingTeacherApplications: 0,
     pendingQuestions: 0,
     pendingBooks: 0,
+    pendingIeltsSets: 0,
     reports: 0,
     supportTickets: 0,
+    feedbackInbox: 0,
+    waitlistEntries: 0,
+    activeNotices: 0,
+    sentBroadcasts: 0,
+    auditEvents: 0,
     contests: 0,
     ieltsSets: 0,
     unreadNotifications: 0,
@@ -43,11 +52,15 @@ const CARD_CONFIG = [
   { key: 'totalUsers', label: 'Total users', hint: 'Registered accounts across the platform', icon: <HiMiniUsers />, tone: 'info' },
   { key: 'students', label: 'Students', hint: 'Learners currently onboarded', icon: <HiMiniAcademicCap />, tone: 'neutral' },
   { key: 'teachers', label: 'Teachers', hint: 'Approved teacher accounts', icon: <HiMiniClipboardDocumentCheck />, tone: 'success' },
+  { key: 'premiumUsers', label: 'Premium users', hint: 'Paid or manually granted active premium access', icon: <HiMiniShieldCheck />, tone: 'success' },
   { key: 'pendingTeacherApplications', label: 'Teacher applications', hint: 'Waiting for admin review', icon: <HiMiniQueueList />, tone: 'warning' },
-  { key: 'pendingQuestions', label: 'Pending questions', hint: 'Approval queue placeholder', icon: <HiMiniDocumentText />, tone: 'neutral' },
+  { key: 'pendingQuestions', label: 'Pending questions', hint: 'Question bank items awaiting approval', icon: <HiMiniDocumentText />, tone: 'neutral' },
   { key: 'pendingBooks', label: 'Pending books', hint: 'Unpublished reading uploads', icon: <HiMiniBookOpen />, tone: 'neutral' },
+  { key: 'pendingIeltsSets', label: 'Pending IELTS', hint: 'Listening and writing sets awaiting review', icon: <HiMiniAcademicCap />, tone: 'warning' },
   { key: 'reports', label: 'Reports', hint: 'Open moderation issues', icon: <HiMiniExclamationTriangle />, tone: 'danger' },
   { key: 'supportTickets', label: 'Support tickets', hint: 'Open support issues needing admin attention', icon: <HiMiniChatBubbleLeftRight />, tone: 'neutral' },
+  { key: 'feedbackInbox', label: 'Feedback inbox', hint: 'New or reviewed feedback still in admin workflow', icon: <HiMiniBell />, tone: 'info' },
+  { key: 'auditEvents', label: 'Audit events', hint: 'Recorded admin actions across completed phases', icon: <HiMiniShieldCheck />, tone: 'neutral' },
   { key: 'contests', label: 'Contests', hint: 'All contest records', icon: <HiMiniTrophy />, tone: 'info' },
   { key: 'totalRevenue', label: 'Revenue', hint: 'Validated payment totals', icon: <HiMiniChartBarSquare />, tone: 'success', format: 'currency' }
 ];
@@ -131,9 +144,9 @@ export default function AdminDashboard() {
       <div className="admin-overview-grid">
         <article className="admin-hero__banner">
           <p className="admin-topbar__eyebrow">Platform overview</p>
-          <h3>Teacher review, user control, moderation, and audit visibility now live inside one isolated admin module.</h3>
+          <h3>Real platform counts now back the admin dashboard across approvals, moderation, support, notifications, payments, and audit history.</h3>
           <p>
-            Real backend counts are shown where the platform already has data. Modules that are still pending remain clearly marked without breaking the rest of the application.
+            This view now pulls directly from the live admin-side collections already in use, so queues and totals reflect current operational workload instead of phase-era placeholders.
           </p>
         </article>
 
@@ -148,7 +161,8 @@ export default function AdminDashboard() {
             </AdminBadge>
           </div>
           <p>Uptime: {Math.floor((systemHealth.uptimeSeconds || 0) / 60)} minutes</p>
-          <p>IELTS sets tracked: {stats.ieltsSets}</p>
+          <p>Audit events tracked: {formatValue(stats.auditEvents)}</p>
+          <p>Active notices and broadcasts: {formatValue(stats.activeNotices)} / {formatValue(stats.sentBroadcasts)}</p>
         </article>
       </div>
 
@@ -185,14 +199,14 @@ export default function AdminDashboard() {
             <article className="admin-queue-item">
               <div>
                 <strong>Moderation reports</strong>
-                <p>Open community reports needing action</p>
+                <p>Open and under-review community reports needing action</p>
               </div>
               <AdminBadge tone="danger">{stats.reports}</AdminBadge>
             </article>
             <article className="admin-queue-item">
               <div>
                 <strong>Question approvals</strong>
-                <p>Placeholder until question approval status is fully modeled</p>
+                <p>Question bank items waiting in the approval queue</p>
               </div>
               <AdminBadge tone="neutral">{stats.pendingQuestions}</AdminBadge>
             </article>
@@ -202,6 +216,20 @@ export default function AdminDashboard() {
                 <p>Unpublished book uploads awaiting review</p>
               </div>
               <AdminBadge tone="neutral">{stats.pendingBooks}</AdminBadge>
+            </article>
+            <article className="admin-queue-item">
+              <div>
+                <strong>IELTS approvals</strong>
+                <p>Listening and writing sets currently waiting for admin review</p>
+              </div>
+              <AdminBadge tone="warning">{stats.pendingIeltsSets}</AdminBadge>
+            </article>
+            <article className="admin-queue-item">
+              <div>
+                <strong>Support and feedback</strong>
+                <p>Open tickets plus feedback entries still moving through admin review</p>
+              </div>
+              <AdminBadge tone="info">{stats.supportTickets + stats.feedbackInbox}</AdminBadge>
             </article>
           </div>
         </section>
@@ -224,15 +252,22 @@ export default function AdminDashboard() {
             </li>
             <li>
               <div>
-                <strong>User management</strong>
-                <span>Search, filters, role changes, account status control, and audit logging</span>
+                <strong>Admin operations</strong>
+                <span>{formatValue(stats.auditEvents)} audit events, {formatValue(stats.unreadNotifications)} unread notifications, and {formatValue(stats.totalRevenue, 'currency')} validated revenue tracked</span>
               </div>
               <AdminBadge tone="success" size="sm">Live</AdminBadge>
             </li>
             <li>
               <div>
-                <strong>Teacher management</strong>
-                <span>Application review, verification review, and admin decision history</span>
+                <strong>Content and support</strong>
+                <span>{formatValue(stats.ieltsSets)} IELTS sets, {formatValue(stats.activeNotices)} active notices, {formatValue(stats.waitlistEntries)} waitlist entries, and {formatValue(stats.sentBroadcasts)} broadcasts tracked</span>
+              </div>
+              <AdminBadge tone="success" size="sm">Live</AdminBadge>
+            </li>
+            <li>
+              <div>
+                <strong>Teacher and account workflow</strong>
+                <span>{formatValue(stats.pendingTeacherApplications)} teacher applications and {formatValue(stats.premiumUsers)} premium users currently reflected from live records</span>
               </div>
               <AdminBadge tone="success" size="sm">Live</AdminBadge>
             </li>

@@ -79,6 +79,8 @@ const { globalLimiter } = require("./middleware/rateLimiters");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.disable('x-powered-by');
+
 // Behind a single reverse proxy (Vercel/Render/Nginx) in production so that
 // req.ip and rate limiting reflect the real client, not the proxy.
 if (process.env.NODE_ENV === "production") {
@@ -183,6 +185,12 @@ app.use(
     }),
   ),
 );
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 // JSON body parser with a `verify` callback that stashes the raw bytes on
 // req.rawBody before parsing. Routes that need HMAC verification over the
 // exact wire bytes (e.g. LiveKit webhooks) read req.rawBody from here. This
@@ -276,10 +284,20 @@ app.use("/api/search", searchRoutes);
 app.use("/api", moderationRoutes);
 app.use("/api/practice", practiceRoutes);
 
+function sendHealthResponse(_req, res) {
+  const dbReady = connectDB.isDbReady();
+  return res.status(200).json({
+    status: "ok",
+    service: "topkorbo-api",
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    database: dbReady ? "connected" : "not_ready",
+  });
+}
+
 // Liveness — the process is up (does not assert dependencies).
-app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "TopKorbo API is running 🚀" });
-});
+app.get("/health", sendHealthResponse);
+app.get("/api/health", sendHealthResponse);
 
 // Readiness — the process can serve DB-backed traffic. Load balancers should
 // route on this, not /health. Returns 503 until Mongo is connected.

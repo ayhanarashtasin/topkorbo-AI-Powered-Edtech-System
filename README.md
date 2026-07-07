@@ -365,9 +365,10 @@ npm run dev
 
 The API runs at `http://localhost:5000` by default.
 
-Health check:
+Health checks:
 
 ```bash
+GET http://localhost:5000/health
 GET http://localhost:5000/api/health
 ```
 
@@ -484,6 +485,8 @@ SSLCZ_IS_LIVE=false
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
+
+Google OAuth currently uses the relative callback path `/api/auth/google/callback` with `proxy: true`, so in production the Google Console redirect URI should match your deployed backend origin, for example `https://YOUR_BACKEND_ON_RENDER.onrender.com/api/auth/google/callback`.
 
 ---
 
@@ -654,6 +657,8 @@ Set `VITE_API_URL` in the Vercel project environment so the frontend points to t
 ### Backend
 
 Deploy `server/` to a Node-capable host with MongoDB access and the required environment variables. If the backend is also serving the React build, run the frontend build first so `client/dist` exists beside the server. In production the server enables `trust proxy` for correct client-IP-based rate limiting behind a proxy.
+
+Render free web services may sleep after inactivity, so the first request can take roughly 30 to 90 seconds while the backend wakes up. Use `/health` or `/api/health` to confirm the API process is up. For production, a paid Render plan or another always-on host is recommended; an external uptime monitor can also help for demo environments.
 
 ### Webhooks and Public Callback URLs
 

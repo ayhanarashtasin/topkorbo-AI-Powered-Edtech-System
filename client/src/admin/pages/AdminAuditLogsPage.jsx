@@ -7,65 +7,6 @@ import AdminPagination from '../components/AdminPagination';
 import AdminTable from '../components/AdminTable';
 import { fetchAdminAuditLogs } from '../services/adminApi';
 
-const ACTION_OPTIONS = [
-  'ROLE_CHANGED',
-  'USER_BANNED',
-  'USER_UNBANNED',
-  'USER_SUSPENDED',
-  'USER_REACTIVATED',
-  'TEACHER_APPROVED',
-  'TEACHER_REJECTED',
-  'TEACHER_VERIFIED',
-  'TEACHER_VERIFICATION_REJECTED',
-  'TEACHER_MORE_INFO_REQUESTED',
-  'QUESTION_APPROVED',
-  'QUESTION_REJECTED',
-  'QUESTION_EDITED',
-  'QUESTION_REPORT_VALID',
-  'QUESTION_REPORT_DISMISSED',
-  'QUESTION_REPORT_RESOLVED',
-  'REPORT_UNDER_REVIEW',
-  'REPORT_DISMISSED',
-  'REPORT_RESOLVED',
-  'REPORT_NOTE_ADDED',
-  'USER_WARNED',
-  'CONTENT_HIDDEN',
-  'APPEAL_APPROVED',
-  'APPEAL_REJECTED',
-  'APPEAL_NOTE_ADDED',
-  'BOOK_APPROVED',
-  'BOOK_REJECTED',
-  'IELTS_SET_APPROVED',
-  'IELTS_SET_REJECTED',
-  'NOTICE_CREATED',
-  'NOTICE_UPDATED',
-  'NOTICE_ARCHIVED',
-  'NOTICE_DELETED',
-  'WAITLIST_EXPORTED',
-  'WAITLIST_MARKED_CONTACTED',
-  'BROADCAST_SENT',
-  'BROADCAST_FAILED',
-  'SUPPORT_TICKET_UPDATED',
-  'SUPPORT_TICKET_RESOLVED',
-  'SUPPORT_TICKET_CLOSED',
-  'SUPPORT_TICKET_REPLIED',
-  'FEEDBACK_REVIEWED',
-  'FEEDBACK_DISMISSED',
-  'FEEDBACK_RESOLVED',
-  'SUBJECT_CREATED',
-  'SUBJECT_UPDATED',
-  'SUBJECT_ARCHIVED',
-  'PAPER_CREATED',
-  'PAPER_UPDATED',
-  'PAPER_ARCHIVED',
-  'CHAPTER_CREATED',
-  'CHAPTER_UPDATED',
-  'CHAPTER_ARCHIVED',
-  'TOPIC_CREATED',
-  'TOPIC_UPDATED',
-  'TOPIC_ARCHIVED'
-];
-
 function formatDate(value) {
   if (!value) return 'N/A';
   return new Intl.DateTimeFormat('en-US', {
@@ -82,10 +23,31 @@ function toneForAction(action) {
   return 'info';
 }
 
+function summarizeValue(value) {
+  if (value === null || value === undefined || value === '') return 'N/A';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value.length ? value.map((item) => summarizeValue(item)).join(', ') : '[]';
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value)
+      .filter(([, entryValue]) => entryValue !== undefined && entryValue !== null && entryValue !== '')
+      .slice(0, 4)
+      .map(([key, entryValue]) => `${key}: ${summarizeValue(entryValue)}`);
+    return entries.length ? entries.join(' | ') : 'N/A';
+  }
+  return String(value);
+}
+
 export default function AdminAuditLogsPage() {
-  const [filters, setFilters] = useState({ action: '', page: 1, limit: 20 });
+  const [filters, setFilters] = useState({ action: '', search: '', targetType: '', page: 1, limit: 20 });
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [availableActions, setAvailableActions] = useState([]);
+  const [availableTargetTypes, setAvailableTargetTypes] = useState([]);
+  const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -98,6 +60,8 @@ export default function AdminAuditLogsPage() {
         if (!active) return;
         setLogs(data?.items || []);
         setPagination(data?.pagination || { page: 1, totalPages: 1, total: 0 });
+        setAvailableActions(data?.meta?.actions || []);
+        setAvailableTargetTypes(data?.meta?.targetTypes || []);
       } catch (err) {
         if (active) {
           toast.error(err.message || 'Failed to load audit logs');
@@ -124,27 +88,52 @@ export default function AdminAuditLogsPage() {
       />
 
       <section className="admin-panel">
-        <div className="admin-toolbar">
+        <form
+          className="admin-toolbar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setFilters((prev) => ({ ...prev, search: searchInput.trim(), page: 1 }));
+          }}
+        >
           <label className="admin-field">
             <span>Action type</span>
             <select value={filters.action} onChange={(event) => setFilters((prev) => ({ ...prev, action: event.target.value, page: 1 }))}>
               <option value="">All actions</option>
-              {ACTION_OPTIONS.map((action) => (
+              {availableActions.map((action) => (
                 <option key={action} value={action}>{action}</option>
               ))}
             </select>
           </label>
-        </div>
+          <label className="admin-field">
+            <span>Target type</span>
+            <select value={filters.targetType} onChange={(event) => setFilters((prev) => ({ ...prev, targetType: event.target.value, page: 1 }))}>
+              <option value="">All targets</option>
+              {availableTargetTypes.map((targetType) => (
+                <option key={targetType} value={targetType}>{targetType}</option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-field admin-field--search">
+            <span>Search</span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Reason, action, or target"
+            />
+          </label>
+          <button type="submit" className="admin-button admin-button--ghost">Apply</button>
+        </form>
 
         {loading ? (
           <div className="admin-page-loader"><div className="admin-spinner" /><p>Loading audit history...</p></div>
         ) : logs.length === 0 ? (
-          <AdminEmptyState title="No audit events found" description="Audit entries will appear here as admins change roles, statuses, and taxonomy structures." />
+          <AdminEmptyState title="No audit events found" description="Audit entries will appear here as admins work across users, teachers, content, contests, communications, payments, settings, and moderation." />
         ) : (
           <>
             <AdminTable
-              columns={['Action', 'Admin', 'Target', 'Reason', 'Timestamp']}
-              minWidth={1040}
+              columns={['Action', 'Admin', 'Target', 'Changes', 'Reason', 'Timestamp']}
+              minWidth={1280}
             >
               {logs.map((entry) => (
                 <tr key={entry.id}>
@@ -158,6 +147,10 @@ export default function AdminAuditLogsPage() {
                     <div className="admin-table__muted">
                       {entry.targetUser?.email || [entry.target?.type, entry.targetQuestion?.subject, entry.targetQuestion?.chapter].filter(Boolean).join(' | ') || 'N/A'}
                     </div>
+                  </td>
+                  <td>
+                    <div className="admin-table__muted">From: {summarizeValue(entry.previousValue)}</div>
+                    <div className="admin-table__muted">To: {summarizeValue(entry.newValue)}</div>
                   </td>
                   <td>{entry.reason || 'No reason recorded'}</td>
                   <td>{formatDate(entry.createdAt)}</td>

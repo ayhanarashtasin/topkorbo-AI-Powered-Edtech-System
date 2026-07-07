@@ -10,6 +10,11 @@ function getBearerToken(authHeader) {
   return token || null;
 }
 
+function resolveAccountStatus(user) {
+  if (!user) return 'active';
+  return user.accountStatus || (user.isBanned ? 'banned' : 'active');
+}
+
 async function requireAuth(req, res, next) {
   const token = getBearerToken(req.headers.authorization);
   if (!token) {
@@ -26,6 +31,17 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ success: false, message: 'User not found for this token' });
     }
 
+    const accountStatus = resolveAccountStatus(user);
+    if (accountStatus !== 'active') {
+      const reason = user.statusReason || user.banReason || '';
+      return res.status(403).json({
+        success: false,
+        message: reason
+          ? `Account ${accountStatus}. ${reason}`
+          : `Account ${accountStatus}.`
+      });
+    }
+
     req.user = {
       id: String(user._id),
       _id: user._id,
@@ -34,7 +50,7 @@ async function requireAuth(req, res, next) {
       role: user.role,
       forumRole: user.forumRole,
       isBanned: user.isBanned,
-      accountStatus: user.accountStatus || (user.isBanned ? 'banned' : 'active'),
+      accountStatus,
       statusReason: user.statusReason,
       banReason: user.banReason,
       banExpiresAt: user.banExpiresAt,

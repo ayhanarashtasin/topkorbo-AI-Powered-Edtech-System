@@ -1,15 +1,33 @@
 const AdminAuditLog = require('../../models/AdminAuditLog');
+const { ADMIN_AUDIT_ACTION_TYPES } = require('../../models/AdminAuditLog');
 
-async function listAuditLogs({ action = '', page = 1, limit = 20 }) {
+function escapeRegex(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function listAuditLogs({ action = '', search = '', targetType = '', page = 1, limit = 20 }) {
   const safePage = Math.max(1, Number(page) || 1);
   const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20));
   const query = {};
+  const trimmedSearch = String(search || '').trim();
 
-  if (action) {
+  if (action && ADMIN_AUDIT_ACTION_TYPES.includes(action)) {
     query.actionType = action;
   }
+  if (targetType) {
+    query.targetEntityType = String(targetType).trim();
+  }
+  if (trimmedSearch) {
+    const regex = new RegExp(escapeRegex(trimmedSearch), 'i');
+    query.$or = [
+      { actionType: regex },
+      { reason: regex },
+      { targetEntityType: regex },
+      { targetEntityName: regex }
+    ];
+  }
 
-  const [items, total] = await Promise.all([
+  const [items, total, targetTypes] = await Promise.all([
     AdminAuditLog.find(query)
       .populate('adminId', 'name email')
       .populate('targetUserId', 'name email role')
@@ -18,7 +36,8 @@ async function listAuditLogs({ action = '', page = 1, limit = 20 }) {
       .skip((safePage - 1) * safeLimit)
       .limit(safeLimit)
       .lean(),
-    AdminAuditLog.countDocuments(query)
+    AdminAuditLog.countDocuments(query),
+    AdminAuditLog.distinct('targetEntityType', { targetEntityType: { $ne: '' } })
   ]);
 
   return {
@@ -65,6 +84,10 @@ async function listAuditLogs({ action = '', page = 1, limit = 20 }) {
       limit: safeLimit,
       total,
       totalPages: Math.max(1, Math.ceil(total / safeLimit))
+    },
+    meta: {
+      actions: ADMIN_AUDIT_ACTION_TYPES,
+      targetTypes: targetTypes.filter(Boolean).sort((a, b) => a.localeCompare(b))
     }
   };
 }

@@ -3,12 +3,18 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const TeacherApplication = require('../models/TeacherApplication');
 const planService = require('../services/planService');
+const { recordLoginAttempt } = require('../services/loginHistoryService');
 
 function buildFrontendRedirect(frontendUrl, path, params = {}) {
   const base = String(frontendUrl || '').replace(/\/$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const query = new URLSearchParams(params).toString();
   return `${base}${normalizedPath}${query ? `?${query}` : ''}`;
+}
+
+function resolveAccountStatus(user) {
+  if (!user) return 'active';
+  return user.accountStatus || (user.isBanned ? 'banned' : 'active');
 }
 
 const authController = {
@@ -39,11 +45,34 @@ const authController = {
 
     passport.authenticate('google', { session: false }, async (err, user, info) => {
       if (err) {
+        await recordLoginAttempt({
+          req,
+          status: 'failure',
+          failureReason: err.message || 'google_auth_error'
+        });
         return res.redirect(`${frontendUrl}?error=${encodeURIComponent(err.message || 'auth_failed')}`);
       }
 
       if (!user) {
+        if (info?.message === 'registration_disabled') {
+          await recordLoginAttempt({
+            req,
+            status: 'failure',
+            failureReason: 'registration_disabled',
+            email: info?.profile?.emails?.[0]?.value || ''
+          });
+          return res.redirect(buildFrontendRedirect(frontendUrl, '/signup', {
+            error: 'registration_disabled'
+          }));
+        }
+
         if (info && info.message === 'signup_required' && info.profile) {
+          await recordLoginAttempt({
+            req,
+            status: 'failure',
+            failureReason: 'signup_required',
+            email: info.profile.emails?.[0]?.value || ''
+          });
           const profile = info.profile;
           return res.redirect(buildFrontendRedirect(frontendUrl, '/signup', {
             signupRequired: 'true',
@@ -52,7 +81,27 @@ const authController = {
             avatar: profile.photos[0]?.value || ''
           }));
         }
+        await recordLoginAttempt({
+          req,
+          status: 'failure',
+          failureReason: info?.message || 'auth_failed'
+        });
         return res.redirect(`${frontendUrl}?error=auth_failed`);
+      }
+
+      const accountStatus = resolveAccountStatus(user);
+      if (accountStatus !== 'active') {
+        const reason = user.statusReason || user.banReason || '';
+        await recordLoginAttempt({
+          req,
+          user,
+          status: 'failure',
+          failureReason: accountStatus
+        });
+        return res.redirect(buildFrontendRedirect(frontendUrl, '/signup', {
+          error: accountStatus,
+          reason
+        }));
       }
 
       // Check if the user has completed their profile
@@ -80,6 +129,12 @@ const authController = {
       const avatarUrl = user.avatar && user.avatar.startsWith('data:image')
         ? ''
         : user.avatar || '';
+
+      await recordLoginAttempt({
+        req,
+        user,
+        status: 'success'
+      });
 
       res.redirect(
         `${frontendUrl}?token=${token}` +

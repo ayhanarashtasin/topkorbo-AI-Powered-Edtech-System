@@ -1,6 +1,7 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
+const PlatformSetting = require('../models/PlatformSetting');
 const { TRIAL_PLAN, trialExpiresAt } = require('./plans');
 
 async function hasCompletedProfile(user) {
@@ -15,6 +16,11 @@ async function hasCompletedProfile(user) {
   }
 
   return !!user.collegeName;
+}
+
+async function isRegistrationEnabled() {
+  const settings = await PlatformSetting.findOne({ key: 'platform' }).select('registrationEnabled').lean();
+  return settings ? settings.registrationEnabled !== false : true;
 }
 
 const requiredGoogleEnv = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
@@ -93,6 +99,10 @@ passport.use(new GoogleStrategy({
           }
           await user.save();
           return done(null, user);
+        }
+
+        if (!(await isRegistrationEnabled())) {
+          return done(null, false, { message: 'registration_disabled' });
         }
 
         // Create new user record. Every new signup starts on a free Pro+

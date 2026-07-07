@@ -3,6 +3,7 @@ import { Navigate, Route } from 'react-router-dom';
 import AdminAcademicTaxonomyPage from '../pages/AdminAcademicTaxonomyPage';
 import AdminRoute from '../components/AdminRoute';
 import AdminAuditLogsPage from '../pages/AdminAuditLogsPage';
+import AdminAnalyticsPage from '../pages/AdminAnalyticsPage';
 import AdminBooksPage from '../pages/AdminBooksPage';
 import AdminContestsPage from '../pages/AdminContestsPage';
 import AdminDashboard from '../pages/AdminDashboard';
@@ -10,8 +11,11 @@ import AdminIeltsSetsPage from '../pages/AdminIeltsSetsPage';
 import AdminModerationPage from '../pages/AdminModerationPage';
 import AdminNotificationsPage from '../pages/AdminNotificationsPage';
 import AdminNoticesPage from '../pages/AdminNoticesPage';
+import AdminPaymentsPage from '../pages/AdminPaymentsPage';
 import AdminPlaceholderPage from '../pages/AdminPlaceholderPage';
 import AdminQuestionsPage from '../pages/AdminQuestionsPage';
+import AdminSecurityPage from '../pages/AdminSecurityPage';
+import AdminSettingsPage from '../pages/AdminSettingsPage';
 import AdminSupportPage from '../pages/AdminSupportPage';
 import AdminTeachersPage from '../pages/AdminTeachersPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
@@ -19,34 +23,10 @@ import AdminWaitlistPage from '../pages/AdminWaitlistPage';
 
 const placeholderRoutes = [
   {
-    path: 'settings',
-    title: 'Settings',
-    description: 'System configuration, policy toggles, and platform-wide admin preferences will live here.',
-    bullets: ['General settings', 'Policy controls', 'Operational defaults']
-  },
-  {
     path: 'content-approval',
     title: 'Content Approval',
     description: 'Unified approval queues across books, question sets, and future content modules will be built here.',
     bullets: ['Approval inbox', 'Reviewer workflow', 'Escalation states']
-  },
-  {
-    path: 'analytics',
-    title: 'Analytics',
-    description: 'Platform metrics, growth analysis, and performance tracking dashboards will be added here.',
-    bullets: ['Usage trends', 'Growth reports', 'Engagement analysis']
-  },
-  {
-    path: 'payments',
-    title: 'Payments',
-    description: 'Payment operations, reconciliations, and revenue analytics will be expanded here.',
-    bullets: ['Payment ledger', 'Refund review', 'Revenue insights']
-  },
-  {
-    path: 'security',
-    title: 'Security',
-    description: 'Access control reviews, incident management, and security administration will be added here.',
-    bullets: ['Role audits', 'Session oversight', 'Incident controls']
   }
 ];
 
@@ -74,12 +54,16 @@ export function renderAdminRoutes() {
         <Route path="content/waitlist" element={<AdminWaitlistPage />} />
         <Route path="academic-taxonomy" element={<AdminAcademicTaxonomyPage />} />
         <Route path="notifications" element={<AdminNotificationsPage />} />
+        <Route path="analytics" element={<AdminAnalyticsPage />} />
+        <Route path="payments" element={<AdminPaymentsPage />} />
         <Route path="support" element={<AdminSupportPage />} />
         <Route path="support/feedback" element={<AdminSupportPage />} />
         <Route path="moderation" element={<AdminModerationPage />} />
         <Route path="moderation/appeals" element={<AdminModerationPage />} />
         <Route path="reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="security" element={<AdminSecurityPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
         {placeholderRoutes.map((route) => (
           <Route
             key={route.path}

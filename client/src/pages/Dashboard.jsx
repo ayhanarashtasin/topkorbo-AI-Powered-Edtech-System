@@ -11,6 +11,7 @@ import {
 } from '../services/mentorApi';
 import { getStats, listMyAttempts } from '../services/practiceApi';
 import { getMyRating } from '../services/contestApi';
+import httpClient from '../services/httpClient';
 import './Dashboard.css';
 
 function formatDate(value, language) {
@@ -243,28 +244,16 @@ export default function Dashboard() {
 
     const fetchUserData = async () => {
       try {
-        const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-        const response = await fetch(`${backendBaseUrl}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        if (response.status === 401) {
-          handleSignOut();
-          return;
-        }
-
-        const resData = await response.json();
-        if (resData.success && resData.data) {
+        const userData = await httpClient.request('/auth/me');
+        if (userData) {
           const nextUser = {
-            name: resData.data.name,
-            avatar: resData.data.avatar || '',
-            email: resData.data.email,
-            role: resData.data.role,
-            collegeName: resData.data.collegeName || '',
-            hscBatch: resData.data.hscBatch || '',
-            username: resData.data.username || ''
+            name: userData.name,
+            avatar: userData.avatar || '',
+            email: userData.email,
+            role: userData.role,
+            collegeName: userData.collegeName || '',
+            hscBatch: userData.hscBatch || '',
+            username: userData.username || ''
           };
 
           setUser(nextUser);
@@ -283,6 +272,10 @@ export default function Dashboard() {
           await loadMentorData(nextUser.role);
         }
       } catch (err) {
+        if (err?.status === 401 || err?.status === 403) {
+          handleSignOut();
+          return;
+        }
         console.error('Error fetching user data on dashboard:', err);
         setDashboardLoading(false);
       }

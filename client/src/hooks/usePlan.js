@@ -5,8 +5,7 @@
  * showing usage bars.
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import httpClient from '../services/httpClient';
 
 // Mirror of server/config/plans.js (kept small + in sync by hand).
 export const PLAN_LIMITS = {
@@ -25,7 +24,7 @@ const PLAN_RANK = { free: 0, pro: 1, pro_plus: 2 };
 
 export function usePlan() {
   const [plan, setPlan] = useState(() => {
-    try { return localStorage.getItem('topkorbo_plan') || 'free'; } catch (_) { return 'free'; }
+    try { return localStorage.getItem('topkorbo_plan') || 'free'; } catch { return 'free'; }
   });
   const [usage, setUsage] = useState({ qbankExams: 0, mockTests: 0, battleRooms: 0, aiActions: 0 });
   const [planExpiresAt, setPlanExpiresAt] = useState(null);
@@ -36,18 +35,16 @@ export function usePlan() {
     try {
       const token = localStorage.getItem('topkorbo_token');
       if (!token) { setLoading(false); return; }
-      const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json().catch(() => null);
-      const data = json && json.data;
+      const data = await httpClient.request('/auth/me');
       if (data) {
         const p = data.plan || 'free';
         setPlan(p);
         setUsage(data.usage || { qbankExams: 0, mockTests: 0, battleRooms: 0, aiActions: 0 });
         setPlanExpiresAt(data.planExpiresAt || null);
         setPlanIsTrial(!!data.planIsTrial);
-        try { localStorage.setItem('topkorbo_plan', p); } catch (_) { /* ignore */ }
+        try { localStorage.setItem('topkorbo_plan', p); } catch { /* ignore */ }
       }
-    } catch (_) {
+    } catch {
       /* keep last-known plan */
     } finally {
       setLoading(false);
