@@ -79,7 +79,6 @@ export default function StudentLiveClass() {
               <h1>Available Live Classes</h1>
               <p>Join active classes from mentors who have already accepted your connection request.</p>
             </div>
-            <div className="live-page__usage">Realtime refresh: every 15 seconds</div>
           </div>
 
           {error ? <div className="live-page__error">{error}</div> : null}

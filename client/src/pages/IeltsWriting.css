@@ -14,6 +14,7 @@
 
 .ielts-writing-main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -251,6 +252,11 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  min-width: 0;
+}
+
+.ielts-writing-action-card__text {
+  min-width: 0;
 }
 
 .ielts-writing-action-card__icon {
@@ -281,6 +287,12 @@
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.4;
+}
+
+.ielts-writing-description,
+.ielts-writing-action-card__text p,
+.ielts-writing-action-card__text h3 {
+  overflow-wrap: anywhere;
 }
 
 .ielts-writing-action-card__arrow {
@@ -319,6 +331,19 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .ielts-writing-container {
+    flex-direction: column;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ielts-writing-main {
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
   .ielts-writing-header {
     padding: 16px 20px;
     flex-direction: column;
@@ -328,6 +353,7 @@
 
   .ielts-writing-workspace {
     padding: 20px;
+    overflow: visible;
   }
 
   .ielts-writing-hero {
@@ -340,16 +366,75 @@
 
   .ielts-writing-action-card {
     padding: 20px;
+    align-items: flex-start;
+    gap: 14px;
   }
 
   .ielts-writing-grid-2 {
     grid-template-columns: 1fr;
   }
+  .ielts-criteria-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
 
-@media (max-width: 768px) {
-  .ielts-writing-container {
-    flex-direction: column;
+@media (max-width: 480px) {
+  .ielts-writing-header {
+    padding: 14px 14px;
+  }
+
+  .ielts-writing-badge {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    text-align: center;
+  }
+
+  .ielts-writing-workspace {
+    padding: 16px 12px 24px;
+  }
+
+  .ielts-writing-workspace__body {
+    gap: 1rem;
+  }
+
+  .ielts-writing-hero {
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+
+  .ielts-writing-hero__icon-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .ielts-writing-hero h1 {
+    font-size: 1.28rem;
+  }
+
+  .ielts-writing-description {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .ielts-writing-sub-section {
+    padding: 16px;
+  }
+
+  .ielts-writing-action-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .ielts-writing-action-card__left {
+    gap: 12px;
+  }
+
+  .ielts-writing-action-card__icon {
+    padding: 12px;
+    border-radius: 16px;
   }
 }
 

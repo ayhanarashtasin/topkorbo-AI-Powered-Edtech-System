@@ -14,6 +14,7 @@
 
 .ielts-speaking-main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -251,6 +252,11 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  min-width: 0;
+}
+
+.ielts-speaking-action-card__text {
+  min-width: 0;
 }
 
 .ielts-speaking-action-card__icon {
@@ -281,6 +287,12 @@
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.4;
+}
+
+.ielts-speaking-description,
+.ielts-speaking-action-card__text p,
+.ielts-speaking-action-card__text h3 {
+  overflow-wrap: anywhere;
 }
 
 .ielts-speaking-action-card__arrow {
@@ -328,6 +340,19 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .ielts-speaking-container {
+    flex-direction: column;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ielts-speaking-main {
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
   .ielts-speaking-header {
     padding: 16px 20px;
     flex-direction: column;
@@ -337,6 +362,7 @@
 
   .ielts-speaking-workspace {
     padding: 20px;
+    overflow: visible;
   }
 
   .ielts-speaking-hero {
@@ -349,16 +375,75 @@
 
   .ielts-speaking-action-card {
     padding: 20px;
+    align-items: flex-start;
+    gap: 14px;
   }
 
   .ielts-speaking-grid-3 {
     grid-template-columns: 1fr;
   }
+  .ielts-criteria-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
 
-@media (max-width: 768px) {
-  .ielts-speaking-container {
-    flex-direction: column;
+@media (max-width: 480px) {
+  .ielts-speaking-header {
+    padding: 14px 14px;
+  }
+
+  .ielts-speaking-badge {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    text-align: center;
+  }
+
+  .ielts-speaking-workspace {
+    padding: 16px 12px 24px;
+  }
+
+  .ielts-speaking-workspace__body {
+    gap: 1rem;
+  }
+
+  .ielts-speaking-hero {
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+
+  .ielts-speaking-hero__icon-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .ielts-speaking-hero h1 {
+    font-size: 1.28rem;
+  }
+
+  .ielts-speaking-description {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .ielts-speaking-sub-section {
+    padding: 16px;
+  }
+
+  .ielts-speaking-action-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .ielts-speaking-action-card__left {
+    gap: 12px;
+  }
+
+  .ielts-speaking-action-card__icon {
+    padding: 12px;
+    border-radius: 16px;
   }
 }
 

@@ -368,10 +368,27 @@
 @media (max-width: 768px) {
   .ielts-prep-container {
     flex-direction: column;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ielts-prep-main {
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ielts-prep-header {
+    padding: 16px 20px;
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
   }
 
   .ielts-prep-workspace {
     padding: 20px 16px 24px;
+    overflow: visible;
   }
 
   .ielts-prep-workspace__body {
@@ -416,8 +433,15 @@
   }
 
   .ielts-btn-primary {
-    padding: 8px 20px;
+    width: 100%;
+    max-width: 320px;
+    min-width: 0;
+    padding: 10px 20px;
     font-size: 0.88rem;
+    white-space: normal;
+    height: auto;
+    min-height: 48px;
+    text-align: center;
   }
 
   .ielts-segments-header {
@@ -482,7 +506,7 @@
   }
 
   .ielts-grid-4 {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 8px;
     margin-bottom: 1.25rem;
   }
@@ -516,7 +540,7 @@
   }
 
   .ielts-btn-primary {
-    padding: 7px 16px;
+    padding: 10px 14px;
     font-size: 0.82rem;
   }
 
