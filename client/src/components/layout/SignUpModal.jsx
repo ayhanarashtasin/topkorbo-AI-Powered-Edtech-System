@@ -212,16 +212,18 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
         body: JSON.stringify({ guestType })
       });
 
+      const forumRole = data.forumRole || (guestType === 'admin' ? 'admin' : 'user');
+
       clearAuthStorage();
       localStorage.setItem('topkorbo_token', data.token);
       localStorage.setItem('topkorbo_name', data.name);
       localStorage.setItem('topkorbo_email', data.email);
       localStorage.setItem('topkorbo_avatar', data.avatar || '');
       localStorage.setItem('topkorbo_role', data.role);
-      localStorage.setItem('topkorbo_forum_role', data.forumRole || 'user');
+      localStorage.setItem('topkorbo_forum_role', forumRole);
       localStorage.setItem('topkorbo_guest', 'true');
 
-      window.location.href = '/dashboard';
+      window.location.href = forumRole === 'admin' ? '/admin/dashboard' : '/dashboard';
     } catch (err) {
       setErrorMsg(err?.message || 'Guest login is unavailable right now. Please try again.');
       setGuestLoading('');
@@ -788,7 +790,8 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   {[
                     { type: 'student', title: 'Student', desc: 'Learner dashboard, contests, mock tests, AI tools.' },
                     { type: 'mentor', title: 'Mentor', desc: 'Mentor live classes and guidance flows.' },
-                    { type: 'tutor', title: 'Tutor', desc: 'Approved tutor tools for uploads and teaching.' }
+                    { type: 'tutor', title: 'Tutor', desc: 'Approved tutor tools for uploads and teaching.' },
+                    { type: 'admin', title: 'Admin', desc: 'Admin dashboard, moderation, users, and platform controls.' }
                   ].map((item) => (
                     <motion.button
                       key={item.type}
@@ -801,7 +804,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                       style={{ border: 'none', textAlign: 'left', width: '100%' }}
                     >
                       <div className="signup-modal__option-icon-container" style={{ width: 54, height: 54, fontSize: '1.6rem', display: 'grid', placeItems: 'center' }}>
-                        {item.type === 'student' ? 'S' : item.type === 'mentor' ? 'M' : 'T'}
+                        {item.type === 'student' ? 'S' : item.type === 'mentor' ? 'M' : item.type === 'admin' ? 'A' : 'T'}
                       </div>
                       <h4 className="signup-modal__option-title">{guestLoading === item.type ? 'Preparing...' : item.title}</h4>
                       <p className="signup-modal__option-desc">{item.desc}</p>

@@ -46,9 +46,9 @@ function filterTree(nodes, searchTerm) {
     .map((node) => {
       const children = filterTree(node.children || [], searchTerm);
       const matches =
-        node.name.toLowerCase().includes(query) ||
-        node.typeLabel.toLowerCase().includes(query) ||
-        node.pathLabel.toLowerCase().includes(query);
+        String(node.name || '').toLowerCase().includes(query) ||
+        String(node.typeLabel || '').toLowerCase().includes(query) ||
+        String(node.pathLabel || '').toLowerCase().includes(query);
 
       if (!matches && !children.length) return null;
       return { ...node, children };
@@ -154,6 +154,7 @@ function TaxonomyNode({
 }) {
   const isExpanded = expandedIds.has(node.id);
   const hasChildren = (node.children || []).length > 0;
+  const isSystemNode = node.type === 'system';
 
   return (
     <div className="admin-taxonomy-node">
@@ -172,18 +173,19 @@ function TaxonomyNode({
             <div className="admin-taxonomy-node__heading">
               <strong>{node.name}</strong>
               <AdminBadge tone="info" size="sm">{node.typeLabel}</AdminBadge>
-              <AdminBadge tone={statusTone(node.status)} size="sm">{node.status}</AdminBadge>
+              {!isSystemNode ? <AdminBadge tone={statusTone(node.status)} size="sm">{node.status}</AdminBadge> : null}
               {node.childCount ? <AdminBadge tone="neutral" size="sm">{countLabel(node.childCount, 'child')}</AdminBadge> : null}
             </div>
             <div className="admin-taxonomy-node__meta">
               <span>{node.pathLabel}</span>
-              <span>Order {node.order}</span>
-              <span>{node.source === 'legacy_sync' ? 'Synced from existing data' : 'Created in admin'}</span>
+              {!isSystemNode ? <span>Order {node.order}</span> : null}
+              {!isSystemNode ? <span>{node.source === 'legacy_sync' ? 'Synced from existing data' : 'Created in admin'}</span> : null}
+              {isSystemNode ? <span>Legacy items missing a valid parent are grouped here for review.</span> : null}
             </div>
           </div>
         </div>
 
-        <div className="admin-taxonomy-node__actions">
+        {!isSystemNode ? <div className="admin-taxonomy-node__actions">
           {node.canCreateChild && node.status === 'active' ? (
             <AdminActionButton variant="ghost" onClick={() => onCreate(node)}>
               <HiMiniPlus />
@@ -212,7 +214,7 @@ function TaxonomyNode({
               Archive
             </AdminActionButton>
           ) : null}
-        </div>
+        </div> : null}
       </div>
 
       {hasChildren && isExpanded ? (

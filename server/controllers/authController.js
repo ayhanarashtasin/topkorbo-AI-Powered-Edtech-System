@@ -41,6 +41,7 @@ const GUEST_ROLE_CONFIG = {
   },
   tutor: {
     role: 'teacher',
+    forumRole: 'user',
     name: 'Guest Tutor',
     email: 'guest.tutor@topkorbo.local',
     googleId: 'topkorbo-guest-tutor',
@@ -55,11 +56,33 @@ const GUEST_ROLE_CONFIG = {
       currentYearSemester: 'Graduate',
       admissionAchievement: 'Demo approved tutor account for hackathon judges.'
     }
+  },
+  admin: {
+    role: 'student',
+    forumRole: 'admin',
+    name: 'Guest Admin',
+    email: 'guest.admin@topkorbo.local',
+    googleId: 'topkorbo-guest-admin',
+    profile: {
+      collegeName: 'TopKorbo Demo Admin College',
+      hscBatch: '2026',
+      stream: 'Science',
+      academicStatus: 'HSC 2nd Year',
+      medium: 'Bangla Medium',
+      district: 'Dhaka',
+      division: 'Dhaka',
+      areaName: 'Admin Demo Area',
+      aspirations: ['Engineering']
+    }
   }
 };
 
 function getGuestConfig(guestType) {
-  return GUEST_ROLE_CONFIG[String(guestType || '').toLowerCase()] || GUEST_ROLE_CONFIG.student;
+  const normalizedType = String(guestType || '').toLowerCase();
+  return {
+    guestType: GUEST_ROLE_CONFIG[normalizedType] ? normalizedType : 'student',
+    config: GUEST_ROLE_CONFIG[normalizedType] || GUEST_ROLE_CONFIG.student
+  };
 }
 
 function buildAuthPayload(user, { isGuest = false } = {}) {
@@ -119,7 +142,7 @@ const authController = {
    */
   guestLogin: async (req, res, next) => {
     try {
-      const config = getGuestConfig(req.body?.guestType || req.body?.role);
+      const { guestType, config } = getGuestConfig(req.body?.guestType || req.body?.role);
       const guestAccessExpiresAt = new Date('2099-12-31T23:59:59.000Z');
 
       const user = await User.findOneAndUpdate(
@@ -131,7 +154,7 @@ const authController = {
             email: config.email,
             avatar: '',
             role: config.role,
-            forumRole: 'user',
+            forumRole: config.forumRole || 'user',
             accountStatus: 'active',
             isBanned: false,
             plan: 'pro_plus',
@@ -160,7 +183,10 @@ const authController = {
       res.json({
         success: true,
         message: 'Guest login ready.',
-        data: buildAuthPayload(user, { isGuest: true })
+        data: {
+          ...buildAuthPayload(user, { isGuest: true }),
+          guestType
+        }
       });
     } catch (err) {
       next(err);

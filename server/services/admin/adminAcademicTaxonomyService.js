@@ -205,14 +205,18 @@ async function syncLegacyTaxonomy() {
       name: question.paper,
       order: question.paper === '2nd' ? 1 : 0
     });
+    if (!paperNode) continue;
+
     const chapterNode = await ensureNode({
       type: 'chapter',
-      parentId: paperNode?._id || null,
+      parentId: paperNode._id,
       name: question.chapter
     });
+    if (!chapterNode) continue;
+
     await ensureNode({
       type: 'topic',
-      parentId: chapterNode?._id || null,
+      parentId: chapterNode._id,
       name: question.topic
     });
   }
@@ -227,10 +231,12 @@ async function syncLegacyTaxonomy() {
       name: book.paper,
       order: book.paper === '2nd' ? 1 : 0
     });
+    if (!paperNode) continue;
+
     for (const chapter of book.chapters || []) {
       await ensureNode({
         type: 'chapter',
-        parentId: paperNode?._id || null,
+        parentId: paperNode._id,
         name: chapter.title,
         order: Number(chapter.order) || 0
       });
@@ -250,19 +256,21 @@ async function syncLegacyTaxonomy() {
       name: book.paper,
       order: book.paper === '2nd' ? 1 : 0
     });
+    if (!paperNode) continue;
 
     for (const chapter of knowledge.chapters || []) {
       const chapterNode = await ensureNode({
         type: 'chapter',
-        parentId: paperNode?._id || null,
+        parentId: paperNode._id,
         name: chapter.title,
         order: Number(chapter.order) || 0
       });
+      if (!chapterNode) continue;
 
       for (const topic of chapter.topics || []) {
         await ensureNode({
           type: 'topic',
-          parentId: chapterNode?._id || null,
+          parentId: chapterNode._id,
           name: topic.title,
           order: Number(topic.order) || 0
         });
@@ -282,17 +290,21 @@ async function syncLegacyTaxonomy() {
       const paperNode = await ensureNode({
         type: 'paper',
         parentId: subjectNode._id,
-        name: contestQuestion.paper || contestQuestion.selectionMeta?.paper,
-        order: contestQuestion.paper === '2nd' ? 1 : 0
-      });
+      name: contestQuestion.paper || contestQuestion.selectionMeta?.paper,
+      order: contestQuestion.paper === '2nd' ? 1 : 0
+    });
+      if (!paperNode) continue;
+
       const chapterNode = await ensureNode({
         type: 'chapter',
-        parentId: paperNode?._id || null,
+        parentId: paperNode._id,
         name: contestQuestion.chapter || contestQuestion.selectionMeta?.chapter
       });
+      if (!chapterNode) continue;
+
       await ensureNode({
         type: 'topic',
-        parentId: chapterNode?._id || null,
+        parentId: chapterNode._id,
         name: contestQuestion.topic || contestQuestion.selectionMeta?.topic
       });
     }
@@ -469,11 +481,14 @@ function buildTree(items) {
   });
 
   const roots = [];
+  const orphanRoots = [];
   for (const node of map.values()) {
     if (node.parentId && map.has(node.parentId)) {
       map.get(node.parentId).children.push(node);
-    } else {
+    } else if (node.type === 'subject') {
       roots.push(node);
+    } else {
+      orphanRoots.push(node);
     }
   }
 
@@ -493,6 +508,30 @@ function buildTree(items) {
   };
 
   sortNodes(roots);
+  sortNodes(orphanRoots, [{ id: 'orphaned-taxonomy', type: 'system', name: 'Needs parent' }]);
+
+  if (orphanRoots.length) {
+    roots.push({
+      id: 'orphaned-taxonomy',
+      type: 'system',
+      typeLabel: 'Needs parent',
+      name: 'Needs parent',
+      status: 'active',
+      order: Number.MAX_SAFE_INTEGER,
+      parentId: null,
+      source: 'system',
+      createdAt: null,
+      updatedAt: null,
+      children: orphanRoots,
+      childCount: orphanRoots.length,
+      canCreateChild: false,
+      childType: null,
+      supportsReorder: false,
+      path: [{ id: 'orphaned-taxonomy', type: 'system', name: 'Needs parent' }],
+      pathLabel: 'Needs parent'
+    });
+  }
+
   return roots;
 }
 
