@@ -103,11 +103,6 @@ export default function Sidebar({ activeTab, user }) {
       icon: <HiCalendar size={20} />
     });
     menuItems.push({
-      id: 'leaderboard',
-      label: language === 'en' ? 'Leaderboard' : 'লিডারবোর্ড',
-      icon: <HiClipboardCheck size={20} />
-    });
-    menuItems.push({
       id: 'ielts-prep',
       label: language === 'en' ? 'IELTS Preparation' : 'আইইএলটিএস প্রস্তুতি',
       icon: <HiClipboardList size={20} />
@@ -264,7 +259,6 @@ export default function Sidebar({ activeTab, user }) {
                     else navigate('/mentor/live-class');
                   }
                   else if (item.id === 'contests') navigate('/contests');
-                  else if (item.id === 'leaderboard') navigate('/leaderboard');
                   else if (item.id === 'ielts-prep') navigate('/ielts-prep');
                   else if (item.id === 'reading-books') navigate('/reading-books');
                   else if (item.id === 'forum') navigate('/forum');

@@ -12,9 +12,11 @@ import {
   HiCheckCircle,
   HiBan
 } from 'react-icons/hi';
+import { HiTrophy } from 'react-icons/hi2';
 import Sidebar from '../components/layout/Sidebar';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { getGlobalLeaderboard } from '../services/contestApi';
 import './Contests.css';
 
 // ─── Shared timezone offsets ─────────────────────────────────────────────────
@@ -164,6 +166,13 @@ export default function Contests() {
 
   const activeTab = 'contests';
 
+  // ── Leaderboard state ──────────────────────────────────────────────────────
+  const [lbBy, setLbBy] = useState('points');
+  const [lbRows, setLbRows] = useState([]);
+  const [lbMe, setLbMe] = useState(null);
+  const [lbLoading, setLbLoading] = useState(true);
+  const [lbError, setLbError] = useState('');
+
   // Live timer tick
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
@@ -238,6 +247,34 @@ export default function Contests() {
     fetchUserData();
     fetchAllUpcomingContests();
   }, [navigate]);
+
+  // ── Fetch leaderboard ──────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    setLbLoading(true);
+    setLbError('');
+    getGlobalLeaderboard(lbBy, 50)
+      .then((data) => {
+        if (cancelled) return;
+        setLbRows(data?.leaderboard || []);
+        setLbMe(data?.me || null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Leaderboard fetch failed:', err);
+        setLbError(language === 'en' ? 'Could not load the leaderboard.' : 'লিডারবোর্ড লোড করা যায়নি।');
+      })
+      .finally(() => {
+        if (!cancelled) setLbLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [lbBy, language]);
+
+  const lbMetricLabel = lbBy === 'points'
+    ? (language === 'en' ? 'Points' : 'পয়েন্ট')
+    : (language === 'en' ? 'Rating' : 'রেটিং');
+  const lbMetricValue = (row) => (lbBy === 'points' ? row.contestPoints : `${row.rating} (${row.rankTitle})`);
+  const lbRankMedal = (rank) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`);
 
   // ─── Time helpers ──────────────────────────────────────────────────────────
 
@@ -829,6 +866,99 @@ export default function Contests() {
               language === 'en'
                 ? 'No current or upcoming contests. Check back later!'
                 : 'কোনো বর্তমান বা আসন্ন কনটেস্ট নেই। পরে আবার দেখুন!'
+            )}
+          </div>
+        </section>
+
+        {/* ═══════ Global Leaderboard ═══════ */}
+        <section className="contests-table-section contests-table-section--leaderboard">
+          <div className="contests-section-header">
+            <div className="contests-section-header__icon contests-section-header__icon--active">
+              <HiTrophy size={20} />
+            </div>
+            <div>
+              <h2 className="contests-section-title">
+                {language === 'en' ? 'Global Leaderboard' : 'গ্লোবাল লিডারবোর্ড'}
+              </h2>
+              <p className="contests-section-subtitle">
+                {language === 'en'
+                  ? 'Ranked across all contest participants.'
+                  : 'সকল কনটেস্ট অংশগ্রহণকারীর মধ্যে র‍্যাংকিং।'}
+              </p>
+            </div>
+          </div>
+
+          {/* Points / Rating toggle */}
+          <div style={{ display: 'flex', gap: 8, margin: '4px 0 16px' }}>
+            {['points', 'rating'].map((key) => (
+              <button
+                key={key}
+                onClick={() => setLbBy(key)}
+                className="contest-table-cta"
+                style={{
+                  cursor: 'pointer',
+                  background: lbBy === key ? '#8C5A3C' : 'transparent',
+                  color: lbBy === key ? '#fff' : '#8C5A3C',
+                  border: '1.5px solid #8C5A3C'
+                }}
+              >
+                {key === 'points'
+                  ? (language === 'en' ? 'By Points' : 'পয়েন্ট অনুযায়ী')
+                  : (language === 'en' ? 'By Rating' : 'রেটিং অনুযায়ী')}
+              </button>
+            ))}
+          </div>
+
+          {lbMe && (
+            <div
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 16px', marginBottom: 16, borderRadius: 12,
+                background: 'rgba(140, 90, 60, 0.08)', border: '1px solid rgba(140, 90, 60, 0.25)', fontWeight: 700
+              }}
+            >
+              <span>{language === 'en' ? 'Your rank' : 'আপনার র‍্যাংক'}: {lbRankMedal(lbMe.rank)}</span>
+              <span>{lbMetricLabel}: {lbBy === 'points' ? lbMe.contestPoints : `${lbMe.rating} (${lbMe.rankTitle})`}</span>
+            </div>
+          )}
+
+          <div className="contests-card">
+            {lbLoading ? (
+              <div className="contests-empty-state">{language === 'en' ? 'Loading…' : 'লোড হচ্ছে…'}</div>
+            ) : lbError ? (
+              <div className="contests-empty-state">{lbError}</div>
+            ) : lbRows.length === 0 ? (
+              <div className="contests-empty-state">
+                {language === 'en' ? 'No ranked participants yet.' : 'এখনও কোনো র‍্যাংকড অংশগ্রহণকারী নেই।'}
+              </div>
+            ) : (
+              <div className="contests-table-container">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '10px 14px' }}>{language === 'en' ? 'Rank' : 'র‍্যাংক'}</th>
+                      <th style={{ textAlign: 'left', padding: '10px 14px' }}>{language === 'en' ? 'Student' : 'শিক্ষার্থী'}</th>
+                      <th style={{ textAlign: 'right', padding: '10px 14px' }}>{lbMetricLabel}</th>
+                      <th style={{ textAlign: 'right', padding: '10px 14px' }}>{language === 'en' ? 'Contests' : 'কনটেস্ট'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lbRows.map((row) => {
+                      const isMe = lbMe && row._id && String(row._id) === String(lbMe._id);
+                      return (
+                        <tr key={row._id || row.rank} style={{ background: isMe ? 'rgba(140, 90, 60, 0.08)' : 'transparent' }}>
+                          <td style={{ padding: '10px 14px', fontWeight: 700 }}>{lbRankMedal(row.rank)}</td>
+                          <td style={{ padding: '10px 14px' }}>
+                            {row.name || row.username || (language === 'en' ? 'Student' : 'শিক্ষার্থী')}
+                          </td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>{lbMetricValue(row)}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>{row.contestsPlayed}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </section>
