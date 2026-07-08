@@ -4,7 +4,8 @@ const AUTH_KEYS = [
   'topkorbo_avatar',
   'topkorbo_email',
   'topkorbo_role',
-  'topkorbo_forum_role'
+  'topkorbo_forum_role',
+  'topkorbo_guest'
 ];
 
 export function getAuthToken() {

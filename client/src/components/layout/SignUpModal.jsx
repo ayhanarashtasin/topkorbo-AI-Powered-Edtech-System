@@ -44,6 +44,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
 
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [profileSubStep, setProfileSubStep] = useState(1);
 
@@ -131,11 +132,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
     // SECURITY PATCH: If there's a token in localStorage, but they close the modal before completing the registration steps (step !== 'success'),
     // it means they are attempting to bypass the profile completion or phone verification. We must clear their session to prevent illegal access!
     if (localStorage.getItem('topkorbo_token') && step !== 'success') {
-      localStorage.removeItem('topkorbo_token');
-      localStorage.removeItem('topkorbo_name');
-      localStorage.removeItem('topkorbo_avatar');
-      localStorage.removeItem('topkorbo_email');
-      localStorage.removeItem('topkorbo_role');
+      clearAuthStorage();
       onClose();
       window.location.reload();
       return;
@@ -146,6 +143,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       setStep(initialMode === 'login' ? 'login' : 'choose');
       setRole(null);
       setOauthLoading(false);
+      setGuestLoading('');
       setErrorMsg('');
       setFormData({
         fullName: 'Ayhan Arash Tasin',
@@ -202,6 +200,32 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
   const handleGoogleLogIn = async () => {
     const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     await continueToGoogleAuth(`${backendBaseUrl}/auth/google?action=login`);
+  };
+
+  const handleGuestLogin = async (guestType) => {
+    setErrorMsg('');
+    setGuestLoading(guestType);
+
+    try {
+      const data = await httpClient.request('/auth/guest', {
+        method: 'POST',
+        body: JSON.stringify({ guestType })
+      });
+
+      clearAuthStorage();
+      localStorage.setItem('topkorbo_token', data.token);
+      localStorage.setItem('topkorbo_name', data.name);
+      localStorage.setItem('topkorbo_email', data.email);
+      localStorage.setItem('topkorbo_avatar', data.avatar || '');
+      localStorage.setItem('topkorbo_role', data.role);
+      localStorage.setItem('topkorbo_forum_role', data.forumRole || 'user');
+      localStorage.setItem('topkorbo_guest', 'true');
+
+      window.location.href = '/dashboard';
+    } catch (err) {
+      setErrorMsg(err?.message || 'Guest login is unavailable right now. Please try again.');
+      setGuestLoading('');
+    }
   };
 
   const handleInputChange = (e) => {
@@ -572,12 +596,13 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
           transition={{ type: 'spring', damping: 25, stiffness: 220 }}
         >
           {/* Back button */}
-          {(step === 'google' || step === 'profile_form' || step === 'phone_verification') && (
+          {(step === 'google' || step === 'guest' || step === 'profile_form' || step === 'phone_verification') && (
             <button
               className="signup-modal__back-btn"
               onClick={() => {
                 if (step === 'phone_verification') setStep('profile_form');
                 else if (step === 'profile_form') setStep('google');
+                else if (step === 'guest') setStep('login');
                 else setStep('choose');
               }}
               aria-label="Go Back"
@@ -710,6 +735,21 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   </motion.button>
                 </div>
 
+                <div style={{ marginTop: '18px' }}>
+                  <motion.button
+                    className="signup-modal__google-btn"
+                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => { setStep('guest'); setErrorMsg(''); }}
+                  >
+                    <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>G</span>
+                    <span>Login as a Guest</span>
+                  </motion.button>
+                  <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', fontSize: '0.84rem', lineHeight: 1.45 }}>
+                    Temporary judge access with Pro Plus features enabled.
+                  </p>
+                </div>
+
                 <div style={{ marginTop: '32px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                   New to TopKorbo?{' '}
                   <button
@@ -719,6 +759,54 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   >
                     Sign Up
                   </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Guest Role Selection */}
+            {step === 'guest' && (
+              <motion.div
+                key="guest"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.25 }}
+                className="signup-modal__step-container"
+              >
+                <div className="signup-modal__header">
+                  <h3 className="signup-modal__title">Login as a Guest</h3>
+                  <p className="signup-modal__subtitle">Choose a demo role. Each guest account has Pro Plus access for judging.</p>
+                  {errorMsg && (
+                    <div className="signup-modal__warning-banner" style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(192, 133, 82, 0.1)', border: '1px solid rgba(192, 133, 82, 0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.88rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', lineHeight: '1.4' }}>
+                      <span>!</span>
+                      <span>{errorMsg}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="signup-modal__options-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+                  {[
+                    { type: 'student', title: 'Student', desc: 'Learner dashboard, contests, mock tests, AI tools.' },
+                    { type: 'mentor', title: 'Mentor', desc: 'Mentor live classes and guidance flows.' },
+                    { type: 'tutor', title: 'Tutor', desc: 'Approved tutor tools for uploads and teaching.' }
+                  ].map((item) => (
+                    <motion.button
+                      key={item.type}
+                      type="button"
+                      className={`signup-modal__option-card ${item.type === 'student' ? 'signup-modal__option-card--student' : 'signup-modal__option-card--tutor'}`}
+                      whileHover={{ y: -6, scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={!!guestLoading}
+                      onClick={() => handleGuestLogin(item.type)}
+                      style={{ border: 'none', textAlign: 'left', width: '100%' }}
+                    >
+                      <div className="signup-modal__option-icon-container" style={{ width: 54, height: 54, fontSize: '1.6rem', display: 'grid', placeItems: 'center' }}>
+                        {item.type === 'student' ? 'S' : item.type === 'mentor' ? 'M' : 'T'}
+                      </div>
+                      <h4 className="signup-modal__option-title">{guestLoading === item.type ? 'Preparing...' : item.title}</h4>
+                      <p className="signup-modal__option-desc">{item.desc}</p>
+                    </motion.button>
+                  ))}
                 </div>
               </motion.div>
             )}

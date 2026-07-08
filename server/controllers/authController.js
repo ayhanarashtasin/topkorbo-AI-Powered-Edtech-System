@@ -5,6 +5,86 @@ const TeacherApplication = require('../models/TeacherApplication');
 const planService = require('../services/planService');
 const { recordLoginAttempt } = require('../services/loginHistoryService');
 
+const GUEST_ROLE_CONFIG = {
+  student: {
+    role: 'student',
+    name: 'Guest Student',
+    email: 'guest.student@topkorbo.local',
+    googleId: 'topkorbo-guest-student',
+    profile: {
+      collegeName: 'TopKorbo Demo College',
+      hscBatch: '2026',
+      stream: 'Science',
+      academicStatus: 'HSC 2nd Year',
+      medium: 'Bangla Medium',
+      district: 'Dhaka',
+      division: 'Dhaka',
+      areaName: 'Demo Area',
+      aspirations: ['Engineering', 'University']
+    }
+  },
+  mentor: {
+    role: 'tutor',
+    name: 'Guest Mentor',
+    email: 'guest.mentor@topkorbo.local',
+    googleId: 'topkorbo-guest-mentor',
+    profile: {
+      collegeName: 'TopKorbo Demo College',
+      hscBatch: '2024',
+      studentIdNumber: 'GUEST-MENTOR-001',
+      interestedToGuide: ['Engineering', 'Academic'],
+      universityName: 'Demo University',
+      department: 'Computer Science',
+      currentYearSemester: '3rd Year',
+      admissionAchievement: 'Demo mentor account for hackathon judges.'
+    }
+  },
+  tutor: {
+    role: 'teacher',
+    name: 'Guest Tutor',
+    email: 'guest.tutor@topkorbo.local',
+    googleId: 'topkorbo-guest-tutor',
+    profile: {
+      collegeName: 'TopKorbo Demo College',
+      hscBatch: '2022',
+      studentIdNumber: 'GUEST-TUTOR-001',
+      interestedToGuide: ['IELTS', 'University', 'Academic'],
+      ieltsScore: '8.0',
+      universityName: 'Demo University',
+      department: 'English',
+      currentYearSemester: 'Graduate',
+      admissionAchievement: 'Demo approved tutor account for hackathon judges.'
+    }
+  }
+};
+
+function getGuestConfig(guestType) {
+  return GUEST_ROLE_CONFIG[String(guestType || '').toLowerCase()] || GUEST_ROLE_CONFIG.student;
+}
+
+function buildAuthPayload(user, { isGuest = false } = {}) {
+  const token = jwt.sign(
+    {
+      id: user._id,
+      role: user.role,
+      forumRole: user.forumRole || 'user'
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '60d' }
+  );
+
+  return {
+    token,
+    role: user.role,
+    forumRole: user.forumRole || 'user',
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar || '',
+    isComplete: true,
+    isGuest
+  };
+}
+
 function buildFrontendRedirect(frontendUrl, path, params = {}) {
   const base = String(frontendUrl || '').replace(/\/$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -30,6 +110,61 @@ const authController = {
       scope: ['profile', 'email'],
       state: JSON.stringify({ role, action })
     })(req, res, next);
+  },
+
+  /**
+   * POST /api/auth/guest
+   * Temporary hackathon demo login. Creates/reuses role-specific guest users
+   * with Pro+ access so judges can explore without Google OAuth.
+   */
+  guestLogin: async (req, res, next) => {
+    try {
+      const config = getGuestConfig(req.body?.guestType || req.body?.role);
+      const guestAccessExpiresAt = new Date('2099-12-31T23:59:59.000Z');
+
+      const user = await User.findOneAndUpdate(
+        { email: config.email },
+        {
+          $set: {
+            googleId: config.googleId,
+            name: config.name,
+            email: config.email,
+            avatar: '',
+            role: config.role,
+            forumRole: 'user',
+            accountStatus: 'active',
+            isBanned: false,
+            plan: 'pro_plus',
+            planExpiresAt: guestAccessExpiresAt,
+            planIsTrial: false,
+            ...config.profile
+          },
+          $setOnInsert: {
+            usage: {
+              qbankExams: 0,
+              mockTests: 0,
+              battleRooms: 0,
+              aiActions: 0
+            }
+          }
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+
+      await recordLoginAttempt({
+        req,
+        user,
+        status: 'success'
+      });
+
+      res.json({
+        success: true,
+        message: 'Guest login ready.',
+        data: buildAuthPayload(user, { isGuest: true })
+      });
+    } catch (err) {
+      next(err);
+    }
   },
 
   /**
@@ -114,16 +249,7 @@ const authController = {
         }
       }
 
-      // Generate a JWT token
-      const token = jwt.sign(
-        {
-          id: user._id,
-          role: user.role,
-          forumRole: user.forumRole || 'user'
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '60d' }
-      );
+      const authPayload = buildAuthPayload(user);
 
       // Clean up massive Base64 strings from URL parameter
       const avatarUrl = user.avatar && user.avatar.startsWith('data:image')
@@ -137,7 +263,7 @@ const authController = {
       });
 
       res.redirect(
-        `${frontendUrl}?token=${token}` +
+        `${frontendUrl}?token=${authPayload.token}` +
         `&role=${user.role}` +
         `&forumRole=${encodeURIComponent(user.forumRole || 'user')}` +
         `&name=${encodeURIComponent(user.name)}` +

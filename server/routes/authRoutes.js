@@ -12,6 +12,10 @@ router.get('/google', authLimiter, authController.googleAuth);
 // @route   GET /api/auth/google/callback
 router.get('/google/callback', authLimiter, authController.googleCallback);
 
+// @desc    Temporary hackathon guest login
+// @route   POST /api/auth/guest
+router.post('/guest', authLimiter, authController.guestLogin);
+
 // @desc    Save/Complete Profile details (Student or Mentor)
 // @route   POST /api/auth/profile
 router.post('/profile', auth, authController.completeProfile);
