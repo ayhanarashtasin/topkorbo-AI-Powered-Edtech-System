@@ -13,6 +13,7 @@ import LandingPage from './pages/LandingPage';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Contests = lazy(() => import('./pages/Contests'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const BecomeTeacher = lazy(() => import('./pages/BecomeTeacher'));
 const Setting = lazy(() => import('./pages/Setting'));
 const UploadQuestion = lazy(() => import('./pages/UploadQuestion'));
@@ -106,6 +107,7 @@ function AppContent() {
           <Route path="/login" element={<LandingShell initialAuthMode="login" />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/contests" element={<Contests />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/qbank" element={<QuestionBank />} />
           <Route path="/qbank/source-questions" element={<BoardQuestionsView />} />
           <Route path="/qbank/varsity-written" element={<VarsityWrittenView />} />

@@ -22,6 +22,7 @@ import Confetti from "react-confetti";
 import toast from "react-hot-toast";
 import { createMockTestAttempt } from "../services/mockTestApi";
 import { buildAttemptPayload, submitAttempt as savePracticeAttempt } from "../services/practiceApi";
+import { submitAnswer as submitContestAnswer } from "../services/contestApi";
 import "./MockTestExam.css";
 
 const BOARD_ABBRS = {
@@ -727,29 +728,6 @@ export default function MockTestExam() {
     return () => clearInterval(timer);
   }, [isSubmitted, timeLeft]);
 
-  const calculateCurrentContestScore = (updatedSubmittedKeys) => {
-    let score = 0;
-    questions.forEach((q, idx) => {
-      const k = getQuestionKey(q, idx);
-      if (updatedSubmittedKeys[k]) {
-        const selectedIndex = answers[k];
-        const correctIndex = getCorrectOptionIndex(q);
-        if (q.type === "mcq") {
-          if (selectedIndex !== undefined && selectedIndex !== null) {
-            if (selectedIndex === correctIndex) {
-              score += 1;
-            } else {
-              if (config?.negativeMarking) score -= 0.25;
-            }
-          }
-        } else if (q.type === "written" || q.type === "cq") {
-          const scoreVal = aiEvaluations[k] ? parseFloat(aiEvaluations[k].score) || 0 : 0;
-          score += scoreVal;
-        }
-      }
-    });
-    return Math.max(0, score);
-  };
 
   const handleContestQuestionBack = () => {
     const prevIdx = findPrevUnsubmittedIndex(activeQuestionIndex, submittedQuestionKeys);
@@ -773,30 +751,30 @@ export default function MockTestExam() {
     const updatedSubmittedKeys = { ...submittedQuestionKeys, [key]: true };
     setSubmittedQuestionKeys(updatedSubmittedKeys);
 
-    // Calculate score
-    const currentScore = calculateCurrentContestScore(updatedSubmittedKeys);
     const countSubmitted = Object.keys(updatedSubmittedKeys).length;
 
-    // Call submit endpoint instantly to update the database
+    // Live, point-based scoring: grade this single answer server-side. A correct
+    // answer awards points (and locks the question); a wrong answer applies a
+    // penalty. The leaderboard then updates in real time via socket.
+    let liveAnswerResult;
     if (!config?.isPractice) {
       try {
-        const token = localStorage.getItem("topkorbo_token") || localStorage.getItem("token");
-        const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-        await fetch(`${backendBaseUrl}/contests/${config.contestId}/submit`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            score: currentScore,
-            totalQuestions: questions.length,
-            timeTakenSeconds: Math.max(0, (config?.duration || 0) * 60 - timeLeft),
-            answersSubmitted: countSubmitted,
-            answers: answers
-          }),
-        });
-        toast.success(language === "en" ? `Question ${index + 1} Submitted & Saved!` : `প্রশ্ন ${index + 1} সাবমিট এবং সেভ হয়েছে!`, { duration: 1500 });
+        liveAnswerResult = await submitContestAnswer(config.contestId, key, answers[key]);
+        if (liveAnswerResult?.correct) {
+          toast.success(
+            language === "en"
+              ? `Correct! +${liveAnswerResult.pointsDelta} pts (total ${liveAnswerResult.livePoints})`
+              : `সঠিক! +${liveAnswerResult.pointsDelta} (মোট ${liveAnswerResult.livePoints})`,
+            { duration: 1800 }
+          );
+        } else {
+          toast.error(
+            language === "en"
+              ? `Wrong — penalty applied (total ${liveAnswerResult?.livePoints ?? 0} pts)`
+              : `ভুল — পেনাল্টি (মোট ${liveAnswerResult?.livePoints ?? 0})`,
+            { duration: 1800 }
+          );
+        }
       } catch (err) {
         console.error("Error saving intermediate progress:", err);
       }
@@ -2034,7 +2012,7 @@ export default function MockTestExam() {
                 </span>
               </div>
               <p className="leaderboard-subtitle">
-                {language === "en" ? "Top 3 Solvers" : "শীর্ষ ৩ সমাধানকারী"}
+                {language === "en" ? "Top 3 by Points" : "পয়েন্টে শীর্ষ ৩"}
               </p>
             </div>
             <div className="leaderboard-list">
@@ -2059,7 +2037,7 @@ export default function MockTestExam() {
                   const studentName = isOwn
                     ? (language === "en" ? `${rawName} (You)` : `${rawName} (তুমি)`)
                     : rawName;
-                  const solvedCount = entry.answersSubmitted || 0;
+                  const points = entry.livePoints || 0;
                   return (
                     <div key={rankIndex} className={`leaderboard-item leaderboard-item--rank-${rank} ${isOwn ? "leaderboard-item--own" : ""}`}>
                       <div 
@@ -2073,9 +2051,9 @@ export default function MockTestExam() {
                           {studentName}
                         </div>
                         <div className="leaderboard-solved-count">
-                          {language === "en" 
-                            ? `Number of questions Solved: ${solvedCount}`
-                            : `সমাধানকৃত প্রশ্ন সংখ্যা: ${toBnNum(solvedCount)}`}
+                          {language === "en"
+                            ? `Points: ${points}`
+                            : `পয়েন্ট: ${toBnNum(points)}`}
                         </div>
                       </div>
                     </div>

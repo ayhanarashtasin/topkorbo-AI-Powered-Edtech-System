@@ -19,6 +19,11 @@ router.get('/upcoming', auth, contestController.getUpcomingContests);
 // @route   GET /api/contests/rating/me
 router.get('/rating/me', auth, contestController.getMyRating);
 
+// @desc    Global leaderboard by points or rating
+// @route   GET /api/contests/leaderboard?by=points|rating
+// NOTE: must be declared before the '/:id' catch-all route below.
+router.get('/leaderboard', auth, contestController.getGlobalLeaderboard);
+
 // @desc    Delete a contest owned by current teacher
 // @route   DELETE /api/contests/:id
 router.delete('/:id', auth, contestController.deleteContest);
@@ -35,7 +40,11 @@ router.put('/:id', auth, contestController.updateContest);
 // @route   POST /api/contests/:id/register
 router.post('/:id/register', auth, contestController.registerForContest);
 
-// @desc    Submit a student's contest result
+// @desc    Submit a single answer live during a running contest (point-based)
+// @route   POST /api/contests/:id/answer
+router.post('/:id/answer', auth, contestController.submitAnswer);
+
+// @desc    Finalize a student's contest attempt
 // @route   POST /api/contests/:id/submit
 router.post('/:id/submit', auth, contestController.submitContestResult);
 

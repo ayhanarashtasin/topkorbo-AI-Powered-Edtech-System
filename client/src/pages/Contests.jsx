@@ -937,6 +937,23 @@ export default function Contests() {
                     {selectedResult.userResult ? `${Math.floor(selectedResult.userResult.timeTakenSeconds / 60)}m ${selectedResult.userResult.timeTakenSeconds % 60}s` : '—'}
                   </strong>
                 </div>
+                <div className="contest-metric-item score">
+                  <span className="metric-label">{language === 'en' ? 'Points Earned' : 'অর্জিত পয়েন্ট'}</span>
+                  <strong className="metric-val">
+                    {selectedResult.userResult ? `${selectedResult.userResult.pointsEarned ?? selectedResult.userResult.livePoints ?? 0}` : '—'}
+                  </strong>
+                </div>
+                {selectedResult.userResult && selectedResult.userResult.ratingDelta !== null && selectedResult.userResult.ratingDelta !== undefined && (
+                  <div className="contest-metric-item rank">
+                    <span className="metric-label">{language === 'en' ? 'Rating Change' : 'রেটিং পরিবর্তন'}</span>
+                    <strong className="metric-val" style={{ color: selectedResult.userResult.ratingDelta >= 0 ? '#16a34a' : '#dc2626' }}>
+                      {selectedResult.userResult.ratingDelta >= 0 ? '+' : ''}{selectedResult.userResult.ratingDelta}
+                      {selectedResult.userResult.newRating !== null && selectedResult.userResult.newRating !== undefined
+                        ? ` (${selectedResult.userResult.newRating})`
+                        : ''}
+                    </strong>
+                  </div>
+                )}
               </div>
             )}
 

@@ -6,7 +6,7 @@ const { getIO } = require('../socket');
 const { ensureUsername } = require('../services/mentionService');
 
 const PUBLIC_PROFILE_FIELDS =
-  'name username avatar role collegeName hscBatch stream universityName department reputation followers following isBanned forumRole createdAt';
+  'name username avatar role collegeName hscBatch stream universityName department reputation rating maxRating contestPoints contestsPlayed followers following isBanned forumRole createdAt';
 
 const userController = {
   /**

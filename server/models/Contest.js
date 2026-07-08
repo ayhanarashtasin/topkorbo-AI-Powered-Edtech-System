@@ -213,6 +213,15 @@ const contestSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Set once the contest has ended and ratings/points have been finalized.
+  ratingsSettled: {
+    type: Boolean,
+    default: false
+  },
+  settledAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

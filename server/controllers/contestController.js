@@ -6,31 +6,17 @@ const ContestResult = require('../models/ContestResult');
 const RatingHistory = require('../models/RatingHistory');
 const {
   resolveContestDates,
-  normalizeAdminContestStatus
+  normalizeAdminContestStatus,
+  getContestLifecycle
 } = require('../utils/contestSchedule');
-
-// Rating a student starts from before their first rated contest.
-const INITIAL_RATING = 0;
-
-const RATING_RANKS = [
-  { title: 'Newbie', min: 0 },
-  { title: 'Pupil', min: 1200 },
-  { title: 'Specialist', min: 1400 },
-  { title: 'Expert', min: 1600 },
-  { title: 'Candidate Master', min: 1900 },
-  { title: 'Master', min: 2100 },
-  { title: 'International Master', min: 2300 },
-  { title: 'Grandmaster', min: 2400 }
-];
-
-function getRatingRankTitle(rating) {
-  const value = Number.isFinite(Number(rating)) ? Number(rating) : INITIAL_RATING;
-  let rank = RATING_RANKS[0];
-  for (const candidate of RATING_RANKS) {
-    if (value >= candidate.min) rank = candidate;
-  }
-  return rank.title;
-}
+const {
+  INITIAL_RATING,
+  CORRECT_POINTS,
+  WRONG_PENALTY,
+  getRatingRankTitle,
+  buildLiveLeaderboard,
+  settleContest
+} = require('../services/contestSettlementService');
 
 function canAccessContest(contest, user) {
   const status = normalizeAdminContestStatus(contest);
@@ -45,18 +31,17 @@ function canAccessContest(contest, user) {
 }
 
 /**
- * Performance rating a student "earned" in one contest, derived purely from
- * their real standing among actual participants.
- *  - Multiple participants: top rank ≈ 2400, last rank ≈ 800.
- *  - Solo participant: scaled from their real score percentage.
+ * Resolve the authoritative answer key (correct option index) for a single
+ * contest question. QBank-sourced questions store their options on the original
+ * Question doc, so those are resolved from a preloaded map.
  */
-function contestPerformance(rank, participants, percentage) {
-  if (participants <= 1) {
-    const pct = Math.max(0, Math.min(100, percentage || 0));
-    return Math.round(800 + (pct / 100) * 1200);
+function correctIndexFor(q, originalById) {
+  let options = Array.isArray(q.options) ? q.options : [];
+  if ((!options.length) && q.source === 'qbank' && q.originalQuestionId) {
+    const orig = originalById.get(String(q.originalQuestionId));
+    options = (orig && Array.isArray(orig.options)) ? orig.options : [];
   }
-  const standing = (participants - rank) / (participants - 1); // 1 = best, 0 = worst
-  return Math.round(800 + standing * 1600);
+  return options.findIndex((opt) => opt && opt.isCorrect);
 }
 
 /**
@@ -542,16 +527,146 @@ exports.getContestById = async (req, res, next) => {
 };
 
 /**
- * @desc    Submit a student's contest exam result
+ * Push the current points-ranked live leaderboard to everyone in the contest room.
+ */
+async function broadcastLeaderboard(contestId) {
+  try {
+    const board = await buildLiveLeaderboard(contestId, 10);
+    const { getIO } = require('../socket');
+    getIO().to(`contest:${contestId}`).emit('contest:leaderboard', board);
+  } catch (err) {
+    console.error('Error broadcasting contest leaderboard update:', err);
+  }
+}
+
+/**
+ * @desc    Submit a single answer live during a running contest (point-based)
+ * @route   POST /api/contests/:id/answer
+ * @access  Private (student)
+ *
+ * Grades the answer immediately: a correct answer awards points (and locks the
+ * question), a wrong answer applies a penalty. The live leaderboard is then
+ * broadcast to the contest room.
+ */
+exports.submitAnswer = async (req, res, next) => {
+  try {
+    const { questionId, selectedIndex } = req.body;
+    const contestId = req.params.id;
+    const studentId = req.user.id;
+
+    if (!questionId || selectedIndex === undefined || selectedIndex === null) {
+      return ApiResponse.error(res, 'questionId and selectedIndex are required', 400);
+    }
+
+    const contest = await Contest.findById(contestId).lean();
+    if (!contest) {
+      return ApiResponse.error(res, 'Contest not found', 404);
+    }
+    // Live answers are only accepted while the contest is actually running.
+    if (getContestLifecycle(contest) !== 'live') {
+      return ApiResponse.error(res, 'This contest is not running right now', 403);
+    }
+
+    const registeredIds = (contest.registeredStudents || []).map((id) => id.toString());
+    if (!registeredIds.includes(studentId.toString())) {
+      return ApiResponse.error(res, 'You must register for this contest before participating', 403);
+    }
+
+    const contestQuestions = Array.isArray(contest.questions) ? contest.questions : [];
+    const question = contestQuestions.find((q) => String(q._id) === String(questionId));
+    if (!question) {
+      return ApiResponse.error(res, 'Question not found in this contest', 404);
+    }
+    if ((question.type || 'mcq') !== 'mcq') {
+      return ApiResponse.error(res, 'Only MCQ questions can be answered live', 400);
+    }
+
+    // Resolve the answer key (qbank questions keep options on the Question doc).
+    let originalById = new Map();
+    if (question.source === 'qbank' && question.originalQuestionId) {
+      const orig = await Question.findById(question.originalQuestionId).select('options').lean();
+      if (orig) originalById.set(String(question.originalQuestionId), orig);
+    }
+    const correctIndex = correctIndexFor(question, originalById);
+
+    // Load or create this student's result row.
+    let result = await ContestResult.findOne({ contest: contestId, student: studentId });
+    if (!result) {
+      result = new ContestResult({
+        contest: contestId,
+        student: studentId,
+        score: 0,
+        totalQuestions: contestQuestions.filter((q) => (q.type || 'mcq') === 'mcq').length,
+        timeTakenSeconds: 0,
+        livePoints: 0,
+        perQuestion: {},
+        answers: {}
+      });
+    }
+
+    const perQuestion = result.perQuestion && typeof result.perQuestion === 'object' ? result.perQuestion : {};
+    const key = String(questionId);
+    const state = perQuestion[key] || { attempts: 0, solved: false, awarded: 0, solvedAt: null };
+
+    if (state.solved) {
+      return ApiResponse.error(res, 'You have already solved this question', 400);
+    }
+
+    const isCorrect = Number(selectedIndex) === correctIndex && correctIndex !== -1;
+    state.attempts += 1;
+
+    const pointsBefore = result.livePoints || 0;
+    if (isCorrect) {
+      state.solved = true;
+      state.awarded = CORRECT_POINTS;
+      state.solvedAt = new Date();
+      result.livePoints = pointsBefore + CORRECT_POINTS;
+      result.score = (result.score || 0) + 1;
+    } else {
+      result.livePoints = Math.max(0, pointsBefore - WRONG_PENALTY);
+    }
+    const pointsDelta = result.livePoints - pointsBefore;
+
+    perQuestion[key] = state;
+    result.perQuestion = perQuestion;
+    result.markModified('perQuestion');
+    // Keep the raw answer map in sync for the end-of-contest reconciliation.
+    const answers = result.answers && typeof result.answers === 'object' ? result.answers : {};
+    answers[key] = Number(selectedIndex);
+    result.answers = answers;
+    result.markModified('answers');
+    result.answersSubmitted = Object.keys(answers).length;
+    result.lastPointsChangeAt = new Date();
+    await result.save();
+
+    await broadcastLeaderboard(contestId);
+
+    return ApiResponse.success(res, {
+      correct: isCorrect,
+      solved: state.solved,
+      livePoints: result.livePoints,
+      pointsDelta
+    }, isCorrect ? 'Correct answer' : 'Wrong answer — penalty applied');
+  } catch (err) {
+    console.error('Submit answer error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Finalize a student's contest attempt (marks it finished)
  * @route   POST /api/contests/:id/submit
  * @access  Private (student)
+ *
+ * Scoring happens live via submitAnswer, so this endpoint only finalizes: it
+ * reconciles (grades) any answers that were never submitted live as a safety
+ * net, records the time taken and proctoring flags, and marks the attempt done.
  */
 exports.submitContestResult = async (req, res, next) => {
   try {
-    // SECURITY: `score`, `answersSubmitted` and `totalQuestions` are computed
-    // server-side from the answer key — never trusted from the client. Only the
-    // student's raw `answers`, timing, and self-reported proctoring flags are
-    // read from the request body.
+    // SECURITY: points/score are computed server-side from the answer key —
+    // never trusted from the client. Only raw `answers`, timing, and
+    // self-reported proctoring flags are read from the request body.
     const { timeTakenSeconds, answers, isDisqualified, disqualificationReason } = req.body;
     const contestId = req.params.id;
     const studentId = req.user.id;
@@ -564,84 +679,85 @@ exports.submitContestResult = async (req, res, next) => {
       return ApiResponse.error(res, 'This contest is not accepting submissions right now', 403);
     }
 
-    // Only registered students can submit results
-    const registeredIds = (contest.registeredStudents || []).map(id => id.toString());
+    const registeredIds = (contest.registeredStudents || []).map((id) => id.toString());
     if (!registeredIds.includes(studentId.toString())) {
       return ApiResponse.error(res, 'You must register for this contest before participating', 403);
     }
 
-    // Build the authoritative answer key. For qbank-sourced questions the
-    // correct option lives on the original Question document, so resolve those.
-    const submitted = (answers && typeof answers === 'object') ? answers : {};
     const contestQuestions = Array.isArray(contest.questions) ? contest.questions : [];
+    const totalQuestions = contestQuestions.filter((q) => (q.type || 'mcq') === 'mcq').length;
 
+    // Preload qbank originals to resolve answer keys for reconciliation.
     const qbankIds = contestQuestions
-      .filter(q => q.source === 'qbank' && q.originalQuestionId)
-      .map(q => q.originalQuestionId);
+      .filter((q) => q.source === 'qbank' && q.originalQuestionId)
+      .map((q) => q.originalQuestionId);
     const originals = qbankIds.length
       ? await Question.find({ _id: { $in: qbankIds } }).select('options').lean()
       : [];
-    const originalById = new Map(originals.map(o => [String(o._id), o]));
+    const originalById = new Map(originals.map((o) => [String(o._id), o]));
 
-    let score = 0;
-    let answersSubmitted = 0;
-    let totalQuestions = 0;
+    let result = await ContestResult.findOne({ contest: contestId, student: studentId });
+    if (!result) {
+      result = new ContestResult({
+        contest: contestId,
+        student: studentId,
+        score: 0,
+        totalQuestions,
+        timeTakenSeconds: 0,
+        livePoints: 0,
+        perQuestion: {},
+        answers: {}
+      });
+    }
+
+    // Safety net: grade any client-supplied answers that were never scored live.
+    const perQuestion = result.perQuestion && typeof result.perQuestion === 'object' ? result.perQuestion : {};
+    const mergedAnswers = { ...(result.answers && typeof result.answers === 'object' ? result.answers : {}) };
+    const clientAnswers = answers && typeof answers === 'object' ? answers : {};
 
     for (const q of contestQuestions) {
-      const type = q.type || 'mcq';
-      // Only MCQs can be graded server-side; written/cq are not auto-scored.
-      if (type !== 'mcq') continue;
-      totalQuestions += 1;
-
-      let options = Array.isArray(q.options) ? q.options : [];
-      if ((!options.length) && q.source === 'qbank' && q.originalQuestionId) {
-        const orig = originalById.get(String(q.originalQuestionId));
-        options = (orig && Array.isArray(orig.options)) ? orig.options : [];
-      }
-      const correctIndex = options.findIndex(opt => opt && opt.isCorrect);
-
+      if ((q.type || 'mcq') !== 'mcq') continue;
       const key = String(q._id);
-      const selected = submitted[key];
+      const state = perQuestion[key];
+      if (state && state.solved) continue; // already locked-in live
+      const selected = clientAnswers[key];
       if (selected === undefined || selected === null) continue;
 
-      answersSubmitted += 1;
-      if (Number(selected) === correctIndex && correctIndex !== -1) {
-        score += 1;
+      mergedAnswers[key] = Number(selected);
+      const correctIndex = correctIndexFor(q, originalById);
+      const isCorrect = Number(selected) === correctIndex && correctIndex !== -1;
+      const prev = state || { attempts: 0, solved: false, awarded: 0, solvedAt: null };
+      prev.attempts += 1;
+      if (isCorrect && !prev.solved) {
+        prev.solved = true;
+        prev.awarded = CORRECT_POINTS;
+        prev.solvedAt = new Date();
+        result.livePoints = (result.livePoints || 0) + CORRECT_POINTS;
+        result.score = (result.score || 0) + 1;
+      } else if (!isCorrect) {
+        result.livePoints = Math.max(0, (result.livePoints || 0) - WRONG_PENALTY);
       }
+      perQuestion[key] = prev;
     }
 
-    const result = await ContestResult.findOneAndUpdate(
-      { contest: contestId, student: studentId },
-      {
-        score,
-        totalQuestions,
-        timeTakenSeconds: Number(timeTakenSeconds) || 0,
-        answersSubmitted,
-        answers: submitted,
-        isDisqualified: !!isDisqualified,
-        disqualificationReason: disqualificationReason || '',
-        submittedAt: new Date()
-      },
-      { upsert: true, new: true, runValidators: true }
-    );
-
-    // Fetch top 3 and emit live updates to the contest room (exclude disqualified students)
-    try {
-      const top3 = await ContestResult.find({ contest: contestId, isDisqualified: { $ne: true } })
-        .sort({ answersSubmitted: -1, updatedAt: 1 })
-        .limit(3)
-        .populate('student', 'name')
-        .lean();
-      
-      console.log(`[Controller] Broadcasting updated leaderboard for contest ${contestId}:`, JSON.stringify(top3));
-      const { getIO } = require('../socket');
-      const io = getIO();
-      io.to(`contest:${contestId}`).emit('contest:leaderboard', top3);
-    } catch (err) {
-      console.error('Error broadcasting contest leaderboard update:', err);
+    result.perQuestion = perQuestion;
+    result.markModified('perQuestion');
+    result.answers = mergedAnswers;
+    result.markModified('answers');
+    result.answersSubmitted = Object.keys(mergedAnswers).length;
+    result.totalQuestions = totalQuestions;
+    result.timeTakenSeconds = Number(timeTakenSeconds) || result.timeTakenSeconds || 0;
+    result.isDisqualified = !!isDisqualified;
+    result.disqualificationReason = disqualificationReason || '';
+    result.isFinished = true;
+    if (result.livePoints > 0 && !result.lastPointsChangeAt) {
+      result.lastPointsChangeAt = new Date();
     }
+    await result.save();
 
-    return ApiResponse.success(res, result, 'Contest result submitted successfully');
+    await broadcastLeaderboard(contestId);
+
+    return ApiResponse.success(res, result, 'Contest submitted successfully');
   } catch (err) {
     console.error('Submit contest result error:', err);
     return next(err);
@@ -656,61 +772,84 @@ exports.submitContestResult = async (req, res, next) => {
 exports.getContestResult = async (req, res, next) => {
   try {
     const contestId = req.params.id;
-    const contest = await Contest.findById(contestId).select('creator registeredStudents adminStatus');
+    const contest = await Contest.findById(contestId).select('creator registeredStudents adminStatus date startTime duration ratingsSettled');
     if (!contest) {
       return ApiResponse.error(res, 'Contest not found', 404);
     }
     if (!canAccessContest(contest, req.user)) {
       return ApiResponse.error(res, 'Contest not found', 404);
     }
-    
+
+    // Lazy fallback: if the contest has ended but the scheduled sweep hasn't
+    // settled it yet, finalize points + rating now (idempotent).
+    if (!contest.ratingsSettled && getContestLifecycle(contest) === 'ended') {
+      try {
+        await settleContest(contestId);
+      } catch (settleErr) {
+        console.error('Lazy settlement in getContestResult failed:', settleErr);
+      }
+    }
+
     // Find all results for this contest, populated with student's name
     const results = await ContestResult.find({ contest: contestId })
       .populate('student', 'name')
       .lean();
 
-    // Sort: score desc, timeTakenSeconds asc (disqualified to the bottom)
+    // Rank by live points (desc), earlier last-change wins ties, DQ to the bottom.
     results.sort((a, b) => {
       if (a.isDisqualified && !b.isDisqualified) return 1;
       if (!a.isDisqualified && b.isDisqualified) return -1;
-      if (b.score !== a.score) {
-        return b.score - a.score;
+      if ((b.livePoints || 0) !== (a.livePoints || 0)) {
+        return (b.livePoints || 0) - (a.livePoints || 0);
       }
-      return a.timeTakenSeconds - b.timeTakenSeconds;
+      const at = a.lastPointsChangeAt ? new Date(a.lastPointsChangeAt).getTime() : Infinity;
+      const bt = b.lastPointsChangeAt ? new Date(b.lastPointsChangeAt).getTime() : Infinity;
+      return at - bt;
     });
 
     // Calculate ranks (handling ties)
-    let lastScore = -1;
-    let lastTime = -1;
+    let lastPoints = null;
+    let lastTime = null;
     let currentRank = 0;
 
     const rankedResults = results.map((resItem, index) => {
       if (resItem.isDisqualified) {
-        return {
-          ...resItem,
-          rank: 'DQ'
-        };
+        return { ...resItem, rank: 'DQ' };
       }
-      if (resItem.score !== lastScore || resItem.timeTakenSeconds !== lastTime) {
+      const points = resItem.livePoints || 0;
+      const time = resItem.lastPointsChangeAt ? new Date(resItem.lastPointsChangeAt).getTime() : Infinity;
+      if (points !== lastPoints || time !== lastTime) {
         currentRank = index + 1;
       }
-      lastScore = resItem.score;
-      lastTime = resItem.timeTakenSeconds;
-
-      return {
-        ...resItem,
-        rank: currentRank
-      };
+      lastPoints = points;
+      lastTime = time;
+      return { ...resItem, rank: currentRank };
     });
 
     const userResult = rankedResults.find(r => r.student && r.student._id.toString() === req.user.id);
-    
+
+    // If settled, surface the rating delta from the persisted history.
+    let ratingDelta = null;
+    let newRating = null;
+    if (userResult) {
+      const historyEntry = await RatingHistory.findOne({ student: req.user.id, contest: contestId }).lean();
+      if (historyEntry) {
+        ratingDelta = historyEntry.delta;
+        newRating = historyEntry.newRating;
+      }
+    }
+
     return ApiResponse.success(res, {
+      settled: !!contest.ratingsSettled,
       userResult: userResult ? {
         score: userResult.score,
         totalQuestions: userResult.totalQuestions,
         percentage: userResult.totalQuestions > 0 ? Math.round((userResult.score / userResult.totalQuestions) * 100) : 0,
         rank: userResult.rank,
+        livePoints: userResult.livePoints || 0,
+        pointsEarned: userResult.pointsEarned || 0,
+        ratingDelta,
+        newRating,
         timeTakenSeconds: userResult.timeTakenSeconds,
         isDisqualified: userResult.isDisqualified || false,
         disqualificationReason: userResult.disqualificationReason || ''
@@ -807,111 +946,44 @@ exports.registerForContest = async (req, res, next) => {
  * @route   GET /api/contests/rating/me
  * @access  Private (student)
  *
- * Ratings are computed from real, finished contests the student took part in.
- * The value only moves when they participate in a contest that has ended; it
- * is persisted to RatingHistory (one entry per contest) and to the User doc,
- * so it is stable and never regenerated from fake data.
+ * Ratings are finalized once per contest by the settlement service (on a
+ * schedule and as a lazy fallback). This endpoint is a thin reader: it makes
+ * sure any of the student's ended-but-unsettled contests are settled, then
+ * returns the persisted RatingHistory and the current/max rating.
  */
 exports.getMyRating = async (req, res, next) => {
   try {
     const studentId = req.user.id;
     const now = new Date();
 
-    // Every contest this student submitted a result for.
+    // Settle any of this student's ended contests that haven't been finalized.
     const myResults = await ContestResult.find({ student: studentId })
       .populate('contest')
       .lean();
-
-    // Keep only contests that have actually ended, ordered by when they ended.
-    const finishedResults = myResults
-      .filter((r) => r.contest && resolveContestDates(r.contest).endDate < now)
-      .sort((a, b) => resolveContestDates(a.contest).endDate - resolveContestDates(b.contest).endDate);
-
-    // Which of those already have a persisted rating entry?
-    let existing = await RatingHistory.find({ student: studentId }).lean();
-
-    // Histories generated by the old system started at 1400. Rebuild them once
-    // from the new zero baseline so existing students follow the same ladder.
-    let orderedExisting = [...existing].sort(
-      (a, b) => new Date(a.contestDate) - new Date(b.contestDate)
-    );
-    if (orderedExisting.length > 0 && orderedExisting[0].oldRating !== INITIAL_RATING) {
-      await RatingHistory.deleteMany({ student: studentId });
-      existing = [];
-      orderedExisting = [];
-    }
-
-    const ratedContestIds = new Set(existing.map((e) => e.contest.toString()));
-
-    // Rating so far = newRating of the latest existing entry (chronologically).
-    let runningRating = orderedExisting.length
-      ? orderedExisting[orderedExisting.length - 1].newRating
-      : INITIAL_RATING;
-
-    // Finalize any not-yet-rated finished contests, in chronological order.
-    for (const result of finishedResults) {
-      const contest = result.contest;
-      if (ratedContestIds.has(contest._id.toString())) continue;
-
-      // Real standings for this contest.
-      const contestResults = await ContestResult.find({ contest: contest._id }).lean();
-      contestResults.sort((a, b) => {
-        if (a.isDisqualified && !b.isDisqualified) return 1;
-        if (!a.isDisqualified && b.isDisqualified) return -1;
-        if (b.score !== a.score) return b.score - a.score;
-        return a.timeTakenSeconds - b.timeTakenSeconds;
-      });
-      let rank = contestResults.length;
-      for (let i = 0; i < contestResults.length; i += 1) {
-        if (contestResults[i].student.toString() === studentId.toString()) {
-          rank = i + 1;
-          break;
-        }
-      }
-      const participants = contestResults.length;
-      const percentage = result.totalQuestions > 0
-        ? (result.score / result.totalQuestions) * 100
-        : 0;
-
-      const performance = contestPerformance(rank, participants, percentage);
-      const oldRating = runningRating;
-      const delta = Math.round((performance - oldRating) / 2);
-      const newRating = Math.max(0, oldRating + delta);
-
+    const pendingContestIds = myResults
+      .filter((r) => r.contest && !r.contest.ratingsSettled && resolveContestDates(r.contest).endDate < now)
+      .map((r) => r.contest._id);
+    for (const contestId of pendingContestIds) {
       try {
-        await RatingHistory.create({
-          student: studentId,
-          contest: contest._id,
-          contestName: contest.name || 'Contest',
-          contestDate: resolveContestDates(contest).endDate,
-          rank,
-          participants,
-          score: result.score,
-          totalQuestions: result.totalQuestions,
-          oldRating,
-          newRating,
-          delta
-        });
-        runningRating = newRating;
-      } catch (writeErr) {
-        // Unique index guards against a race; ignore duplicates.
-        if (writeErr.code !== 11000) throw writeErr;
+        await settleContest(contestId);
+      } catch (settleErr) {
+        console.error('Lazy settlement in getMyRating failed:', settleErr);
       }
     }
 
-    // Final ordered history to return + persist current/max on the user.
     const history = await RatingHistory.find({ student: studentId })
       .sort({ contestDate: 1 })
       .lean();
 
-    const current = history.length ? history[history.length - 1].newRating : INITIAL_RATING;
-    const max = history.length ? Math.max(INITIAL_RATING, ...history.map((h) => h.newRating)) : INITIAL_RATING;
-
-    await User.findByIdAndUpdate(studentId, { rating: current, maxRating: max });
+    const user = await User.findById(studentId).select('rating maxRating contestPoints contestsPlayed').lean();
+    const current = user && Number.isFinite(user.rating) ? user.rating : INITIAL_RATING;
+    const max = user && Number.isFinite(user.maxRating) ? user.maxRating : INITIAL_RATING;
 
     return ApiResponse.success(res, {
       current,
       max,
+      contestPoints: user ? (user.contestPoints || 0) : 0,
+      contestsPlayed: user ? (user.contestsPlayed || 0) : 0,
       rankTitle: getRatingRankTitle(current),
       maxRankTitle: getRatingRankTitle(max),
       unrated: history.length === 0,
@@ -923,11 +995,68 @@ exports.getMyRating = async (req, res, next) => {
         oldRating: h.oldRating,
         newRating: h.newRating,
         rankTitle: getRatingRankTitle(h.newRating),
-        delta: h.delta
+        delta: h.delta,
+        pointsEarned: h.pointsEarned || 0
       }))
     }, 'Rating history fetched successfully');
   } catch (err) {
     console.error('Get my rating error:', err);
+    return next(err);
+  }
+};
+
+/**
+ * @desc    Global leaderboard of contest participants by points or rating
+ * @route   GET /api/contests/leaderboard?by=points|rating
+ * @access  Private
+ */
+exports.getGlobalLeaderboard = async (req, res, next) => {
+  try {
+    const by = req.query.by === 'rating' ? 'rating' : 'points';
+    const sortField = by === 'rating' ? 'rating' : 'contestPoints';
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+
+    const users = await User.find({ contestsPlayed: { $gt: 0 } })
+      .select('name username rating maxRating contestPoints contestsPlayed')
+      .sort({ [sortField]: -1, maxRating: -1 })
+      .limit(limit)
+      .lean();
+
+    const leaderboard = users.map((u, index) => ({
+      rank: index + 1,
+      _id: u._id,
+      name: u.name,
+      username: u.username,
+      rating: u.rating || 0,
+      rankTitle: getRatingRankTitle(u.rating || 0),
+      contestPoints: u.contestPoints || 0,
+      contestsPlayed: u.contestsPlayed || 0
+    }));
+
+    // Resolve the caller's own rank (may be outside the returned page).
+    let me = null;
+    const meDoc = await User.findById(req.user.id)
+      .select('name username rating contestPoints contestsPlayed')
+      .lean();
+    if (meDoc && meDoc.contestsPlayed > 0) {
+      const higher = await User.countDocuments({
+        contestsPlayed: { $gt: 0 },
+        [sortField]: { $gt: meDoc[sortField] || 0 }
+      });
+      me = {
+        rank: higher + 1,
+        name: meDoc.name,
+        username: meDoc.username,
+        rating: meDoc.rating || 0,
+        rankTitle: getRatingRankTitle(meDoc.rating || 0),
+        contestPoints: meDoc.contestPoints || 0,
+        contestsPlayed: meDoc.contestsPlayed || 0
+      };
+    }
+
+    return ApiResponse.success(res, { by, leaderboard, me }, 'Global leaderboard fetched successfully');
+  } catch (err) {
+    console.error('Get global leaderboard error:', err);
     return next(err);
   }
 };

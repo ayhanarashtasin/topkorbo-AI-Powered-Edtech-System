@@ -78,14 +78,9 @@ function initSocket(httpServer) {
       socket.join(`contest:${String(contestId)}`);
       {
         try {
-          const ContestResult = require('../models/ContestResult');
-          const top3 = await ContestResult.find({ contest: contestId, isDisqualified: { $ne: true } })
-            .sort({ answersSubmitted: -1, updatedAt: 1 })
-            .limit(3)
-            .populate('student', 'name')
-            .lean();
-          console.log(`[Socket] Emitting initial leaderboard for contest ${contestId}:`, JSON.stringify(top3));
-          socket.emit('contest:leaderboard', top3);
+          const { buildLiveLeaderboard } = require('../services/contestSettlementService');
+          const board = await buildLiveLeaderboard(contestId, 10);
+          socket.emit('contest:leaderboard', board);
         } catch (err) {
           console.error('Error fetching initial contest leaderboard:', err);
         }

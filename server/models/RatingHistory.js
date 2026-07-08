@@ -31,6 +31,8 @@ const ratingHistorySchema = new mongoose.Schema(
     participants: { type: Number, required: true },
     score: { type: Number, default: 0 },
     totalQuestions: { type: Number, default: 0 },
+    // Contest points banked from this contest (for the history/points graph).
+    pointsEarned: { type: Number, default: 0 },
     oldRating: { type: Number, required: true },
     newRating: { type: Number, required: true },
     delta: { type: Number, required: true }

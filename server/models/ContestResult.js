@@ -34,6 +34,40 @@ const contestResultSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {}
     },
+    // ===== Live, point-based scoring during a running contest =====
+    // Running point total accumulated while the contest is live (correct answers
+    // add points, wrong answers apply a penalty). Floored at 0.
+    livePoints: {
+      type: Number,
+      default: 0,
+      index: true
+    },
+    // Per-question live state keyed by contest question _id:
+    // { [questionId]: { attempts, solved, awarded, solvedAt } }
+    perQuestion: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    },
+    // Timestamp of the last livePoints change — leaderboard tiebreak (earlier wins).
+    lastPointsChangeAt: {
+      type: Date,
+      default: null
+    },
+    // Final points banked to the account at settlement (livePoints + rank bonus).
+    pointsEarned: {
+      type: Number,
+      default: 0
+    },
+    // Final rank assigned at settlement.
+    finalRank: {
+      type: Number,
+      default: null
+    },
+    // Set when the student finishes/submits the contest.
+    isFinished: {
+      type: Boolean,
+      default: false
+    },
     isDisqualified: {
       type: Boolean,
       default: false

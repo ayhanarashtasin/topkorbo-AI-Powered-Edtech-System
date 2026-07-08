@@ -109,7 +109,7 @@ export default function Dashboard() {
   });
   const [practiceStats, setPracticeStats] = useState(null);
   const [studentAttempts, setStudentAttempts] = useState([]);
-  const [ratingData, setRatingData] = useState({ current: 0, max: 0, unrated: false, history: [] });
+  const [ratingData, setRatingData] = useState({ current: 0, max: 0, contestPoints: 0, contestsPlayed: 0, unrated: false, history: [] });
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState('');
   const [requestingMentorId, setRequestingMentorId] = useState('');
@@ -629,6 +629,15 @@ export default function Dashboard() {
         secondaryLabel: 'Max',
         secondaryValue: maxRating,
         accent: currentTier.color
+      },
+      {
+        name: 'Contest points',
+        subtitle: (ratingData.contestsPlayed || 0) > 0 ? `${ratingData.contestsPlayed} contests` : 'No contests yet',
+        primaryLabel: 'Points',
+        primaryValue: ratingData.contestPoints || 0,
+        secondaryLabel: 'Played',
+        secondaryValue: ratingData.contestsPlayed || 0,
+        accent: '#d9a441'
       },
       {
         name: 'Problems solved',

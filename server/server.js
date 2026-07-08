@@ -372,6 +372,16 @@ initSocket(httpServer);
 const server = httpServer.listen(PORT, () => {
   // Promote configured admin emails once the DB is reachable.
   setTimeout(() => bootstrapAdmin(), 1500);
+
+  // Finalize ratings + bank contest points for any contests that have ended.
+  // Runs once shortly after boot and then on a fixed interval (idempotent).
+  const { settleEndedContests } = require("./services/contestSettlementService");
+  const runSettlement = () =>
+    settleEndedContests().catch((err) =>
+      console.error("Contest settlement sweep failed:", err),
+    );
+  setTimeout(runSettlement, 5000);
+  setInterval(runSettlement, 5 * 60 * 1000);
 });
 
 server.on("error", (err) => {
