@@ -73,7 +73,15 @@ const forumApi = {
     return request('/posts', { method: 'POST', body: form, isForm: true });
   },
   updatePost(id, patch) {
-    return request(`/posts/${id}`, { method: 'PATCH', body: patch });
+    const form = new FormData();
+    for (const field of ['contentHtml', 'title', 'category', 'type', 'tags']) {
+      if (patch[field] !== undefined) form.append(field, patch[field]);
+    }
+    if (patch.keepImages !== undefined) {
+      form.append('keepImages', JSON.stringify(patch.keepImages));
+    }
+    for (const file of patch.images || []) form.append('images', file);
+    return request(`/posts/${id}`, { method: 'PATCH', body: form, isForm: true });
   },
   deletePost(id) {
     return request(`/posts/${id}`, { method: 'DELETE' });

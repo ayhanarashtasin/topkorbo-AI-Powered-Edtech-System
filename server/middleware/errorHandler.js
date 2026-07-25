@@ -63,6 +63,12 @@ const errorHandler = (err, req, res, next) => {
 
   // Multer errors (file upload)
   if (err.code === 'LIMIT_FILE_SIZE') {
+    if (/^\/api\/users\/me/.test(req.originalUrl || '')) {
+      return ApiResponse.error(res, 'Avatar too large. Avatars are limited to 2MB.', 413);
+    }
+    if (/^\/api\/(?:posts|comments)/.test(req.originalUrl || '')) {
+      return ApiResponse.error(res, 'Image too large. Forum images are limited to 4MB.', 413);
+    }
     return ApiResponse.error(res, `File too large. Max size is ${upload.MAX_PDF_UPLOAD_MB}MB`, 413);
   }
   if (err.code === 'LIMIT_UNEXPECTED_FILE') {

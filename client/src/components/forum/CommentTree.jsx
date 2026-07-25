@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForum } from '../../context/ForumContext';
 import CommentItem from './CommentItem';
 import RichTextEditor from './RichTextEditor';
@@ -14,17 +14,50 @@ export default function CommentTree({ postId, onCountChange }) {
   const [replyingTo, setReplyingTo] = useState(null);
   const [topHtml, setTopHtml] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
   const editorRef = useRef(null);
-  const mentionRef = useRef(null);
+  const commentIdsRef = useRef(new Set());
+
+  const addComment = useCallback((comment) => {
+    const id = String(comment._id);
+    if (commentIdsRef.current.has(id)) return false;
+    commentIdsRef.current.add(id);
+    setAllComments((current) => [...current, comment]);
+    onCountChange?.(1);
+    return true;
+  }, [onCountChange]);
+
+  const removeComment = useCallback((commentId) => {
+    const id = String(commentId);
+    if (!commentIdsRef.current.has(id)) return false;
+    commentIdsRef.current.delete(id);
+    setAllComments((current) =>
+      current.filter((comment) => String(comment._id) !== id)
+    );
+    onCountChange?.(-1);
+    return true;
+  }, [onCountChange]);
 
   // Initial load of the comment thread.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await forumApi.comments(postId);
-        if (!cancelled) setAllComments(r.data || []);
-      } catch {}
+        const response = await forumApi.comments(postId);
+        if (!cancelled) {
+          const comments = response.data || [];
+          commentIdsRef.current = new Set(comments.map((comment) => String(comment._id)));
+          setAllComments(comments);
+          setNextCursor(response.nextCursor || null);
+        }
+      } catch (requestError) {
+        if (!cancelled) setError(requestError.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [postId]);
@@ -33,28 +66,26 @@ export default function CommentTree({ postId, onCountChange }) {
   useEffect(() => {
     const off = subscribeComment(postId, {
       onNew: (c) => {
-        setAllComments((prev) => (prev.find((x) => x._id === c._id) ? prev : [...prev, c]));
+        addComment(c);
       },
       onUpdate: (c) => {
         setAllComments((prev) => prev.map((x) => (x._id === c._id ? c : x)));
       },
       onDelete: ({ commentId }) => {
-        setAllComments((prev) => prev.filter((x) => x._id !== commentId));
+        removeComment(commentId);
       }
     });
     return () => off && off();
-  }, [postId, subscribeComment]);
-
-  useEffect(() => {
-    onCountChange && onCountChange(allComments.length);
-  }, [allComments.length, onCountChange]);
+  }, [addComment, postId, removeComment, subscribeComment]);
 
   // Group comments by their parent ID so we can render them as a tree.
   // `__root__` is the synthetic bucket for top-level comments.
   const tree = useMemo(() => {
     const byParent = new Map();
+    const knownIds = new Set(allComments.map((comment) => String(comment._id)));
     for (const c of allComments) {
-      const key = c.parent ? String(c.parent) : '__root__';
+      const parentId = c.parent ? String(c.parent) : null;
+      const key = parentId && knownIds.has(parentId) ? parentId : '__root__';
       if (!byParent.has(key)) byParent.set(key, []);
       byParent.get(key).push(c);
     }
@@ -73,7 +104,7 @@ export default function CommentTree({ postId, onCountChange }) {
         setReplyingTo={setReplyingTo}
         postId={postId}
         onDelete={(id) => {
-          setAllComments((prev) => prev.filter((x) => x._id !== id));
+          removeComment(id);
         }}
         onUpdate={(updated) => {
           setAllComments((prev) => prev.map((x) => (x._id === updated._id ? updated : x)));
@@ -84,7 +115,11 @@ export default function CommentTree({ postId, onCountChange }) {
             onCancel={() => setReplyingTo(null)}
             onSubmit={async (html) => {
               try {
-                await createComment(postId, { contentHtml: html, parentId: parent._id });
+                const created = await createComment(postId, {
+                  contentHtml: html,
+                  parentId: parent._id
+                });
+                addComment(created);
                 setReplyingTo(null);
               } catch (e) {
                 alert(e.message);
@@ -103,13 +138,42 @@ export default function CommentTree({ postId, onCountChange }) {
     if (!text) return;
     setSubmitting(true);
     try {
-      await createComment(postId, { contentHtml: topHtml });
+      const created = await createComment(postId, { contentHtml: topHtml });
+      addComment(created);
       setTopHtml('');
       editorRef.current && editorRef.current.clear();
     } catch (e) {
       alert(e.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const response = await forumApi.comments(postId, nextCursor);
+      const incoming = response.data || [];
+      for (const comment of incoming) {
+        const id = String(comment._id);
+        if (!commentIdsRef.current.has(id)) {
+          commentIdsRef.current.add(id);
+        }
+      }
+      setAllComments((current) => {
+        const currentIds = new Set(current.map((comment) => String(comment._id)));
+        return [
+          ...current,
+          ...incoming.filter((comment) => !currentIds.has(String(comment._id)))
+        ];
+      });
+      setNextCursor(response.nextCursor || null);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -134,13 +198,32 @@ export default function CommentTree({ postId, onCountChange }) {
         </div>
       </div>
 
-      {(tree.get('__root__') || []).length === 0 ? (
+      {error ? (
+        <div className="forum-error" role="alert">{error}</div>
+      ) : null}
+
+      {loading ? (
+        <p className="forum-muted" style={{ textAlign: 'center', padding: 16 }}>
+          Loading commentsâ€¦
+        </p>
+      ) : (tree.get('__root__') || []).length === 0 ? (
         <p className="forum-muted" style={{ textAlign: 'center', padding: 16 }}>
           Be the first to comment.
         </p>
       ) : (
         (tree.get('__root__') || []).map(renderNode)
       )}
+
+      {nextCursor ? (
+        <button
+          type="button"
+          className="forum-load-more"
+          disabled={loadingMore}
+          onClick={loadMore}
+        >
+          {loadingMore ? 'Loadingâ€¦' : 'Load more comments'}
+        </button>
+      ) : null}
     </div>
   );
 }

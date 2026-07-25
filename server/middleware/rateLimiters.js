@@ -1,5 +1,5 @@
 /**
- * Centralised rate limiters (express-rate-limit v7).
+ * Centralised rate limiters (express-rate-limit v8).
  *
  * Sensitive endpoints — auth/OAuth, payment init, AI (LLM cost), and forum
  * writes — are brute-force / spam / cost-amplification targets. Authenticated
@@ -10,6 +10,7 @@
  * server.js sets `app.set('trust proxy', 1)` in production.
  */
 const rateLimit = require('express-rate-limit');
+const { createRateLimitStore } = require('../config/redis');
 
 const standard = {
   standardHeaders: true,
@@ -18,7 +19,14 @@ const standard = {
 
 // Key by authenticated user id when present, else fall back to IP.
 function userOrIpKey(req, res) {
-  return (req.user && req.user.id) ? `u:${req.user.id}` : `ip:${req.ip}`;
+  return (req.user && req.user.id)
+    ? `u:${req.user.id}`
+    : `ip:${rateLimit.ipKeyGenerator(req.ip)}`;
+}
+
+function distributedStore(prefix) {
+  const store = createRateLimitStore(prefix);
+  return store ? { store } : {};
 }
 
 const message = (msg) => ({ success: false, message: msg, code: 'RATE_LIMITED' });
@@ -26,6 +34,7 @@ const message = (msg) => ({ success: false, message: msg, code: 'RATE_LIMITED' }
 // Global backstop — generous, protects the whole API surface.
 const globalLimiter = rateLimit({
   ...standard,
+  ...distributedStore('rl:global:'),
   windowMs: 60 * 1000,
   max: 300,
   message: message('Too many requests. Please slow down and try again shortly.')
@@ -34,6 +43,7 @@ const globalLimiter = rateLimit({
 // Auth / OAuth — brute force + callback flooding.
 const authLimiter = rateLimit({
   ...standard,
+  ...distributedStore('rl:auth:'),
   windowMs: 15 * 60 * 1000,
   max: 40,
   message: message('Too many authentication attempts. Try again in a few minutes.')
@@ -43,6 +53,7 @@ const authLimiter = rateLimit({
 // NOT limited here (they must be able to retry) and are validated server-side.
 const paymentLimiter = rateLimit({
   ...standard,
+  ...distributedStore('rl:payment:'),
   windowMs: 15 * 60 * 1000,
   max: 20,
   keyGenerator: userOrIpKey,
@@ -52,6 +63,7 @@ const paymentLimiter = rateLimit({
 // AI / LLM — protects against cost abuse and request amplification.
 const aiLimiter = rateLimit({
   ...standard,
+  ...distributedStore('rl:ai:'),
   windowMs: 60 * 1000,
   max: 20,
   keyGenerator: userOrIpKey,
@@ -61,15 +73,26 @@ const aiLimiter = rateLimit({
 // Forum writes (posts/comments/reactions) — spam control.
 const writeLimiter = rateLimit({
   ...standard,
+  ...distributedStore('rl:forum-write:'),
   windowMs: 60 * 1000,
   max: 30,
   keyGenerator: userOrIpKey,
   message: message('You are posting too quickly. Please slow down.')
 });
 
+const reportLimiter = rateLimit({
+  ...standard,
+  ...distributedStore('rl:forum-report:'),
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyGenerator: userOrIpKey,
+  message: message('Too many reports. Please wait before submitting another.')
+});
+
 // Uploads — heavier disk/network cost per request.
 const uploadLimiter = rateLimit({
   ...standard,
+  ...distributedStore('rl:upload:'),
   windowMs: 60 * 1000,
   max: 30,
   keyGenerator: userOrIpKey,
@@ -82,5 +105,6 @@ module.exports = {
   paymentLimiter,
   aiLimiter,
   writeLimiter,
+  reportLimiter,
   uploadLimiter
 };

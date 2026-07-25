@@ -57,10 +57,13 @@ const postSchema = new mongoose.Schema(
 );
 
 // Compound indexes for feed queries
-postSchema.index({ isHidden: 1, createdAt: -1 });
-postSchema.index({ isHidden: 1, category: 1, createdAt: -1 });
-postSchema.index({ isHidden: 1, score: -1, createdAt: -1 });
-postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ isHidden: 1, createdAt: -1, _id: -1 });
+postSchema.index({ isHidden: 1, category: 1, createdAt: -1, _id: -1 });
+postSchema.index({ isHidden: 1, score: -1, createdAt: -1, _id: -1 });
+postSchema.index({ isHidden: 1, category: 1, score: -1, createdAt: -1, _id: -1 });
+postSchema.index({ isHidden: 1, commentsCount: -1, createdAt: -1, _id: -1 });
+postSchema.index({ isHidden: 1, category: 1, commentsCount: -1, createdAt: -1, _id: -1 });
+postSchema.index({ author: 1, isHidden: 1, createdAt: -1, _id: -1 });
 
 // Full-text index for search
 postSchema.index(

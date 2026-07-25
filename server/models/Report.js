@@ -61,5 +61,13 @@ const reportSchema = new mongoose.Schema(
 );
 
 reportSchema.index({ status: 1, createdAt: -1 });
+reportSchema.index({ targetType: 1, target: 1, createdAt: -1 });
+reportSchema.index(
+  { reporter: 1, targetType: 1, target: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ['open', 'under_review'] } }
+  }
+);
 
 module.exports = mongoose.model('Report', reportSchema);

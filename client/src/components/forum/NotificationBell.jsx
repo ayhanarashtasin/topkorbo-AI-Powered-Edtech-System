@@ -63,19 +63,21 @@ export default function NotificationBell() {
         className="forum-icon-btn"
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
+        aria-expanded={open}
+        aria-controls="forum-notifications-panel"
         title="Notifications"
       >
-        <HiBell size={20} />
+        <HiBell size={20} aria-hidden="true" />
         {unreadCount > 0 && <span className="forum-bell__badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
       {open && (
-        <div className="forum-bell__panel" role="dialog" aria-label="Notifications">
+        <div id="forum-notifications-panel" className="forum-bell__panel" role="dialog" aria-label="Notifications">
           <div className="forum-bell__header">
             <h4>Notifications</h4>
             {unreadCount > 0 && (
               <button type="button" className="forum-bell__markall" onClick={markAllNotificationsRead}>
-                Mark all read
+                Mark All Read
               </button>
             )}
           </div>
@@ -86,20 +88,21 @@ export default function NotificationBell() {
             {notifications.map((n) => {
               const Icon = ICONS[n.type] || HiBell;
               return (
-                <div
+                <button
+                  type="button"
                   key={n._id}
                   className={`forum-bell__item ${!n.read ? 'forum-bell__item--unread' : ''}`}
                   onClick={() => openItem(n)}
                 >
                   <div className="forum-bell__icon">
-                    <Icon size={18} />
+                    <Icon size={18} aria-hidden="true" />
                   </div>
                   <div className="forum-bell__main">
                     <div className="forum-bell__msg">{n.message}</div>
                     {n.preview && <div className="forum-bell__preview">{n.preview}</div>}
                     <div className="forum-bell__time">{timeAgo(n.createdAt)}</div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

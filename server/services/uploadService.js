@@ -4,7 +4,9 @@ const crypto = require('crypto');
 const { cloudinary, isCloudinaryEnabled } = require('../config/cloudinary');
 
 const LOCAL_ROOT = path.resolve(__dirname, '..', 'uploads', 'forum');
-if (!fs.existsSync(LOCAL_ROOT)) fs.mkdirSync(LOCAL_ROOT, { recursive: true });
+const requiresExternalStorage =
+  Boolean(process.env.VERCEL) ||
+  process.env.REQUIRE_EXTERNAL_IMAGE_STORAGE === 'true';
 
 /**
  * Upload a single image buffer.
@@ -41,6 +43,14 @@ async function uploadImage(file, userId, folder = 'topkorbo/forum') {
   // Local fallback — write to /uploads/forum/<userId>/<timestamp>-<rand>.<ext>
   // Derive the extension from the *detected* content type (set by
   // verifyImageBytes), never from the client-supplied filename/mimetype.
+  if (requiresExternalStorage) {
+    const error = new Error(
+      'Forum image storage is not configured. Set the Cloudinary environment variables.'
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+
   const ext = (file.detectedExt || mimeToExt(file.detectedMime) || mimeToExt(file.mimetype) || '.jpg')
     .toLowerCase()
     .replace(/[^a-z0-9.]/g, '');
@@ -68,7 +78,7 @@ function mimeToExt(mime) {
  * Delete a previously uploaded image (best-effort, swallows errors).
  */
 async function deleteImage(publicId, localUrl) {
-  if (isCloudinaryEnabled && publicId && !publicId.includes('/')) {
+  if (isCloudinaryEnabled && publicId) {
     try {
       await cloudinary.uploader.destroy(publicId);
     } catch (e) {

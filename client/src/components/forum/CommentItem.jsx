@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HiOutlineHeart, HiHeart, HiOutlineReply, HiPencilAlt, HiTrash, HiFlag } from 'react-icons/hi';
 import { useForum } from '../../context/ForumContext';
-import UserAvatar from './UserAvatar';
+import { UserAvatarLink } from './UserAvatar';
 import ReportModal from './ReportModal';
 import forumApi from '../../services/forumApi';
 import { sanitizeHtml } from '../../utils/safeHtml';
@@ -29,34 +29,29 @@ export default function CommentItem({
   setReplyingTo,
   children,
   onDelete,
-  onUpdate,
-  postId
+  onUpdate
 }) {
   const { user, toggleReaction, subscribeReaction } = useForum();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editHtml, setEditHtml] = useState(comment.contentHtml || '');
   const [counts, setCounts] = useState(comment.reactionsCount || { like: 0, love: 0 });
-  const [myReaction, setMyReaction] = useState(null);
+  const [myReaction, setMyReaction] = useState(comment.userReaction || null);
   const [busy, setBusy] = useState(false);
 
   const isOwner = user && String(user._id) === String(comment.author?._id);
-
-  useEffect(() => {
-    setCounts(comment.reactionsCount || { like: 0, love: 0 });
-  }, [comment.reactionsCount]);
+  const userId = user?._id ? String(user._id) : null;
 
   useEffect(() => {
     if (!comment?._id) return;
     const off = subscribeReaction('comment', comment._id, (payload) => {
       setCounts(payload.counts);
-      if (payload.userId && user && payload.userId === String(user._id)) {
+      if (payload.userId && userId && String(payload.userId) === userId) {
         setMyReaction(payload.userReaction);
       }
     });
     return () => off && off();
-  }, [comment?._id, subscribeReaction, user]);
+  }, [comment?._id, subscribeReaction, userId]);
 
   async function react(type) {
     if (busy) return;
@@ -72,10 +67,16 @@ export default function CommentItem({
     });
     setMyReaction((cur) => (cur === type ? null : type));
     try {
-      await toggleReaction({ targetType: 'comment', target: comment._id, type });
-    } catch (e) {
+      const result = await toggleReaction({
+        targetType: 'comment',
+        target: comment._id,
+        type
+      });
+      setCounts(result.counts);
+      setMyReaction(result.userReaction);
+    } catch {
       setCounts(comment.reactionsCount || { like: 0, love: 0 });
-      setMyReaction(null);
+      setMyReaction(comment.userReaction || null);
     } finally {
       setBusy(false);
     }
@@ -107,14 +108,14 @@ export default function CommentItem({
 
   return (
     <div className="forum-comment" data-depth={comment.depth || 0}>
-      <UserAvatar user={comment.author} size="sm" to />
+      <UserAvatarLink user={comment.author} size="sm" />
       <div className="forum-comment__body">
         <div className="forum-comment__head">
           <span className="forum-comment__author">{comment.author?.name || 'Unknown'}</span>
           {comment.author?.username && <span>@{comment.author.username}</span>}
           <span>· {formatRelative(comment.createdAt)}</span>
           {comment.isEdited && <span>(edited)</span>}
-          {comment.author?.forumRole === 'admin' && <span className="forum-profile-header__role" style={{ fontSize: '0.66rem', padding: '1px 6px' }}>Admin</span>}
+          {comment.author?.forumRole === 'admin' && <span className="forum-role-badge forum-role-badge--admin">Admin</span>}
         </div>
 
         {editing ? (
@@ -124,10 +125,12 @@ export default function CommentItem({
               style={{ minHeight: 80, width: '100%', border: '1px solid rgba(140,90,60,0.18)', borderRadius: 8, padding: 8, font: 'inherit' }}
               value={editHtml}
               onChange={(e) => setEditHtml(e.target.value)}
+              name="edited-comment"
+              aria-label="Edit comment"
             />
             <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
               <button type="button" className="forum-btn forum-btn--primary" onClick={saveEdit} disabled={busy}>
-                Save
+                Save Edit
               </button>
               <button type="button" className="forum-btn" onClick={() => { setEditing(false); setEditHtml(comment.contentHtml); }}>
                 Cancel
@@ -142,37 +145,35 @@ export default function CommentItem({
         )}
 
         <div className="forum-comment__actions">
-          <button type="button" className={`forum-comment__action ${myReaction === 'like' ? 'forum-action-btn--active' : ''}`} onClick={() => react('like')}>
-            <HiOutlineHeart size={13} /> {counts.like || 0}
+          <button type="button" className={`forum-comment__action ${myReaction === 'like' ? 'forum-action-btn--active' : ''}`} onClick={() => react('like')} aria-pressed={myReaction === 'like'} disabled={busy}>
+            <HiOutlineHeart size={13} aria-hidden="true" /> {counts.like || 0}
           </button>
-          <button type="button" className={`forum-comment__action forum-action-btn--love ${myReaction === 'love' ? 'forum-action-btn--active' : ''}`} onClick={() => react('love')}>
-            <HiHeart size={13} /> {counts.love || 0}
+          <button type="button" className={`forum-comment__action forum-action-btn--love ${myReaction === 'love' ? 'forum-action-btn--active' : ''}`} onClick={() => react('love')} aria-pressed={myReaction === 'love'} disabled={busy}>
+            <HiHeart size={13} aria-hidden="true" /> {counts.love || 0}
           </button>
           <button type="button" className="forum-comment__action" onClick={() => setReplyingTo(replyingTo === comment._id ? null : comment._id)}>
-            <HiOutlineReply size={13} /> Reply
+            <HiOutlineReply size={13} aria-hidden="true" /> Reply
           </button>
           {isOwner && (
             <>
               <button type="button" className="forum-comment__action" onClick={() => setEditing(true)}>
-                <HiPencilAlt size={13} /> Edit
+                <HiPencilAlt size={13} aria-hidden="true" /> Edit
               </button>
               <button type="button" className="forum-comment__action" onClick={deleteThis}>
-                <HiTrash size={13} /> Delete
+                <HiTrash size={13} aria-hidden="true" /> Delete
               </button>
             </>
           )}
           {!isOwner && (
             <button type="button" className="forum-comment__action" onClick={() => setReportOpen(true)}>
-              <HiFlag size={13} /> Report
+              <HiFlag size={13} aria-hidden="true" /> Report
             </button>
           )}
         </div>
 
         {replyingTo === comment._id && (
           <div className="forum-comment__reply-box">
-            {onReply && onReply(comment, (html) => {
-              // Reply success is handled by the parent (it closes the box).
-            })}
+            {onReply && onReply(comment, () => {})}
           </div>
         )}
 

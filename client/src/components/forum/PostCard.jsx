@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { HiDotsHorizontal, HiOutlineHeart, HiHeart, HiOutlineBookmark, HiBookmark, HiFlag, HiPencilAlt, HiTrash } from 'react-icons/hi';
 import { FaRegCommentDots } from 'react-icons/fa';
-import UserAvatar from './UserAvatar';
+import { UserAvatarLink } from './UserAvatar';
 import { useForum } from '../../context/ForumContext';
 import forumApi from '../../services/forumApi';
 import ReportModal from './ReportModal';
@@ -36,6 +36,7 @@ export default function PostCard({ post, onDelete, detail = false }) {
   const [busy, setBusy] = useState(false);
 
   const isOwner = user && String(user._id) === String(post.author?._id);
+  const userId = user?._id ? String(user._id) : null;
 
   // Local state for the reaction counts / which one the current user picked
   // and the bookmark flag — all updated optimistically for snappy UI.
@@ -44,18 +45,16 @@ export default function PostCard({ post, onDelete, detail = false }) {
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked);
 
   // Subscribe to live reaction updates for this post.
-  const unsubRef = useRef(null);
   useEffect(() => {
     if (!post?._id) return;
     const off = subscribeReaction('post', post._id, (payload) => {
       setCounts(payload.counts);
-      if (payload.userId && user && payload.userId === String(user._id)) {
+      if (payload.userId && userId && String(payload.userId) === userId) {
         setMyReaction(payload.userReaction);
       }
     });
-    unsubRef.current = off;
     return () => off && off();
-  }, [post?._id, subscribeReaction, user]);
+  }, [post?._id, subscribeReaction, userId]);
 
   async function react(type) {
     if (busy) return;
@@ -72,10 +71,16 @@ export default function PostCard({ post, onDelete, detail = false }) {
     });
     setMyReaction((cur) => (cur === type ? null : type));
     try {
-      await toggleReaction({ targetType: 'post', target: post._id, type });
+      const result = await toggleReaction({
+        targetType: 'post',
+        target: post._id,
+        type
+      });
+      setCounts(result.counts);
+      setMyReaction(result.userReaction);
     } catch {
       setCounts(post.reactionsCount || { like: 0, love: 0 });
-      setMyReaction(null);
+      setMyReaction(post.userReaction || null);
     } finally {
       setBusy(false);
     }
@@ -92,30 +97,24 @@ export default function PostCard({ post, onDelete, detail = false }) {
     }
   }
 
-  function go(e) {
-    if (e.target.closest('a, button')) return;
-    if (detail) return;
-    navigate(`/forum/post/${post._id}`);
-  }
-
   return (
-    <article className="forum-post" onClick={go} role="link" tabIndex={0}>
+    <article className="forum-post">
       <div className="forum-post__header">
-        <UserAvatar user={post.author} to />
+        <UserAvatarLink user={post.author} />
         <div className="forum-post__author-block">
           <span className="forum-post__author-name">
             {post.author?.name || 'Unknown'}
             {post.author?.forumRole === 'tutor' || post.author?.forumRole === 'teacher' || post.author?.role === 'tutor' ? (
-              <span className="forum-profile-header__role" title="Tutor" style={{ background: 'rgba(140,90,60,0.12)', color: 'var(--text-accent)' }}>
+              <span className="forum-role-badge forum-role-badge--tutor" title="Tutor">
                 Tutor
               </span>
             ) : null}
             {post.author?.forumRole === 'admin' ? (
-              <span className="forum-profile-header__role" style={{ background: 'rgba(225,29,72,0.12)', color: '#be123c' }}>
+              <span className="forum-role-badge forum-role-badge--admin">
                 Admin
               </span>
             ) : null}
-            {post.reputation > 0 && (
+            {post.author?.reputation > 0 && (
               <span className="forum-rep" title="Reputation">★ {post.author.reputation}</span>
             )}
           </span>
@@ -127,7 +126,11 @@ export default function PostCard({ post, onDelete, detail = false }) {
         <span className="forum-post__category">{post.type === 'question' ? 'Question' : post.category}</span>
       </div>
 
-      {post.title && <h2 className="forum-post__title">{post.title}</h2>}
+      {post.title ? (
+        <h2 className="forum-post__title">
+          {detail ? post.title : <Link to={`/forum/post/${post._id}`}>{post.title}</Link>}
+        </h2>
+      ) : null}
 
       {/* `contentHtml` is sanitized server-side; we sanitize again client-side
           (defense in depth) so a stale/compromised payload still can't run JS. */}
@@ -136,11 +139,24 @@ export default function PostCard({ post, onDelete, detail = false }) {
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.contentHtml || '') }}
       />
 
+      {!detail && !post.title ? (
+        <Link className="forum-post__open-link" to={`/forum/post/${post._id}`}>
+          Open Discussion
+        </Link>
+      ) : null}
+
       {post.images && post.images.length > 0 && (
         <div className="forum-post__media">
           {post.images.map((img, i) => (
             <a key={i} href={img.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-              <img src={img.url} alt="" loading="lazy" referrerPolicy="no-referrer" />
+              <img
+                src={img.url}
+                alt={post.title ? `Attachment for ${post.title}` : 'Discussion attachment'}
+                width="720"
+                height="420"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
             </a>
           ))}
         </div>
@@ -160,8 +176,9 @@ export default function PostCard({ post, onDelete, detail = false }) {
           className={`forum-action-btn ${myReaction === 'like' ? 'forum-action-btn--active' : ''}`}
           onClick={(e) => { e.stopPropagation(); react('like'); }}
           disabled={busy}
+          aria-pressed={myReaction === 'like'}
         >
-          <HiOutlineHeart size={18} />
+          <HiOutlineHeart size={18} aria-hidden="true" />
           <span className="forum-action-btn__count">{counts.like || 0}</span>
           <span>Like</span>
         </button>
@@ -170,50 +187,55 @@ export default function PostCard({ post, onDelete, detail = false }) {
           className={`forum-action-btn forum-action-btn--love ${myReaction === 'love' ? 'forum-action-btn--active' : ''}`}
           onClick={(e) => { e.stopPropagation(); react('love'); }}
           disabled={busy}
+          aria-pressed={myReaction === 'love'}
         >
-          {myReaction === 'love' ? <HiHeart size={18} /> : <HiHeart size={18} />}
+          <HiHeart size={18} aria-hidden="true" />
           <span className="forum-action-btn__count">{counts.love || 0}</span>
           <span>Love</span>
         </button>
-        <button
-          type="button"
+        <Link
           className="forum-action-btn"
-          onClick={(e) => { e.stopPropagation(); navigate(`/forum/post/${post._id}`); }}
+          to={`/forum/post/${post._id}`}
         >
-          <FaRegCommentDots size={16} />
+          <FaRegCommentDots size={16} aria-hidden="true" />
           <span className="forum-action-btn__count">{post.commentsCount || 0}</span>
           <span>Comments</span>
-        </button>
+        </Link>
         <button
           type="button"
           className={`forum-action-btn ${bookmarked ? 'forum-action-btn--active' : ''}`}
           onClick={(e) => { e.stopPropagation(); bookmark(); }}
+          aria-pressed={bookmarked}
+          aria-label={bookmarked ? 'Remove from saved discussions' : 'Save discussion'}
         >
-          {bookmarked ? <HiBookmark size={18} /> : <HiOutlineBookmark size={18} />}
+          {bookmarked ? <HiBookmark size={18} aria-hidden="true" /> : <HiOutlineBookmark size={18} aria-hidden="true" />}
           <span>{bookmarked ? 'Saved' : 'Save'}</span>
         </button>
 
-        <div className="forum-post__menu" onClick={(e) => e.stopPropagation()}>
+        <div className="forum-post__menu">
           <button
             type="button"
             className="forum-action-btn"
             onClick={() => setMenuOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
+            aria-label="More discussion actions"
           >
-            <HiDotsHorizontal size={18} />
+            <HiDotsHorizontal size={18} aria-hidden="true" />
           </button>
           {menuOpen && (
             <div className="forum-menu-list" role="menu" onMouseLeave={() => setMenuOpen(false)}>
               {isOwner && (
                 <>
                   <button
+                    type="button"
                     className="forum-menu-item"
                     onClick={() => { setMenuOpen(false); navigate(`/forum/compose?edit=${post._id}`); }}
                   >
-                    <HiPencilAlt size={16} /> Edit post
+                    <HiPencilAlt size={16} aria-hidden="true" /> Edit Post
                   </button>
                   <button
+                    type="button"
                     className="forum-menu-item forum-menu-item--danger"
                     onClick={async () => {
                       setMenuOpen(false);
@@ -226,16 +248,17 @@ export default function PostCard({ post, onDelete, detail = false }) {
                       }
                     }}
                   >
-                    <HiTrash size={16} /> Delete
+                    <HiTrash size={16} aria-hidden="true" /> Delete Post
                   </button>
                 </>
               )}
               {!isOwner && (
                 <button
+                  type="button"
                   className="forum-menu-item"
                   onClick={() => { setMenuOpen(false); setReportOpen(true); }}
                 >
-                  <HiFlag size={16} /> Report
+                  <HiFlag size={16} aria-hidden="true" /> Report Post
                 </button>
               )}
             </div>

@@ -12,7 +12,12 @@ router.use(auth);
 const aiRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
-  keyGenerator: (req) => req.user?.id || req.user?._id || req.ip,
+  keyGenerator: (req) => {
+    const userId = req.user?.id || req.user?._id;
+    return userId
+      ? `u:${String(userId)}`
+      : `ip:${rateLimit.ipKeyGenerator(req.ip)}`;
+  },
   message: { success: false, message: 'Too many requests. Please slow down and try again in a minute.' },
   standardHeaders: true,
   legacyHeaders: false

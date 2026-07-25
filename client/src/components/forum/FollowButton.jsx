@@ -6,15 +6,26 @@ import forumApi from '../../services/forumApi';
 // FollowButton — toggles the current user's follow state of `userId`
 // with optimistic UI and a toast confirmation.
 export default function FollowButton({ userId, initialFollowing, onChange }) {
-  const [following, setFollowing] = useState(!!initialFollowing);
+  const [following, setFollowing] = useState(
+    typeof initialFollowing === 'boolean' ? initialFollowing : null
+  );
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setFollowing(!!initialFollowing);
-  }, [initialFollowing]);
+    if (!userId || typeof initialFollowing === 'boolean') return;
+    let cancelled = false;
+    forumApi.followState(userId)
+      .then((response) => {
+        if (!cancelled) setFollowing(!!response.data?.following);
+      })
+      .catch((error) => {
+        if (!cancelled) toast.error(error.message || 'Could not load follow state.');
+      });
+    return () => { cancelled = true; };
+  }, [initialFollowing, userId]);
 
   async function toggle() {
-    if (!userId || busy) return;
+    if (!userId || busy || following === null) return;
     setBusy(true);
     try {
       const json = following
@@ -36,10 +47,10 @@ export default function FollowButton({ userId, initialFollowing, onChange }) {
       type="button"
       className={`forum-follow-btn ${following ? 'forum-follow-btn--following' : ''}`}
       onClick={toggle}
-      disabled={busy}
+      disabled={busy || following === null}
     >
       {following ? <HiUserRemove size={16} /> : <HiUserAdd size={16} />}
-      <span>{following ? 'Following' : 'Follow'}</span>
+      <span>{following === null ? 'Loadingâ€¦' : following ? 'Following' : 'Follow'}</span>
     </button>
   );
 }

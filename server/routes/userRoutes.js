@@ -2,15 +2,23 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { avatarUpload, verifyImageBytes } = require('../middleware/forumUpload');
+const { writeLimiter } = require('../middleware/rateLimiters');
 const userController = require('../controllers/userController');
 const postController = require('../controllers/postController');
 
 router.get('/me', auth, userController.me);
-router.patch('/me', auth, avatarUpload.single('avatar'), verifyImageBytes, userController.updateMe);
+router.patch(
+  '/me',
+  auth,
+  writeLimiter,
+  avatarUpload.single('avatar'),
+  verifyImageBytes,
+  userController.updateMe
+);
 
 // Follow
-router.post('/:id/follow', auth, userController.follow);
-router.delete('/:id/follow', auth, userController.unfollow);
+router.post('/:id/follow', auth, writeLimiter, userController.follow);
+router.delete('/:id/follow', auth, writeLimiter, userController.unfollow);
 router.get('/:id/follow-state', auth, userController.followState);
 
 // Public profile (must be last so dynamic :id doesn't shadow /me)

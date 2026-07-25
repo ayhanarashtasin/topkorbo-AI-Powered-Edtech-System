@@ -1,21 +1,45 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-export default function UserAvatar({ user, size = 'md', to }) {
-  const navigate = useNavigate();
-  const cls = `forum-avatar ${size === 'sm' ? 'forum-avatar--sm' : ''} ${size === 'lg' ? 'forum-avatar--lg' : ''}`;
+const AVATAR_PIXELS = { sm: 32, md: 42, lg: 88 };
+
+function AvatarVisual({ user, size = 'md' }) {
+  const className = `forum-avatar ${size === 'sm' ? 'forum-avatar--sm' : ''} ${size === 'lg' ? 'forum-avatar--lg' : ''}`;
   const initial = (user?.name || user?.username || '?').charAt(0).toUpperCase();
-  const handle = (e) => {
-    if (!to) return;
-    e.stopPropagation();
-    if (user?._id) navigate(`/forum/u/${user._id}`);
-  };
+  const pixels = AVATAR_PIXELS[size] || AVATAR_PIXELS.md;
+
   return (
-    <div className={cls} onClick={handle} role={to ? 'button' : undefined} style={to ? { cursor: 'pointer' } : undefined}>
+    <span className={className} aria-hidden="true">
       {user?.avatar ? (
-        <img src={user.avatar} alt={user.name || 'avatar'} loading="lazy" referrerPolicy="no-referrer" />
+        <img
+          src={user.avatar}
+          alt=""
+          width={pixels}
+          height={pixels}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
       ) : (
         <span>{initial}</span>
       )}
-    </div>
+    </span>
+  );
+}
+
+export default function UserAvatar({ user, size = 'md' }) {
+  return <AvatarVisual user={user} size={size} />;
+}
+
+export function UserAvatarLink({ user, size = 'md' }) {
+  if (!user?._id) return <AvatarVisual user={user} size={size} />;
+
+  return (
+    <Link
+      className="forum-avatar-link"
+      to={`/forum/u/${user._id}`}
+      aria-label={`View ${user.name || user.username || 'community member'}'s profile`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <AvatarVisual user={user} size={size} />
+    </Link>
   );
 }

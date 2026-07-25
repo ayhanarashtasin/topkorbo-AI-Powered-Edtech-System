@@ -1,49 +1,45 @@
 /**
- * Practice History Page
- * ----------------------------------------------------------------------------
- * Shows every Mock Test, QBank inline practice, and free practice attempt
- * the student has completed. Filterable by:
- *   - mode (mock_test / qbank_practice / inline_qbank / free_practice)
- *   - subject, paper, chapter, topic
- *   - percentage range
- *   - date range
- *
- * Clicking an attempt opens a side panel with the full per-question
- * breakdown, marks, AI feedback, and the option to delete.
+ * Practice History
+ * A study ledger for reviewing attempts, spotting patterns, and choosing
+ * what to practise next.
  */
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import {
   HiOutlineAcademicCap,
+  HiOutlineBookOpen,
+  HiOutlineCalendar,
   HiOutlineChartBar,
-  HiOutlineClipboardCheck,
+  HiOutlineCheckCircle,
+  HiOutlineChevronRight,
   HiOutlineClock,
   HiOutlineDocumentText,
   HiOutlineFilter,
+  HiOutlineFolder,
+  HiOutlineMinusCircle,
   HiOutlineSearch,
   HiOutlineTrash,
+  HiOutlineTrendingUp,
   HiOutlineX,
-  HiOutlineCheckCircle,
-  HiOutlineXCircle,
-  HiOutlineMinusCircle,
-  HiOutlineBookOpen,
-  HiOutlineFolder,
-  HiOutlineChevronRight,
-  HiOutlineCalendar,
-  HiOutlineTrendingUp
+  HiOutlineXCircle
 } from "react-icons/hi";
 import toast from "react-hot-toast";
-import Sidebar from "../components/layout/Sidebar";
-import { useLanguage } from "../hooks/useLanguage";
-import {
-  listMyAttempts,
-  getAttempt,
-  deleteAttempt,
-  getStats
-} from "../services/practiceApi";
-import "./PracticeHistory.css";
 import katex from "katex";
+import Sidebar from "../components/layout/Sidebar";
+import {
+  deleteAttempt,
+  getAttempt,
+  getStats,
+  listMyAttempts
+} from "../services/practiceApi";
 import { sanitizeHtml } from "../utils/safeHtml";
+import "./PracticeHistory.css";
 import "katex/dist/katex.min.css";
 
 const MODE_LABELS = {
@@ -53,209 +49,306 @@ const MODE_LABELS = {
   free_practice: "Free Practice"
 };
 
-const MODE_COLORS = {
-  mock_test: "#C08552",
-  qbank_practice: "#059669",
-  inline_qbank: "#8C5A3C",
-  free_practice: "#e11d48"
+const MODE_CLASS_NAMES = {
+  mock_test: "ph-mode--mock",
+  qbank_practice: "ph-mode--qbank",
+  inline_qbank: "ph-mode--inline",
+  free_practice: "ph-mode--free"
 };
 
+const MODE_OPTIONS = [
+  { value: "", label: "All modes" },
+  { value: "mock_test", label: "Mock Test" },
+  { value: "qbank_practice", label: "QBank Practice" },
+  { value: "inline_qbank", label: "QBank Inline" },
+  { value: "free_practice", label: "Free Practice" }
+];
+
+const EMPTY_FILTERS = Object.freeze({
+  mode: "",
+  subject: "",
+  paper: "",
+  chapter: "",
+  topic: "",
+  minPercentage: "",
+  maxPercentage: "",
+  from: "",
+  to: ""
+});
+
+const EMPTY_OVERALL = Object.freeze({
+  totalAttempts: 0,
+  totalQuestions: 0,
+  attemptedQuestions: 0,
+  correctQuestions: 0,
+  accuracy: 0,
+  totalObtained: 0,
+  totalPossible: 0,
+  totalTimeSeconds: 0
+});
+
+const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  day: "2-digit",
+  month: "short",
+  year: "numeric"
+});
+
+const TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  hour: "numeric",
+  minute: "2-digit"
+});
+
+const SHORT_DAY_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  weekday: "short"
+});
+
+const NUMBER_FORMATTER = new Intl.NumberFormat();
+const PERCENT_FORMATTERS = {
+  0: new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }),
+  1: new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  })
+};
+const FILTER_KEYS = Object.keys(EMPTY_FILTERS);
+
+function getInitialFilters() {
+  if (typeof window === "undefined") return { ...EMPTY_FILTERS };
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialFilters = { ...EMPTY_FILTERS };
+  FILTER_KEYS.forEach((key) => {
+    initialFilters[key] = searchParams.get(key) || "";
+  });
+  return initialFilters;
+}
+
+function formatNumber(value) {
+  return NUMBER_FORMATTER.format(Number(value) || 0);
+}
+
 function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString();
+  if (!iso) return { date: "No date", time: "" };
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return { date: "No date", time: "" };
+  return {
+    date: DATE_FORMATTER.format(date),
+    time: TIME_FORMATTER.format(date)
+  };
 }
 
 function formatDuration(seconds = 0) {
-  const s = Math.max(0, Math.round(seconds));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}m ${r}s`;
+  const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+function formatPercentage(value, decimals = 0) {
+  const percentage = Number(value) || 0;
+  const formatter = PERCENT_FORMATTERS[decimals] || PERCENT_FORMATTERS[0];
+  return `${formatter.format(percentage)}%`;
+}
+
+function percentageFromRatio(value) {
+  return Math.max(0, Math.min(100, (Number(value) || 0) * 100));
+}
+
+function scoreBand(percentage) {
+  if (percentage >= 80) return "strong";
+  if (percentage >= 50) return "steady";
+  return "rebuild";
+}
+
+function localDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildMomentumDays(rawDays = [], today = new Date()) {
+  const byDate = new Map(rawDays.map((day) => [day._id, day]));
+  const days = [];
+
+  for (let offset = 13; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setHours(12, 0, 0, 0);
+    date.setDate(today.getDate() - offset);
+    const key = localDateKey(date);
+    const source = byDate.get(key);
+    const average = Math.max(0, Math.min(100, Number(source?.avgPct) || 0));
+
+    days.push({
+      key,
+      average,
+      count: Number(source?.count) || 0,
+      label: SHORT_DAY_FORMATTER.format(date),
+      dateLabel: DATE_FORMATTER.format(date)
+    });
+  }
+
+  return days;
 }
 
 function renderMarkdownWithMath(text) {
   if (!text) return { __html: "" };
 
-  // Normalize double backslashes to single backslashes for LaTeX commands/symbols
-  const normalizedText = text.replace(/\\\\([a-zA-Z\d_{}%])/g, '\\$1');
-
+  const normalizedText = text.replace(/\\\\([a-zA-Z\d_{}%])/g, "\\$1");
   const mathBlocks = [];
 
-  // 1. Extract and render display math: $$...$$
-  let processed = normalizedText.replace(/\$\$([\s\S]+?)\$\$/g, (match, p1) => {
+  let processed = normalizedText.replace(/\$\$([\s\S]+?)\$\$/g, (match, value) => {
     try {
-      const rendered = katex.renderToString(p1.trim(), {
+      const rendered = katex.renderToString(value.trim(), {
         displayMode: true,
-        throwOnError: false,
+        throwOnError: false
       });
       const index = mathBlocks.length;
       mathBlocks.push(rendered);
       return `%%MATH_BLOCK_${index}%%`;
-    } catch (e) {
+    } catch {
       return match;
     }
   });
 
-  // 2. Extract and render inline math: $...$
-  processed = processed.replace(/\$([^\$]+)\$/g, (match, p1) => {
+  processed = processed.replace(/\$([^$]+)\$/g, (match, value) => {
     try {
-      const rendered = katex.renderToString(p1.trim(), {
+      const rendered = katex.renderToString(value.trim(), {
         displayMode: false,
-        throwOnError: false,
+        throwOnError: false
       });
       const index = mathBlocks.length;
       mathBlocks.push(rendered);
       return `%%MATH_BLOCK_${index}%%`;
-    } catch (e) {
+    } catch {
       return match;
     }
   });
 
-  // 3. Apply markdown formatting to the remaining text (with placeholders)
   processed = processed
-    // Headings: ### Heading, ## Heading, # Heading
-    .replace(/^### (.+)$/gm, '<div style="font-size:15px;font-weight:700;color:#8C5A3C;margin:16px 0 6px;border-bottom:1px solid rgba(192, 133, 82, 0.15);padding-bottom:4px;">$1</div>')
-    .replace(/^## (.+)$/gm, '<div style="font-size:17px;font-weight:700;color:#251817;margin:20px 0 8px;border-bottom:2px solid #C08552;padding-bottom:6px;">$1</div>')
-    .replace(/^# (.+)$/gm, '<div style="font-size:19px;font-weight:800;color:#251817;margin:20px 0 10px;border-bottom:2px solid #C08552;padding-bottom:6px;">$1</div>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#251817;">$1</strong>')
-    // Numbered steps
-    .replace(/^(\d+)\.\s/gm, '<span style="display:inline-block;background:#C08552;color:#FFF;font-weight:700;font-size:13px;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;margin-right:8px;">$1</span>')
-    // Bullet points
-    .replace(/^[-•]\s(.+)$/gm, '<div style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;"><span style="color:#C08552;font-weight:bold;margin-top:2px;">•</span><span>$1</span></div>')
-    // Line breaks
-    .replace(/\n\n/g, '<div style="margin:12px 0;"></div>')
-    .replace(/\n/g, '<br/>');
+    .replace(
+      /^### (.+)$/gm,
+      '<div class="ph-rich-heading ph-rich-heading--small">$1</div>'
+    )
+    .replace(
+      /^## (.+)$/gm,
+      '<div class="ph-rich-heading ph-rich-heading--medium">$1</div>'
+    )
+    .replace(
+      /^# (.+)$/gm,
+      '<div class="ph-rich-heading ph-rich-heading--large">$1</div>'
+    )
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /^(\d+)\.\s/gm,
+      '<span class="ph-rich-step">$1</span>'
+    )
+    .replace(
+      /^[-•]\s(.+)$/gm,
+      '<div class="ph-rich-bullet"><span aria-hidden="true">•</span><span>$1</span></div>'
+    )
+    .replace(/\n\n/g, '<div class="ph-rich-break"></div>')
+    .replace(/\n/g, "<br/>");
 
-  // 4. Restore the math blocks
   mathBlocks.forEach((renderedMath, index) => {
-    processed = processed.replace(`%%MATH_BLOCK_${index}%%`, () => renderedMath);
+    processed = processed.replace(
+      `%%MATH_BLOCK_${index}%%`,
+      () => renderedMath
+    );
   });
 
   return { __html: sanitizeHtml(processed) };
 }
 
 export default function PracticeHistory() {
-  const { t } = useLanguage();
-  const [user] = useState({
+  const [user] = useState(() => ({
     name: localStorage.getItem("topkorbo_name") || "Student",
     role: localStorage.getItem("topkorbo_role") || "student"
-  });
-
+  }));
   const [loading, setLoading] = useState(true);
   const [attempts, setAttempts] = useState([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(null);
+  const [filters, setFilters] = useState(getInitialFilters);
+  const [drawer, setDrawer] = useState({ status: "closed", attempt: null });
+  const drawerRequestRef = useRef(0);
 
-  // Filter state
-  const [filters, setFilters] = useState({
-    mode: "",
-    subject: "",
-    paper: "",
-    chapter: "",
-    topic: "",
-    minPercentage: "",
-    maxPercentage: "",
-    from: "",
-    to: ""
-  });
+  useEffect(() => {
+    let active = true;
 
-  // Detail drawer
-  const [detail, setDetail] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  const activeTab = "practice-history";
-
-  const fetchList = useCallback(async () => {
-    setLoading(true);
-    try {
+    const loadAttempts = async () => {
       const params = {};
-      Object.entries(filters).forEach(([k, v]) => {
-        if (v !== "" && v !== null && v !== undefined) params[k] = v;
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== "" && value !== null && value !== undefined) {
+          params[key] = value;
+        }
       });
-      const res = await listMyAttempts({ ...params, limit: 100 });
-      setAttempts(res.items || []);
-      setTotal(res.total || 0);
-    } catch (err) {
-      console.error("[PracticeHistory] fetchList failed:", err);
-      toast.error(err?.message || "Failed to load practice history");
-    } finally {
-      setLoading(false);
-    }
+
+      try {
+        const response = await listMyAttempts({ ...params, limit: 100 });
+        if (!active) return;
+        setAttempts(response.items || []);
+        setTotal(response.total || 0);
+      } catch (error) {
+        if (!active) return;
+        console.error("[PracticeHistory] list failed:", error);
+        toast.error(error?.message || "Failed to load practice history");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadAttempts();
+    return () => {
+      active = false;
+    };
   }, [filters]);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const s = await getStats();
-      setStats(s);
-    } catch (err) {
-      console.warn("stats load failed", err);
-    }
+  useEffect(() => {
+    let active = true;
+
+    const loadStats = async () => {
+      try {
+        const response = await getStats();
+        if (active) setStats(response);
+      } catch (error) {
+        console.warn("[PracticeHistory] stats failed:", error);
+      }
+    };
+
+    loadStats();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    fetchList();
-    fetchStats();
-  }, [fetchList, fetchStats]);
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      mode: "",
-      subject: "",
-      paper: "",
-      chapter: "",
-      topic: "",
-      minPercentage: "",
-      maxPercentage: "",
-      from: "",
-      to: ""
+    const url = new URL(window.location.href);
+    FILTER_KEYS.forEach((key) => {
+      if (filters[key]) url.searchParams.set(key, filters[key]);
+      else url.searchParams.delete(key);
     });
-  };
+    window.history.replaceState(window.history.state, "", url);
+  }, [filters]);
 
-  const openDetail = async (id) => {
-    setDetail(null);
-    setDetailLoading(true);
-    try {
-      const a = await getAttempt(id);
-      setDetail(a);
-    } catch (err) {
-      console.error("[PracticeHistory] getAttempt failed:", err);
-      toast.error(err?.message || "Failed to load attempt");
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this attempt? This cannot be undone.")) return;
-    try {
-      await deleteAttempt(id);
-      toast.success("Attempt deleted");
-      setDetail(null);
-      fetchList();
-      fetchStats();
-    } catch (err) {
-      toast.error("Delete failed");
-    }
-  };
-
-  // Build subject/paper/chapter/topic filter options from the visible rows
   const filterOptions = useMemo(() => {
     const subjects = new Set();
     const papers = new Set();
     const chapters = new Set();
     const topics = new Set();
-    attempts.forEach((a) => {
-      (a.subjects || []).forEach((s) => s && subjects.add(s));
-      (a.papers || []).forEach((s) => s && papers.add(s));
-      (a.chapters || []).forEach((s) => s && chapters.add(s));
-      (a.topics || []).forEach((s) => s && topics.add(s));
+
+    attempts.forEach((attempt) => {
+      (attempt.subjects || []).forEach((value) => value && subjects.add(value));
+      (attempt.papers || []).forEach((value) => value && papers.add(value));
+      (attempt.chapters || []).forEach((value) => value && chapters.add(value));
+      (attempt.topics || []).forEach((value) => value && topics.add(value));
     });
+
     return {
       subjects: Array.from(subjects).sort(),
       papers: Array.from(papers).sort(),
@@ -264,192 +357,382 @@ export default function PracticeHistory() {
     };
   }, [attempts]);
 
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  const handleFilterChange = (name, value) => {
+    setLoading(true);
+    setFilters((current) => ({ ...current, [name]: value }));
+  };
+
+  const clearFilters = () => {
+    setLoading(true);
+    setFilters({ ...EMPTY_FILTERS });
+  };
+
+  const closeDrawer = useCallback(() => {
+    drawerRequestRef.current += 1;
+    setDrawer({ status: "closed", attempt: null });
+  }, []);
+
+  const openDetail = async (id) => {
+    const requestId = drawerRequestRef.current + 1;
+    drawerRequestRef.current = requestId;
+    setDrawer({ status: "loading", attempt: null });
+
+    try {
+      const attempt = await getAttempt(id);
+      if (drawerRequestRef.current === requestId) {
+        setDrawer({ status: "ready", attempt });
+      }
+    } catch (error) {
+      if (drawerRequestRef.current === requestId) {
+        setDrawer({ status: "closed", attempt: null });
+        toast.error(error?.message || "Failed to load attempt");
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this attempt? This cannot be undone.")) return;
+
+    try {
+      await deleteAttempt(id);
+    } catch {
+      toast.error("Delete failed");
+      return;
+    }
+
+    closeDrawer();
+    toast.success("Attempt deleted");
+    setLoading(true);
+
+    try {
+      const params = {};
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== "" && value !== null && value !== undefined) {
+          params[key] = value;
+        }
+      });
+      const [listResponse, statsResponse] = await Promise.all([
+        listMyAttempts({ ...params, limit: 100 }),
+        getStats()
+      ]);
+      setAttempts(listResponse.items || []);
+      setTotal(listResponse.total || 0);
+      setStats(statsResponse);
+    } catch {
+      toast.error("Record deleted, but the totals could not refresh. Reload the page.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="dashboard-container practice-history-page">
-      <Sidebar user={user} activeTab={activeTab} />
-      <div className="practice-history-main">
-        <header className="practice-history-header">
-          <div>
-            <h1 className="practice-history-title">
-              <HiOutlineClipboardCheck size={28} />
-              Practice History
-            </h1>
-            <p className="practice-history-sub">
-              Every mock test and QBank practice you complete is saved here.
-            </p>
-          </div>
-          {stats && (
-            <div className="practice-history-overall">
-              <StatPill
-                icon={<HiOutlineDocumentText />}
-                label="Attempts"
-                value={stats.overall.totalAttempts}
-              />
-              <StatPill
-                icon={<HiOutlineChartBar />}
-                label="Accuracy"
-                value={`${(stats.overall.accuracy * 100).toFixed(1)}%`}
-              />
-              <StatPill
-                icon={<HiOutlineClock />}
-                label="Total Time"
-                value={formatDuration(stats.overall.totalTimeSeconds)}
-              />
-              <StatPill
-                icon={<HiOutlineAcademicCap />}
-                label="Marks"
-                value={`${stats.overall.totalObtained}/${stats.overall.totalPossible}`}
-              />
-            </div>
-          )}
-        </header>
+    <React.Fragment>
+      <div className="dashboard-container practice-history-page">
+        <a className="ph-skip-link" href="#practice-history-content">
+          Skip to Practice History
+        </a>
+        <Sidebar user={user} activeTab="practice-history" />
 
-        {/* ── Filters ────────────────────────────────────────────── */}
-        <section className="practice-history-filters">
-          <div className="ph-filter-row">
-            <FilterSelect
-              label="Mode"
-              value={filters.mode}
-              onChange={(v) => handleFilterChange("mode", v)}
-              options={[
-                { value: "", label: "All modes" },
-                { value: "mock_test", label: "Mock Test" },
-                { value: "qbank_practice", label: "QBank Practice" },
-                { value: "inline_qbank", label: "QBank Inline" },
-                { value: "free_practice", label: "Free Practice" }
-              ]}
-            />
-            <FilterSelect
-              label="Subject"
-              value={filters.subject}
-              onChange={(v) => handleFilterChange("subject", v)}
-              options={[
-                { value: "", label: "All subjects" },
-                ...filterOptions.subjects.map((s) => ({ value: s, label: s }))
-              ]}
-            />
-            <FilterSelect
-              label="Paper"
-              value={filters.paper}
-              onChange={(v) => handleFilterChange("paper", v)}
-              options={[
-                { value: "", label: "All papers" },
-                ...filterOptions.papers.map((s) => ({ value: s, label: s }))
-              ]}
-            />
-            <FilterSelect
-              label="Chapter"
-              value={filters.chapter}
-              onChange={(v) => handleFilterChange("chapter", v)}
-              options={[
-                { value: "", label: "All chapters" },
-                ...filterOptions.chapters.map((s) => ({ value: s, label: s }))
-              ]}
-            />
-            <FilterSelect
-              label="Topic"
-              value={filters.topic}
-              onChange={(v) => handleFilterChange("topic", v)}
-              options={[
-                { value: "", label: "All topics" },
-                ...filterOptions.topics.map((s) => ({ value: s, label: s }))
-              ]}
-            />
-          </div>
-          <div className="ph-filter-row">
-            <FilterInput
-              label="Min %"
-              type="number"
-              value={filters.minPercentage}
-              onChange={(v) => handleFilterChange("minPercentage", v)}
-            />
-            <FilterInput
-              label="Max %"
-              type="number"
-              value={filters.maxPercentage}
-              onChange={(v) => handleFilterChange("maxPercentage", v)}
-            />
-            <FilterInput
-              label="From"
-              type="date"
-              value={filters.from}
-              onChange={(v) => handleFilterChange("from", v)}
-            />
-            <FilterInput
-              label="To"
-              type="date"
-              value={filters.to}
-              onChange={(v) => handleFilterChange("to", v)}
-            />
-            <button className="ph-clear-btn" onClick={clearFilters}>
-              <HiOutlineFilter size={16} /> Clear
-            </button>
-          </div>
-        </section>
+        <main id="practice-history-content" className="practice-history-main">
+          <LearningLedgerHero stats={stats} />
 
-        {/* ── List ────────────────────────────────────────────── */}
-        <section className="practice-history-list">
-          {loading ? (
-            <div className="ph-empty">Loading…</div>
-          ) : attempts.length === 0 ? (
-            <div className="ph-empty">
-              <HiOutlineSearch size={28} />
-              <p>No attempts yet. Take a mock test or answer a QBank question to see it here.</p>
-            </div>
-          ) : (
-            <>
-              <div className="ph-results-meta">
-                Showing {attempts.length} of {total}
-              </div>
-              {attempts.map((a) => (
-                <AttemptCard
-                  key={a._id}
-                  attempt={a}
-                  onOpen={() => openDetail(a._id)}
-                />
-              ))}
-            </>
-          )}
-        </section>
+          <div className="ph-workspace">
+            <aside className="ph-control-rail" aria-label="History controls">
+              <FilterPanel
+                filters={filters}
+                options={filterOptions}
+                activeCount={activeFilterCount}
+                onChange={handleFilterChange}
+                onClear={clearFilters}
+              />
+              <SubjectSignals subjects={stats?.bySubject || []} />
+            </aside>
+
+            <AttemptFeed
+              attempts={attempts}
+              total={total}
+              loading={loading}
+              activeFilterCount={activeFilterCount}
+              onOpen={openDetail}
+            />
+          </div>
+        </main>
+
+        {drawer.status !== "closed" ? (
+          <DrawerShell
+            title={
+              drawer.status === "ready"
+                ? drawer.attempt?.title || "Attempt review"
+                : "Opening attempt"
+            }
+            onClose={closeDrawer}
+          >
+            {drawer.status === "loading" ? (
+              <DrawerLoading />
+            ) : (
+              <AttemptDetail
+                attempt={drawer.attempt}
+                onDelete={handleDelete}
+              />
+            )}
+          </DrawerShell>
+        ) : null}
+      </div>
+    </React.Fragment>
+  );
+}
+
+function LearningLedgerHero({ stats }) {
+  const overall = stats?.overall || EMPTY_OVERALL;
+  const accuracy = percentageFromRatio(overall.accuracy);
+  const momentumDays = useMemo(
+    () => buildMomentumDays(stats?.last14Days || []),
+    [stats?.last14Days]
+  );
+
+  return (
+    <header className="ph-hero">
+      <div className="ph-hero__intro">
+        <span className="ph-kicker">
+          <span className="ph-kicker__line" aria-hidden="true" />
+          Learning record / Practice
+        </span>
+        <h1>Practice History</h1>
+        <p>
+          Read the pattern behind every attempt, then return to the topics
+          that need one more pass.
+        </p>
       </div>
 
-      {/* ── Detail drawer ────────────────────────────────────────────── */}
-      {(detail || detailLoading) && (
-        <DetailDrawer
-          attempt={detail}
-          loading={detailLoading}
-          onClose={() => setDetail(null)}
-          onDelete={() => detail && handleDelete(detail._id)}
+      <div className="ph-hero__analysis">
+        <div className={`ph-accuracy ph-score--${scoreBand(accuracy)}`}>
+          <span className="ph-accuracy__label">Overall accuracy</span>
+          <strong>{formatPercentage(accuracy, 1)}</strong>
+          <span>
+            {formatNumber(overall.correctQuestions)} correct of{" "}
+            {formatNumber(overall.attemptedQuestions)} answered
+          </span>
+        </div>
+        <MomentumRail days={momentumDays} />
+      </div>
+
+      <div className="ph-metric-strip" aria-label="Practice totals">
+        <HeroMetric
+          icon={<HiOutlineDocumentText aria-hidden="true" />}
+          label="Attempts logged"
+          value={formatNumber(overall.totalAttempts)}
         />
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Sub-components                                                     */
-/* ------------------------------------------------------------------ */
-
-function StatPill({ icon, label, value }) {
-  return (
-    <div className="ph-stat-pill">
-      <span className="ph-stat-pill-icon">{icon}</span>
-      <div>
-        <div className="ph-stat-pill-value">{value}</div>
-        <div className="ph-stat-pill-label">{label}</div>
+        <HeroMetric
+          icon={<HiOutlineAcademicCap aria-hidden="true" />}
+          label="Marks earned"
+          value={`${formatNumber(overall.totalObtained)}/${formatNumber(overall.totalPossible)}`}
+        />
+        <HeroMetric
+          icon={<HiOutlineClock aria-hidden="true" />}
+          label="Study time"
+          value={formatDuration(overall.totalTimeSeconds)}
+        />
+        <HeroMetric
+          icon={<HiOutlineChartBar aria-hidden="true" />}
+          label="Questions seen"
+          value={formatNumber(overall.totalQuestions)}
+        />
       </div>
+    </header>
+  );
+}
+
+function HeroMetric({ icon, label, value }) {
+  return (
+    <div className="ph-hero-metric">
+      <span className="ph-hero-metric__icon">{icon}</span>
+      <span className="ph-hero-metric__copy">
+        <strong>{value}</strong>
+        <span>{label}</span>
+      </span>
     </div>
   );
 }
 
-function FilterSelect({ label, value, onChange, options }) {
+function MomentumRail({ days }) {
+  const peak = Math.max(1, ...days.map((day) => day.average));
+
+  return (
+    <section className="ph-momentum" aria-labelledby="ph-momentum-title">
+      <div className="ph-momentum__heading">
+        <div>
+          <span className="ph-momentum__eyebrow">14-day pulse</span>
+          <h2 id="ph-momentum-title">Momentum</h2>
+        </div>
+        <HiOutlineTrendingUp aria-hidden="true" />
+      </div>
+      <div
+        className="ph-momentum__chart"
+        role="list"
+        aria-label="Average daily scores"
+      >
+        {days.map((day, index) => {
+          const height = day.count > 0 ? Math.max(12, (day.average / peak) * 100) : 4;
+          const showLabel = index === 0 || index === 6 || index === days.length - 1;
+          return (
+            <div
+              className={`ph-momentum__day ${day.count === 0 ? "is-empty" : ""}`}
+              key={day.key}
+              role="listitem"
+              aria-label={`${day.dateLabel}: ${formatNumber(day.count)} attempt${day.count === 1 ? "" : "s"}, ${formatPercentage(day.average)} average`}
+              title={`${day.dateLabel}: ${day.count} attempt${day.count === 1 ? "" : "s"}, ${formatPercentage(day.average)} average`}
+            >
+              <span
+                className="ph-momentum__bar"
+                style={{ "--ph-bar-height": `${height}%` }}
+                aria-hidden="true"
+              />
+              <span className="ph-momentum__day-label">
+                {showLabel ? day.label : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function FilterPanel({ filters, options, activeCount, onChange, onClear }) {
+  return (
+    <section className="ph-index-card" aria-labelledby="ph-filter-title">
+      <div className="ph-index-card__header">
+        <span className="ph-index-card__number">01</span>
+        <div>
+          <span className="ph-section-kicker">Find a record</span>
+          <h2 id="ph-filter-title">Filter Index</h2>
+        </div>
+        {activeCount > 0 ? (
+          <span className="ph-filter-count" aria-label={`${activeCount} active filters`}>
+            {activeCount}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="ph-filter-group">
+        <span className="ph-filter-group__label">Source</span>
+        <FilterSelect
+          label="Practice mode"
+          name="mode"
+          value={filters.mode}
+          onChange={onChange}
+          options={MODE_OPTIONS}
+        />
+        <FilterSelect
+          label="Subject"
+          name="subject"
+          value={filters.subject}
+          onChange={onChange}
+          options={withAllOption("All subjects", options.subjects)}
+        />
+        <FilterSelect
+          label="Paper"
+          name="paper"
+          value={filters.paper}
+          onChange={onChange}
+          options={withAllOption("All papers", options.papers)}
+        />
+        <FilterSelect
+          label="Chapter"
+          name="chapter"
+          value={filters.chapter}
+          onChange={onChange}
+          options={withAllOption("All chapters", options.chapters)}
+        />
+        <FilterSelect
+          label="Topic"
+          name="topic"
+          value={filters.topic}
+          onChange={onChange}
+          options={withAllOption("All topics", options.topics)}
+        />
+      </div>
+
+      <div className="ph-filter-group">
+        <span className="ph-filter-group__label">Score range</span>
+        <div className="ph-filter-split">
+          <FilterInput
+            label="Minimum"
+            name="minPercentage"
+            type="number"
+            value={filters.minPercentage}
+            onChange={onChange}
+            suffix="%"
+          />
+          <FilterInput
+            label="Maximum"
+            name="maxPercentage"
+            type="number"
+            value={filters.maxPercentage}
+            onChange={onChange}
+            suffix="%"
+          />
+        </div>
+      </div>
+
+      <div className="ph-filter-group">
+        <span className="ph-filter-group__label">Date range</span>
+        <div className="ph-filter-split">
+          <FilterInput
+            label="From"
+            name="from"
+            type="date"
+            value={filters.from}
+            onChange={onChange}
+          />
+          <FilterInput
+            label="To"
+            name="to"
+            type="date"
+            value={filters.to}
+            onChange={onChange}
+          />
+        </div>
+      </div>
+
+      <div className="ph-index-card__footer">
+        <span>Updates instantly</span>
+        <button
+          type="button"
+          className="ph-reset-button"
+          onClick={onClear}
+          disabled={activeCount === 0}
+        >
+          <HiOutlineFilter aria-hidden="true" />
+          Reset Filters
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function withAllOption(label, values) {
+  return [
+    { value: "", label },
+    ...values.map((value) => ({ value, label: value }))
+  ];
+}
+
+function FilterSelect({ label, name, value, onChange, options }) {
   return (
     <label className="ph-filter-field">
       <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
+      <select
+        name={name}
+        value={value}
+        autoComplete="off"
+        onChange={(event) => onChange(name, event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>
@@ -457,177 +740,452 @@ function FilterSelect({ label, value, onChange, options }) {
   );
 }
 
-function FilterInput({ label, type, value, onChange }) {
+function FilterInput({ label, name, type, value, onChange, suffix }) {
+  const numberProps =
+    type === "number"
+      ? { min: 0, max: 100, step: 1, inputMode: "decimal" }
+      : {};
+
   return (
     <label className="ph-filter-field">
       <span>{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <span className="ph-filter-input-wrap">
+        <input
+          {...numberProps}
+          name={name}
+          type={type}
+          value={value}
+          autoComplete="off"
+          onChange={(event) => onChange(name, event.target.value)}
+        />
+        {suffix ? <span aria-hidden="true">{suffix}</span> : null}
+      </span>
     </label>
   );
 }
 
-function AttemptCard({ attempt, onOpen }) {
-  const pct = attempt.marks?.percentage ?? 0;
-  const color = pct >= 80 ? "#059669" : pct >= 50 ? "#8C5A3C" : "#e11d48";
-  const mode = attempt.mode;
+function SubjectSignals({ subjects }) {
+  const focusSubjects = [...subjects]
+    .sort((first, second) => (first.accuracy || 0) - (second.accuracy || 0))
+    .slice(0, 4);
+
   return (
-    <div className="ph-attempt-card" onClick={onOpen}>
-      <div
-        className="ph-attempt-mode"
-        style={{ backgroundColor: MODE_COLORS[mode] || "#6366f1" }}
-      >
-        {MODE_LABELS[mode] || mode}
-      </div>
-      <div className="ph-attempt-body">
-        <h3 className="ph-attempt-title">{attempt.title || "Untitled attempt"}</h3>
-        <div className="ph-attempt-meta">
-          {attempt.subjects && attempt.subjects.length > 0 && (
-            <span>
-              <HiOutlineBookOpen size={14} className="ph-meta-icon" />
-              {attempt.subjects.join(", ")}
-            </span>
-          )}
-          {attempt.papers && attempt.papers.length > 0 && (
-            <span>
-              <HiOutlineDocumentText size={14} className="ph-meta-icon" />
-              {attempt.papers.join(", ")}
-            </span>
-          )}
-          {attempt.chapters && attempt.chapters.length > 0 && (
-            <span>
-              <HiOutlineFolder size={14} className="ph-meta-icon" />
-              {attempt.chapters.join(", ")}
-            </span>
-          )}
-        </div>
-        <div className="ph-attempt-submeta">
-          <span>
-            <HiOutlineClock size={14} /> {formatDuration(attempt.timing?.timeTakenSeconds)}
-          </span>
-          <span>
-            <HiOutlineAcademicCap size={14} /> {attempt.config?.questionCount || attempt.questions?.length || 0} questions
-          </span>
-          <span>
-            <HiOutlineCalendar size={14} /> {formatDate(attempt.createdAt)}
-          </span>
+    <section className="ph-signal-card" aria-labelledby="ph-signal-title">
+      <div className="ph-signal-card__heading">
+        <span className="ph-index-card__number">02</span>
+        <div>
+          <span className="ph-section-kicker">Revision signal</span>
+          <h2 id="ph-signal-title">Focus Next</h2>
         </div>
       </div>
-      <div className="ph-attempt-score" style={{ color }}>
-        <div className="ph-attempt-score-num">{pct.toFixed(1)}%</div>
-        <div className="ph-attempt-score-sub">
-          {attempt.marks?.obtained ?? 0} / {attempt.marks?.total ?? 0}
+
+      {focusSubjects.length > 0 ? (
+        <div className="ph-signal-list">
+          {focusSubjects.map((subject) => {
+            const accuracy = percentageFromRatio(subject.accuracy);
+            return (
+              <div className="ph-signal" key={subject._id || "Uncategorised"}>
+                <div className="ph-signal__copy">
+                  <span>{subject._id || "Uncategorised"}</span>
+                  <strong>{formatPercentage(accuracy)}</strong>
+                </div>
+                <div className="ph-signal__track" aria-hidden="true">
+                  <span style={{ "--ph-signal-width": `${accuracy}%` }} />
+                </div>
+                <span className="ph-signal__attempts">
+                  {formatNumber(subject.attempts)} attempt{subject.attempts === 1 ? "" : "s"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="ph-signal-card__empty">
+          Subject signals appear after your first completed practice.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function AttemptFeed({ attempts, total, loading, activeFilterCount, onOpen }) {
+  return (
+    <section className="ph-ledger" aria-labelledby="ph-ledger-title">
+      <div className="ph-ledger__header">
+        <div className="ph-ledger__title-wrap">
+          <span className="ph-index-card__number">03</span>
+          <div>
+            <span className="ph-section-kicker">Chronological review</span>
+            <h2 id="ph-ledger-title">Attempt Ledger</h2>
+          </div>
+        </div>
+        <div className="ph-ledger__count" aria-live="polite">
+          {loading
+            ? "Checking records…"
+            : `${formatNumber(attempts.length)} of ${formatNumber(total)} records`}
         </div>
       </div>
-      <div className="ph-attempt-chevron">
-        <HiOutlineChevronRight size={18} />
-      </div>
+
+      {loading ? (
+        <AttemptFeedLoading />
+      ) : attempts.length === 0 ? (
+        <AttemptFeedEmpty hasFilters={activeFilterCount > 0} />
+      ) : (
+        <div className="ph-attempt-list">
+          {attempts.map((attempt, index) => (
+            <AttemptCard
+              key={attempt._id}
+              attempt={attempt}
+              index={index + 1}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AttemptFeedLoading() {
+  return (
+    <div className="ph-loading-list" role="status">
+      <span className="sr-only">Loading practice records</span>
+      {[0, 1, 2].map((item) => (
+        <div className="ph-loading-row" key={item} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      ))}
     </div>
   );
 }
 
-function DetailDrawer({ attempt, loading, onClose, onDelete }) {
+function AttemptFeedEmpty({ hasFilters }) {
   return (
-    <div className="ph-drawer-backdrop" onClick={onClose}>
-      <div className="ph-drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="ph-drawer-header">
-          <h2>{attempt ? attempt.title || "Attempt" : "Loading…"}</h2>
-          <button className="ph-icon-btn" onClick={onClose} aria-label="Close">
-            <HiOutlineX size={20} />
+    <div className="ph-empty-state">
+      <span className="ph-empty-state__icon">
+        <HiOutlineSearch aria-hidden="true" />
+      </span>
+      <span className="ph-section-kicker">No matching entry</span>
+      <h3>{hasFilters ? "Try a wider filter" : "Your ledger starts here"}</h3>
+      <p>
+        {hasFilters
+          ? "No practice records match this combination. Reset a filter and check again."
+          : "Complete a mock test or QBank practice and its review will appear here."}
+      </p>
+    </div>
+  );
+}
+
+function AttemptCard({ attempt, index, onOpen }) {
+  const percentage = Number(attempt.marks?.percentage) || 0;
+  const band = scoreBand(percentage);
+  const modeClass = MODE_CLASS_NAMES[attempt.mode] || "ph-mode--default";
+  const created = formatDate(attempt.createdAt);
+  const title = attempt.title || "Untitled attempt";
+  const questionCount =
+    attempt.config?.questionCount || attempt.questions?.length || 0;
+
+  return (
+    <article className={`ph-attempt ph-score--${band}`}>
+      <button
+        type="button"
+        className="ph-attempt__button"
+        onClick={() => onOpen(attempt._id)}
+        aria-label={`Review ${title}, score ${formatPercentage(percentage, 1)}`}
+      >
+        <span className="ph-attempt__sequence" aria-hidden="true">
+          {String(index).padStart(2, "0")}
+        </span>
+
+        <span className="ph-attempt__main">
+          <span className={`ph-mode-label ${modeClass}`}>
+            {MODE_LABELS[attempt.mode] || attempt.mode || "Practice"}
+          </span>
+          <strong className="ph-attempt__title">{title}</strong>
+          <span className="ph-attempt__taxonomy">
+            {attempt.subjects?.length > 0 ? (
+              <span>
+                <HiOutlineBookOpen aria-hidden="true" />
+                {attempt.subjects.join(", ")}
+              </span>
+            ) : null}
+            {attempt.papers?.length > 0 ? (
+              <span>
+                <HiOutlineDocumentText aria-hidden="true" />
+                {attempt.papers.join(", ")}
+              </span>
+            ) : null}
+            {attempt.chapters?.length > 0 ? (
+              <span>
+                <HiOutlineFolder aria-hidden="true" />
+                {attempt.chapters.join(", ")}
+              </span>
+            ) : null}
+          </span>
+          <span className="ph-attempt__facts">
+            <span>
+              <HiOutlineClock aria-hidden="true" />
+              {formatDuration(attempt.timing?.timeTakenSeconds)}
+            </span>
+            <span>
+              <HiOutlineAcademicCap aria-hidden="true" />
+              {questionCount} question{questionCount === 1 ? "" : "s"}
+            </span>
+          </span>
+        </span>
+
+        <span className="ph-attempt__date">
+          <HiOutlineCalendar aria-hidden="true" />
+          <span>{created.date}</span>
+          <small>{created.time}</small>
+        </span>
+
+        <span className="ph-attempt__score">
+          <strong>{formatPercentage(percentage, 1)}</strong>
+          <span>
+            {formatNumber(attempt.marks?.obtained)}/
+            {formatNumber(attempt.marks?.total)} marks
+          </span>
+        </span>
+
+        <span className="ph-attempt__open" aria-hidden="true">
+          <HiOutlineChevronRight />
+        </span>
+      </button>
+    </article>
+  );
+}
+
+function DrawerShell({ title, onClose, children }) {
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const drawerElement = closeButtonRef.current?.closest(".ph-drawer");
+      const focusable = drawerElement?.querySelectorAll(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable?.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    closeButtonRef.current?.focus();
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [onClose]);
+
+  const handleBackdropPointerDown = (event) => {
+    if (event.target === event.currentTarget) onClose();
+  };
+
+  return (
+    <div className="ph-drawer-backdrop" onMouseDown={handleBackdropPointerDown}>
+      <aside
+        className="ph-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ph-drawer-title"
+      >
+        <div className="ph-drawer__header">
+          <div>
+            <span className="ph-section-kicker">Attempt review</span>
+            <h2 id="ph-drawer-title">{title}</h2>
+          </div>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="ph-icon-button"
+            onClick={onClose}
+            aria-label="Close attempt review"
+          >
+            <HiOutlineX aria-hidden="true" />
           </button>
         </div>
-
-        {loading || !attempt ? (
-          <div className="ph-empty">Loading attempt…</div>
-        ) : (
-          <>
-            <div className="ph-drawer-summary">
-              <div>
-                <div className="ph-drawer-summary-label">Score</div>
-                <div className="ph-drawer-summary-value">
-                  {attempt.marks?.obtained ?? 0} / {attempt.marks?.total ?? 0}
-                  <span className="ph-drawer-summary-sub">
-                    ({attempt.marks?.percentage?.toFixed(1) ?? 0}%)
-                  </span>
-                </div>
-              </div>
-              <div>
-                <div className="ph-drawer-summary-label">Time</div>
-                <div className="ph-drawer-summary-value">
-                  {formatDuration(attempt.timing?.timeTakenSeconds)}
-                </div>
-              </div>
-              <div>
-                <div className="ph-drawer-summary-label">Mode</div>
-                <div className="ph-drawer-summary-value">
-                  {MODE_LABELS[attempt.mode] || attempt.mode}
-                </div>
-              </div>
-              <div>
-                <div className="ph-drawer-summary-label">Correct / Wrong / Skipped</div>
-                <div className="ph-drawer-summary-value">
-                  <span style={{ color: "#059669" }}>{attempt.marks?.correct || 0}</span>
-                  {" / "}
-                  <span style={{ color: "#e11d48" }}>{attempt.marks?.incorrect || 0}</span>
-                  {" / "}
-                  <span style={{ color: "var(--text-muted)" }}>{attempt.marks?.skipped || 0}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="ph-drawer-section-title">Questions</div>
-            <div className="ph-drawer-questions">
-              {(attempt.questions || []).map((q, idx) => {
-                const icon = !q.isAttempted ? (
-                  <HiOutlineMinusCircle size={20} color="var(--text-muted)" />
-                ) : q.isCorrect ? (
-                  <HiOutlineCheckCircle size={20} color="#059669" />
-                ) : (
-                  <HiOutlineXCircle size={20} color="#e11d48" />
-                );
-                return (
-                  <div key={q._id || idx} className="ph-drawer-q">
-                    <div className="ph-drawer-q-head">
-                      {icon}
-                      <div className="ph-drawer-q-num">Q{idx + 1}</div>
-                      <div className="ph-drawer-q-meta">
-                        {q.subject && <span>{q.subject}</span>}
-                        {q.paper && <span>· {q.paper} Paper</span>}
-                        {q.chapter && <span>· {q.chapter}</span>}
-                        {q.topic && <span>· {q.topic}</span>}
-                      </div>
-                      <div className="ph-drawer-q-score">
-                        {q.score?.toFixed?.(2) ?? q.score} / {q.maxScore}
-                      </div>
-                    </div>
-                    {q.snapshot?.questionText && (
-                      <div
-                        className="ph-drawer-q-text"
-                        dangerouslySetInnerHTML={renderMarkdownWithMath(q.snapshot.questionText)}
-                      />
-                    )}
-                    {q.aiFeedback && (
-                      <div
-                        className="ph-drawer-q-feedback"
-                        dangerouslySetInnerHTML={renderMarkdownWithMath(`**AI feedback:** ${q.aiFeedback}`)}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="ph-drawer-footer">
-              <button className="ph-delete-btn" onClick={onDelete}>
-                <HiOutlineTrash size={16} /> Delete
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+        <div className="ph-drawer__body">{children}</div>
+      </aside>
     </div>
+  );
+}
+
+function DrawerLoading() {
+  return (
+    <div className="ph-drawer-loading" role="status">
+      <span className="ph-drawer-loading__mark" aria-hidden="true" />
+      <strong>Opening the record</strong>
+      <span>Collecting question-level feedback…</span>
+    </div>
+  );
+}
+
+function AttemptDetail({ attempt, onDelete }) {
+  const percentage = Number(attempt?.marks?.percentage) || 0;
+  const questions = attempt?.questions || [];
+
+  return (
+    <>
+      <section className="ph-detail-summary" aria-label="Attempt summary">
+        <DetailMetric
+          label="Score"
+          value={`${formatNumber(attempt?.marks?.obtained)}/${formatNumber(attempt?.marks?.total)}`}
+          detail={formatPercentage(percentage, 1)}
+        />
+        <DetailMetric
+          label="Time"
+          value={formatDuration(attempt?.timing?.timeTakenSeconds)}
+        />
+        <DetailMetric
+          label="Mode"
+          value={MODE_LABELS[attempt?.mode] || attempt?.mode || "Practice"}
+        />
+      </section>
+
+      <div className="ph-detail-outcomes">
+        <Outcome
+          kind="correct"
+          icon={<HiOutlineCheckCircle aria-hidden="true" />}
+          label="Correct"
+          value={formatNumber(attempt?.marks?.correct)}
+        />
+        <Outcome
+          kind="incorrect"
+          icon={<HiOutlineXCircle aria-hidden="true" />}
+          label="Incorrect"
+          value={formatNumber(attempt?.marks?.incorrect)}
+        />
+        <Outcome
+          kind="skipped"
+          icon={<HiOutlineMinusCircle aria-hidden="true" />}
+          label="Skipped"
+          value={formatNumber(attempt?.marks?.skipped)}
+        />
+      </div>
+
+      <div className="ph-detail-section-heading">
+        <span className="ph-section-kicker">Question breakdown</span>
+        <h3>{questions.length} review item{questions.length === 1 ? "" : "s"}</h3>
+      </div>
+
+      {questions.length > 0 ? (
+        <div className="ph-question-list">
+          {questions.map((question, index) => (
+            <QuestionReview
+              key={question._id || index}
+              question={question}
+              index={index}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="ph-question-empty">No question details were saved for this attempt.</p>
+      )}
+
+      <footer className="ph-drawer__footer">
+        <p>Deleting removes this record from your progress totals.</p>
+        <button
+          type="button"
+          className="ph-delete-button"
+          onClick={() => onDelete(attempt._id)}
+        >
+          <HiOutlineTrash aria-hidden="true" />
+          Delete Record
+        </button>
+      </footer>
+    </>
+  );
+}
+
+function DetailMetric({ label, value, detail }) {
+  return (
+    <div className="ph-detail-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {detail ? <small>{detail}</small> : null}
+    </div>
+  );
+}
+
+function Outcome({ kind, icon, label, value }) {
+  return (
+    <div className={`ph-outcome ph-outcome--${kind}`}>
+      {icon}
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function QuestionReview({ question, index }) {
+  const status = !question.isAttempted
+    ? "skipped"
+    : question.isCorrect
+      ? "correct"
+      : "incorrect";
+  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
+  return (
+    <article className={`ph-question ph-question--${status}`}>
+      <header className="ph-question__header">
+        <span className="ph-question__number">Q{String(index + 1).padStart(2, "0")}</span>
+        <span className="ph-question__status">{statusLabel}</span>
+        <span className="ph-question__score">
+          {formatNumber(question.score)}
+          <small> / {formatNumber(question.maxScore)}</small>
+        </span>
+      </header>
+
+      <div className="ph-question__taxonomy">
+        {[question.subject, question.paper, question.chapter, question.topic]
+          .filter(Boolean)
+          .map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+      </div>
+
+      {question.snapshot?.questionText ? (
+        <RichText
+          className="ph-question__text"
+          text={question.snapshot.questionText}
+        />
+      ) : null}
+
+      {question.aiFeedback ? (
+        <div className="ph-question__feedback">
+          <span className="ph-question__feedback-label">AI feedback</span>
+          <RichText text={question.aiFeedback} />
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function RichText({ className = "", text }) {
+  const html = useMemo(() => renderMarkdownWithMath(text), [text]);
+  return (
+    <div
+      className={`ph-rich-text ${className}`}
+      dangerouslySetInnerHTML={html}
+    />
   );
 }

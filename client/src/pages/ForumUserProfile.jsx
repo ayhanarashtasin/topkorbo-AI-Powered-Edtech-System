@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import forumApi from '../services/forumApi';
 import InfiniteFeed from '../components/forum/InfiniteFeed';
@@ -35,22 +35,33 @@ export default function ForumUserProfile() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
+  const [loadedId, setLoadedId] = useState(null);
+  const fetchPosts = useCallback(
+    (cursor) => forumApi.postsByUser(id, cursor),
+    [id]
+  );
 
   useEffect(() => {
     let cancelled = false;
-    setProfile(null);
-    setError(null);
     (async () => {
       try {
         const r = await forumApi.getUser(id);
-        if (!cancelled) setProfile(r.data);
+        if (!cancelled) {
+          setProfile(r.data);
+          setError(null);
+          setLoadedId(id);
+        }
       } catch (e) {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) {
+          setError(e.message);
+          setLoadedId(id);
+        }
       }
     })();
     return () => { cancelled = true; };
   }, [id]);
 
+  if (loadedId !== id) return <LoadingSkeleton count={2} />;
   if (error) {
     return (
       <EmptyState
@@ -97,8 +108,8 @@ export default function ForumUserProfile() {
               (profile.contestsPlayed || 0) > 0
                 ? <span><strong>{profile.contestPoints || 0}</strong> contest points</span>
                 : null,
-              <span><strong>{(profile.followers || []).length}</strong> followers</span>,
-              <span><strong>{(profile.following || []).length}</strong> following</span>
+              <span><strong>{profile.followerCount || 0}</strong> followers</span>,
+              <span><strong>{profile.followingCount || 0}</strong> following</span>
             ].filter(Boolean).map((item, i, arr) => (
               <span key={i}>
                 {item}
@@ -107,13 +118,25 @@ export default function ForumUserProfile() {
             ))}
           </div>
         </div>
-        {user?._id !== profile._id && <FollowButton userId={profile._id} />}
+        {user?._id !== profile._id && (
+          <FollowButton
+            key={profile._id}
+            userId={profile._id}
+            onChange={(_following, counts) => {
+              if (counts?.followerCount === undefined) return;
+              setProfile((current) => ({
+                ...current,
+                followerCount: counts.followerCount
+              }));
+            }}
+          />
+        )}
       </div>
 
       <h3 style={{ marginBottom: 12 }}>Posts</h3>
       <InfiniteFeed
         feedKey={`user:${profile._id}`}
-        fetchPage={(cursor) => forumApi.postsByUser(profile._id, cursor)}
+        fetchPage={fetchPosts}
         emptyTitle="No posts yet"
         emptyMessage={`${profile.name} hasn't posted anything yet.`}
       />

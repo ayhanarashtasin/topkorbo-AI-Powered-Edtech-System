@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const crypto = require('node:crypto');
 
 /**
  * Generate a URL-safe, unique username slug from a display name.
@@ -27,23 +28,43 @@ function slugifyName(name, email) {
 async function ensureUsername(user) {
   if (user.username) return user.username;
   const base = slugifyName(user.name, user.email);
-  let candidate = base;
-  let suffix = 0;
-  // Try a handful of candidates before giving up with a random suffix.
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const exists = await User.exists({ username: candidate, _id: { $ne: user._id } });
-    if (!exists) break;
-    suffix += 1;
-    candidate = `${base}${suffix}`;
-    if (suffix > 50) {
-      candidate = `${base}_${Math.floor(Math.random() * 10000)}`;
-      break;
+
+  for (let suffix = 0; suffix < 100; suffix += 1) {
+    const candidate = suffix < 50
+      ? `${base}${suffix || ''}`
+      : `${base}_${crypto.randomBytes(3).toString('hex')}`;
+    try {
+      const updated = await User.findOneAndUpdate(
+        {
+          _id: user._id,
+          $or: [
+            { username: { $exists: false } },
+            { username: null },
+            { username: '' }
+          ]
+        },
+        { $set: { username: candidate } },
+        { new: true, runValidators: true }
+      ).select('username');
+
+      if (updated?.username) {
+        user.username = updated.username;
+        return updated.username;
+      }
+
+      const current = await User.findById(user._id).select('username').lean();
+      if (current?.username) {
+        user.username = current.username;
+        return current.username;
+      }
+    } catch (error) {
+      if (error.code !== 11000) throw error;
     }
   }
-  user.username = candidate;
-  await user.save();
-  return candidate;
+
+  const error = new Error('Could not allocate a unique username. Please try again.');
+  error.statusCode = 409;
+  throw error;
 }
 
 /**

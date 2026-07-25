@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/layout/Navbar';
@@ -217,8 +217,8 @@ function App() {
 
 /**
  * ForumErrorBoundary — surfaces render errors instead of a blank white page.
- * Logs to console + window and renders a visible diagnostic box so the
- * actual exception message is visible without opening DevTools.
+ * Logs diagnostics for developers while keeping production error details
+ * out of the rendered page.
  */
 class ForumErrorBoundary extends Component {
   constructor(props) {
@@ -229,9 +229,8 @@ class ForumErrorBoundary extends Component {
     return { error };
   }
   componentDidCatch(error, info) {
-    // eslint-disable-next-line no-console
     console.error('[ForumErrorBoundary]', error, info);
-    if (typeof window !== 'undefined') {
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
       window.__lastForumError = { message: String(error?.message || error), stack: error?.stack, info };
     }
   }
@@ -264,7 +263,7 @@ class ForumErrorBoundary extends Component {
               fontSize: 13
             }}
           >
-            {String(this.state.error?.message || this.state.error)}
+            Please refresh the page. If the problem continues, contact support.
           </pre>
         </div>
       );

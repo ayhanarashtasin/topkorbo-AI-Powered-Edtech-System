@@ -67,15 +67,16 @@ export default function MentionInput({
   useEffect(() => {
     if (!active) return;
     if (debounced.length < minChars) {
-      setResults([]);
       return;
     }
     let cancelled = false;
     forumApi
       .search(debounced, 'user')
       .then((r) => {
-        if (!cancelled) setResults(r.data?.users || []);
-        setHighlight(0);
+        if (!cancelled) {
+          setResults(r.data?.users || []);
+          setHighlight(0);
+        }
       })
       .catch(() => {
         if (!cancelled) setResults([]);
@@ -86,30 +87,39 @@ export default function MentionInput({
   }, [debounced, active, minChars]);
 
   function choose(user) {
-    if (!containerRef?.current) return;
+    const editor = containerRef?.current?.node || containerRef?.current;
+    if (!editor) return;
     const range = lastRange.current;
-    if (range) {
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
-    // Replace the in-progress `@token` with the chosen user's mention link.
     const node = range?.startContainer;
-    if (node && node.nodeType === Node.TEXT_NODE) {
+    if (range && node?.isConnected && node.nodeType === Node.TEXT_NODE) {
       const offset = range.startOffset;
       const before = node.textContent.slice(0, offset);
-      const after = node.textContent.slice(offset);
-      const replaced = before.replace(/@([a-z0-9_.]{0,24})$/i, '');
+      const token = /@([a-z0-9_.]{0,24})$/i.exec(before);
+      if (!token) return;
+
       const username = user.username || user.name?.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-      const link = `<a class="mention" data-uid="${user._id}" href="/forum/u/${user._id}">@${username}</a>&nbsp;`;
-      node.textContent = replaced;
-      // Splice the rendered link in immediately after the typed text node.
-      const linkNode = document.createElement('span');
-      linkNode.innerHTML = link;
-      const parent = node.parentNode;
-      while (linkNode.firstChild) parent.insertBefore(linkNode.firstChild, node.nextSibling);
-      parent.insertBefore(document.createTextNode(after), linkNode.nextSibling);
-      parent.removeChild(node);
+      const mention = document.createElement('a');
+      mention.className = 'mention';
+      mention.dataset.uid = user._id;
+      mention.href = `/forum/u/${user._id}`;
+      mention.textContent = `@${username}`;
+      const spacer = document.createTextNode('\u00a0');
+
+      const replacement = document.createRange();
+      replacement.setStart(node, offset - token[0].length);
+      replacement.setEnd(node, offset);
+      replacement.deleteContents();
+
+      const fragment = document.createDocumentFragment();
+      fragment.append(mention, spacer);
+      replacement.insertNode(fragment);
+
+      const selection = window.getSelection();
+      replacement.setStartAfter(spacer);
+      replacement.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(replacement);
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
     }
     setActive(false);
     onSelect && onSelect(user);
@@ -126,7 +136,7 @@ export default function MentionInput({
     });
   }, [active, query]);
 
-  if (!active || !results.length) return null;
+  if (!active || debounced.length < minChars || !results.length) return null;
 
   return (
     <div

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { HiSearch } from 'react-icons/hi';
 import forumApi from '../services/forumApi';
 import useDebounce from '../hooks/useDebounce';
 import EmptyState from '../components/forum/EmptyState';
 import UserAvatar from '../components/forum/UserAvatar';
+
+const EMPTY_RESULTS = { posts: [], users: [], categories: [] };
 
 export default function ForumSearch() {
   const [params, setParams] = useSearchParams();
@@ -17,16 +19,15 @@ export default function ForumSearch() {
   const debounced = useDebounce(q, 350);
 
   useEffect(() => {
-    setQ(params.get('q') || '');
+    startTransition(() => setQ(params.get('q') || ''));
   }, [params]);
 
   useEffect(() => {
     if (!debounced.trim()) {
-      setData({ posts: [], users: [], categories: [] });
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    startTransition(() => setLoading(true));
     forumApi
       .search(debounced, tab)
       .then((r) => {
@@ -45,6 +46,8 @@ export default function ForumSearch() {
     e.preventDefault();
     setParams(q ? { q } : {});
   }
+
+  const visibleData = debounced.trim() ? data : EMPTY_RESULTS;
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
@@ -79,14 +82,14 @@ export default function ForumSearch() {
         <EmptyState title="Type to search" message="Find posts, people, and categories from across the community." />
       )}
 
-      {!loading && q && data.posts.length === 0 && data.users.length === 0 && data.categories.length === 0 && (
+      {!loading && q && visibleData.posts.length === 0 && visibleData.users.length === 0 && visibleData.categories.length === 0 && (
         <EmptyState title="No results" message={`Nothing matches "${q}". Try a different keyword.`} />
       )}
 
-      {data.posts.length > 0 && (tab === 'all' || tab === 'post') && (
+      {visibleData.posts.length > 0 && (tab === 'all' || tab === 'post') && (
         <section>
           <h3 style={{ marginBottom: 10 }}>Posts</h3>
-          {data.posts.map((p) => (
+          {visibleData.posts.map((p) => (
             <div
               key={p._id}
               className="forum-search-result"
@@ -106,11 +109,11 @@ export default function ForumSearch() {
         </section>
       )}
 
-      {data.users.length > 0 && (tab === 'all' || tab === 'user') && (
+      {visibleData.users.length > 0 && (tab === 'all' || tab === 'user') && (
         <section style={{ marginTop: 24 }}>
           <h3 style={{ marginBottom: 10 }}>People</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-            {data.users.map((u) => (
+            {visibleData.users.map((u) => (
               <div
                 key={u._id}
                 className="forum-search-result"
@@ -121,7 +124,7 @@ export default function ForumSearch() {
                   <div>
                     <div style={{ fontWeight: 700 }}>{u.name}</div>
                     <div className="forum-muted" style={{ fontSize: '0.78rem' }}>
-                      {u.username ? `@${u.username}` : u.email}
+                      {u.username ? `@${u.username}` : u.role || 'Community member'}
                     </div>
                   </div>
                 </div>
@@ -131,18 +134,18 @@ export default function ForumSearch() {
         </section>
       )}
 
-      {data.categories.length > 0 && (tab === 'all' || tab === 'category') && (
+      {visibleData.categories.length > 0 && (tab === 'all' || tab === 'category') && (
         <section style={{ marginTop: 24 }}>
           <h3 style={{ marginBottom: 10 }}>Categories</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {data.categories.map((c) => (
+            {visibleData.categories.map((c) => (
               <button
                 key={c.name}
                 type="button"
                 className="forum-category-chip"
                 onClick={() => {
                   setQ(c.name);
-                  navigate(`/forum?q=${encodeURIComponent(c.name)}`);
+                  navigate(`/forum?category=${encodeURIComponent(c.name)}`);
                 }}
               >
                 {c.name}

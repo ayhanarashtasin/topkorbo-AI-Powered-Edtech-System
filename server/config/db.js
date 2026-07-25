@@ -16,25 +16,24 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/topkorbo';
 
-  // Handle post-connection errors (like replica set timeouts) to prevent uncaughtException crashes
-  mongoose.connection.on('error', (error) => {
-    console.error(` Mongoose Connection Error: ${error.message}`);
-  });
-
-  mongoose.connection.on('disconnected', () => {
-    console.warn(' MongoDB disconnected. Will auto-reconnect on next query.');
-  });
-
-  mongoose.connection.on('reconnected', () => {
-    console.log(' MongoDB reconnected');
-  });
+  if (mongoose.connection.listenerCount('error') === 0) {
+    mongoose.connection.on('error', (error) => {
+      console.error(` Mongoose Connection Error: ${error.message}`);
+    });
+    mongoose.connection.on('disconnected', () => {
+      console.warn(' MongoDB disconnected. Will auto-reconnect on next query.');
+    });
+    mongoose.connection.on('reconnected', () => {
+      console.log(' MongoDB reconnected');
+    });
+  }
 
   try {
-    const conn = await mongoose.connect(uri, {
+    await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 15000,
       socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      minPoolSize: 2,
+      maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE) || 10,
+      minPoolSize: process.env.VERCEL ? 0 : 2,
       heartbeatFrequencyMS: 10000
     });
     console.log('MongoDB Atlas Connected');

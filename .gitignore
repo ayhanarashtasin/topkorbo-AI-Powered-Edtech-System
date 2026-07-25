@@ -25,6 +25,17 @@ build/
 Thumbs.db
 .vscode/
 .idea/
+.agents/
 .puku/
 *.log
 .puku-cli
+
+# Local test and runtime artifacts
+**/__tests__/
+coverage/
+test-results/
+playwright-report/
+server/tmp/
+
+# Local project document (not application source)
+/TopKorbo_AI_DataCard.docx

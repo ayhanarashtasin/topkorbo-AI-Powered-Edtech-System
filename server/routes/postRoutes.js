@@ -10,9 +10,16 @@ const postController = require('../controllers/postController');
 router.get('/bookmarks/mine', auth, postController.myBookmarks);
 router.post('/', auth, writeLimiter, postUpload.array('images', 8), verifyImageBytes, postController.create);
 router.get('/', auth, postController.feed);
-router.post('/:id/bookmark', auth, postController.toggleBookmark);
+router.post('/:id/bookmark', auth, writeLimiter, postController.toggleBookmark);
 router.get('/:id', auth, postController.getOne);
-router.patch('/:id', auth, postController.update);
-router.delete('/:id', auth, postController.remove);
+router.patch(
+  '/:id',
+  auth,
+  writeLimiter,
+  postUpload.array('images', 8),
+  verifyImageBytes,
+  postController.update
+);
+router.delete('/:id', auth, writeLimiter, postController.remove);
 
 module.exports = router;

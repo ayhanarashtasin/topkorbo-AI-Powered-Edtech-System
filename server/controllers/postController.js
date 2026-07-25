@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const User = require('../models/User');
@@ -7,24 +6,23 @@ const { uploadImage, deleteImage } = require('../services/uploadService');
 const { sanitize, htmlToText } = require('../services/sanitizeService');
 const { ensureUsername, resolveMentions } = require('../services/mentionService');
 const { notify } = require('../services/notificationService');
+const { recomputePostScore } = require('../services/forumScoreService');
 const { getIO } = require('../socket');
-const rateLimit = require('express-rate-limit');
+const {
+  clampLimit,
+  descendingCursorFilter,
+  finalizePage
+} = require('../utils/forumPagination');
+const {
+  POST_HTML_MAX,
+  validateHtmlLength,
+  normalizeTags,
+  normalizeCategory
+} = require('../utils/forumValidation');
 
 const PAGE_SIZE = 20;
 
 const POPULATE_AUTHOR = 'name username avatar role collegeName universityName department hscBatch stream forumRole reputation';
-
-/**
- * Compute a trending score. Simple time-decayed engagement.
- *   score = (reactions + 3*comments) / hoursSincePost^1.5
- * Stored in `score` so we can index it for fast sorting.
- */
-function computeScore(post) {
-  const likes = (post.reactionsCount?.like || 0) + 2 * (post.reactionsCount?.love || 0);
-  const comments = post.commentsCount || 0;
-  const hours = Math.max(1, (Date.now() - new Date(post.createdAt).getTime()) / 3.6e6);
-  return (likes + 3 * comments) / Math.pow(hours, 1.5);
-}
 
 async function attachUserPostState(docs, userId, options = {}) {
   if (!docs || docs.length === 0) return docs;
@@ -56,30 +54,30 @@ async function attachUserPostState(docs, userId, options = {}) {
   return docs;
 }
 
-const createLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 12,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id || req.ip,
-  message: { success: false, message: 'You are posting too fast — try again in a minute.' }
-});
-
 async function uploadPostImages(req) {
   const files = (req.files || []).slice(0, 8);
   const out = [];
-  for (const f of files) {
-    // eslint-disable-next-line no-await-in-loop
-    const uploaded = await uploadImage(f, req.user.id, 'topkorbo/forum/posts');
-    out.push(uploaded);
+  try {
+    for (const f of files) {
+      // Keep per-request memory and outbound bandwidth bounded.
+      // eslint-disable-next-line no-await-in-loop
+      const uploaded = await uploadImage(f, req.user.id, 'topkorbo/forum/posts');
+      out.push(uploaded);
+    }
+    return out;
+  } catch (error) {
+    await Promise.allSettled(
+      out.map((image) => deleteImage(image.publicId, image.url))
+    );
+    throw error;
   }
-  return out;
+}
+
+function imageKey(image) {
+  return image.publicId || image.url;
 }
 
 const postController = {
-  /** Rate limiter exposed for the routes file to mount separately. */
-  createLimiter,
-
   /**
    * POST /api/posts
    * multipart/form-data with fields:
@@ -100,54 +98,60 @@ const postController = {
       await ensureUsername(author);
 
       const { contentHtml: rawHtml, title, category, type, tags } = req.body;
-      if (!rawHtml || !String(rawHtml).trim()) {
-        return res.status(400).json({ success: false, message: 'contentHtml is required' });
+      const htmlError = validateHtmlLength(rawHtml, POST_HTML_MAX, 'Post body');
+      if (htmlError) {
+        return res.status(400).json({ success: false, message: htmlError });
       }
       const safeHtml = sanitize(rawHtml);
       if (!safeHtml || !htmlToText(safeHtml)) {
         return res.status(400).json({ success: false, message: 'Post body cannot be empty.' });
       }
 
-      const images = await uploadPostImages(req);
+      const normalizedCategory = normalizeCategory(category);
+      if (!normalizedCategory) {
+        return res.status(400).json({ success: false, message: 'Invalid category.' });
+      }
+
       const { ids: mentionIds } = await resolveMentions(safeHtml);
-      const tagList = String(tags || '')
-        .split(',')
-        .map((t) => t.trim().toLowerCase())
-        .filter(Boolean)
-        .slice(0, 8);
-
-      const post = await Post.create({
-        author: author._id,
-        type: type === 'question' ? 'question' : 'text',
-        category: category || 'General',
-        title: title ? String(title).trim().slice(0, 200) : undefined,
-        contentHtml: safeHtml,
-        contentText: htmlToText(safeHtml, 5000),
-        images,
-        mentions: mentionIds,
-        tags: tagList,
-        groupVisibility: author.stream ? [author.stream] : []
-      });
-
-      post.score = computeScore(post);
-      await post.save();
+      const tagList = normalizeTags(tags);
+      const images = await uploadPostImages(req);
+      let post;
+      try {
+        post = await Post.create({
+          author: author._id,
+          type: type === 'question' ? 'question' : 'text',
+          category: normalizedCategory,
+          title: title ? String(title).trim().slice(0, 200) : undefined,
+          contentHtml: safeHtml,
+          contentText: htmlToText(safeHtml, 5000),
+          images,
+          mentions: mentionIds,
+          tags: tagList,
+          score: 0,
+          groupVisibility: author.stream ? [author.stream] : []
+        });
+      } catch (error) {
+        await Promise.allSettled(
+          images.map((image) => deleteImage(image.publicId, image.url))
+        );
+        throw error;
+      }
 
       const populated = await Post.findById(post._id).populate('author', POPULATE_AUTHOR);
 
       // Broadcast + mention notifications
       const io = getIO();
       io.emit('post:new', populated);
-      for (const uid of mentionIds) {
-        // eslint-disable-next-line no-await-in-loop
-        await notify(io, {
+      await Promise.allSettled(
+        mentionIds.map((uid) => notify(io, {
           recipient: uid,
           actor: author._id,
           type: 'mention',
           post: post._id,
           message: `${author.name} mentioned you in a post.`,
           preview: post.contentText.slice(0, 120)
-        });
-      }
+        }))
+      );
 
       return res.status(201).json({ success: true, data: populated });
     } catch (err) {
@@ -160,13 +164,22 @@ const postController = {
    */
   async feed(req, res, next) {
     try {
-      const feed = String(req.query.feed || 'latest');
+      const requestedFeed = String(req.query.feed || 'latest');
+      const feed = ['latest', 'trending', 'following', 'discussed'].includes(requestedFeed)
+        ? requestedFeed
+        : 'latest';
       const category = req.query.category ? String(req.query.category) : null;
       const cursor = req.query.cursor;
-      const limit = Math.min(50, Number(req.query.limit) || PAGE_SIZE);
+      const limit = clampLimit(req.query.limit, PAGE_SIZE, 50);
 
       const baseFilter = { isHidden: false };
-      if (category && category !== 'All') baseFilter.category = category;
+      if (category && category !== 'All') {
+        const normalizedCategory = normalizeCategory(category);
+        if (!normalizedCategory) {
+          return res.status(400).json({ success: false, message: 'Invalid category.' });
+        }
+        baseFilter.category = normalizedCategory;
+      }
 
       if (feed === 'following' && req.user) {
         const me = await User.findById(req.user.id).select('following');
@@ -177,13 +190,18 @@ const postController = {
         baseFilter.author = { $in: ids };
       }
 
-      let sort = { createdAt: -1 };
-      if (feed === 'trending') sort = { score: -1, createdAt: -1 };
-      else if (feed === 'discussed') sort = { commentsCount: -1, createdAt: -1 };
-
-      if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
-        baseFilter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+      let sort = { createdAt: -1, _id: -1 };
+      let cursorFields = ['createdAt'];
+      if (feed === 'trending') {
+        sort = { score: -1, createdAt: -1, _id: -1 };
+        cursorFields = ['score', 'createdAt'];
+      } else if (feed === 'discussed') {
+        sort = { commentsCount: -1, createdAt: -1, _id: -1 };
+        cursorFields = ['commentsCount', 'createdAt'];
       }
+
+      const cursorFilter = descendingCursorFilter(cursor, cursorFields);
+      if (cursorFilter) Object.assign(baseFilter, cursorFilter);
 
       const posts = await Post.find(baseFilter)
         .sort(sort)
@@ -191,16 +209,14 @@ const postController = {
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
 
-      await attachUserPostState(posts, req.user?.id);
+      const page = finalizePage(posts, limit, cursorFields);
+      await attachUserPostState(page.items, req.user?.id);
 
-      let nextCursor = null;
-      if (posts.length > limit) {
-        const last = posts.pop();
-        nextCursor = last._id;
-      }
-
-
-      return res.json({ success: true, data: posts, nextCursor });
+      return res.json({
+        success: true,
+        data: page.items,
+        nextCursor: page.nextCursor
+      });
     } catch (err) {
       next(err);
     }
@@ -238,12 +254,20 @@ const postController = {
   async update(req, res, next) {
     try {
       const post = await Post.findById(req.params.id);
-      if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+      if (!post || post.isHidden) {
+        return res.status(404).json({ success: false, message: 'Post not found' });
+      }
       if (String(post.author) !== String(req.user.id)) {
         return res.status(403).json({ success: false, message: 'Not your post' });
       }
       const { contentHtml, title, category, tags, type } = req.body;
+      let removedImages = [];
+      let uploadedImages = [];
       if (contentHtml !== undefined) {
+        const htmlError = validateHtmlLength(contentHtml, POST_HTML_MAX, 'Post body');
+        if (htmlError) {
+          return res.status(400).json({ success: false, message: htmlError });
+        }
         const safe = sanitize(contentHtml);
         if (!safe || !htmlToText(safe)) {
           return res.status(400).json({ success: false, message: 'Post body cannot be empty.' });
@@ -254,18 +278,58 @@ const postController = {
         post.mentions = mentionIds;
       }
       if (title !== undefined) post.title = String(title).trim().slice(0, 200);
-      if (category) post.category = category;
-      if (type === 'text' || type === 'question') post.type = type;
-      if (tags !== undefined) {
-        post.tags = String(tags)
-          .split(',')
-          .map((t) => t.trim().toLowerCase())
-          .filter(Boolean)
-          .slice(0, 8);
+      if (category !== undefined) {
+        const normalizedCategory = normalizeCategory(category);
+        if (!normalizedCategory) {
+          return res.status(400).json({ success: false, message: 'Invalid category.' });
+        }
+        post.category = normalizedCategory;
       }
+      if (type === 'text' || type === 'question') post.type = type;
+      if (tags !== undefined) post.tags = normalizeTags(tags);
+
+      if (req.body.keepImages !== undefined || (req.files || []).length > 0) {
+        let keepKeys;
+        try {
+          const parsed = req.body.keepImages === undefined
+            ? (post.images || []).map(imageKey)
+            : JSON.parse(req.body.keepImages || '[]');
+          keepKeys = new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+        } catch {
+          return res.status(400).json({ success: false, message: 'Invalid image selection.' });
+        }
+
+        const keptImages = (post.images || []).filter((image) =>
+          keepKeys.has(String(imageKey(image)))
+        );
+        removedImages = (post.images || []).filter((image) =>
+          !keepKeys.has(String(imageKey(image)))
+        );
+        if (keptImages.length + (req.files || []).length > 8) {
+          return res.status(400).json({
+            success: false,
+            message: 'A post can contain at most 8 images.'
+          });
+        }
+
+        uploadedImages = await uploadPostImages(req);
+        post.images = [...keptImages, ...uploadedImages];
+      }
+
       post.isEdited = true;
       post.editedAt = new Date();
-      await post.save();
+      try {
+        await post.save();
+      } catch (error) {
+        await Promise.allSettled(
+          uploadedImages.map((image) => deleteImage(image.publicId, image.url))
+        );
+        throw error;
+      }
+
+      await Promise.allSettled(
+        removedImages.map((image) => deleteImage(image.publicId, image.url))
+      );
 
       const populated = await Post.findById(post._id).populate('author', POPULATE_AUTHOR);
       const io = getIO();
@@ -283,7 +347,9 @@ const postController = {
   async remove(req, res, next) {
     try {
       const post = await Post.findById(req.params.id);
-      if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+      if (!post || post.isHidden) {
+        return res.status(404).json({ success: false, message: 'Post not found' });
+      }
       const isOwner = String(post.author) === String(req.user.id);
       const isAdmin = req.user.forumRole === 'admin' || req.user.forumRole === 'moderator';
       if (!isOwner && !isAdmin) {
@@ -292,11 +358,9 @@ const postController = {
       post.isHidden = true;
       post.hiddenReason = isAdmin && !isOwner ? 'Removed by moderator' : 'Deleted by author';
       await post.save();
-      // Best-effort delete images
-      for (const img of post.images) {
-        // eslint-disable-next-line no-await-in-loop
-        await deleteImage(img.publicId, img.url);
-      }
+      await Promise.allSettled(
+        post.images.map((image) => deleteImage(image.publicId, image.url))
+      );
       const io = getIO();
       io.to(`post:${String(post._id)}`).emit('post:delete', { postId: post._id });
       return res.json({ success: true, data: { _id: post._id } });
@@ -310,22 +374,61 @@ const postController = {
    */
   async toggleBookmark(req, res, next) {
     try {
-      const post = await Post.findById(req.params.id);
+      const post = await Post.findById(req.params.id).select('_id isHidden');
       if (!post || post.isHidden) return res.status(404).json({ success: false, message: 'Post not found' });
-      const me = await User.findById(req.user.id).select('bookmarks');
-      if (!me) return res.status(404).json({ success: false, message: 'User not found' });
-      
-      const isBookmarked = me.bookmarks.some((b) => String(b) === String(post._id));
-      
-      if (isBookmarked) {
-        await User.updateOne({ _id: me._id }, { $pull: { bookmarks: post._id } });
-        await Post.updateOne({ _id: post._id }, { $inc: { bookmarksCount: -1 } });
-        return res.json({ success: true, data: { bookmarked: false, bookmarksCount: Math.max(0, (post.bookmarksCount || 0) - 1) } });
-      } else {
-        await User.updateOne({ _id: me._id }, { $addToSet: { bookmarks: post._id } });
-        await Post.updateOne({ _id: post._id }, { $inc: { bookmarksCount: 1 } });
-        return res.json({ success: true, data: { bookmarked: true, bookmarksCount: (post.bookmarksCount || 0) + 1 } });
+
+      const removed = await User.updateOne(
+        { _id: req.user.id, bookmarks: post._id },
+        { $pull: { bookmarks: post._id } }
+      );
+      const bookmarked = removed.modifiedCount === 0;
+      let countDelta = removed.modifiedCount === 1 ? -1 : 0;
+
+      if (bookmarked) {
+        const added = await User.updateOne(
+          { _id: req.user.id, bookmarks: { $ne: post._id } },
+          { $addToSet: { bookmarks: post._id } }
+        );
+        if (added.matchedCount === 0) {
+          return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        // Concurrent requests can both observe an unbookmarked state. Only
+        // the request that actually inserts the ObjectId owns the counter bump.
+        countDelta = added.modifiedCount === 1 ? 1 : 0;
       }
+
+      try {
+        if (countDelta > 0) {
+          await Post.updateOne({ _id: post._id }, { $inc: { bookmarksCount: 1 } });
+        } else if (countDelta < 0) {
+          await Post.updateOne(
+            { _id: post._id },
+            [{
+              $set: {
+                bookmarksCount: {
+                  $max: [0, { $subtract: [{ $ifNull: ['$bookmarksCount', 0] }, 1] }]
+                }
+              }
+            }]
+          );
+        }
+      } catch (error) {
+        if (countDelta !== 0) {
+          await User.updateOne(
+            { _id: req.user.id },
+            bookmarked
+              ? { $pull: { bookmarks: post._id } }
+              : { $addToSet: { bookmarks: post._id } }
+          );
+        }
+        throw error;
+      }
+
+      const updated = await Post.findById(post._id).select('bookmarksCount').lean();
+      return res.json({
+        success: true,
+        data: { bookmarked, bookmarksCount: updated?.bookmarksCount || 0 }
+      });
     } catch (err) {
       next(err);
     }
@@ -336,26 +439,25 @@ const postController = {
    */
   async byUser(req, res, next) {
     try {
-      const limit = Math.min(50, Number(req.query.limit) || PAGE_SIZE);
+      const limit = clampLimit(req.query.limit, PAGE_SIZE, 50);
       const cursor = req.query.cursor;
       const filter = { author: req.params.id, isHidden: false };
-      if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
-        filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
-      }
+      const cursorFields = ['createdAt'];
+      const cursorFilter = descendingCursorFilter(cursor, cursorFields);
+      if (cursorFilter) Object.assign(filter, cursorFilter);
       const posts = await Post.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: -1 })
         .limit(limit + 1)
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
         
-      await attachUserPostState(posts, req.user?.id);
-      
-      let nextCursor = null;
-      if (posts.length > limit) {
-        const last = posts.pop();
-        nextCursor = last._id;
-      }
-      return res.json({ success: true, data: posts, nextCursor });
+      const page = finalizePage(posts, limit, cursorFields);
+      await attachUserPostState(page.items, req.user?.id);
+      return res.json({
+        success: true,
+        data: page.items,
+        nextCursor: page.nextCursor
+      });
     } catch (err) {
       next(err);
     }
@@ -388,10 +490,7 @@ const postController = {
    */
   async recomputeScore(postId) {
     try {
-      const post = await Post.findById(postId);
-      if (!post) return;
-      post.score = computeScore(post);
-      await post.save();
+      await recomputePostScore(postId);
     } catch (e) {
       // best-effort
     }

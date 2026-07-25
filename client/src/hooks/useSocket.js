@@ -13,6 +13,7 @@ const DEFAULT_URL = import.meta.env.VITE_API_URL
  */
 export default function useSocket() {
   const [connected, setConnected] = useState(false);
+  const [socket, setSocket] = useState(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -27,7 +28,10 @@ export default function useSocket() {
     });
     socketRef.current = s;
 
-    s.on('connect', () => setConnected(true));
+    s.on('connect', () => {
+      setSocket(s);
+      setConnected(true);
+    });
     s.on('disconnect', () => setConnected(false));
     s.on('connect_error', () => setConnected(false));
 
@@ -51,5 +55,5 @@ export default function useSocket() {
     s.emit(event, payload);
   }, []);
 
-  return { socket: socketRef.current, connected, on, emit };
+  return { socket, connected, on, emit };
 }

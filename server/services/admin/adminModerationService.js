@@ -9,6 +9,7 @@ const { notify } = require('../notificationService');
 const { getIO } = require('../../socket');
 const { createAdminAuditLog } = require('./adminAuditService');
 const { updateUserStatus, resolveAccountStatus } = require('./adminUserService');
+const { hideComment } = require('../forumCommentService');
 
 const REPORT_STATUSES = ['open', 'under_review', 'resolved', 'dismissed'];
 const REPORT_TARGET_TYPES = ['post', 'comment', 'user', 'question'];
@@ -115,7 +116,7 @@ function mapTargetSummary(group, targetMaps) {
           }
         : null,
       isHidden: !!target?.isHidden,
-      linkPath: target ? `/community/posts/${group.targetId}` : ''
+      linkPath: target ? `/forum/post/${group.targetId}` : ''
     };
   }
 
@@ -132,7 +133,7 @@ function mapTargetSummary(group, targetMaps) {
           }
         : null,
       isHidden: !!target?.isHidden,
-      linkPath: target?.post ? `/community/posts/${target.post._id || target.post}` : ''
+      linkPath: target?.post ? `/forum/post/${target.post._id || target.post}` : ''
     };
   }
 
@@ -339,7 +340,7 @@ async function resolveTargetForReport(report) {
             email: post.author.email || ''
           }
         : null,
-      linkPath: post ? `/community/posts/${post._id}` : '',
+      linkPath: post ? `/forum/post/${post._id}` : '',
       isHidden: !!post?.isHidden
     };
   }
@@ -362,7 +363,7 @@ async function resolveTargetForReport(report) {
             email: comment.author.email || ''
           }
         : null,
-      linkPath: comment?.post ? `/community/posts/${comment.post._id}` : '',
+      linkPath: comment?.post ? `/forum/post/${comment.post._id}` : '',
       isHidden: !!comment?.isHidden
     };
   }
@@ -633,7 +634,7 @@ async function hideReportedContent({ adminUser, reportId, note = '' }) {
   if (anchor.targetType === 'post') {
     await Post.findByIdAndUpdate(anchor.target, { isHidden: true, hiddenReason });
   } else if (anchor.targetType === 'comment') {
-    await Comment.findByIdAndUpdate(anchor.target, { isHidden: true });
+    await hideComment(anchor.target);
   } else {
     const err = new Error('Hide content is only supported for posts and comments');
     err.statusCode = 400;

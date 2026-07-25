@@ -42,7 +42,8 @@ const userSchema = new mongoose.Schema({
   // Optional local-only hash reserved for dev/admin seed flows.
   passwordHash: {
     type: String,
-    default: ''
+    default: '',
+    select: false
   },
   avatar: {
     type: String

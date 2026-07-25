@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { HiCode, HiLink } from 'react-icons/hi';
 import { MdFormatBold, MdFormatItalic, MdFormatListBulleted, MdFormatQuote } from 'react-icons/md';
 
@@ -9,18 +9,17 @@ import { MdFormatBold, MdFormatItalic, MdFormatListBulleted, MdFormatQuote } fro
 // uploads them). HTML is re-sanitized server-side with sanitize-html.
 //
 // No third-party editor is used to keep the bundle small.
-const RichTextEditor = forwardRef(function RichTextEditor(
+function RichTextEditor(
   {
+    ref,
     initialHtml = '',
     placeholder = 'Share something with the community…',
     onChange,
     onImageFiles,
     minHeight = 160
-  },
-  ref
+  }
 ) {
   const editorRef = useRef(null);
-  const [empty, setEmpty] = useState(!initialHtml);
 
   // NOTE: `handleInput` must be declared before the `useImperativeHandle`
   // that captures it. Otherwise the imperative methods would reference a
@@ -28,7 +27,6 @@ const RichTextEditor = forwardRef(function RichTextEditor(
   const handleInput = useCallback(() => {
     const html = editorRef.current?.innerHTML || '';
     const text = (editorRef.current?.innerText || '').trim();
-    setEmpty(!text);
     onChange && onChange(html, text);
   }, [onChange]);
 
@@ -44,18 +42,15 @@ const RichTextEditor = forwardRef(function RichTextEditor(
     getText: () => (editorRef.current?.innerText || '').trim(),
     clear: () => {
       if (editorRef.current) editorRef.current.innerHTML = '';
-      setEmpty(true);
       onChange && onChange('', '');
     }
   }), [handleInput, onChange]);
 
   useEffect(() => {
-    if (editorRef.current && initialHtml && editorRef.current.innerHTML !== initialHtml) {
-      editorRef.current.innerHTML = initialHtml;
-      setEmpty(false);
+    if (editorRef.current && editorRef.current.innerHTML !== initialHtml) {
+      editorRef.current.innerHTML = initialHtml || '';
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialHtml]);
 
   function exec(cmd, value = null) {
     document.execCommand(cmd, false, value);
@@ -118,6 +113,6 @@ const RichTextEditor = forwardRef(function RichTextEditor(
       />
     </div>
   );
-});
+}
 
 export default RichTextEditor;

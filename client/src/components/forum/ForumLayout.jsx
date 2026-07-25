@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { HiSearch, HiPlus, HiBookmark, HiUserCircle } from 'react-icons/hi';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { HiBookmark, HiPlus, HiSearch, HiUserCircle } from 'react-icons/hi';
 import Sidebar from '../layout/Sidebar';
 import NotificationBell from './NotificationBell';
 import { useForum } from '../../context/ForumContext';
 import { useLanguage } from '../../hooks/useLanguage';
 import '../../styles/forum.css';
 
-// ForumLayout — chrome for every /forum/* page. Reuses the app Sidebar for
-// navigation and adds a forum-specific header (search, compose, notifications,
-// profile shortcut) above the route outlet.
 export default function ForumLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,19 +14,16 @@ export default function ForumLayout() {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
 
-  // Auth guard — bounce unauthenticated visitors back to the landing page.
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
-    if (!token) {
-      window.location.href = '/';
-    }
+    if (!token) window.location.href = '/';
   }, []);
 
-  function onSearch(e) {
-    e.preventDefault();
-    const q = query.trim();
-    if (!q) return;
-    navigate(`/forum/search?q=${encodeURIComponent(q)}`);
+  function onSearch(event) {
+    event.preventDefault();
+    const nextQuery = query.trim();
+    if (!nextQuery) return;
+    navigate(`/forum/search?q=${encodeURIComponent(nextQuery)}`);
   }
 
   const activeTab = (() => {
@@ -40,55 +34,72 @@ export default function ForumLayout() {
     return 'forum';
   })();
 
+  const localizedPlaceholder = t('forum.search_placeholder')
+    || 'Search discussions, people, or topics';
+  const searchPlaceholder = `${localizedPlaceholder.replace(/[.\u2026]+$/, '')}\u2026`;
+
   return (
     <div className="forum-shell">
+      <a className="forum-skip-link" href="#forum-main-content">Skip to Community</a>
       <Sidebar activeTab={activeTab} user={user} />
 
       <div className="forum-main">
         <header className="forum-header">
+          <Link className="forum-header__identity" to="/forum" aria-label="TopKorbo Community home">
+            <span className="forum-header__mark" aria-hidden="true">TK</span>
+            <span>
+              <strong>Community</strong>
+              <small>Learn together</small>
+            </span>
+          </Link>
+
           <form className="forum-search" onSubmit={onSearch} role="search">
-            <HiSearch className="forum-search__icon" size={18} />
+            <label className="forum-visually-hidden" htmlFor="forum-global-search">
+              Search the community
+            </label>
+            <HiSearch className="forum-search__icon" size={18} aria-hidden="true" />
             <input
+              id="forum-global-search"
+              name="forum-search"
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('forum.search_placeholder') || 'Search posts, people, or categories'}
-              aria-label="Search"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder}
+              autoComplete="off"
             />
+            <kbd aria-hidden="true">Enter</kbd>
           </form>
 
-          <div className="forum-header__actions">
+          <nav className="forum-header__actions" aria-label="Community shortcuts">
             <NotificationBell />
-            <button
+            <Link
               className="forum-icon-btn"
-              type="button"
-              title={t('forum.bookmarks') || 'Bookmarks'}
-              onClick={() => navigate('/forum/bookmarks')}
+              to="/forum/bookmarks"
+              aria-label={t('forum.bookmarks') || 'Saved discussions'}
+              title={t('forum.bookmarks') || 'Saved discussions'}
             >
-              <HiBookmark size={20} />
-            </button>
-            <button
-              className="forum-icon-btn"
-              type="button"
-              title={t('forum.profile') || 'My profile'}
-              onClick={() => user && navigate(`/forum/u/${user._id}`)}
-            >
-              <HiUserCircle size={20} />
-            </button>
-            <button
-              className="forum-compose-btn"
-              type="button"
-              onClick={() => navigate('/forum/compose')}
-            >
-              <HiPlus size={18} />
-              <span>{t('forum.compose') || 'New post'}</span>
-            </button>
-          </div>
+              <HiBookmark size={19} aria-hidden="true" />
+            </Link>
+            {user ? (
+              <Link
+                className="forum-icon-btn"
+                to={`/forum/u/${user._id}`}
+                aria-label={t('forum.profile') || 'Your community profile'}
+                title={t('forum.profile') || 'Your community profile'}
+              >
+                <HiUserCircle size={21} aria-hidden="true" />
+              </Link>
+            ) : null}
+            <Link className="forum-compose-btn" to="/forum/compose">
+              <HiPlus size={18} aria-hidden="true" />
+              <span>{t('forum.compose') || 'New Post'}</span>
+            </Link>
+          </nav>
         </header>
 
-        <div className="forum-content">
+        <main id="forum-main-content" className="forum-content" tabIndex="-1">
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );

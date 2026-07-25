@@ -2,6 +2,9 @@ const multer = require('multer');
 const { detectImage } = require('../utils/imageSignature');
 
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+const MAX_FORUM_IMAGE_MB = 4;
+const MAX_FORUM_IMAGE_BYTES = MAX_FORUM_IMAGE_MB * 1024 * 1024;
+const MAX_FORUM_REQUEST_BYTES = 4 * 1024 * 1024;
 
 const storage = multer.memoryStorage();
 
@@ -10,7 +13,9 @@ function fileFilter(req, file, cb) {
   // magic-byte validation below (verifyImageBytes), which runs after multer has
   // buffered the file and can inspect the real content.
   if (ALLOWED_MIME.includes(file.mimetype)) return cb(null, true);
-  cb(new Error('Only PNG, JPEG, GIF, or WebP images are allowed.'));
+  const error = new Error('Only PNG, JPEG, GIF, or WebP images are allowed.');
+  error.statusCode = 400;
+  cb(error);
 }
 
 /**
@@ -37,19 +42,30 @@ function verifyImageBytes(req, res, next) {
     f.detectedMime = detected.mime;
     f.detectedExt = detected.ext;
   }
+
+  const totalBytes = files.reduce(
+    (sum, file) => sum + (file.size || file.buffer?.length || 0),
+    0
+  );
+  if (totalBytes > MAX_FORUM_REQUEST_BYTES) {
+    return res.status(413).json({
+      success: false,
+      message: `Forum images must be ${MAX_FORUM_IMAGE_MB}MB or less in total.`
+    });
+  }
   next();
 }
 
 const postUpload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024, files: 8 }
+  limits: { fileSize: MAX_FORUM_IMAGE_BYTES, files: 8 }
 });
 
 const commentUpload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024, files: 3 }
+  limits: { fileSize: MAX_FORUM_IMAGE_BYTES, files: 3 }
 });
 
 const avatarUpload = multer({
@@ -58,4 +74,11 @@ const avatarUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024, files: 1 }
 });
 
-module.exports = { postUpload, commentUpload, avatarUpload, verifyImageBytes };
+module.exports = {
+  postUpload,
+  commentUpload,
+  avatarUpload,
+  verifyImageBytes,
+  MAX_FORUM_IMAGE_MB,
+  MAX_FORUM_REQUEST_BYTES
+};

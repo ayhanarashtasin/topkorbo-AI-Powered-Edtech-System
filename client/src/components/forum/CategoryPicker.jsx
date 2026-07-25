@@ -1,38 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import forumApi from '../../services/forumApi';
 import { useForum } from '../../context/ForumContext';
 
-// CategoryPicker — horizontal category chips shown above the feed.
-// Driven by /api/search/categories which returns each category's post count.
 export default function CategoryPicker({ active, onChange }) {
   const { categories } = useForum();
-  const [localCats, setLocalCats] = useState([]);
+  const [fetchedCategories, setFetchedCategories] = useState([]);
 
   useEffect(() => {
-    if (categories?.length) {
-      setLocalCats(categories);
-      return;
-    }
+    if (categories?.length) return undefined;
     let mounted = true;
-    forumApi.categories().then((r) => {
-      if (mounted) setLocalCats(r.data || []);
-    }).catch(() => {});
+    forumApi.categories()
+      .then((response) => {
+        if (mounted) setFetchedCategories(response.data || []);
+      })
+      .catch(() => {});
     return () => { mounted = false; };
   }, [categories]);
 
+  const visibleCategories = useMemo(() => {
+    const source = categories?.length ? categories : fetchedCategories;
+    const hasAll = source.some((category) => category.name === 'All');
+    return hasAll ? source : [{ name: 'All', count: 0 }, ...source];
+  }, [categories, fetchedCategories]);
+
   return (
-    <div className="forum-categories" role="tablist" aria-label="Categories">
-      {localCats.map((c) => (
+    <div className="forum-categories" role="tablist" aria-label="Discussion topics">
+      {visibleCategories.map((category) => (
         <button
-          key={c.name}
+          key={category.name}
           type="button"
           role="tab"
-          aria-selected={active === c.name}
-          className={`forum-category-chip ${active === c.name ? 'forum-category-chip--active' : ''}`}
-          onClick={() => onChange && onChange(c.name)}
+          aria-selected={active === category.name}
+          aria-controls="forum-feed-results"
+          className={`forum-category-chip ${active === category.name ? 'forum-category-chip--active' : ''}`}
+          onClick={() => onChange?.(category.name)}
         >
-          {c.name}
-          {c.count > 0 && <span className="forum-category-chip__count">{c.count}</span>}
+          <span>{category.name}</span>
+          {category.count > 0 ? (
+            <span className="forum-category-chip__count" aria-label={`${category.count} posts`}>
+              {category.count}
+            </span>
+          ) : null}
         </button>
       ))}
     </div>

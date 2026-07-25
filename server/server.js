@@ -108,6 +108,23 @@ if (!jwtSecret || PLACEHOLDER_JWT_SECRETS.has(jwtSecret)) {
   process.exit(1);
 }
 
+if (process.env.VERCEL) {
+  const missingVercelEnvironment = [
+    'MONGODB_URI',
+    'REDIS_URL',
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET'
+  ].filter((name) => !process.env[name]);
+
+  if (missingVercelEnvironment.length > 0) {
+    console.error(
+      `FATAL: missing required Vercel environment variables: ${missingVercelEnvironment.join(', ')}`
+    );
+    process.exit(1);
+  }
+}
+
 // Connect to MongoDB
 connectDB();
 
@@ -126,12 +143,18 @@ const corsAllowlist = new Set(
     .filter(Boolean),
 );
 
-function isAllowedCorsOrigin(origin) {
+function isAllowedCorsOrigin(origin, req) {
   if (!origin) return true;
-  if (corsAllowlist.size === 0 || corsAllowlist.has(origin)) return true;
+  if (corsAllowlist.has(origin)) return true;
 
   try {
-    const { hostname } = new URL(origin);
+    const { hostname, host } = new URL(origin);
+    const forwardedHost = String(req.get("x-forwarded-host") || "")
+      .split(",")[0]
+      .trim();
+    if (host === req.get("host") || (forwardedHost && host === forwardedHost)) {
+      return true;
+    }
     return hostname === "sslcommerz.com" ||
       hostname.endsWith(".sslcommerz.com") ||
       hostname === "sslcommerz.com.bd" ||
@@ -144,7 +167,7 @@ function isAllowedCorsOrigin(origin) {
 if (process.env.NODE_ENV === "production" && corsAllowlist.size === 0) {
   console.warn(
     "⚠️  CORS: no FRONTEND_URL/CORS_ORIGINS configured in production — " +
-      "falling back to allow-all. Set CORS_ORIGINS to lock this down.",
+      "same-origin requests remain allowed; cross-origin requests are denied.",
   );
 }
 
@@ -166,11 +189,9 @@ app.use(
     done(null, {
       origin(origin, cb) {
         // Allow same-origin / non-browser requests (no Origin header) and the
-        // payment gateway callbacks. When an allowlist is configured, enforce
-        // it strictly for everything else; when it is NOT configured, fall back
-        // to allow-all so an unconfigured deploy still works (a warning is
-        // logged above in production).
-        if (GATEWAY_CALLBACK_PATHS.has(req.path) || isAllowedCorsOrigin(origin)) {
+        // payment gateway callbacks. Everything else must be explicitly
+        // allowlisted or match the request's own host.
+        if (GATEWAY_CALLBACK_PATHS.has(req.path) || isAllowedCorsOrigin(origin, req)) {
           return cb(null, true);
         }
         return cb(new Error("Not allowed by CORS"));
@@ -234,7 +255,9 @@ app.use("/api", (req, res, next) => {
 
 // Serve uploaded book PDFs
 const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!process.env.VERCEL && !fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 app.use(
   "/uploads",
   express.static(uploadsDir, {

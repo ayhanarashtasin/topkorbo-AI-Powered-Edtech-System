@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Question = require('../models/Question');
 const { notify } = require('../services/notificationService');
 const { getIO } = require('../socket');
+const { hideComment } = require('../services/forumCommentService');
 
 const REPORT_TARGETS = ['post', 'comment', 'user', 'question'];
 const VALID_REASONS = [
@@ -45,6 +46,19 @@ const moderationController = {
       else if (targetType === 'user') exists = !!(await User.exists({ _id: target }));
       else if (targetType === 'question') exists = !!(await Question.exists({ _id: target }));
       if (!exists) return res.status(404).json({ success: false, message: 'Target not found' });
+
+      const existing = await Report.exists({
+        reporter: req.user.id,
+        targetType,
+        target,
+        status: { $in: ['open', 'under_review'] }
+      });
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: 'You already have an active report for this item.'
+        });
+      }
 
       const report = await Report.create({
         reporter: req.user.id,
@@ -101,7 +115,7 @@ const moderationController = {
         if (report.targetType === 'post') {
           await Post.findByIdAndUpdate(report.target, { isHidden: true, hiddenReason: note || 'Hidden by moderator' });
         } else if (report.targetType === 'comment') {
-          await Comment.findByIdAndUpdate(report.target, { isHidden: true });
+          await hideComment(report.target);
         }
         report.status = 'action_taken';
         actionTaken = 'hidden';
@@ -137,8 +151,12 @@ const moderationController = {
           // Ban 7 days by default
           await User.findByIdAndUpdate(userId, {
             isBanned: true,
+            accountStatus: 'banned',
+            statusReason: note || report.reason,
             banReason: note || report.reason,
-            banExpiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000)
+            banExpiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+            suspendedAt: new Date(),
+            statusChangedAt: new Date()
           });
           report.status = 'action_taken';
           actionTaken = 'banned';

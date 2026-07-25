@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HiArrowLeft } from 'react-icons/hi';
 import PostCard from '../components/forum/PostCard';
@@ -13,25 +13,33 @@ export default function ForumPostDetail() {
   const [post, setPost] = useState(null);
   const [error, setError] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
+  const [loadedId, setLoadedId] = useState(null);
+  const changeCommentCount = useCallback((delta) => {
+    setCommentCount((current) => Math.max(0, current + delta));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    setPost(null);
-    setError(null);
     (async () => {
       try {
         const r = await forumApi.getPost(id);
         if (!cancelled) {
           setPost(r.data);
+          setError(null);
           setCommentCount(r.data.commentsCount || 0);
+          setLoadedId(id);
         }
       } catch (e) {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) {
+          setError(e.message);
+          setLoadedId(id);
+        }
       }
     })();
     return () => { cancelled = true; };
   }, [id]);
 
+  if (loadedId !== id) return <LoadingSkeleton count={1} />;
   if (error) {
     return (
       <EmptyState
@@ -63,7 +71,11 @@ export default function ForumPostDetail() {
 
       <div style={{ marginTop: 18 }}>
         <h3 style={{ fontFamily: 'var(--font-heading)', marginBottom: 6 }}>Comments ({commentCount})</h3>
-        <CommentTree postId={post._id} onCountChange={setCommentCount} />
+        <CommentTree
+          key={post._id}
+          postId={post._id}
+          onCountChange={changeCommentCount}
+        />
       </div>
     </div>
   );

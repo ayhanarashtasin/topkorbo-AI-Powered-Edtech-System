@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import forumApi from '../services/forumApi';
 import useSocket from '../hooks/useSocket';
 
@@ -24,7 +24,7 @@ export function ForumProvider({ children }) {
   const [bootDone, setBootDone] = useState(false);
 
   const { socket, connected, on } = useSocket();
-  const handlersRef = useRef({});
+  const unreadNotificationIdsRef = useRef(new Set());
 
   // ---- Boot: load user + categories + notifications ----
   const refreshUser = useCallback(async () => {
@@ -42,7 +42,7 @@ export function ForumProvider({ children }) {
     try {
       const json = await forumApi.categories();
       setCategories(json.data || []);
-    } catch (e) {
+    } catch {
       // Categories failing to load is non-fatal — the rest of the app still works.
     }
   }, []);
@@ -50,9 +50,15 @@ export function ForumProvider({ children }) {
   const refreshNotifications = useCallback(async () => {
     try {
       const json = await forumApi.notifications({ limit: 30 });
-      setNotifications(json.data || []);
+      const items = json.data || [];
+      unreadNotificationIdsRef.current = new Set(
+        items
+          .filter((notification) => !notification.read)
+          .map((notification) => String(notification._id))
+      );
+      setNotifications(items);
       setUnreadCount(json.unreadCount || 0);
-    } catch (e) {
+    } catch {
       // Notifications failing to load is non-fatal.
     }
   }, []);
@@ -64,21 +70,43 @@ export function ForumProvider({ children }) {
     })();
   }, [refreshUser, refreshCategories, refreshNotifications]);
 
+  const applyNotificationRead = useCallback((notificationId) => {
+    const id = String(notificationId);
+    const wasUnread = unreadNotificationIdsRef.current.delete(id);
+    setNotifications((current) =>
+      current.map((notification) =>
+        String(notification._id) === id
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+    if (wasUnread) {
+      setUnreadCount((current) => Math.max(0, current - 1));
+    }
+  }, []);
+
   // ---- Socket subscriptions ----
   useEffect(() => {
     if (!socket || !connected) return;
 
     const off1 = on('notification:new', (notif) => {
-      setNotifications((prev) => [notif, ...prev].slice(0, 50));
-      setUnreadCount((c) => c + 1);
+      const id = String(notif._id);
+      if (!unreadNotificationIdsRef.current.has(id)) {
+        unreadNotificationIdsRef.current.add(id);
+        setUnreadCount((current) => current + 1);
+      }
+      setNotifications((current) => [
+        notif,
+        ...current.filter((notification) => String(notification._id) !== id)
+      ].slice(0, 50));
     });
 
     const off2 = on('notification:read', ({ _id }) => {
-      setNotifications((prev) => prev.map((n) => (n._id === _id ? { ...n, read: true } : n)));
-      setUnreadCount((c) => Math.max(0, c - 1));
+      applyNotificationRead(_id);
     });
 
     const off3 = on('notification:read-all', () => {
+      unreadNotificationIdsRef.current.clear();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     });
@@ -88,20 +116,12 @@ export function ForumProvider({ children }) {
       off2 && off2();
       off3 && off3();
     };
-  }, [socket, connected, on]);
+  }, [applyNotificationRead, socket, connected, on]);
 
   // ---- Action helpers ----
   const toggleReaction = useCallback(async ({ targetType, target, type }) => {
-    try {
-      const json = await forumApi.toggleReaction({ targetType, target, type });
-      // Fan the result out to any per-target subscriber registered via `subscribeReaction`.
-      const key = `${targetType}:${target}`;
-      const h = handlersRef.current[`reaction:${key}`];
-      if (h) h(json.data);
-      return json.data;
-    } catch (e) {
-      throw e;
-    }
+    const json = await forumApi.toggleReaction({ targetType, target, type });
+    return json.data;
   }, []);
 
   // Subscribe to live reaction updates for a specific post or comment.
@@ -109,7 +129,6 @@ export function ForumProvider({ children }) {
   const subscribeReaction = useCallback(
     (targetType, target, callback) => {
       if (!socket) return () => {};
-      const key = `reaction:${targetType}:${target}`;
       const handler = (payload) => {
         if (
           payload.targetType === targetType &&
@@ -119,10 +138,8 @@ export function ForumProvider({ children }) {
         }
       };
       socket.on('reaction:update', handler);
-      handlersRef.current[key] = handler;
       return () => {
         socket.off('reaction:update', handler);
-        delete handlersRef.current[key];
       };
     },
     [socket]
@@ -185,20 +202,20 @@ export function ForumProvider({ children }) {
 
   const markNotificationRead = useCallback(async (id) => {
     try {
-      await forumApi.markNotificationRead(id);
-      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
-      setUnreadCount((c) => Math.max(0, c - 1));
-    } catch (e) {
+      const response = await forumApi.markNotificationRead(id);
+      if (response.data?.changed) applyNotificationRead(id);
+    } catch {
       // Best-effort — we still mark the notification read locally even if the API call fails.
     }
-  }, []);
+  }, [applyNotificationRead]);
 
   const markAllNotificationsRead = useCallback(async () => {
     try {
       await forumApi.markAllNotificationsRead();
+      unreadNotificationIdsRef.current.clear();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
-    } catch (e) {
+    } catch {
       // Best-effort — local optimistic state is the source of truth on failure.
     }
   }, []);
@@ -278,8 +295,9 @@ export function ForumProvider({ children }) {
   return <ForumContext.Provider value={value}>{children}</ForumContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useForum() {
-  const ctx = useContext(ForumContext);
+  const ctx = use(ForumContext);
   if (!ctx) throw new Error('useForum must be used inside <ForumProvider>');
   return ctx;
 }
