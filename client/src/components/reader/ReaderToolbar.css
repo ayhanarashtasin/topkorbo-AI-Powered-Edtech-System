@@ -109,7 +109,6 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary, #251817);
-  outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -516,10 +515,421 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
-input:checked + .rb-slider {
+.rb-switch input:checked + .rb-slider {
   background-color: #8C5A3C;
 }
 
-input:checked + .rb-slider:before {
+.rb-switch input:checked + .rb-slider:before {
   transform: translateX(16px);
+}
+
+/* ---- Focused study-tool refresh ---- */
+.rb-toolbar {
+  position: relative;
+  top: auto;
+  z-index: 32;
+  display: flex;
+  min-height: 58px;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 14px;
+  border-top: 1px solid rgba(140, 90, 60, 0.08);
+  border-bottom: 1px solid rgba(140, 90, 60, 0.17);
+  background: rgba(255, 253, 249, 0.96);
+  box-shadow: 0 7px 22px rgba(75, 46, 43, 0.045);
+  scrollbar-color: #cba98c transparent;
+  scrollbar-width: thin;
+}
+
+.rb-toolbar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.rb-toolbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rb-toolbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cba98c;
+}
+
+.rb-toolbar__group {
+  min-height: 40px;
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(140, 90, 60, 0.14);
+  border-radius: 12px;
+  background: #f8efe7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.rb-toolbar__colors,
+.rb-toolbar__sizes {
+  background: #fffdf9;
+}
+
+.rb-toolbar__btn,
+.rb-toolbar__size {
+  min-height: 34px;
+  border-radius: 9px;
+  color: #5b4039;
+  font-size: 0.7rem;
+  font-weight: 750;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.rb-toolbar__btn {
+  padding: 7px 9px;
+}
+
+.rb-toolbar__btn--icon {
+  min-width: 34px;
+  justify-content: center;
+  padding-inline: 7px;
+}
+
+.rb-toolbar__btn:hover:not(:disabled),
+.rb-toolbar__size:hover {
+  color: #70442f;
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateY(-1px);
+}
+
+.rb-toolbar__btn--active,
+.rb-toolbar__btn--active:hover,
+.rb-toolbar__size--active {
+  border-color: #8c5a3c;
+  color: #ffffff;
+  background: #8c5a3c;
+  box-shadow: 0 5px 12px rgba(140, 90, 60, 0.2);
+}
+
+.rb-toolbar__btn--bookmarked,
+.rb-toolbar__btn--bookmarked:hover {
+  color: #75452f;
+  background: #efd7b4;
+  box-shadow: inset 0 0 0 1px rgba(140, 90, 60, 0.2);
+}
+
+.rb-toolbar__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.36;
+  transform: none;
+}
+
+.rb-toolbar__btn:focus-visible,
+.rb-toolbar__size:focus-visible,
+.rb-toolbar__pen-swatch:focus-visible,
+.rb-eraser-size-btn:focus-visible,
+.rb-eraser-card:focus-visible,
+.rb-eraser-clear-btn:focus-visible,
+.rb-toolbar__upgrade:focus-visible,
+.rb-toolbar__page-input:focus-visible {
+  outline: 3px solid rgba(192, 133, 82, 0.5);
+  outline-offset: 2px;
+}
+
+.rb-toolbar__btn-label {
+  font-size: 0.69rem;
+}
+
+.rb-toolbar__upgrade {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  color: #74452f;
+  background: #f2e3d5;
+  font-size: 0.67rem;
+  font-weight: 750;
+  white-space: nowrap;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.rb-toolbar__upgrade:hover {
+  color: #4b2e2b;
+  background: #ead5c2;
+}
+
+.rb-toolbar__divider {
+  flex: 0 0 1px;
+  height: 24px;
+  background: rgba(140, 90, 60, 0.15);
+}
+
+.rb-toolbar__pages {
+  gap: 4px;
+  padding-inline: 3px;
+  color: #60453e;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-toolbar__page-input {
+  width: 42px;
+  height: 30px;
+  padding: 0 3px;
+  border-color: rgba(140, 90, 60, 0.25);
+  border-radius: 8px;
+  color: #3f2b27;
+  background: #ffffff;
+  font-variant-numeric: tabular-nums;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+  -moz-appearance: textfield;
+}
+
+.rb-toolbar__page-input::-webkit-inner-spin-button,
+.rb-toolbar__page-input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.rb-toolbar__page-input:focus,
+.rb-toolbar__page-input:focus-visible {
+  border-color: #8c5a3c;
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.13);
+}
+
+.rb-toolbar__zoom-val {
+  min-width: 42px;
+  padding-inline: 4px;
+  color: #5d433b;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-toolbar__pen-swatch {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-width: 2px;
+}
+
+.rb-toolbar__pen-swatch--active {
+  border-color: #fffdf9;
+  box-shadow:
+    0 0 0 2px #8c5a3c,
+    0 4px 8px rgba(75, 46, 43, 0.16);
+}
+
+.rb-toolbar__size--active .rb-toolbar__btn-label {
+  color: #ffffff;
+}
+
+.rb-toolbar__hint {
+  min-height: 34px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 6px 9px;
+  border-color: rgba(140, 90, 60, 0.17);
+  border-radius: 9px;
+  color: #76503d;
+  background: #f8eee4;
+  font-size: 0.68rem;
+}
+
+.rb-toolbar__chevron {
+  margin-left: 2px;
+  color: currentColor;
+  font-size: 0.5rem;
+}
+
+.rb-eraser-inner-divider {
+  background: rgba(140, 90, 60, 0.16);
+}
+
+.rb-eraser-size-btn {
+  width: 30px;
+  height: 30px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.rb-eraser-size-btn:hover {
+  transform: translateY(-1px);
+}
+
+.rb-eraser-size-btn--active {
+  border-color: #8c5a3c;
+  background: #ead8c7;
+}
+
+.rb-eraser-popover,
+.rb-eraser-settings-popover {
+  position: fixed;
+  top: auto;
+  right: auto;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  border-color: rgba(140, 90, 60, 0.2);
+  border-radius: 16px;
+  color: #2f1e1c;
+  background: #fffdf9;
+  box-shadow: 0 20px 50px rgba(37, 24, 23, 0.2);
+  overscroll-behavior: contain;
+}
+
+.rb-eraser-popover {
+  width: min(300px, calc(100vw - 24px));
+}
+
+.rb-eraser-settings-popover {
+  width: min(240px, calc(100vw - 24px));
+}
+
+.rb-eraser-popover::after,
+.rb-eraser-settings-popover::after {
+  display: none;
+}
+
+.rb-eraser-popover__title,
+.rb-eraser-settings-popover__title {
+  color: #70442f;
+  font-family: var(--font-heading);
+  font-weight: 800;
+}
+
+.rb-eraser-popover__cards {
+  gap: 9px;
+}
+
+.rb-eraser-card {
+  min-height: 104px;
+  border-color: rgba(140, 90, 60, 0.12);
+  color: #4f3832;
+  background: #faf2e9;
+  font-family: inherit;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.rb-eraser-card:hover {
+  border-color: rgba(140, 90, 60, 0.28);
+  background: #f4e6da;
+}
+
+.rb-eraser-card--active {
+  border-color: #8c5a3c;
+  color: #70442f;
+  background: #efe0d1;
+}
+
+.rb-eraser-card__icon-wrapper {
+  border-color: rgba(140, 90, 60, 0.14);
+  border-radius: 11px;
+  background: #fffdf9;
+}
+
+.rb-eraser-card__label {
+  font-weight: 750;
+}
+
+.rb-eraser-clear-btn {
+  min-height: 40px;
+  border: 1px solid rgba(185, 28, 28, 0.12);
+  border-radius: 9px;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .rb-toolbar__btn-label {
+    display: none;
+  }
+
+  .rb-toolbar__btn {
+    min-width: 34px;
+    justify-content: center;
+  }
+
+  .rb-toolbar__hint {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .rb-toolbar {
+    min-height: 56px;
+    padding: 7px 10px;
+  }
+
+  .rb-eraser-popover,
+  .rb-eraser-settings-popover {
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 50%;
+    width: min(300px, calc(100vw - 24px));
+    margin: 0;
+    transform: translateX(-50%);
+  }
+
+  .rb-eraser-popover::after,
+  .rb-eraser-settings-popover::after {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .rb-toolbar {
+    gap: 5px;
+    padding-inline: 8px;
+  }
+
+  .rb-toolbar__group {
+    min-height: 42px;
+  }
+
+  .rb-toolbar__btn,
+  .rb-toolbar__size,
+  .rb-toolbar__btn--icon {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .rb-toolbar__divider {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-toolbar__btn,
+  .rb-toolbar__size,
+  .rb-toolbar__upgrade,
+  .rb-toolbar__pen-swatch,
+  .rb-eraser-size-btn,
+  .rb-eraser-card {
+    transition-duration: 0.01ms;
+  }
+
+  .rb-toolbar__btn:hover,
+  .rb-toolbar__size:hover,
+  .rb-eraser-size-btn:hover,
+  .rb-eraser-card:hover {
+    transform: none;
+  }
 }

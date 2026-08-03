@@ -6,6 +6,7 @@ const Book = require('../../models/Book');
 const Contest = require('../../models/Contest');
 const Post = require('../../models/Post');
 const Comment = require('../../models/Comment');
+const Follow = require('../../models/Follow');
 const PracticeAttempt = require('../../models/PracticeAttempt');
 const { createAdminAuditLog } = require('./adminAuditService');
 
@@ -31,7 +32,7 @@ function isActiveAdmin(user) {
   return user?.forumRole === 'admin' && resolveAccountStatus(user) === 'active';
 }
 
-async function assertAnotherActiveAdminExists(excludingUserId) {
+async function assertAnotherActiveAdminExists(excludingUserId, { session } = {}) {
   const otherActiveAdmins = await User.countDocuments({
     _id: { $ne: excludingUserId },
     forumRole: 'admin',
@@ -39,7 +40,7 @@ async function assertAnotherActiveAdminExists(excludingUserId) {
       { accountStatus: 'active' },
       { accountStatus: { $exists: false }, isBanned: { $ne: true } }
     ]
-  });
+  }).session(session || null);
 
   if (otherActiveAdmins < 1) {
     const err = new Error('This action would remove the last active admin account.');
@@ -185,7 +186,9 @@ async function getUserDetails(userId) {
     contestsCount,
     postsCount,
     commentsCount,
-    practiceAttemptsCount
+    practiceAttemptsCount,
+    followersCount,
+    followingCount
   ] = await Promise.all([
     TeacherApplication.findOne({ userId: user._id }).lean(),
     Question.countDocuments({ teacher: user._id }),
@@ -193,7 +196,9 @@ async function getUserDetails(userId) {
     Contest.countDocuments({ creator: user._id }),
     Post.countDocuments({ author: user._id }),
     Comment.countDocuments({ author: user._id }),
-    PracticeAttempt.countDocuments({ userId: user._id })
+    PracticeAttempt.countDocuments({ userId: user._id }),
+    Follow.countDocuments({ following: user._id }),
+    Follow.countDocuments({ follower: user._id })
   ]);
 
   return {
@@ -235,8 +240,8 @@ async function getUserDetails(userId) {
       postsCount,
       commentsCount,
       practiceAttemptsCount,
-      followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
-      followingCount: Array.isArray(user.following) ? user.following.length : 0
+      followersCount,
+      followingCount
     }
   };
 }
@@ -309,7 +314,7 @@ async function updateUserRole({ adminUser, targetUserId, nextRole, reason = '', 
   return sanitizeUserListItem(user);
 }
 
-async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = '' }) {
+async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = '', session }) {
   if (!MANAGEABLE_STATUSES.includes(nextStatus)) {
     const err = new Error('Invalid account status');
     err.statusCode = 400;
@@ -322,7 +327,7 @@ async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = 
     throw err;
   }
 
-  const user = await User.findById(targetUserId);
+  const user = await User.findById(targetUserId).session(session || null);
   if (!user) {
     const err = new Error('User not found');
     err.statusCode = 404;
@@ -336,7 +341,7 @@ async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = 
   };
 
   if (isActiveAdmin(user) && nextStatus !== 'active') {
-    await assertAnotherActiveAdminExists(user._id);
+    await assertAnotherActiveAdminExists(user._id, { session });
   }
 
   const now = new Date();
@@ -347,7 +352,7 @@ async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = 
   user.statusReason = nextStatus === 'active' ? '' : String(reason).trim();
   user.banReason = nextStatus === 'banned' ? String(reason).trim() : '';
   user.banExpiresAt = nextStatus === 'banned' ? user.banExpiresAt || null : null;
-  await user.save();
+  await user.save({ session });
 
   const actionTypeByStatus = {
     banned: previousValue.accountStatus === 'banned' ? 'USER_BANNED' : 'USER_BANNED',
@@ -365,7 +370,8 @@ async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = 
       isBanned: user.isBanned,
       statusReason: user.statusReason || user.banReason || ''
     },
-    reason
+    reason,
+    session
   });
 
   return sanitizeUserListItem(user);

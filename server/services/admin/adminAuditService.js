@@ -10,9 +10,10 @@ async function createAdminAuditLog({
   actionType,
   previousValue,
   newValue,
-  reason = ''
+  reason = '',
+  session
 }) {
-  return AdminAuditLog.create({
+  const [entry] = await AdminAuditLog.create([{
     adminId,
     targetUserId,
     targetQuestionId,
@@ -23,7 +24,8 @@ async function createAdminAuditLog({
     previousValue,
     newValue,
     reason: reason ? String(reason).slice(0, 500) : ''
-  });
+  }], { session });
+  return entry;
 }
 
 module.exports = {

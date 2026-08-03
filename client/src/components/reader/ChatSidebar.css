@@ -120,40 +120,100 @@
   border-color: rgba(180, 83, 9, 0.38);
 }
 
-.rb-chat-action-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px 16px 14px;
+.rb-chat-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
 }
 
-.rb-chat-action-card {
+.rb-chat-quick-trigger {
+  border: 1px solid rgba(192, 133, 82, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #8c5a3c;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  padding: 12px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(192, 133, 82, 0.16);
-  background: rgba(255, 255, 255, 0.86);
-  color: #251817;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: left;
+  justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(61, 34, 14, 0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.rb-chat-action-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(180, 83, 9, 0.3);
-  box-shadow: 0 12px 28px rgba(61, 34, 14, 0.08);
+.rb-chat-quick-trigger:hover {
+  border-color: rgba(180, 83, 9, 0.35);
+  background: rgba(255, 248, 240, 1);
 }
 
-.rb-chat-action-card--active {
-  border-color: rgba(180, 83, 9, 0.4);
-  background: linear-gradient(135deg, rgba(255, 248, 240, 1), rgba(255, 255, 255, 0.92));
+.rb-chat-quick-trigger--active {
+  background: linear-gradient(135deg, rgba(180, 83, 9, 0.16), rgba(192, 133, 82, 0.24));
+  border-color: rgba(180, 83, 9, 0.38);
+}
+
+.rb-chat-quick-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(61, 34, 14, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  padding: 8px;
+  z-index: 10;
+  animation: rbQuickIn 0.15s ease-out;
+}
+
+@keyframes rbQuickIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.rb-chat-quick-popover-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 8px 6px;
+}
+
+.rb-chat-quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rb-chat-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+
+.rb-chat-quick-item:hover {
+  background: rgba(180, 83, 9, 0.08);
+  color: #8c5a3c;
+}
+
+.rb-chat-quick-item svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.rb-chat-quick-item:hover svg {
+  color: #8c5a3c;
 }
 
 .rb-chat-content {
@@ -354,11 +414,114 @@
 
 .rb-chat-sidebar .rb-chat-markdown p {
   margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rb-chat-sidebar .rb-chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.rb-chat-sidebar .rb-chat-markdown h1,
+.rb-chat-sidebar .rb-chat-markdown h2,
+.rb-chat-sidebar .rb-chat-markdown h3,
+.rb-chat-sidebar .rb-chat-markdown h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #251817;
+  margin: 12px 0 6px;
+  line-height: 1.3;
+}
+
+.rb-chat-sidebar .rb-chat-markdown h1 {
+  font-size: 16px;
+}
+
+.rb-chat-sidebar .rb-chat-markdown h2 {
+  font-size: 15px;
+}
+
+.rb-chat-sidebar .rb-chat-markdown h3 {
+  font-size: 14px;
+}
+
+.rb-chat-sidebar .rb-chat-markdown h4 {
+  font-size: 13px;
+}
+
+.rb-chat-sidebar .rb-chat-markdown strong {
+  font-weight: 800;
+  color: #251817;
+}
+
+.rb-chat-sidebar .rb-chat-markdown em {
+  font-style: italic;
+  color: #4b5563;
 }
 
 .rb-chat-sidebar .rb-chat-markdown ul,
 .rb-chat-sidebar .rb-chat-markdown ol {
   padding-left: 18px;
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rb-chat-sidebar .rb-chat-markdown li {
+  margin-bottom: 4px;
+}
+
+.rb-chat-sidebar .rb-chat-markdown code {
+  font-size: 12px;
+  background: rgba(180, 83, 9, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #8c5a3c;
+}
+
+.rb-chat-sidebar .rb-chat-markdown pre {
+  background: rgba(37, 24, 23, 0.04);
+  border: 1px solid rgba(192, 133, 82, 0.12);
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.rb-chat-sidebar .rb-chat-markdown pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.rb-chat-sidebar .rb-chat-markdown blockquote {
+  border-left: 3px solid rgba(180, 83, 9, 0.3);
+  padding-left: 10px;
+  margin: 8px 0;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.rb-chat-sidebar .rb-chat-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.rb-chat-sidebar .rb-chat-markdown th,
+.rb-chat-sidebar .rb-chat-markdown td {
+  border: 1px solid rgba(192, 133, 82, 0.15);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.rb-chat-sidebar .rb-chat-markdown th {
+  background: rgba(250, 244, 238, 0.8);
+  font-weight: 700;
+  color: #251817;
 }
 
 .rb-chat-footer {
@@ -459,9 +622,8 @@
     max-height: 100dvh;
   }
 
-  .rb-chat-quick-actions {
-    display: flex;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  .rb-chat-quick-popover {
+    width: 180px;
+    right: -8px;
   }
 }

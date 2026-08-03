@@ -7,6 +7,10 @@ import httpClient from '../../services/httpClient';
 import { clearAuthStorage } from '../../utils/authStorage';
 import './SignUpModal.css';
 
+const GUEST_LOGIN_ENABLED = import.meta.env.VITE_ENABLE_GUEST_LOGIN === 'true';
+const GUEST_ADMIN_ENABLED =
+  import.meta.env.DEV && import.meta.env.VITE_ENABLE_GUEST_ADMIN === 'true';
+
 export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' }) {
   const { t } = useLanguage();
   const [step, setStep] = useState(initialMode === 'login' ? 'login' : 'choose'); // 'choose', 'login', 'google', 'profile_form', 'success'
@@ -223,7 +227,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
       localStorage.setItem('topkorbo_forum_role', forumRole);
       localStorage.setItem('topkorbo_guest', 'true');
 
-      window.location.href = forumRole === 'admin' ? '/admin/dashboard' : '/dashboard';
+      window.location.assign(forumRole === 'admin' ? '/admin/dashboard' : '/dashboard');
     } catch (err) {
       setErrorMsg(err?.message || 'Guest login is unavailable right now. Please try again.');
       setGuestLoading('');
@@ -737,7 +741,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   </motion.button>
                 </div>
 
-                <div style={{ marginTop: '18px' }}>
+                {GUEST_LOGIN_ENABLED && <div style={{ marginTop: '18px' }}>
                   <motion.button
                     className="signup-modal__google-btn"
                     whileHover={{ scale: 1.03, y: -2 }}
@@ -750,7 +754,7 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                   <p style={{ margin: '10px 0 0', color: 'var(--text-secondary)', fontSize: '0.84rem', lineHeight: 1.45 }}>
                     Temporary judge access with Pro Plus features enabled.
                   </p>
-                </div>
+                </div>}
 
                 <div style={{ marginTop: '32px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                   New to TopKorbo?{' '}
@@ -792,7 +796,9 @@ export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' })
                     { type: 'mentor', title: 'Mentor', desc: 'Mentor live classes and guidance flows.' },
                     { type: 'tutor', title: 'Tutor', desc: 'Approved tutor tools for uploads and teaching.' },
                     { type: 'admin', title: 'Admin', desc: 'Admin dashboard, moderation, users, and platform controls.' }
-                  ].map((item) => (
+                  ]
+                    .filter((item) => item.type !== 'admin' || GUEST_ADMIN_ENABLED)
+                    .map((item) => (
                     <motion.button
                       key={item.type}
                       type="button"

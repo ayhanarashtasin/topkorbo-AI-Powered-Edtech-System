@@ -28,7 +28,7 @@ function formatRelative(date) {
  * Optimistically updates reactions and the bookmark toggle, then subscribes
  * to live `reaction:update` socket events to reconcile with the server.
  */
-export default function PostCard({ post, onDelete, detail = false }) {
+export default function PostCard({ post, onDelete, onBookmarkChange, detail = false }) {
   const navigate = useNavigate();
   const { user, toggleReaction, subscribeReaction, toggleBookmark } = useForum();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -92,6 +92,7 @@ export default function PostCard({ post, onDelete, detail = false }) {
     try {
       const r = await toggleBookmark(post._id);
       setBookmarked(!!r.bookmarked);
+      onBookmarkChange?.(!!r.bookmarked);
     } catch {
       setBookmarked(prev);
     }

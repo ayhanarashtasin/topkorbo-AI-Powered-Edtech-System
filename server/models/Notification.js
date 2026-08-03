@@ -5,8 +5,7 @@ const notificationSchema = new mongoose.Schema(
     recipient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      index: true
+      required: true
     },
     actor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,7 +20,7 @@ const notificationSchema = new mongoose.Schema(
     comment: { type: mongoose.Schema.Types.ObjectId, ref: 'Comment' },
     message: { type: String, default: '' },
     preview: { type: String, default: '' }, // short text snippet
-    read: { type: Boolean, default: false, index: true }
+    read: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

@@ -1,4 +1,3 @@
-import React from 'react';
 import { HiAnnotation } from 'react-icons/hi';
 import './HighlightLayer.css';
 
@@ -8,7 +7,7 @@ export default function HighlightLayer({ highlights, activeTool, onHighlightClic
   if (!highlights || highlights.length === 0) return null;
 
   return (
-    <div className={`rb-highlight-layer ${activeTool === 'eraser' ? 'rb-highlight-layer--eraser' : ''}`}>
+    <div className={`rb-highlight-layer ${activeTool === 'select' ? 'rb-highlight-layer--select' : ''}`}>
       {highlights.map((highlight) => (
         <div key={highlight._id} className="rb-highlight-group">
           {highlight.rects && highlight.rects.map((rect, i) => (
@@ -23,16 +22,11 @@ export default function HighlightLayer({ highlights, activeTool, onHighlightClic
                 backgroundColor: highlight.color || '#FFEB3B',
               }}
               title={highlight.note || undefined}
-              onPointerDown={(e) => {
-                if (activeTool === 'eraser' || activeTool === 'select' || activeTool === 'highlighter') {
-                  e.stopPropagation();
-                  onHighlightClick && onHighlightClick(highlight, e);
-                }
-              }}
             />
           ))}
           {highlight.note && highlight.boundingRect && (
-            <div
+            <button
+              type="button"
               className="rb-highlight-note-icon"
               style={{
                 left: `${(highlight.boundingRect.x + highlight.boundingRect.width) * 100}%`,
@@ -40,15 +34,16 @@ export default function HighlightLayer({ highlights, activeTool, onHighlightClic
                 color: highlight.color || '#FFEB3B',
               }}
               title={highlight.note}
+              aria-label="Open highlight note"
               onPointerDown={(e) => {
-                if (activeTool === 'eraser' || activeTool === 'select' || activeTool === 'highlighter') {
+                if (activeTool === 'select') {
                   e.stopPropagation();
                   onHighlightClick && onHighlightClick(highlight, e);
                 }
               }}
             >
-              <HiAnnotation />
-            </div>
+              <HiAnnotation aria-hidden="true" />
+            </button>
           )}
         </div>
       ))}

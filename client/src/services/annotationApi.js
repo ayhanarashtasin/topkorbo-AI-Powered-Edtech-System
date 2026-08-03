@@ -12,7 +12,7 @@ import { httpClient } from './httpClient';
 const { request, buildHeaders } = httpClient;
 
 /**
- * Get all annotations for a chapter (optionally filtered to a single page).
+ * Get annotations for one chapter page.
  *
  * @param {string} chapterId
  * @param {number|string} [page] — when present, restricts to that page
@@ -20,15 +20,15 @@ const { request, buildHeaders } = httpClient;
  */
 export function listAnnotations(chapterId, page) {
   const qs = new URLSearchParams({ chapterId });
-  if (page) qs.set('page', String(page));
+  qs.set('page', String(page));
   return request(`/books/annotations?${qs.toString()}`, {
     headers: buildHeaders()
   });
 }
 
 /**
- * Create a single annotation. Mainly kept for highlights/markers; pen
- * strokes go through `bulkCreate` so we amortise network round-trips.
+ * Create a single pen annotation. The reader normally uses `sync` so writes,
+ * deletes, undo, and retries share one idempotent operation contract.
  *
  * @param {object} payload — see backend createAnnotation
  */
@@ -50,6 +50,19 @@ export function createAnnotation(payload) {
  */
 export function bulkCreateAnnotations(payload) {
   return request('/books/annotations/bulk', {
+    method: 'POST',
+    headers: buildHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Apply the final intent for a set of stable clientIds. Retrying the same
+ * payload is safe: upserts use the per-user clientId key and deletes are
+ * owner/page scoped.
+ */
+export function syncAnnotations(payload) {
+  return request('/books/annotations/sync', {
     method: 'POST',
     headers: buildHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
@@ -90,6 +103,7 @@ export const annotationApi = {
   list: listAnnotations,
   create: createAnnotation,
   bulkCreate: bulkCreateAnnotations,
+  sync: syncAnnotations,
   bulkDelete: bulkDeleteAnnotations,
   remove: deleteAnnotation
 };

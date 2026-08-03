@@ -47,7 +47,8 @@ export default function ForumSearch() {
     setParams(q ? { q } : {});
   }
 
-  const visibleData = debounced.trim() ? data : EMPTY_RESULTS;
+  const visibleData = q.trim() && debounced.trim() ? data : EMPTY_RESULTS;
+  const searching = loading && Boolean(q.trim()) && Boolean(debounced.trim());
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
@@ -76,13 +77,13 @@ export default function ForumSearch() {
         ))}
       </div>
 
-      {loading && <p className="forum-muted">Searching…</p>}
+      {searching && <p className="forum-muted">Searching…</p>}
 
-      {!loading && !q && (
+      {!q && (
         <EmptyState title="Type to search" message="Find posts, people, and categories from across the community." />
       )}
 
-      {!loading && q && visibleData.posts.length === 0 && visibleData.users.length === 0 && visibleData.categories.length === 0 && (
+      {!searching && q && visibleData.posts.length === 0 && visibleData.users.length === 0 && visibleData.categories.length === 0 && (
         <EmptyState title="No results" message={`Nothing matches "${q}". Try a different keyword.`} />
       )}
 

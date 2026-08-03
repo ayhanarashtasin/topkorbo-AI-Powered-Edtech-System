@@ -40,6 +40,10 @@ export default function ForumUserProfile() {
     (cursor) => forumApi.postsByUser(id, cursor),
     [id]
   );
+  const acceptNewPost = useCallback(
+    (post) => String(post.author?._id || post.author) === String(id),
+    [id]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +141,7 @@ export default function ForumUserProfile() {
       <InfiniteFeed
         feedKey={`user:${profile._id}`}
         fetchPage={fetchPosts}
+        acceptNewPost={acceptNewPost}
         emptyTitle="No posts yet"
         emptyMessage={`${profile.name} hasn't posted anything yet.`}
       />

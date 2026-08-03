@@ -9,11 +9,12 @@
     "bootstrap:admin": "node scripts/bootstrapAdminCli.js",
     "seed:admin": "node scripts/seedAdmin.js",
     "migrate:forum": "node scripts/migrateForumData.js",
+    "migrate:reader-annotations": "node scripts/migrateReaderAnnotations.js",
     "test": "jest --forceExit --detectOpenHandles"
   },
   "dependencies": {
     "@socket.io/redis-adapter": "^8.3.0",
-    "@xenova/transformers": "^2.17.2",
+    "@huggingface/transformers": "^4.2.0",
     "canvas": "^3.2.3",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.5",
@@ -36,6 +37,13 @@
     "slugify": "^1.6.9",
     "socket.io": "^4.8.3",
     "sslcommerz-lts": "^1.1.0"
+  },
+  "overrides": {
+    "adm-zip": "0.6.0",
+    "brace-expansion": "2.1.4",
+    "form-data": "2.5.6",
+    "sharp": "0.35.3",
+    "uuid": "11.1.1"
   },
   "devDependencies": {
     "jest": "^30.4.2"

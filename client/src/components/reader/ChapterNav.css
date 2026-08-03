@@ -201,7 +201,10 @@
   font-weight: 700;
   cursor: pointer;
   padding: 6px 10px;
-  transition: all 0.15s ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .rb-chapnav__book-ai-btn:hover,
@@ -480,7 +483,10 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .rb-chapnav__nav-btn:hover:not(:disabled) {
@@ -547,7 +553,10 @@
   cursor: pointer;
   border-radius: 4px;
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .rb-chapnav__bookmark-remove:hover {
@@ -748,5 +757,306 @@
   .rb-chapnav__backdrop--visible {
     opacity: 1;
     pointer-events: auto;
+  }
+}
+
+/* ---- Reading-room visual refresh ---- */
+.rb-chapnav {
+  width: 300px;
+  visibility: hidden;
+  border-right: 1px solid rgba(140, 90, 60, 0.18);
+  background: #fffdf9;
+  box-shadow: 12px 0 32px rgba(75, 46, 43, 0.06);
+  transition:
+    margin-left 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 180ms ease,
+    transform 250ms ease,
+    visibility 0s linear 260ms;
+}
+
+.rb-chapnav--open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+@media (min-width: 1024px) {
+  .rb-chapnav:not(.rb-chapnav--open) {
+    margin-left: -300px;
+  }
+}
+
+.rb-chapnav__header {
+  position: relative;
+  gap: 14px;
+  padding: 22px 18px 18px;
+  border-bottom: 1px solid rgba(192, 133, 82, 0.1);
+  color: #3d2b26;
+  background: linear-gradient(180deg, #faf6f1 0%, #f5ede4 100%);
+}
+
+.rb-chapnav__header::after {
+  display: none;
+}
+
+.rb-chapnav__book {
+  align-items: flex-start;
+  gap: 12px;
+  color: #3d2b26;
+}
+
+.rb-chapnav__book-icon {
+  display: inline-flex;
+  width: 40px;
+  height: 44px;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(192, 133, 82, 0.15);
+  border-radius: 10px 13px 13px 10px;
+  color: #8c5a3c;
+  background: rgba(192, 133, 82, 0.08);
+}
+
+.rb-chapnav__eyebrow {
+  margin-bottom: 3px;
+  color: #9a8579;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.rb-chapnav__book-title {
+  color: #2d1f1a;
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.rb-chapnav__book-sub {
+  overflow: hidden;
+  max-width: 170px;
+  margin-top: 3px;
+  color: #8c7b79;
+  font-size: 0.64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rb-chapnav__status--ready {
+  margin-top: 8px;
+  color: #6b8a6b;
+  background: rgba(107, 138, 107, 0.12);
+  border: 1px solid rgba(107, 138, 107, 0.2);
+}
+
+.rb-chapnav__close {
+  width: 36px;
+  height: 36px;
+  border-color: rgba(192, 133, 82, 0.15);
+  border-radius: 11px;
+  color: #6b5a52;
+  background: rgba(192, 133, 82, 0.06);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.rb-chapnav__close:hover {
+  border-color: rgba(192, 133, 82, 0.3);
+  background: rgba(192, 133, 82, 0.12);
+  transform: rotate(3deg);
+}
+
+.rb-chapnav__chapters {
+  padding: 18px 14px 14px;
+  border-bottom-color: rgba(140, 90, 60, 0.13);
+  background:
+    linear-gradient(180deg, rgba(247, 235, 225, 0.46), transparent 52%),
+    #fffdf9;
+}
+
+.rb-chapnav__section-head {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rb-chapnav__section-title {
+  margin: 0;
+  padding: 0 4px;
+  color: #8c5a3c;
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+}
+
+.rb-chapnav__section-actions {
+  width: 100%;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+
+.rb-chapnav__book-ai-btn {
+  min-height: 34px;
+  flex: 1;
+  border-color: rgba(140, 90, 60, 0.18);
+  border-radius: 10px;
+  color: #70442f;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 3px 10px rgba(75, 46, 43, 0.04);
+  font-size: 0.65rem;
+}
+
+.rb-chapnav__book-ai-btn:hover {
+  border-color: rgba(140, 90, 60, 0.36);
+  color: #4b2e2b;
+  background: #f6e9dd;
+}
+
+.rb-chapnav__list {
+  gap: 5px;
+}
+
+.rb-chapnav__item {
+  position: relative;
+  min-height: 44px;
+  gap: 11px;
+  overflow: hidden;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #4e3934;
+  font-size: 0.75rem;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.rb-chapnav__item:hover {
+  border-color: rgba(140, 90, 60, 0.16);
+  color: #6e422e;
+  background: #faf1e8;
+  transform: translateX(2px);
+}
+
+.rb-chapnav__item--active {
+  border-color: rgba(140, 90, 60, 0.24);
+  color: #603925;
+  background:
+    linear-gradient(90deg, rgba(192, 133, 82, 0.2), rgba(247, 235, 225, 0.7));
+  font-weight: 750;
+}
+
+.rb-chapnav__item--active::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #8c5a3c;
+  content: '';
+}
+
+.rb-chapnav__num {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: #71462f;
+  background: #efe0d1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rb-chapnav__item--active .rb-chapnav__num {
+  color: #ffffff;
+  background: #8c5a3c;
+  box-shadow: 0 4px 10px rgba(140, 90, 60, 0.18);
+}
+
+.rb-chapnav__nav-row {
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top-color: rgba(140, 90, 60, 0.13);
+}
+
+.rb-chapnav__nav-btn {
+  min-height: 40px;
+  border-color: rgba(140, 90, 60, 0.16);
+  border-radius: 10px;
+  color: #61443a;
+  background: #ffffff;
+}
+
+.rb-chapnav__bookmarks {
+  padding: 16px 14px;
+  background: #fcf7f1;
+}
+
+.rb-chapnav__bookmark-list {
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.rb-chapnav__bookmark {
+  border-color: rgba(140, 90, 60, 0.14);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.rb-chapnav__bookmark-btn {
+  min-height: 38px;
+  border-radius: 8px;
+}
+
+.rb-chapnav__bookmark-remove {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.rb-chapnav button:focus-visible {
+  outline: 3px solid rgba(230, 204, 178, 0.74);
+  outline-offset: 2px;
+}
+
+.rb-chapnav__backdrop {
+  padding: 0;
+  border: 0;
+}
+
+@media (max-width: 1023px) {
+  .rb-chapnav {
+    width: min(88vw, 330px);
+    max-width: none;
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior: contain;
+    box-shadow: 14px 0 42px rgba(37, 24, 23, 0.25);
+  }
+
+  .rb-chapnav__backdrop {
+    cursor: default;
+    background: rgba(37, 24, 23, 0.52);
+    backdrop-filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-chapnav,
+  .rb-chapnav__backdrop,
+  .rb-chapnav__close,
+  .rb-chapnav__item {
+    transition-duration: 0.01ms;
+  }
+
+  .rb-chapnav__close:hover,
+  .rb-chapnav__item:hover {
+    transform: none;
   }
 }

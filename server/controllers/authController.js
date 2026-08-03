@@ -4,6 +4,10 @@ const User = require('../models/User');
 const TeacherApplication = require('../models/TeacherApplication');
 const planService = require('../services/planService');
 const { recordLoginAttempt } = require('../services/loginHistoryService');
+const {
+  resolveAccountStatus,
+  reactivateExpiredBan
+} = require('../services/accountStatusService');
 
 const GUEST_ROLE_CONFIG = {
   student: {
@@ -115,11 +119,6 @@ function buildFrontendRedirect(frontendUrl, path, params = {}) {
   return `${base}${normalizedPath}${query ? `?${query}` : ''}`;
 }
 
-function resolveAccountStatus(user) {
-  if (!user) return 'active';
-  return user.accountStatus || (user.isBanned ? 'banned' : 'active');
-}
-
 const authController = {
   /**
    * GET /api/auth/google
@@ -143,6 +142,17 @@ const authController = {
   guestLogin: async (req, res, next) => {
     try {
       const { guestType, config } = getGuestConfig(req.body?.guestType || req.body?.role);
+      if (process.env.ENABLE_GUEST_LOGIN !== 'true') {
+        return res.status(404).json({ success: false, message: 'Guest login is disabled.' });
+      }
+      if (guestType === 'admin' && (
+        process.env.NODE_ENV === 'production' || process.env.ENABLE_GUEST_ADMIN !== 'true'
+      )) {
+        return res.status(403).json({
+          success: false,
+          message: 'The demo administrator account is disabled.'
+        });
+      }
       const guestAccessExpiresAt = new Date('2099-12-31T23:59:59.000Z');
 
       const user = await User.findOneAndUpdate(
@@ -250,6 +260,7 @@ const authController = {
         return res.redirect(`${frontendUrl}?error=auth_failed`);
       }
 
+      user = await reactivateExpiredBan(user);
       const accountStatus = resolveAccountStatus(user);
       if (accountStatus !== 'active') {
         const reason = user.statusReason || user.banReason || '';

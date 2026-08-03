@@ -405,6 +405,15 @@ const server = httpServer.listen(PORT, () => {
     );
   setTimeout(runSettlement, 5000);
   setInterval(runSettlement, 5 * 60 * 1000);
+
+  // Persist time decay even when a post receives no new reactions/comments.
+  // The trending endpoint also performs a throttled refresh, which covers
+  // short-lived/serverless instances where this interval may not run.
+  const { startTrendingScoreRefresh, refreshTrendingScores } = require('./services/forumScoreService');
+  setTimeout(() => refreshTrendingScores({ force: true }).catch((err) =>
+    console.error('Initial forum trending-score refresh failed:', err.message)
+  ), 7000);
+  startTrendingScoreRefresh();
 });
 
 server.on("error", (err) => {

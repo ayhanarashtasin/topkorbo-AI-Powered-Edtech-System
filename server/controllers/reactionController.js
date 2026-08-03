@@ -6,25 +6,23 @@ const { notify } = require('../services/notificationService');
 const { addReputation } = require('../services/reputationService');
 const { recomputePostScore } = require('../services/forumScoreService');
 const { getIO } = require('../socket');
+const { withMongoTransaction } = require('../utils/mongoTransaction');
 
 const REPUTATION_DELTAS = { like: 5, love: 10 };
 
-async function mutateReaction({ targetType, target, user, type }, attempts = 3) {
+async function mutateReaction({ targetType, target, user, type, session }, attempts = 3) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const existing = await Reaction.findOne({ targetType, target, user }).lean();
+    const existing = await Reaction.findOne({ targetType, target, user })
+      .session(session)
+      .lean();
 
     if (!existing) {
-      try {
-        await Reaction.create({ targetType, target, user, type });
-        return { previous: null, next: type };
-      } catch (error) {
-        if (error.code === 11000) continue;
-        throw error;
-      }
+      await Reaction.create([{ targetType, target, user, type }], { session });
+      return { previous: null, next: type };
     }
 
     if (existing.type === type) {
-      const removed = await Reaction.deleteOne({ _id: existing._id, type });
+      const removed = await Reaction.deleteOne({ _id: existing._id, type }).session(session);
       if (removed.deletedCount === 1) {
         return { previous: type, next: null };
       }
@@ -33,7 +31,8 @@ async function mutateReaction({ targetType, target, user, type }, attempts = 3) 
 
     const switched = await Reaction.updateOne(
       { _id: existing._id, type: existing.type },
-      { $set: { type } }
+      { $set: { type } },
+      { session }
     );
     if (switched.modifiedCount === 1) {
       return { previous: existing.type, next: type };
@@ -88,90 +87,85 @@ const reactionController = {
       if (!target) return res.status(400).json({ success: false, message: 'target required' });
 
       const Model = targetType === 'post' ? Post : Comment;
-      const doc = await Model.findById(target);
-      if (!doc || doc.isHidden) {
-        return res.status(404).json({ success: false, message: `${targetType} not found` });
-      }
+      const result = await withMongoTransaction(async (session) => {
+        const doc = await Model.findOne({ _id: target, isHidden: false }).session(session);
+        if (!doc) return null;
 
-      const transition = await mutateReaction({
-        targetType,
-        target,
-        user: req.user.id,
-        type
+        const transition = await mutateReaction({
+          targetType,
+          target,
+          user: req.user.id,
+          type,
+          session
+        });
+
+        const updated = await Model.findOneAndUpdate(
+          { _id: target, isHidden: false },
+          counterUpdate(transition.previous, transition.next),
+          { new: true, session, timestamps: false }
+        );
+        if (!updated) {
+          const error = new Error(`${targetType} not found`);
+          error.statusCode = 404;
+          throw error;
+        }
+
+        if (targetType === 'post') {
+          await recomputePostScore(updated._id, { session });
+        }
+
+        const isOwnTarget = String(doc.author) === String(req.user.id);
+        if (!isOwnTarget) {
+          const reputationDelta =
+            (transition.next ? REPUTATION_DELTAS[transition.next] : 0) -
+            (transition.previous ? REPUTATION_DELTAS[transition.previous] : 0);
+          await addReputation(doc.author, reputationDelta, { session });
+        }
+
+        return {
+          counts: {
+            like: updated.reactionsCount?.like || 0,
+            love: updated.reactionsCount?.love || 0
+          },
+          userReaction: transition.next,
+          author: String(doc.author),
+          postId: targetType === 'post' ? String(target) : String(doc.post),
+          preview: doc.contentText?.slice(0, 120) || '',
+          shouldNotify: !isOwnTarget && Boolean(transition.next)
+        };
       });
 
-      const updated = await Model.findOneAndUpdate(
-        { _id: target, isHidden: false },
-        counterUpdate(transition.previous, transition.next),
-        { new: true }
-      );
-      if (!updated) {
-        // The target was hidden between validation and mutation. Restore the
-        // previous reaction state so the reaction collection stays consistent.
-        if (transition.previous) {
-          await Reaction.findOneAndUpdate(
-            { targetType, target, user: req.user.id },
-            { $set: { type: transition.previous } },
-            { upsert: true }
-          );
-        } else {
-          await Reaction.deleteOne({ targetType, target, user: req.user.id });
-        }
+      if (!result) {
         return res.status(404).json({ success: false, message: `${targetType} not found` });
       }
 
-      const counts = {
-        like: updated.reactionsCount?.like || 0,
-        love: updated.reactionsCount?.love || 0
-      };
-      const userReaction = transition.next;
-
-      // Update trending score if it's a post
-      if (targetType === 'post') {
-        await recomputePostScore(updated._id);
-      }
-
-      if (String(doc.author) !== String(req.user.id)) {
-        const reputationDelta =
-          (transition.next ? REPUTATION_DELTAS[transition.next] : 0) -
-          (transition.previous ? REPUTATION_DELTAS[transition.previous] : 0);
-        const sideEffects = [addReputation(doc.author, reputationDelta)];
-        if (transition.next) {
-          sideEffects.push((async () => {
-            const actor = await User.findById(req.user.id).select('name').lean();
-            const io = getIO();
-            await notify(io, {
-              recipient: doc.author,
-              actor: req.user.id,
-              type: transition.next,
-              post: targetType === 'post' ? target : doc.post,
-              comment: targetType === 'comment' ? target : undefined,
-              message: `${actor?.name || 'Someone'} reacted with ${transition.next} on your ${targetType}.`,
-              preview: doc.contentText?.slice(0, 120) || ''
-            });
-          })());
-        }
-        // The reaction is already committed. Notification delivery must not
-        // turn a successful toggle into a retryable 500 and duplicate it.
-        await Promise.allSettled(sideEffects);
+      if (result.shouldNotify) {
+        const actor = await User.findById(req.user.id).select('name').lean();
+        const io = getIO();
+        await notify(io, {
+          recipient: result.author,
+          actor: req.user.id,
+          type: result.userReaction,
+          post: result.postId,
+          comment: targetType === 'comment' ? target : undefined,
+          message: `${actor?.name || 'Someone'} reacted with ${result.userReaction} on your ${targetType}.`,
+          preview: result.preview
+        }).catch(() => {});
       }
 
       const io = getIO();
-      const roomKey =
-        targetType === 'post'
-          ? `post:${String(target)}`
-          : `post:${String(doc.post)}`;
+      const roomKey = `post:${result.postId}`;
       io.to(['forum', roomKey]).emit('reaction:update', {
         targetType,
         target: String(target),
-        counts,
+        counts: result.counts,
         userId: String(req.user.id),
-        userReaction
+        userReaction: result.userReaction
       });
 
       return res.json({
         success: true,
-        data: { counts, userReaction }
+        data: { counts: result.counts, userReaction: result.userReaction }
       });
     } catch (err) {
       next(err);

@@ -80,6 +80,18 @@ const writeLimiter = rateLimit({
   message: message('You are posting too quickly. Please slow down.')
 });
 
+// Reader writes can contain thousands of sampled pointer coordinates. The
+// autosave client batches them, so a per-user limiter blocks request-amplified
+// abuse without affecting normal drawing, erasing, undo, or retry traffic.
+const annotationWriteLimiter = rateLimit({
+  ...standard,
+  ...distributedStore('rl:annotation-write:'),
+  windowMs: 60 * 1000,
+  max: 60,
+  keyGenerator: userOrIpKey,
+  message: message('Annotation changes are being sent too quickly. Please wait a moment.')
+});
+
 const reportLimiter = rateLimit({
   ...standard,
   ...distributedStore('rl:forum-report:'),
@@ -105,6 +117,7 @@ module.exports = {
   paymentLimiter,
   aiLimiter,
   writeLimiter,
+  annotationWriteLimiter,
   reportLimiter,
   uploadLimiter
 };

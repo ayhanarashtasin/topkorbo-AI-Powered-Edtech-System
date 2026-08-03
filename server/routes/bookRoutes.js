@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const requirePlan = require('../middleware/requirePlan');
+const { annotationWriteLimiter } = require('../middleware/rateLimiters');
 const c = require('../controllers/bookController');
 
 // IMPORTANT: literal path segments (like `/annotations` and `/reading-state`)
@@ -17,11 +18,12 @@ router.get('/:id/knowledge',               auth, requirePlan('pro_plus'), c.getK
 
 // ── Annotations (user-scoped) — declare before /:id routes ──
 // Pen / highlighter / highlight-note creation is a Pro+ reading tool.
-router.post('/annotations',                auth, requirePlan('pro_plus'), c.createAnnotation);
-router.post('/annotations/bulk',           auth, requirePlan('pro_plus'), c.createAnnotationsBulk);
-router.post('/annotations/bulk-delete',    auth, c.deleteAnnotationsBulk);
+router.post('/annotations',                auth, annotationWriteLimiter, requirePlan('pro_plus'), c.createAnnotation);
+router.post('/annotations/bulk',           auth, annotationWriteLimiter, requirePlan('pro_plus'), c.createAnnotationsBulk);
+router.post('/annotations/sync',           auth, annotationWriteLimiter, requirePlan('pro_plus'), c.syncAnnotations);
+router.post('/annotations/bulk-delete',    auth, annotationWriteLimiter, c.deleteAnnotationsBulk);
 router.get('/annotations',                 auth, c.listAnnotations);
-router.delete('/annotations/:id',          auth, c.deleteAnnotation);
+router.delete('/annotations/:id',          auth, annotationWriteLimiter, c.deleteAnnotation);
 
 // ── Reading state (bookmarks + progress) — declare before /:id routes ──
 router.post('/reading-state',              auth, c.upsertReadingState);

@@ -20,6 +20,8 @@ export function ForumProvider({ children }) {
   const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationCursor, setNotificationCursor] = useState(null);
+  const [notificationLoadingMore, setNotificationLoadingMore] = useState(false);
   const [bootError, setBootError] = useState(null);
   const [bootDone, setBootDone] = useState(false);
 
@@ -57,11 +59,34 @@ export function ForumProvider({ children }) {
           .map((notification) => String(notification._id))
       );
       setNotifications(items);
+      setNotificationCursor(json.nextCursor || null);
       setUnreadCount(json.unreadCount || 0);
     } catch {
       // Notifications failing to load is non-fatal.
     }
   }, []);
+
+  const loadMoreNotifications = useCallback(async () => {
+    if (!notificationCursor || notificationLoadingMore) return;
+    setNotificationLoadingMore(true);
+    try {
+      const json = await forumApi.notifications({ limit: 30, cursor: notificationCursor });
+      const items = json.data || [];
+      for (const notification of items) {
+        if (!notification.read) {
+          unreadNotificationIdsRef.current.add(String(notification._id));
+        }
+      }
+      setNotifications((current) => {
+        const existing = new Set(current.map((notification) => String(notification._id)));
+        return [...current, ...items.filter((notification) => !existing.has(String(notification._id)))];
+      });
+      setNotificationCursor(json.nextCursor || null);
+      setUnreadCount(json.unreadCount || 0);
+    } finally {
+      setNotificationLoadingMore(false);
+    }
+  }, [notificationCursor, notificationLoadingMore]);
 
   useEffect(() => {
     (async () => {
@@ -167,6 +192,24 @@ export function ForumProvider({ children }) {
     [socket]
   );
 
+  const subscribePost = useCallback((callbacks = {}) => {
+    if (!socket) return () => {};
+    const onNew = (post) => callbacks.onNew?.(post);
+    const onUpdate = (post) => callbacks.onUpdate?.(post);
+    const onDelete = (payload) => callbacks.onDelete?.(payload);
+    const onStats = (payload) => callbacks.onStats?.(payload);
+    socket.on('post:new', onNew);
+    socket.on('post:update', onUpdate);
+    socket.on('post:delete', onDelete);
+    socket.on('post:stats', onStats);
+    return () => {
+      socket.off('post:new', onNew);
+      socket.off('post:update', onUpdate);
+      socket.off('post:delete', onDelete);
+      socket.off('post:stats', onStats);
+    };
+  }, [socket]);
+
   const createPost = useCallback(async (payload) => {
     const json = await forumApi.createPost(payload);
     return json.data;
@@ -237,6 +280,8 @@ export function ForumProvider({ children }) {
       categories,
       notifications,
       unreadCount,
+      hasMoreNotifications: Boolean(notificationCursor),
+      notificationLoadingMore,
       socketConnected: connected,
       bootDone,
       bootError,
@@ -244,6 +289,7 @@ export function ForumProvider({ children }) {
       // refreshers
       refreshUser,
       refreshNotifications,
+      loadMoreNotifications,
 
       // posts / comments / reactions
       createPost,
@@ -256,6 +302,7 @@ export function ForumProvider({ children }) {
       toggleReaction,
       subscribeReaction,
       subscribeComment,
+      subscribePost,
 
       // notifications
       markNotificationRead,
@@ -270,11 +317,14 @@ export function ForumProvider({ children }) {
       categories,
       notifications,
       unreadCount,
+      notificationCursor,
+      notificationLoadingMore,
       connected,
       bootDone,
       bootError,
       refreshUser,
       refreshNotifications,
+      loadMoreNotifications,
       createPost,
       updatePost,
       deletePost,
@@ -285,6 +335,7 @@ export function ForumProvider({ children }) {
       toggleReaction,
       subscribeReaction,
       subscribeComment,
+      subscribePost,
       markNotificationRead,
       markAllNotificationsRead,
       follow,

@@ -5,20 +5,17 @@ const reactionSchema = new mongoose.Schema(
     targetType: {
       type: String,
       enum: ['post', 'comment'],
-      required: true,
-      index: true
+      required: true
     },
     target: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      index: true,
       refPath: 'targetType'
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      index: true
+      required: true
     },
     type: {
       type: String,

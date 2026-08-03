@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 
 const DEFAULT_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
-  : 'http://localhost:5000';
+  : (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000');
 
 /**
  * useSocket — single shared Socket.IO connection per user.

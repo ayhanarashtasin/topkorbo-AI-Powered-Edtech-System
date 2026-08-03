@@ -174,6 +174,7 @@ const AnnotationCanvas = forwardRef(function AnnotationCanvas(props, ref) {
         onPointerMove={drawing.handlers.onPointerMove}
         onPointerUp={drawing.handlers.onPointerUp}
         onPointerCancel={drawing.handlers.onPointerCancel}
+        onLostPointerCapture={drawing.handlers.onLostPointerCapture}
       />
       {/* Overlay canvas: transient guides like the eraser ring (pointer-events: none). */}
       <canvas
@@ -193,13 +194,14 @@ function drawCommittedStroke(ctx, stroke, pageW, pageH) {
   if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) return;
   const col = stroke.color || '#111827';
   const baseW = stroke.strokeWidth || 3;
+  const widthScale = stroke.referenceWidth ? pageW / stroke.referenceWidth : 1;
   const px = new Array(stroke.points.length);
   for (let i = 0; i < stroke.points.length; i += 1) {
     const p = stroke.points[i];
     px[i] = {
       x: p.x * pageW,
       y: p.y * pageH,
-      w: (typeof p.w === 'number' && p.w > 0) ? p.w : baseW
+      w: ((typeof p.w === 'number' && p.w > 0) ? p.w : baseW) * widthScale
     };
   }
   drawTaperedStroke(ctx, px, col);

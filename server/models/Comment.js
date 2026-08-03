@@ -10,13 +10,12 @@ const imageSchema = new mongoose.Schema(
 
 const commentSchema = new mongoose.Schema(
   {
-    post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true, index: true },
-    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    post: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Comment',
-      default: null,
-      index: true
+      default: null
     },
     contentHtml: { type: String, default: '' },
     contentText: { type: String, default: '' },
@@ -30,7 +29,7 @@ const commentSchema = new mongoose.Schema(
     depth: { type: Number, default: 0 }, // visual indent level
     isEdited: { type: Boolean, default: false },
     editedAt: { type: Date },
-    isHidden: { type: Boolean, default: false, index: true }
+    isHidden: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

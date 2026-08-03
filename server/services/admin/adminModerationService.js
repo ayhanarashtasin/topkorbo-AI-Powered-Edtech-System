@@ -10,6 +10,8 @@ const { getIO } = require('../../socket');
 const { createAdminAuditLog } = require('./adminAuditService');
 const { updateUserStatus, resolveAccountStatus } = require('./adminUserService');
 const { hideComment } = require('../forumCommentService');
+const { deleteImage } = require('../uploadService');
+const { withMongoTransaction } = require('../../utils/mongoTransaction');
 
 const REPORT_STATUSES = ['open', 'under_review', 'resolved', 'dismissed'];
 const REPORT_TARGET_TYPES = ['post', 'comment', 'user', 'question'];
@@ -101,7 +103,7 @@ async function populateGroupedReportTargets(groups) {
 }
 
 function mapTargetSummary(group, targetMaps) {
-  const target = targetMaps[group.targetType]?.get(group.targetId) || null;
+  const target = targetMaps[group.targetType]?.get(String(group.targetId)) || null;
 
   if (group.targetType === 'post') {
     return {
@@ -181,6 +183,52 @@ function mapTargetSummary(group, targetMaps) {
   };
 }
 
+async function buildGroupedReportSearchMatch(search) {
+  const regex = new RegExp(escapeRegex(search), 'i');
+  const matchedUsers = await User.find({
+    $or: [{ name: regex }, { email: regex }, { username: regex }]
+  }).select('_id').lean();
+  const userIds = matchedUsers.map((user) => user._id);
+
+  const [posts, comments, questions] = await Promise.all([
+    Post.find({
+      $or: [
+        { title: regex },
+        { contentText: regex },
+        ...(userIds.length ? [{ author: { $in: userIds } }] : [])
+      ]
+    }).select('_id').lean(),
+    Comment.find({
+      $or: [
+        { contentText: regex },
+        ...(userIds.length ? [{ author: { $in: userIds } }] : [])
+      ]
+    }).select('_id').lean(),
+    Question.find({
+      $or: [
+        { questionText: regex },
+        ...(userIds.length ? [{ teacher: { $in: userIds } }] : [])
+      ]
+    }).select('_id').lean()
+  ]);
+
+  const clauses = [];
+  if (userIds.length) {
+    clauses.push({ latestReporterId: { $in: userIds } });
+    clauses.push({ targetType: 'user', targetId: { $in: userIds } });
+  }
+  if (posts.length) {
+    clauses.push({ targetType: 'post', targetId: { $in: posts.map((item) => item._id) } });
+  }
+  if (comments.length) {
+    clauses.push({ targetType: 'comment', targetId: { $in: comments.map((item) => item._id) } });
+  }
+  if (questions.length) {
+    clauses.push({ targetType: 'question', targetId: { $in: questions.map((item) => item._id) } });
+  }
+  return clauses.length ? { $or: clauses } : { _id: null };
+}
+
 async function listReports({
   search = '',
   status = '',
@@ -195,7 +243,10 @@ async function listReports({
   const safeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
   const match = buildReportMatch({ status, itemType, reason, createdFrom, createdTo });
 
-  const grouped = await Report.aggregate([
+  const groupedSearchMatch = search
+    ? await buildGroupedReportSearchMatch(search)
+    : null;
+  const pipeline = [
     { $match: match },
     { $sort: { createdAt: 1, _id: 1 } },
     {
@@ -213,8 +264,46 @@ async function listReports({
         reportCount: { $sum: 1 }
       }
     },
-    { $sort: { latestCreatedAt: -1 } }
-  ]);
+    {
+      $set: {
+        effectiveStatus: {
+          $switch: {
+            branches: [
+              { case: { $in: ['open', '$statuses'] }, then: 'open' },
+              { case: { $in: ['under_review', '$statuses'] }, then: 'under_review' },
+              {
+                case: {
+                  $or: [
+                    { $in: ['resolved', '$statuses'] },
+                    { $in: ['action_taken', '$statuses'] }
+                  ]
+                },
+                then: 'resolved'
+              }
+            ],
+            default: 'dismissed'
+          }
+        }
+      }
+    }
+  ];
+  if (groupedSearchMatch) pipeline.push({ $match: groupedSearchMatch });
+  pipeline.push({
+    $facet: {
+      items: [
+        { $sort: { latestCreatedAt: -1, reportId: -1 } },
+        { $skip: (safePage - 1) * safeLimit },
+        { $limit: safeLimit }
+      ],
+      summary: [
+        { $group: { _id: '$effectiveStatus', count: { $sum: 1 } } }
+      ],
+      total: [{ $count: 'count' }]
+    }
+  });
+
+  const [faceted = { items: [], summary: [], total: [] }] = await Report.aggregate(pipeline);
+  const grouped = faceted.items || [];
 
   const reporterIds = Array.from(
     new Set(grouped.map((item) => String(item.latestReporterId || '')).filter(Boolean))
@@ -228,7 +317,7 @@ async function listReports({
 
   const reporterMap = new Map(reporters.map((item) => [String(item._id), item]));
 
-  let items = grouped.map((group) => {
+  const items = grouped.map((group) => {
     const target = mapTargetSummary(group, targetMaps);
     const reporter = reporterMap.get(String(group.latestReporterId)) || null;
     return {
@@ -237,13 +326,7 @@ async function listReports({
       itemType: group.targetType,
       reason: group.latestReason || 'other',
       description: group.latestDescription || '',
-      status: group.statuses.includes('open')
-        ? 'open'
-        : group.statuses.includes('under_review')
-          ? 'under_review'
-          : group.statuses.some((item) => normalizeReportStatus(item) === 'resolved')
-            ? 'resolved'
-            : 'dismissed',
+      status: group.effectiveStatus,
       createdAt: group.latestCreatedAt || null,
       reportedBy: reporter
         ? {
@@ -256,31 +339,14 @@ async function listReports({
     };
   });
 
-  if (search) {
-    const regex = new RegExp(escapeRegex(search), 'i');
-    items = items.filter((item) =>
-      regex.test(item.reportedBy?.name || '') ||
-      regex.test(item.reportedBy?.email || '') ||
-      regex.test(item.target.owner?.name || '') ||
-      regex.test(item.target.owner?.email || '') ||
-      regex.test(item.target.preview || '')
-    );
+  const total = faceted.total?.[0]?.count || 0;
+  const summary = { total, open: 0, under_review: 0, resolved: 0, dismissed: 0 };
+  for (const row of faceted.summary || []) {
+    if (Object.hasOwn(summary, row._id)) summary[row._id] = row.count;
   }
 
-  const summary = items.reduce(
-    (accumulator, item) => {
-      accumulator.total += 1;
-      accumulator[item.status] += 1;
-      return accumulator;
-    },
-    { total: 0, open: 0, under_review: 0, resolved: 0, dismissed: 0 }
-  );
-
-  const total = items.length;
-  const pagedItems = items.slice((safePage - 1) * safeLimit, (safePage - 1) * safeLimit + safeLimit);
-
   return {
-    items: pagedItems,
+    items,
     summary,
     filters: {
       statuses: REPORT_STATUSES,
@@ -296,14 +362,14 @@ async function listReports({
   };
 }
 
-async function resolveRelatedReports(reportId) {
+async function resolveRelatedReports(reportId, { session } = {}) {
   if (!mongoose.Types.ObjectId.isValid(reportId)) {
     const err = new Error('Report not found');
     err.statusCode = 404;
     throw err;
   }
 
-  const anchor = await Report.findById(reportId);
+  const anchor = await Report.findById(reportId).session(session || null);
   if (!anchor) {
     const err = new Error('Report not found');
     err.statusCode = 404;
@@ -314,6 +380,7 @@ async function resolveRelatedReports(reportId) {
     targetType: anchor.targetType,
     target: anchor.target
   })
+    .session(session || null)
     .populate('reporter', 'name email username')
     .populate('reviewer', 'name email')
     .populate('adminNotes.addedBy', 'name email')
@@ -322,11 +389,14 @@ async function resolveRelatedReports(reportId) {
   return { anchor, reports };
 }
 
-async function resolveTargetForReport(report) {
+async function resolveTargetForReport(report, { session } = {}) {
   if (!report) return null;
 
   if (report.targetType === 'post') {
-    const post = await Post.findById(report.target).populate('author', 'name email username').lean();
+    const post = await Post.findById(report.target)
+      .session(session || null)
+      .populate('author', 'name email username')
+      .lean();
     return {
       entityId: String(report.target),
       entityType: 'post',
@@ -347,6 +417,7 @@ async function resolveTargetForReport(report) {
 
   if (report.targetType === 'comment') {
     const comment = await Comment.findById(report.target)
+      .session(session || null)
       .populate('author', 'name email username')
       .populate('post', 'title')
       .lean();
@@ -369,7 +440,10 @@ async function resolveTargetForReport(report) {
   }
 
   if (report.targetType === 'question') {
-    const question = await Question.findById(report.target).populate('teacher', 'name email').lean();
+    const question = await Question.findById(report.target)
+      .session(session || null)
+      .populate('teacher', 'name email')
+      .lean();
     return {
       entityId: String(report.target),
       entityType: 'question',
@@ -389,7 +463,10 @@ async function resolveTargetForReport(report) {
   }
 
   if (report.targetType === 'user') {
-    const user = await User.findById(report.target).select('name email username accountStatus isBanned statusReason banReason').lean();
+    const user = await User.findById(report.target)
+      .session(session || null)
+      .select('name email username accountStatus isBanned statusReason banReason')
+      .lean();
     return {
       entityId: String(report.target),
       entityType: 'user',
@@ -474,6 +551,58 @@ async function getReportDetails(reportId) {
   return buildReportDetails(anchor, reports, targetSummary);
 }
 
+async function applyRelatedReportStatus({
+  adminUser,
+  anchor,
+  reports,
+  targetSummary,
+  nextStatus,
+  note = '',
+  actionType,
+  session
+}) {
+  const previousStatuses = Array.from(
+    new Set(reports.map((item) => normalizeReportStatus(item.status)))
+  );
+  const now = new Date();
+  const trimmedNote = String(note || '').trim();
+  const update = {
+    $set: {
+      status: nextStatus,
+      reviewer: adminUser.id,
+      reviewedAt: now
+    }
+  };
+  if (trimmedNote) {
+    update.$set.actionTaken = trimmedNote;
+    update.$push = {
+      adminNotes: {
+        note: trimmedNote,
+        addedBy: adminUser.id,
+        addedAt: now
+      }
+    };
+  }
+
+  await Report.updateMany(
+    { _id: { $in: reports.map((report) => report._id) } },
+    update,
+    { session }
+  );
+  await createAdminAuditLog({
+    adminId: adminUser.id,
+    targetUserId: targetSummary?.targetUserId || undefined,
+    targetEntityId: targetSummary?.entityId,
+    targetEntityType: targetSummary?.entityType,
+    targetEntityName: targetSummary?.entityName,
+    actionType,
+    previousValue: { statuses: previousStatuses },
+    newValue: { status: nextStatus, reportId: String(anchor._id) },
+    reason: trimmedNote,
+    session
+  });
+}
+
 async function addReportNote({ adminUser, reportId, note }) {
   const trimmedNote = String(note || '').trim();
   if (!trimmedNote) {
@@ -482,39 +611,35 @@ async function addReportNote({ adminUser, reportId, note }) {
     throw err;
   }
 
-  const { anchor, reports } = await resolveRelatedReports(reportId);
-  const targetSummary = await resolveTargetForReport(anchor);
   const noteEntry = {
     note: trimmedNote,
     addedBy: adminUser.id,
     addedAt: new Date()
   };
 
-  await Promise.all(
-    reports.map((report) =>
-      Report.updateOne(
-        { _id: report._id },
-        {
-          $push: { adminNotes: noteEntry },
-          $set: {
-            reviewer: adminUser.id,
-            reviewedAt: noteEntry.addedAt
-          }
-        }
-      )
-    )
-  );
-
-  await createAdminAuditLog({
-    adminId: adminUser.id,
-    targetUserId: targetSummary?.targetUserId || undefined,
-    targetEntityId: targetSummary?.entityId,
-    targetEntityType: targetSummary?.entityType,
-    targetEntityName: targetSummary?.entityName,
-    actionType: 'REPORT_NOTE_ADDED',
-    previousValue: { status: normalizeReportStatus(anchor.status) },
-    newValue: { status: normalizeReportStatus(anchor.status), reportId: String(anchor._id) },
-    reason: trimmedNote
+  await withMongoTransaction(async (session) => {
+    const { anchor, reports } = await resolveRelatedReports(reportId, { session });
+    const targetSummary = await resolveTargetForReport(anchor, { session });
+    await Report.updateMany(
+      { _id: { $in: reports.map((report) => report._id) } },
+      {
+        $push: { adminNotes: noteEntry },
+        $set: { reviewer: adminUser.id, reviewedAt: noteEntry.addedAt }
+      },
+      { session }
+    );
+    await createAdminAuditLog({
+      adminId: adminUser.id,
+      targetUserId: targetSummary?.targetUserId || undefined,
+      targetEntityId: targetSummary?.entityId,
+      targetEntityType: targetSummary?.entityType,
+      targetEntityName: targetSummary?.entityName,
+      actionType: 'REPORT_NOTE_ADDED',
+      previousValue: { status: normalizeReportStatus(anchor.status) },
+      newValue: { status: normalizeReportStatus(anchor.status), reportId: String(anchor._id) },
+      reason: trimmedNote,
+      session
+    });
   });
 
   return getReportDetails(reportId);
@@ -527,139 +652,175 @@ async function updateReportStatus({ adminUser, reportId, nextStatus, note = '', 
     throw err;
   }
 
-  const { anchor, reports } = await resolveRelatedReports(reportId);
-  const targetSummary = await resolveTargetForReport(anchor);
-  const previousStatuses = Array.from(new Set(reports.map((item) => normalizeReportStatus(item.status))));
-  const now = new Date();
-  const trimmedNote = String(note || '').trim();
-
-  await Promise.all(
-    reports.map((report) => {
-      const update = {
-        $set: {
-          status: nextStatus,
-          reviewer: adminUser.id,
-          reviewedAt: now,
-          actionTaken: trimmedNote || report.actionTaken || ''
-        }
-      };
-      if (trimmedNote) {
-        update.$push = {
-          adminNotes: {
-            note: trimmedNote,
-            addedBy: adminUser.id,
-            addedAt: now
-          }
-        };
-      }
-      return Report.updateOne({ _id: report._id }, update);
-    })
-  );
-
-  await createAdminAuditLog({
-    adminId: adminUser.id,
-    targetUserId: targetSummary?.targetUserId || undefined,
-    targetEntityId: targetSummary?.entityId,
-    targetEntityType: targetSummary?.entityType,
-    targetEntityName: targetSummary?.entityName,
-    actionType,
-    previousValue: { statuses: previousStatuses },
-    newValue: { status: nextStatus, reportId: String(anchor._id) },
-    reason: trimmedNote
+  await withMongoTransaction(async (session) => {
+    const { anchor, reports } = await resolveRelatedReports(reportId, { session });
+    const targetSummary = await resolveTargetForReport(anchor, { session });
+    await applyRelatedReportStatus({
+      adminUser,
+      anchor,
+      reports,
+      targetSummary,
+      nextStatus,
+      note,
+      actionType,
+      session
+    });
   });
 
   return getReportDetails(reportId);
 }
 
 async function warnReportedUser({ adminUser, reportId, note = '' }) {
-  const { anchor } = await resolveRelatedReports(reportId);
-  const targetSummary = await resolveTargetForReport(anchor);
-  const userId = targetSummary?.targetUserId;
-
-  if (!userId) {
-    const err = new Error('No target user is available for this report');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const warningReason = String(note || '').trim() || anchor.reason;
-  await User.findByIdAndUpdate(userId, {
-    $push: {
-      warnings: {
-        reason: warningReason,
-        issuedBy: adminUser.id
-      }
+  const result = await withMongoTransaction(async (session) => {
+    const { anchor, reports } = await resolveRelatedReports(reportId, { session });
+    const targetSummary = await resolveTargetForReport(anchor, { session });
+    const userId = targetSummary?.targetUserId;
+    if (!userId) {
+      const err = new Error('No target user is available for this report');
+      err.statusCode = 400;
+      throw err;
     }
+
+    const warningReason = String(note || '').trim() || anchor.reason;
+    const updatedUser = await User.findByIdAndUpdate(userId, {
+      $push: {
+        warnings: {
+          reason: warningReason,
+          issuedBy: adminUser.id
+        }
+      }
+    }, { session, new: true });
+    if (!updatedUser) {
+      const err = new Error('Target user not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    await createAdminAuditLog({
+      adminId: adminUser.id,
+      targetUserId: userId,
+      targetEntityId: targetSummary?.entityId,
+      targetEntityType: targetSummary?.entityType,
+      targetEntityName: targetSummary?.entityName,
+      actionType: 'USER_WARNED',
+      previousValue: { reportId: String(anchor._id) },
+      newValue: { warned: true },
+      reason: warningReason,
+      session
+    });
+    await applyRelatedReportStatus({
+      adminUser,
+      anchor,
+      reports,
+      targetSummary,
+      nextStatus: 'resolved',
+      note: warningReason,
+      actionType: 'REPORT_RESOLVED',
+      session
+    });
+    return { userId: String(userId), warningReason };
   });
 
   try {
     const io = getIO();
     await notify(io, {
-      recipient: userId,
+      recipient: result.userId,
       actor: adminUser.id,
       type: 'warning',
-      message: `You have received a warning: ${warningReason}`,
+      message: `You have received a warning: ${result.warningReason}`,
       preview: 'Please review our community guidelines.'
     });
   } catch (_) {
     // Notification delivery should not block the moderation action.
   }
 
-  await createAdminAuditLog({
-    adminId: adminUser.id,
-    targetUserId: userId,
-    targetEntityId: targetSummary?.entityId,
-    targetEntityType: targetSummary?.entityType,
-    targetEntityName: targetSummary?.entityName,
-    actionType: 'USER_WARNED',
-    previousValue: { reportId: String(anchor._id) },
-    newValue: { warned: true },
-    reason: warningReason
-  });
-
-  return updateReportStatus({
-    adminUser,
-    reportId,
-    nextStatus: 'resolved',
-    note: warningReason,
-    actionType: 'REPORT_RESOLVED'
-  });
+  return getReportDetails(reportId);
 }
 
 async function hideReportedContent({ adminUser, reportId, note = '' }) {
-  const { anchor } = await resolveRelatedReports(reportId);
-  const targetSummary = await resolveTargetForReport(anchor);
-  const hiddenReason = String(note || '').trim() || 'Hidden by admin moderation';
+  const hidden = await withMongoTransaction(async (session) => {
+    const { anchor, reports } = await resolveRelatedReports(reportId, { session });
+    const targetSummary = await resolveTargetForReport(anchor, { session });
+    const hiddenReason = String(note || '').trim() || 'Hidden by admin moderation';
+    let event = null;
+    let images = [];
 
-  if (anchor.targetType === 'post') {
-    await Post.findByIdAndUpdate(anchor.target, { isHidden: true, hiddenReason });
-  } else if (anchor.targetType === 'comment') {
-    await hideComment(anchor.target);
+    if (anchor.targetType === 'post') {
+      const post = await Post.findById(anchor.target).session(session);
+      if (!post) {
+        const err = new Error('Reported post not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      if (!post.isHidden) {
+        post.isHidden = true;
+        post.hiddenReason = hiddenReason;
+        await post.save({ session });
+        images = post.images || [];
+      }
+      event = { type: 'post', postId: String(post._id) };
+    } else if (anchor.targetType === 'comment') {
+      const comment = await Comment.findById(anchor.target).session(session);
+      if (!comment) {
+        const err = new Error('Reported comment not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      const hideResult = await hideComment(anchor.target, { session });
+      images = hideResult.comment?.images || [];
+      event = {
+        type: 'comment',
+        commentId: String(comment._id),
+        postId: String(comment.post)
+      };
+    } else {
+      const err = new Error('Hide content is only supported for posts and comments');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    await createAdminAuditLog({
+      adminId: adminUser.id,
+      targetUserId: targetSummary?.targetUserId || undefined,
+      targetEntityId: targetSummary?.entityId,
+      targetEntityType: targetSummary?.entityType,
+      targetEntityName: targetSummary?.entityName,
+      actionType: 'CONTENT_HIDDEN',
+      previousValue: { isHidden: targetSummary?.isHidden || false, reportId: String(anchor._id) },
+      newValue: { isHidden: true },
+      reason: hiddenReason,
+      session
+    });
+    await applyRelatedReportStatus({
+      adminUser,
+      anchor,
+      reports,
+      targetSummary,
+      nextStatus: 'resolved',
+      note: hiddenReason,
+      actionType: 'REPORT_RESOLVED',
+      session
+    });
+    return { event, images };
+  });
+
+  await Promise.allSettled(
+    hidden.images.map((image) => deleteImage(image.publicId, image.url))
+  );
+  const io = getIO();
+  if (hidden.event.type === 'post') {
+    io.to(['forum', `post:${hidden.event.postId}`]).emit('post:delete', {
+      postId: hidden.event.postId
+    });
   } else {
-    const err = new Error('Hide content is only supported for posts and comments');
-    err.statusCode = 400;
-    throw err;
+    io.to(`post:${hidden.event.postId}`).emit('comment:delete', hidden.event);
+    const post = await Post.findById(hidden.event.postId).select('commentsCount').lean();
+    io.to('forum').emit('post:stats', {
+      postId: hidden.event.postId,
+      commentsCount: post?.commentsCount || 0
+    });
   }
-
-  await createAdminAuditLog({
-    adminId: adminUser.id,
-    targetUserId: targetSummary?.targetUserId || undefined,
-    targetEntityId: targetSummary?.entityId,
-    targetEntityType: targetSummary?.entityType,
-    targetEntityName: targetSummary?.entityName,
-    actionType: 'CONTENT_HIDDEN',
-    previousValue: { isHidden: false, reportId: String(anchor._id) },
-    newValue: { isHidden: true },
-    reason: hiddenReason
-  });
-
-  return updateReportStatus({
-    adminUser,
-    reportId,
-    nextStatus: 'resolved',
-    note: hiddenReason,
-    actionType: 'REPORT_RESOLVED'
-  });
+  return getReportDetails(reportId);
 }
 
 async function changeReportedUserStatus({ adminUser, reportId, status, reason = '' }) {
@@ -669,31 +830,36 @@ async function changeReportedUserStatus({ adminUser, reportId, status, reason = 
     throw err;
   }
 
-  const { anchor } = await resolveRelatedReports(reportId);
-  const targetSummary = await resolveTargetForReport(anchor);
-  const userId = targetSummary?.targetUserId;
+  await withMongoTransaction(async (session) => {
+    const { anchor, reports } = await resolveRelatedReports(reportId, { session });
+    const targetSummary = await resolveTargetForReport(anchor, { session });
+    const userId = targetSummary?.targetUserId;
+    if (!userId) {
+      const err = new Error('No target user is available for this report');
+      err.statusCode = 400;
+      throw err;
+    }
 
-  if (!userId) {
-    const err = new Error('No target user is available for this report');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const finalReason = String(reason || '').trim() || anchor.reason;
-  await updateUserStatus({
-    adminUser,
-    targetUserId: userId,
-    nextStatus: status,
-    reason: finalReason
+    const finalReason = String(reason || '').trim() || anchor.reason;
+    await updateUserStatus({
+      adminUser,
+      targetUserId: userId,
+      nextStatus: status,
+      reason: finalReason,
+      session
+    });
+    await applyRelatedReportStatus({
+      adminUser,
+      anchor,
+      reports,
+      targetSummary,
+      nextStatus: 'resolved',
+      note: finalReason,
+      actionType: 'REPORT_RESOLVED',
+      session
+    });
   });
-
-  return updateReportStatus({
-    adminUser,
-    reportId,
-    nextStatus: 'resolved',
-    note: finalReason,
-    actionType: 'REPORT_RESOLVED'
-  });
+  return getReportDetails(reportId);
 }
 
 function buildAppealQuery({ status = '', createdFrom = '', createdTo = '' }) {

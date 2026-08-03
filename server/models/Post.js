@@ -12,7 +12,7 @@ const imageSchema = new mongoose.Schema(
 
 const postSchema = new mongoose.Schema(
   {
-    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     type: { type: String, enum: ['text', 'question'], default: 'text' },
     category: {
       type: String,
@@ -26,15 +26,14 @@ const postSchema = new mongoose.Schema(
         'Assignment',
         'Other'
       ],
-      default: 'General',
-      index: true
+      default: 'General'
     },
     title: { type: String, trim: true, maxlength: 200 },
     contentHtml: { type: String, required: true },
     contentText: { type: String, default: '' },
     images: { type: [imageSchema], default: [] },
     mentions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    tags: { type: [String], default: [], index: true },
+    tags: { type: [String], default: [] },
     groupVisibility: [
       {
         type: String,
@@ -45,11 +44,11 @@ const postSchema = new mongoose.Schema(
       like: { type: Number, default: 0 },
       love: { type: Number, default: 0 }
     },
-    commentsCount: { type: Number, default: 0, index: true },
+    commentsCount: { type: Number, default: 0 },
     bookmarksCount: { type: Number, default: 0 },
-    score: { type: Number, default: 0, index: true }, // trending score
+    score: { type: Number, default: 0 }, // trending score
     isEdited: { type: Boolean, default: false },
-    isHidden: { type: Boolean, default: false, index: true },
+    isHidden: { type: Boolean, default: false },
     hiddenReason: { type: String, default: '' },
     editedAt: { type: Date }
   },

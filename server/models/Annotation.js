@@ -15,10 +15,10 @@ const mongoose = require('mongoose');
  *      (mouse / non-pressure stylus).
  */
 const pointSchema = new mongoose.Schema({
-  x: { type: Number, required: true },
-  y: { type: Number, required: true },
-  w: { type: Number },
-  p: { type: Number }
+  x: { type: Number, required: true, min: 0, max: 1 },
+  y: { type: Number, required: true, min: 0, max: 1 },
+  w: { type: Number, min: 0.01, max: 64 },
+  p: { type: Number, min: 0, max: 1 }
 }, { _id: false });
 
 const annotationSchema = new mongoose.Schema({
@@ -42,7 +42,14 @@ const annotationSchema = new mongoose.Schema({
   pageNumber: {
     type: Number,
     required: true,
-    min: 1
+    min: 1,
+    max: 100000
+  },
+  clientId: {
+    type: String,
+    trim: true,
+    maxlength: 96,
+    match: /^[A-Za-z0-9:_-]+$/
   },
   type: {
     type: String,
@@ -51,18 +58,33 @@ const annotationSchema = new mongoose.Schema({
   },
   color: {
     type: String,
-    default: '#EF4444'
+    default: '#EF4444',
+    match: /^#[0-9A-Fa-f]{6}$/
   },
   // Pen-only
   points: {
     type: [pointSchema],
-    default: undefined
+    default: undefined,
+    validate: {
+      validator: (points) => Array.isArray(points) && points.length >= 1 && points.length <= 6000,
+      message: 'points must contain between 1 and 6000 entries'
+    }
   },
   // Base stroke width in CSS px. The actual rendered width for a segment is
   // modulated by per-point w (and p) — this is just the chosen tool size.
   strokeWidth: {
     type: Number,
-    default: 3
+    default: 3,
+    min: 0.5,
+    max: 64
+  },
+  // CSS page width used when the point widths were captured. This lets
+  // pressure-sensitive strokes scale consistently across phones, tablets,
+  // desktop zoom levels, and exported screenshots.
+  referenceWidth: {
+    type: Number,
+    min: 1,
+    max: 20000
   },
   // Optimistic-concurrency hint. Bumped when the document is updated.
   // Not enforced yet, but useful for future PATCH endpoints.
@@ -80,7 +102,14 @@ const annotationSchema = new mongoose.Schema({
   }
 });
 
-annotationSchema.index({ userId: 1, chapterId: 1, pageNumber: 1 });
+annotationSchema.index({ userId: 1, chapterId: 1, pageNumber: 1, createdAt: 1 });
+annotationSchema.index(
+  { userId: 1, clientId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientId: { $type: 'string' } }
+  }
+);
 
 // Touch `updatedAt` on save so the bulk endpoint can return the latest
 // timestamps to the client (used for ordering and audit).

@@ -3,8 +3,16 @@ import { useInView } from 'react-intersection-observer';
 import PostCard from './PostCard';
 import LoadingSkeleton from './LoadingSkeleton';
 import EmptyState from './EmptyState';
+import { useForum } from '../../context/ForumContext';
 
-function PaginatedFeed({ emptyTitle, emptyMessage, fetchPage }) {
+function PaginatedFeed({
+  emptyTitle,
+  emptyMessage,
+  fetchPage,
+  acceptNewPost,
+  removeWhenUnbookmarked = false
+}) {
+  const { subscribePost } = useForum();
   const [items, setItems] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [done, setDone] = useState(false);
@@ -17,7 +25,11 @@ function PaginatedFeed({ emptyTitle, emptyMessage, fetchPage }) {
       try {
         const response = await fetchPage(null);
         if (cancelled) return;
-        setItems(response.data || []);
+        setItems((currentItems) => {
+          const incoming = response.data || [];
+          const incomingIds = new Set(incoming.map((item) => String(item._id)));
+          return [...currentItems.filter((item) => !incomingIds.has(String(item._id))), ...incoming];
+        });
         setCursor(response.nextCursor || null);
         setDone(!response.nextCursor);
       } catch (requestError) {
@@ -30,13 +42,51 @@ function PaginatedFeed({ emptyTitle, emptyMessage, fetchPage }) {
     return () => { cancelled = true; };
   }, [fetchPage]);
 
+  useEffect(() => subscribePost({
+    onNew: (post) => {
+      if (!acceptNewPost?.(post)) return;
+      setItems((currentItems) => [
+        post,
+        ...currentItems.filter((item) => String(item._id) !== String(post._id))
+      ]);
+    },
+    onUpdate: (post) => {
+      setItems((currentItems) => currentItems.map((item) =>
+        String(item._id) === String(post._id)
+          ? {
+            ...item,
+            ...post,
+            userReaction: item.userReaction,
+            bookmarked: item.bookmarked
+          }
+          : item
+      ));
+    },
+    onDelete: ({ postId }) => {
+      setItems((currentItems) => currentItems.filter((item) =>
+        String(item._id) !== String(postId)
+      ));
+    },
+    onStats: ({ postId, ...stats }) => {
+      setItems((currentItems) => currentItems.map((item) =>
+        String(item._id) === String(postId) ? { ...item, ...stats } : item
+      ));
+    }
+  }), [acceptNewPost, subscribePost]);
+
   const loadMore = useCallback(async () => {
     if (loading || done) return;
     setLoading(true);
     setError(null);
     try {
       const response = await fetchPage(cursor);
-      setItems((currentItems) => [...currentItems, ...(response.data || [])]);
+      setItems((currentItems) => {
+        const existing = new Set(currentItems.map((item) => String(item._id)));
+        return [
+          ...currentItems,
+          ...(response.data || []).filter((item) => !existing.has(String(item._id)))
+        ];
+      });
       setCursor(response.nextCursor || null);
       setDone(!response.nextCursor);
     } catch (requestError) {
@@ -72,6 +122,13 @@ function PaginatedFeed({ emptyTitle, emptyMessage, fetchPage }) {
           key={post._id}
           post={post}
           onDelete={(id) => setItems((currentItems) => currentItems.filter((item) => item._id !== id))}
+          onBookmarkChange={(bookmarked) => {
+            setItems((currentItems) => removeWhenUnbookmarked && !bookmarked
+              ? currentItems.filter((item) => item._id !== post._id)
+              : currentItems.map((item) => item._id === post._id
+                ? { ...item, bookmarked }
+                : item));
+          }}
         />
       ))}
       {!done ? (
@@ -89,13 +146,22 @@ function PaginatedFeed({ emptyTitle, emptyMessage, fetchPage }) {
   );
 }
 
-export default function InfiniteFeed({ feedKey, emptyTitle, emptyMessage, fetchPage }) {
+export default function InfiniteFeed({
+  feedKey,
+  emptyTitle,
+  emptyMessage,
+  fetchPage,
+  acceptNewPost,
+  removeWhenUnbookmarked
+}) {
   return (
     <PaginatedFeed
       key={feedKey}
       emptyTitle={emptyTitle}
       emptyMessage={emptyMessage}
       fetchPage={fetchPage}
+      acceptNewPost={acceptNewPost}
+      removeWhenUnbookmarked={removeWhenUnbookmarked}
     />
   );
 }

@@ -1,91 +1,102 @@
+const mongoose = require('mongoose');
+const Book = require('../models/Book');
 const Highlight = require('../models/Highlight');
+const {
+  validateHighlightCreate,
+  validateHighlightUpdate
+} = require('../utils/highlightValidation');
 
-// Get all highlights for a specific chapter
+function userId(req) {
+  return req.user._id || req.user.id;
+}
+
+function boundingRectFor(rects) {
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.width));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+// Get the authenticated user's highlights for a chapter. The compound model
+// index supports both the equality filter and this display order.
 exports.getHighlights = async (req, res, next) => {
   try {
     const { chapterId } = req.query;
-    if (!chapterId) {
-      return res.status(400).json({ success: false, message: 'chapterId is required' });
+    if (!mongoose.isValidObjectId(chapterId)) {
+      return res.status(400).json({ success: false, message: 'Valid chapterId is required' });
     }
 
-    const highlights = await Highlight.find({ 
-      userId: req.user._id || req.user.id, 
-      chapterId 
-    }).sort({ pageNumber: 1, 'boundingRect.y': 1 });
+    const highlights = await Highlight.find({ userId: userId(req), chapterId })
+      .sort({ pageNumber: 1, 'boundingRect.y': 1 })
+      .lean();
 
-    res.status(200).json({
-      success: true,
-      data: { highlights }
-    });
+    return res.status(200).json({ success: true, data: { highlights } });
   } catch (err) {
     next(err);
   }
 };
 
-// Create a new highlight
 exports.createHighlight = async (req, res, next) => {
   try {
-    const { bookId, chapterId, pageNumber, text, color, note, boundingRect, rects } = req.body;
+    const parsed = validateHighlightCreate(req.body);
+    if (parsed.error) {
+      return res.status(400).json({ success: false, message: parsed.error });
+    }
 
-    const highlight = await Highlight.create({
-      userId: req.user._id || req.user.id,
-      bookId,
-      chapterId,
-      pageNumber,
-      text,
-      color,
-      note,
-      boundingRect,
-      rects
-    });
+    const book = await Book.findOne({
+      _id: parsed.value.bookId,
+      'chapters._id': parsed.value.chapterId
+    }).select('_id').lean();
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'Book or chapter not found' });
+    }
 
-    res.status(201).json({
-      success: true,
-      data: highlight
-    });
+    const highlight = await Highlight.create({ userId: userId(req), ...parsed.value });
+    return res.status(201).json({ success: true, data: highlight });
   } catch (err) {
     next(err);
   }
 };
 
-// Update a highlight (e.g., change color or add a note)
 exports.updateHighlight = async (req, res, next) => {
   try {
-    const highlight = await Highlight.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id || req.user.id },
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!highlight) {
-      return res.status(404).json({ success: false, message: 'Highlight not found or unauthorized' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Highlight not found' });
+    }
+    const parsed = validateHighlightUpdate(req.body);
+    if (parsed.error) {
+      return res.status(400).json({ success: false, message: parsed.error });
+    }
+    if (parsed.value.rects && !parsed.value.boundingRect) {
+      parsed.value.boundingRect = boundingRectFor(parsed.value.rects);
     }
 
-    res.status(200).json({
-      success: true,
-      data: highlight
-    });
+    const highlight = await Highlight.findOneAndUpdate(
+      { _id: req.params.id, userId: userId(req) },
+      { $set: parsed.value },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!highlight) {
+      return res.status(404).json({ success: false, message: 'Highlight not found' });
+    }
+    return res.status(200).json({ success: true, data: highlight });
   } catch (err) {
     next(err);
   }
 };
 
-// Delete a highlight
 exports.deleteHighlight = async (req, res, next) => {
   try {
-    const highlight = await Highlight.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id || req.user.id
-    });
-
-    if (!highlight) {
-      return res.status(404).json({ success: false, message: 'Highlight not found or unauthorized' });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Highlight not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      data: {}
-    });
+    const result = await Highlight.deleteOne({ _id: req.params.id, userId: userId(req) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Highlight not found' });
+    }
+    return res.status(200).json({ success: true, data: {} });
   } catch (err) {
     next(err);
   }

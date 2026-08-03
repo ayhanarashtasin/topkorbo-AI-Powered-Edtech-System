@@ -27,15 +27,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const DEFAULT_LIMIT = 200;
 
-export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
+export function useUndoRedo({ limit = DEFAULT_LIMIT, keyboard = true } = {}) {
   const [present, setPresent] = useState([]);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
   // Bumped whenever a stack-mutating fn runs. The toolbar reads
   // canUndo / canRedo, so we need this to be reactive.
-  const [version, setVersion] = useState(0);
+  const [stackState, setStackState] = useState({ version: 0, undo: 0, redo: 0 });
 
-  const bump = useCallback(() => setVersion((v) => v + 1), []);
+  const bump = useCallback(() => setStackState((current) => ({
+    version: current.version + 1,
+    undo: undoStackRef.current.length,
+    redo: redoStackRef.current.length
+  })), []);
 
   /**
    * Replace the present and clear both stacks. Use this when the
@@ -61,7 +65,6 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
         const next = action.do(curr);
         return Array.isArray(next) ? next : curr;
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('useUndoRedo.do() threw:', err);
         return curr;
       }
@@ -81,14 +84,13 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
         const next = action.undo(curr);
         return Array.isArray(next) ? next : curr;
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('useUndoRedo.undo() threw:', err);
         return curr;
       }
     });
     redoStackRef.current.push(action);
     bump();
-    return true;
+    return action;
   }, [bump]);
 
   const redo = useCallback(() => {
@@ -100,14 +102,13 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
         const next = action.do(curr);
         return Array.isArray(next) ? next : curr;
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('useUndoRedo.redo() threw:', err);
         return curr;
       }
     });
     undoStackRef.current.push(action);
     bump();
-    return true;
+    return action;
   }, [bump]);
 
   const clearRedo = useCallback(() => {
@@ -118,6 +119,7 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
 
   // Keyboard binding.
   useEffect(() => {
+    if (!keyboard) return undefined;
     const isEditable = (el) => {
       if (!el) return false;
       const tag = el.tagName;
@@ -140,7 +142,7 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo]);
+  }, [keyboard, undo, redo]);
 
   return {
     present,
@@ -150,11 +152,11 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
     redo,
     clearRedo,
     reset,
-    canUndo: undoStackRef.current.length > 0,
-    canRedo: redoStackRef.current.length > 0,
+    canUndo: stackState.undo > 0,
+    canRedo: stackState.redo > 0,
     sizes: {
-      undo: undoStackRef.current.length,
-      redo: redoStackRef.current.length
+      undo: stackState.undo,
+      redo: stackState.redo
     },
     // Expose the underlying stack refs so consumers can "peek" the most
     // recently-pushed action when wiring async side effects (e.g. server
@@ -162,7 +164,7 @@ export function useUndoRedo({ limit = DEFAULT_LIMIT } = {}) {
     // deliberately not frozen so the hook can still mutate them.
     undoStackRef,
     redoStackRef,
-    version
+    version: stackState.version
   };
 }
 

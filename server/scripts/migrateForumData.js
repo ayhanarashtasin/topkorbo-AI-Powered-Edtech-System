@@ -9,7 +9,117 @@ const Comment = require('../models/Comment');
 const Notification = require('../models/Notification');
 const Report = require('../models/Report');
 const User = require('../models/User');
+const Bookmark = require('../models/Bookmark');
+const Follow = require('../models/Follow');
 const { scoreExpression } = require('../services/forumScoreService');
+const { normalizeSearchText } = require('../utils/searchNormalization');
+
+async function backfillUserSearchNames() {
+  const operations = [];
+  const cursor = User.find({}).select('_id name +searchName').lean().cursor();
+  for await (const user of cursor) {
+    const searchName = normalizeSearchText(user.name);
+    if (user.searchName === searchName) continue;
+    operations.push({
+      updateOne: {
+        filter: { _id: user._id },
+        update: { $set: { searchName } }
+      }
+    });
+    if (operations.length >= 500) {
+      await User.bulkWrite(operations, { ordered: false });
+      operations.length = 0;
+    }
+  }
+  if (operations.length) await User.bulkWrite(operations, { ordered: false });
+}
+
+async function backfillForumRelations() {
+  await Promise.all([Bookmark.createIndexes(), Follow.createIndexes()]);
+  const now = new Date();
+
+  await User.collection.aggregate([
+    { $match: { following: { $type: 'array', $ne: [] } } },
+    { $unwind: '$following' },
+    {
+      $project: {
+        _id: 0,
+        follower: '$_id',
+        following: '$following',
+        createdAt: { $literal: now },
+        updatedAt: { $literal: now }
+      }
+    },
+    {
+      $merge: {
+        into: Follow.collection.collectionName,
+        on: ['follower', 'following'],
+        whenMatched: 'keepExisting',
+        whenNotMatched: 'insert'
+      }
+    }
+  ]).toArray();
+
+  // Include inverse-only legacy relationships as well; older compensating
+  // writes could leave followers/following arrays out of sync.
+  await User.collection.aggregate([
+    { $match: { followers: { $type: 'array', $ne: [] } } },
+    { $unwind: '$followers' },
+    {
+      $project: {
+        _id: 0,
+        follower: '$followers',
+        following: '$_id',
+        createdAt: { $literal: now },
+        updatedAt: { $literal: now }
+      }
+    },
+    {
+      $merge: {
+        into: Follow.collection.collectionName,
+        on: ['follower', 'following'],
+        whenMatched: 'keepExisting',
+        whenNotMatched: 'insert'
+      }
+    }
+  ]).toArray();
+
+  await User.collection.aggregate([
+    { $match: { bookmarks: { $type: 'array', $ne: [] } } },
+    { $unwind: '$bookmarks' },
+    {
+      $project: {
+        _id: 0,
+        user: '$_id',
+        post: '$bookmarks',
+        createdAt: { $literal: now },
+        updatedAt: { $literal: now }
+      }
+    },
+    {
+      $merge: {
+        into: Bookmark.collection.collectionName,
+        on: ['user', 'post'],
+        whenMatched: 'keepExisting',
+        whenNotMatched: 'insert'
+      }
+    }
+  ]).toArray();
+
+  // Preserve the legacy arrays by default so a deployment can be rolled back
+  // after the normalized relations are backfilled. Remove them only in a
+  // separately reviewed cleanup run.
+  if (process.env.REMOVE_LEGACY_FORUM_RELATIONS === 'true') {
+    await User.collection.updateMany({}, {
+      $unset: { followers: '', following: '', bookmarks: '' }
+    });
+  } else {
+    console.log(
+      'Legacy forum relation arrays preserved; set '
+      + 'REMOVE_LEGACY_FORUM_RELATIONS=true only after validating the backfill.'
+    );
+  }
+}
 
 async function deduplicateReactions() {
   const duplicates = await Reaction.aggregate([
@@ -109,9 +219,8 @@ async function rebuildCommentCounts() {
 
 async function rebuildBookmarkCounts() {
   await Post.updateMany({}, { $set: { bookmarksCount: 0 } });
-  const counts = await User.aggregate([
-    { $unwind: '$bookmarks' },
-    { $group: { _id: '$bookmarks', count: { $sum: 1 } } }
+  const counts = await Bookmark.aggregate([
+    { $group: { _id: '$post', count: { $sum: 1 } } }
   ]);
   if (!counts.length) return;
 
@@ -177,8 +286,41 @@ async function rebuildIndexes() {
     Post.createIndexes(),
     Comment.createIndexes(),
     Notification.createIndexes(),
-    Report.createIndexes()
+    Report.createIndexes(),
+    User.createIndexes(),
+    Bookmark.createIndexes(),
+    Follow.createIndexes()
   ]);
+
+  if (process.env.DROP_CONFIRMED_LEGACY_FORUM_INDEXES === 'true') {
+    const legacyIndexes = {
+      posts: [
+        'author_1', 'category_1', 'tags_1', 'commentsCount_1', 'score_1', 'isHidden_1',
+        'isHidden_1_createdAt_-1', 'isHidden_1_category_1_createdAt_-1',
+        'isHidden_1_score_-1_createdAt_-1', 'author_1_createdAt_-1'
+      ],
+      comments: [
+        'post_1', 'author_1', 'parent_1', 'isHidden_1',
+        'post_1_parent_1_createdAt_1'
+      ],
+      notifications: ['recipient_1', 'read_1'],
+      reports: ['reporter_1', 'status_1'],
+      reactions: ['targetType_1', 'target_1', 'user_1']
+    };
+
+    for (const [collectionName, names] of Object.entries(legacyIndexes)) {
+      const collection = mongoose.connection.collection(collectionName);
+      const existing = new Set((await collection.indexes()).map((index) => index.name));
+      for (const name of names) {
+        if (existing.has(name)) await collection.dropIndex(name);
+      }
+    }
+  } else {
+    console.log(
+      'Legacy forum indexes were preserved. After confirming unused indexes in Atlas Performance Advisor, ' +
+      'rerun with DROP_CONFIRMED_LEGACY_FORUM_INDEXES=true to remove the reviewed allowlist.'
+    );
+  }
 }
 
 async function main() {
@@ -188,6 +330,8 @@ async function main() {
   await mongoose.connect(uri, { autoIndex: false });
   const duplicateGroups = await deduplicateReactions();
   const duplicateReportGroups = await deduplicateActiveReports();
+  await backfillUserSearchNames();
+  await backfillForumRelations();
   await rebuildReactionCounts();
   await rebuildCommentCounts();
   await rebuildBookmarkCounts();

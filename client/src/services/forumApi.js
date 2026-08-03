@@ -2,7 +2,8 @@
 // `{ success, data, nextCursor, unreadCount }` envelope and throws an
 // Error (with `.status` and `.payload`) on non-2xx responses so callers
 // can `try/catch` cleanly.
-const DEFAULT_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const DEFAULT_BASE = import.meta.env.VITE_API_URL
+  || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 function token() {
   return localStorage.getItem('topkorbo_token');
@@ -93,8 +94,12 @@ const forumApi = {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
     return request(`/users/${userId}/posts${qs}`);
   },
-  myBookmarks() {
-    return request('/posts/bookmarks/mine');
+  myBookmarks({ cursor, limit } = {}) {
+    const qs = new URLSearchParams();
+    if (cursor) qs.set('cursor', cursor);
+    if (limit) qs.set('limit', String(limit));
+    const q = qs.toString();
+    return request(`/posts/bookmarks/mine${q ? `?${q}` : ''}`);
   },
 
   // ---- Comments ----
@@ -122,9 +127,10 @@ const forumApi = {
   },
 
   // ---- Notifications ----
-  notifications({ limit, before } = {}) {
+  notifications({ limit, cursor, before } = {}) {
     const qs = new URLSearchParams();
     if (limit) qs.set('limit', String(limit));
+    if (cursor) qs.set('cursor', cursor);
     if (before) qs.set('before', before);
     const q = qs.toString();
     return request(`/notifications${q ? `?${q}` : ''}`);

@@ -200,7 +200,7 @@ export default function ForumCompose() {
                   current.filter((item) => (item.publicId || item.url) !== (image.publicId || image.url))
                 )}
               >
-                Ã—
+                ×
               </button>
             </div>
           ))}

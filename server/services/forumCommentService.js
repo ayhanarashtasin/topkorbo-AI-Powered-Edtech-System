@@ -2,8 +2,9 @@ const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const { deleteImage } = require('./uploadService');
 const { recomputePostScore } = require('./forumScoreService');
+const { withMongoTransaction } = require('../utils/mongoTransaction');
 
-async function decrementCounter(model, id, field) {
+async function decrementCounter(model, id, field, session) {
   if (!id) return null;
   return model.updateOne(
     { _id: id },
@@ -13,52 +14,38 @@ async function decrementCounter(model, id, field) {
           $max: [0, { $subtract: [{ $ifNull: [`$${field}`, 0] }, 1] }]
         }
       }
-    }]
+    }],
+    { session, timestamps: false }
   );
 }
 
-async function incrementCounter(model, id, field) {
-  if (!id) return null;
-  return model.updateOne({ _id: id }, { $inc: { [field]: 1 } });
-}
-
-async function hideComment(commentId) {
+async function hideCommentInTransaction(commentId, session) {
   const comment = await Comment.findOneAndUpdate(
     { _id: commentId, isHidden: false },
     { $set: { isHidden: true } },
-    { new: false }
+    { new: false, session }
   ).lean();
 
   if (!comment) return { changed: false, comment: null };
 
-  const counterResults = await Promise.allSettled([
-    decrementCounter(Post, comment.post, 'commentsCount'),
-    decrementCounter(Comment, comment.parent, 'repliesCount')
-  ]);
-  const failed = counterResults.find((result) => result.status === 'rejected');
-  if (failed) {
-    const rollback = [
-      Comment.updateOne(
-        { _id: comment._id, isHidden: true },
-        { $set: { isHidden: false } }
-      )
-    ];
-    if (counterResults[0].status === 'fulfilled') {
-      rollback.push(incrementCounter(Post, comment.post, 'commentsCount'));
-    }
-    if (comment.parent && counterResults[1].status === 'fulfilled') {
-      rollback.push(incrementCounter(Comment, comment.parent, 'repliesCount'));
-    }
-    await Promise.allSettled(rollback);
-    throw failed.reason;
-  }
-
-  await Promise.allSettled(
-    (comment.images || []).map((image) => deleteImage(image.publicId, image.url))
-  );
-  await recomputePostScore(comment.post).catch(() => {});
+  await decrementCounter(Post, comment.post, 'commentsCount', session);
+  await decrementCounter(Comment, comment.parent, 'repliesCount', session);
+  await recomputePostScore(comment.post, { session });
 
   return { changed: true, comment };
 }
 
-module.exports = { hideComment };
+async function hideComment(commentId, { session } = {}) {
+  if (session) return hideCommentInTransaction(commentId, session);
+
+  const result = await withMongoTransaction((transactionSession) =>
+    hideCommentInTransaction(commentId, transactionSession)
+  );
+
+  await Promise.allSettled(
+    (result.comment?.images || []).map((image) => deleteImage(image.publicId, image.url))
+  );
+  return result;
+}
+
+module.exports = { hideComment, hideCommentInTransaction };

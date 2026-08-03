@@ -2,12 +2,18 @@ const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const User = require('../models/User');
 const Reaction = require('../models/Reaction');
+const Bookmark = require('../models/Bookmark');
+const Follow = require('../models/Follow');
 const { uploadImage, deleteImage } = require('../services/uploadService');
 const { sanitize, htmlToText } = require('../services/sanitizeService');
 const { ensureUsername, resolveMentions } = require('../services/mentionService');
 const { notify } = require('../services/notificationService');
-const { recomputePostScore } = require('../services/forumScoreService');
+const {
+  recomputePostScore,
+  refreshTrendingScores
+} = require('../services/forumScoreService');
 const { getIO } = require('../socket');
+const { withMongoTransaction } = require('../utils/mongoTransaction');
 const {
   clampLimit,
   descendingCursorFilter,
@@ -35,18 +41,20 @@ async function attachUserPostState(docs, userId, options = {}) {
   }
 
   const ids = docs.map((d) => d._id);
-  const [myReactions, me] = await Promise.all([
+  const [myReactions, myBookmarks] = await Promise.all([
     Reaction.find({
       targetType: 'post',
       target: { $in: ids },
       user: userId
     }).lean(),
-    options.allBookmarked ? null : User.findById(userId).select('bookmarks').lean()
+    options.allBookmarked
+      ? []
+      : Bookmark.find({ user: userId, post: { $in: ids } }).select('post').lean()
   ]);
 
   const reactionMap = {};
   for (const r of myReactions) reactionMap[String(r.target)] = r.type;
-  const bookmarkedIds = new Set((me?.bookmarks || []).map((id) => String(id)));
+  const bookmarkedIds = new Set(myBookmarks.map((bookmark) => String(bookmark.post)));
   for (const d of docs) {
     d.userReaction = reactionMap[String(d._id)] || null;
     d.bookmarked = options.allBookmarked || bookmarkedIds.has(String(d._id));
@@ -141,7 +149,7 @@ const postController = {
 
       // Broadcast + mention notifications
       const io = getIO();
-      io.emit('post:new', populated);
+      io.to('forum').emit('post:new', populated);
       await Promise.allSettled(
         mentionIds.map((uid) => notify(io, {
           recipient: uid,
@@ -182,8 +190,7 @@ const postController = {
       }
 
       if (feed === 'following' && req.user) {
-        const me = await User.findById(req.user.id).select('following');
-        const ids = (me?.following || []).map((id) => id);
+        const ids = await Follow.find({ follower: req.user.id }).distinct('following');
         if (!ids.length) {
           return res.json({ success: true, data: [], nextCursor: null });
         }
@@ -193,6 +200,7 @@ const postController = {
       let sort = { createdAt: -1, _id: -1 };
       let cursorFields = ['createdAt'];
       if (feed === 'trending') {
+        await refreshTrendingScores();
         sort = { score: -1, createdAt: -1, _id: -1 };
         cursorFields = ['score', 'createdAt'];
       } else if (feed === 'discussed') {
@@ -333,7 +341,7 @@ const postController = {
 
       const populated = await Post.findById(post._id).populate('author', POPULATE_AUTHOR);
       const io = getIO();
-      io.to(`post:${String(post._id)}`).emit('post:update', populated);
+      io.to(['forum', `post:${String(post._id)}`]).emit('post:update', populated);
 
       return res.json({ success: true, data: populated });
     } catch (err) {
@@ -362,7 +370,7 @@ const postController = {
         post.images.map((image) => deleteImage(image.publicId, image.url))
       );
       const io = getIO();
-      io.to(`post:${String(post._id)}`).emit('post:delete', { postId: post._id });
+      io.to(['forum', `post:${String(post._id)}`]).emit('post:delete', { postId: post._id });
       return res.json({ success: true, data: { _id: post._id } });
     } catch (err) {
       next(err);
@@ -374,60 +382,61 @@ const postController = {
    */
   async toggleBookmark(req, res, next) {
     try {
-      const post = await Post.findById(req.params.id).select('_id isHidden');
-      if (!post || post.isHidden) return res.status(404).json({ success: false, message: 'Post not found' });
+      const result = await withMongoTransaction(async (session) => {
+        const post = await Post.findOne({ _id: req.params.id, isHidden: false })
+          .select('_id')
+          .session(session);
+        if (!post) return null;
 
-      const removed = await User.updateOne(
-        { _id: req.user.id, bookmarks: post._id },
-        { $pull: { bookmarks: post._id } }
-      );
-      const bookmarked = removed.modifiedCount === 0;
-      let countDelta = removed.modifiedCount === 1 ? -1 : 0;
+        const existing = await Bookmark.findOne({
+          user: req.user.id,
+          post: post._id
+        }).session(session);
+        const bookmarked = !existing;
 
-      if (bookmarked) {
-        const added = await User.updateOne(
-          { _id: req.user.id, bookmarks: { $ne: post._id } },
-          { $addToSet: { bookmarks: post._id } }
-        );
-        if (added.matchedCount === 0) {
-          return res.status(404).json({ success: false, message: 'User not found' });
+        if (existing) {
+          await Bookmark.deleteOne({ _id: existing._id }).session(session);
+        } else {
+          await Bookmark.create([{
+            user: req.user.id,
+            post: post._id
+          }], { session });
         }
-        // Concurrent requests can both observe an unbookmarked state. Only
-        // the request that actually inserts the ObjectId owns the counter bump.
-        countDelta = added.modifiedCount === 1 ? 1 : 0;
-      }
 
-      try {
-        if (countDelta > 0) {
-          await Post.updateOne({ _id: post._id }, { $inc: { bookmarksCount: 1 } });
-        } else if (countDelta < 0) {
-          await Post.updateOne(
-            { _id: post._id },
-            [{
-              $set: {
-                bookmarksCount: {
-                  $max: [0, { $subtract: [{ $ifNull: ['$bookmarksCount', 0] }, 1] }]
-                }
+        const updated = await Post.findOneAndUpdate(
+          { _id: post._id, isHidden: false },
+          [{
+            $set: {
+              bookmarksCount: {
+                $max: [
+                  0,
+                  {
+                    $add: [
+                      { $ifNull: ['$bookmarksCount', 0] },
+                      bookmarked ? 1 : -1
+                    ]
+                  }
+                ]
               }
-            }]
-          );
-        }
-      } catch (error) {
-        if (countDelta !== 0) {
-          await User.updateOne(
-            { _id: req.user.id },
-            bookmarked
-              ? { $pull: { bookmarks: post._id } }
-              : { $addToSet: { bookmarks: post._id } }
-          );
-        }
-        throw error;
-      }
+            }
+          }],
+          { new: true, session, timestamps: false }
+        ).select('bookmarksCount').lean();
 
-      const updated = await Post.findById(post._id).select('bookmarksCount').lean();
+        if (!updated) {
+          const error = new Error('Post not found');
+          error.statusCode = 404;
+          throw error;
+        }
+        return { bookmarked, bookmarksCount: updated.bookmarksCount || 0 };
+      });
+
+      if (!result) {
+        return res.status(404).json({ success: false, message: 'Post not found' });
+      }
       return res.json({
         success: true,
-        data: { bookmarked, bookmarksCount: updated?.bookmarksCount || 0 }
+        data: result
       });
     } catch (err) {
       next(err);
@@ -468,18 +477,35 @@ const postController = {
    */
   async myBookmarks(req, res, next) {
     try {
-      const me = await User.findById(req.user.id).select('bookmarks');
-      const ids = me?.bookmarks || [];
-      if (!ids.length) return res.json({ success: true, data: [] });
-      // Preserve bookmark order (most recent first), then sort by createdAt
+      const limit = clampLimit(req.query.limit, PAGE_SIZE, 50);
+      const filter = { user: req.user.id };
+      const cursorFields = ['createdAt'];
+      const cursorFilter = descendingCursorFilter(req.query.cursor, cursorFields);
+      if (cursorFilter) Object.assign(filter, cursorFilter);
+
+      const bookmarks = await Bookmark.find(filter)
+        .sort({ createdAt: -1, _id: -1 })
+        .limit(limit + 1)
+        .lean();
+      const page = finalizePage(bookmarks, limit, cursorFields);
+      if (!page.items.length) {
+        return res.json({ success: true, data: [], nextCursor: null });
+      }
+
+      const ids = page.items.map((bookmark) => bookmark.post);
       const posts = await Post.find({ _id: { $in: ids }, isHidden: false })
-        .sort({ createdAt: -1 })
         .populate('author', POPULATE_AUTHOR)
         .lean({ virtuals: true });
-        
-      await attachUserPostState(posts, req.user?.id, { allBookmarked: true });
-      
-      return res.json({ success: true, data: posts });
+
+      const postMap = new Map(posts.map((post) => [String(post._id), post]));
+      const orderedPosts = ids.map((id) => postMap.get(String(id))).filter(Boolean);
+      await attachUserPostState(orderedPosts, req.user?.id, { allBookmarked: true });
+
+      return res.json({
+        success: true,
+        data: orderedPosts,
+        nextCursor: page.nextCursor
+      });
     } catch (err) {
       next(err);
     }

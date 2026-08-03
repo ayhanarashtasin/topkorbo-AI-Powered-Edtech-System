@@ -1,282 +1,533 @@
 .rb-ktree {
+  --map-ink: #25324a;
+  --map-muted: #687188;
+  --map-line: #cbd2df;
+  --map-paper: #fffdf8;
+  --map-book: #8c5a3c;
+  --map-chapter: #5271c8;
+  --map-topic: #2f7d6d;
+  --map-subtopic: #d09332;
+  --map-point: #d5655d;
   display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 12px;
+  color: var(--map-ink);
 }
 
 .rb-ktree__header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #8C5A3C;
+  gap: 12px;
 }
 
-.rb-ktree__header-title {
+.rb-ktree__heading {
   display: inline-flex;
+  min-width: 0;
   align-items: center;
-  gap: 6px;
+  gap: 9px;
+}
+
+.rb-ktree__heading-icon {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #fff;
+  background: var(--map-ink);
+  box-shadow: 0 6px 14px rgba(37, 50, 74, 0.18);
+}
+
+.rb-ktree__heading > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rb-ktree__heading strong {
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.01em;
+}
+
+.rb-ktree__heading small {
+  overflow: hidden;
+  color: var(--map-muted);
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rb-ktree__zoom {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  min-height: 34px;
   padding: 3px;
-  border: 1px solid rgba(192, 133, 82, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 8px 18px rgba(61, 34, 14, 0.08);
+  border: 1px solid rgba(82, 113, 200, 0.18);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 16px rgba(37, 50, 74, 0.08);
 }
 
-.rb-ktree__zoom button {
+.rb-ktree__zoom button,
+.rb-ktree__overview {
   display: inline-flex;
+  min-width: 30px;
+  height: 28px;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
-  height: 28px;
+  gap: 5px;
   padding: 0 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
+  color: var(--map-ink);
   background: transparent;
-  color: #8C5A3C;
   cursor: pointer;
-  font-size: 11px;
+  font: inherit;
+  font-size: 10px;
   font-weight: 800;
 }
 
-.rb-ktree__zoom button:hover:not(:disabled) {
-  background: rgba(192, 133, 82, 0.12);
+.rb-ktree__zoom button:hover:not(:disabled),
+.rb-ktree__overview:hover {
+  color: #3d59aa;
+  background: #eef2ff;
 }
 
 .rb-ktree__zoom button:disabled {
-  color: rgba(140, 90, 60, 0.34);
+  color: #adb4c3;
   cursor: not-allowed;
 }
 
+.rb-ktree__zoom > i {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: #dde2eb;
+}
+
+.rb-ktree__zoom output {
+  min-width: 38px;
+  color: var(--map-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.rb-ktree__overview {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #dfe4ec;
+  background: #fff;
+}
+
+.rb-ktree__legend {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rb-ktree__legend::-webkit-scrollbar {
+  display: none;
+}
+
+.rb-ktree__legend-item {
+  --legend-color: var(--map-topic);
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--legend-color) 18%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--legend-color) 84%, #25324a);
+  background: color-mix(in srgb, var(--legend-color) 7%, #fff);
+  font-size: 9px;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.rb-ktree__legend-item i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--legend-color);
+}
+
+.rb-ktree__legend-item--book { --legend-color: var(--map-book); }
+.rb-ktree__legend-item--chapter { --legend-color: var(--map-chapter); }
+.rb-ktree__legend-item--topic { --legend-color: var(--map-topic); }
+.rb-ktree__legend-item--point { --legend-color: var(--map-point); }
+
 .rb-ktree__canvas {
+  position: relative;
+  flex: 1;
   width: 100%;
-  min-height: 360px;
-  max-height: 520px;
-  overflow: auto;
-  border-radius: 18px;
-  border: 1px solid rgba(192, 133, 82, 0.18);
-  background:
-    linear-gradient(rgba(192, 133, 82, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(192, 133, 82, 0.055) 1px, transparent 1px),
-    radial-gradient(circle at 18% 12%, rgba(192, 133, 82, 0.13), transparent 34%),
-    radial-gradient(circle at 82% 18%, rgba(92, 126, 255, 0.08), transparent 32%),
-    linear-gradient(135deg, rgba(255, 251, 247, 0.96), #FFFFFF 52%, rgba(245, 248, 255, 0.78));
-  background-size: 28px 28px, 28px 28px, auto, auto, auto;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  min-width: 0;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid #dce2ec;
+  border-radius: 16px;
+  background-color: #f8faff;
+  background-image:
+    radial-gradient(circle, rgba(82, 113, 200, 0.15) 1px, transparent 1.2px),
+    linear-gradient(135deg, rgba(255, 253, 248, 0.96), rgba(243, 247, 255, 0.94));
+  background-size: 22px 22px, auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  touch-action: none;
 }
 
-.rb-ktree__stage {
-  min-width: 100%;
-  min-height: 100%;
+.rb-ktree__canvas::after {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #778097;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 3px 10px rgba(37, 50, 74, 0.08);
+  content: 'Drag to move';
+  font-size: 9px;
+  font-weight: 750;
+  pointer-events: none;
 }
 
-.rb-ktree__stage svg {
+.rb-ktree__canvas svg {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.rb-ktree__stage .rb-ktree__link {
+.rb-ktree__canvas .rb-ktree__link {
   fill: none;
-  stroke: rgba(140, 90, 60, 0.36);
-  stroke-width: 2;
+  stroke: #aeb9cd;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.rb-ktree__stage .rd3t-node,
-.rb-ktree__stage .rd3t-leaf-node {
+.rb-ktree__canvas .rd3t-node,
+.rb-ktree__canvas .rd3t-leaf-node {
   cursor: default;
 }
 
-.rb-ktree__empty {
-  padding: 18px;
-  color: var(--text-muted, #8c7b79);
-  font-size: 12px;
-}
-
 .rb-ktree__node {
-  --node-accent: #C08552;
+  --node-accent: var(--map-topic);
   position: relative;
   box-sizing: border-box;
+  display: flex;
   width: 100%;
   height: 100%;
-  min-height: 140px;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--node-accent) 34%, transparent);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 244, 238, 0.9)),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--node-accent) 18%, transparent), transparent 48%);
-  box-shadow: 0 18px 38px rgba(61, 34, 14, 0.10), 0 0 0 1px rgba(255, 255, 255, 0.75) inset;
-  padding: 11px 13px;
-  display: flex;
   flex-direction: column;
-  gap: 7px;
-  text-align: left;
-  cursor: pointer;
-  color: var(--text-primary, #251817);
   overflow: hidden;
-}
-
-.rb-ktree__node:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--node-accent) 36%, transparent);
-  outline-offset: 2px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 34%, #dce2ec);
+  border-radius: 14px;
+  color: var(--map-ink);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 10px 24px rgba(37, 50, 74, 0.12);
 }
 
 .rb-ktree__node::before {
-  content: '';
   position: absolute;
+  z-index: 2;
   inset: 0 auto 0 0;
   width: 5px;
-  background: linear-gradient(180deg, var(--node-accent), color-mix(in srgb, var(--node-accent) 22%, transparent));
+  background: var(--node-accent);
+  content: '';
+  pointer-events: none;
 }
 
-.rb-ktree__node:hover {
-  transform: translateY(-1px);
-  border-color: rgba(192, 133, 82, 0.45);
-  box-shadow: 0 16px 28px rgba(61, 34, 14, 0.12);
-}
+.rb-ktree__node--book,
+.rb-ktree__node--document { --node-accent: var(--map-book); }
+.rb-ktree__node--chapter { --node-accent: var(--map-chapter); }
+.rb-ktree__node--topic { --node-accent: var(--map-topic); }
+.rb-ktree__node--subtopic { --node-accent: var(--map-subtopic); }
+.rb-ktree__node--point { --node-accent: var(--map-point); }
 
 .rb-ktree__node--active {
-  border-color: color-mix(in srgb, var(--node-accent) 72%, transparent);
-  box-shadow: 0 22px 42px color-mix(in srgb, var(--node-accent) 24%, transparent), 0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+  border-color: var(--node-accent);
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--node-accent) 20%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--node-accent) 15%, transparent);
 }
 
-.rb-ktree__node--root {
-  --node-accent: #8C5A3C;
-  background: linear-gradient(180deg, rgba(255, 249, 243, 1), rgba(245, 232, 221, 1));
+.rb-ktree__node-select {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px 7px 15px;
+  border: 0;
+  color: inherit;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--node-accent) 8%, #fff), #fff 55%);
+  text-align: left;
+  cursor: pointer;
 }
 
-.rb-ktree__node--document {
-  --node-accent: #8C5A3C;
-}
-
-.rb-ktree__node--topic {
-  --node-accent: #C08552;
-}
-
-.rb-ktree__node--subtopic {
-  --node-accent: #7C83FD;
-}
-
-.rb-ktree__node--point {
-  --node-accent: #10B981;
-  justify-content: center;
-  border-radius: 999px;
-  min-height: 120px;
-  padding: 16px 22px;
-}
-
-.rb-ktree__node--point::before {
-  width: 100%;
-  height: 100%;
-  opacity: 0.08;
+.rb-ktree__node-select:hover {
+  background: linear-gradient(120deg, color-mix(in srgb, var(--node-accent) 13%, #fff), #fff 64%);
 }
 
 .rb-ktree__node-top {
   display: flex;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
 .rb-ktree__pill {
-  font-size: 10px;
-  font-weight: 800;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--node-accent) 84%, #25324a);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
-  letter-spacing: 0.7px;
-  color: color-mix(in srgb, var(--node-accent) 82%, #251817);
-  background: color-mix(in srgb, var(--node-accent) 12%, #FFFFFF);
-  border-radius: 999px;
-  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.rb-ktree__pages {
+  flex: 0 0 auto;
+  color: var(--map-muted);
+  font-size: 8px;
+  font-weight: 750;
 }
 
 .rb-ktree__title {
-  position: relative;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.3;
   overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--map-ink);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.25;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .rb-ktree__meta {
-  position: relative;
-  font-size: 10px;
-  color: var(--text-muted, #8c7b79);
-}
-
-.rb-ktree__step {
-  flex-shrink: 0;
+  overflow: hidden;
+  margin-top: auto;
+  color: var(--map-muted);
   font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #FFFFFF;
-  background: color-mix(in srgb, var(--node-accent) 82%, #251817);
-  border-radius: 999px;
-  padding: 3px 7px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rb-ktree__points {
+.rb-ktree__node-toggle {
+  display: flex;
+  width: 100%;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--node-accent) 15%, #e3e7ee);
+  color: color-mix(in srgb, var(--node-accent) 86%, #25324a);
+  background: color-mix(in srgb, var(--node-accent) 6%, #fff);
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.rb-ktree__node-toggle:hover {
+  background: color-mix(in srgb, var(--node-accent) 13%, #fff);
+}
+
+.rb-ktree__node-select:focus-visible,
+.rb-ktree__node-toggle:focus-visible,
+.rb-ktree__zoom button:focus-visible,
+.rb-ktree__overview:focus-visible,
+.rb-ktree__outline-select:focus-visible,
+.rb-ktree__outline-toggle:focus-visible {
   position: relative;
-  list-style: none;
+  z-index: 4;
+  outline: 3px solid rgba(82, 113, 200, 0.36);
+  outline-offset: -2px;
+}
+
+.rb-ktree__outline {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 2px 2px 22px;
+  overscroll-behavior: contain;
+}
+
+.rb-ktree__outline ul {
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  list-style: none;
 }
 
-.rb-ktree__points li {
+.rb-ktree__outline-children {
   position: relative;
-  padding-left: 13px;
-  font-size: 10px;
-  line-height: 1.32;
-  color: var(--text-secondary, #5c4d4c);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin: 7px 0 0 18px !important;
+  padding-left: 14px !important;
+  border-left: 2px solid #d8deea;
 }
 
-.rb-ktree__points li::before {
-  content: '';
+.rb-ktree__outline-children::before {
   position: absolute;
-  left: 0;
-  top: 0.52em;
+  top: -2px;
+  left: -4px;
   width: 6px;
   height: 6px;
+  border-radius: 50%;
+  background: #aeb9cd;
+  content: '';
+}
+
+.rb-ktree__outline-item + .rb-ktree__outline-item {
+  margin-top: 7px;
+}
+
+.rb-ktree__outline-card {
+  --node-accent: var(--map-topic);
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 24%, #dce2ec);
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 5px 14px rgba(37, 50, 74, 0.07);
+}
+
+.rb-ktree__outline-card--book,
+.rb-ktree__outline-card--document { --node-accent: var(--map-book); }
+.rb-ktree__outline-card--chapter { --node-accent: var(--map-chapter); }
+.rb-ktree__outline-card--topic { --node-accent: var(--map-topic); }
+.rb-ktree__outline-card--subtopic { --node-accent: var(--map-subtopic); }
+.rb-ktree__outline-card--point { --node-accent: var(--map-point); }
+
+.rb-ktree__outline-card--active {
+  border-color: var(--node-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-accent) 13%, transparent);
+}
+
+.rb-ktree__outline-select {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 10px 10px;
+  border: 0;
+  color: inherit;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--node-accent) 7%, #fff), #fff 48%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rb-ktree__outline-marker {
+  width: 9px;
+  height: 36px;
+  flex: 0 0 9px;
   border-radius: 999px;
   background: var(--node-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-accent) 14%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--node-accent) 10%, transparent);
 }
 
-.rb-ktree__summary {
-  position: relative;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--text-secondary, #5c4d4c);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+.rb-ktree__outline-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rb-ktree__outline-type {
+  color: color-mix(in srgb, var(--node-accent) 86%, #25324a);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rb-ktree__outline-copy strong {
   overflow: hidden;
+  color: var(--map-ink);
+  font-size: 12px;
+  font-weight: 820;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (max-width: 1023px) {
+.rb-ktree__outline-copy small {
+  color: var(--map-muted);
+  font-size: 9px;
+  font-weight: 620;
+}
+
+.rb-ktree__outline-toggle {
+  display: inline-flex;
+  width: 42px;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--node-accent) 15%, #e3e7ee);
+  color: var(--node-accent);
+  background: color-mix(in srgb, var(--node-accent) 5%, #fff);
+  cursor: pointer;
+}
+
+.rb-ktree__empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 20px;
+  color: var(--map-muted, #687188);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 639px) {
   .rb-ktree {
-    display: none;
+    gap: 8px;
+  }
+
+  .rb-ktree__heading-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .rb-ktree__legend {
+    margin-inline: -2px;
+    padding: 0 2px 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-ktree *,
+  .rb-ktree *::before,
+  .rb-ktree *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
   }
 }

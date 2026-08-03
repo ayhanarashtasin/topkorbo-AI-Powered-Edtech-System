@@ -2,9 +2,9 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 24px 16px 60px;
+  padding: clamp(22px, 3vw, 38px) 18px 64px;
   min-height: 100%;
-  background: #FAF4EE;
+  background: transparent;
 }
 
 .rb-pdf-page-wrap--pen {
@@ -37,19 +37,34 @@
   display: flex;
   justify-content: center;
   width: 100%;
+  min-width: fit-content;
 }
 
 .rb-pdf-page-container {
   position: relative;
   background: #FFFFFF;
-  box-shadow: 0 4px 24px rgba(140, 90, 60, 0.18);
-  border-radius: 4px;
+  border: 1px solid rgba(75, 46, 43, 0.12);
+  border-radius: 3px;
+  box-shadow:
+    0 2px 2px rgba(75, 46, 43, 0.06),
+    0 18px 42px rgba(75, 46, 43, 0.18),
+    12px 14px 0 -8px rgba(255, 250, 244, 0.7);
   overflow: hidden;
   display: inline-block;
 }
 
 .rb-pdf-page-container .rb-pdf-page {
   display: block;
+}
+
+.rb-pdf-page-container ::selection {
+  background: rgba(255, 241, 118, 0.4);
+  color: inherit;
+}
+
+.rb-pdf-page-container ::-moz-selection {
+  background: rgba(255, 241, 118, 0.4);
+  color: inherit;
 }
 
 .rb-pdf-canvas {
@@ -65,13 +80,18 @@
 
 .rb-pdf-loading,
 .rb-pdf-error {
+  width: min(460px, calc(100vw - 32px));
+  min-height: 220px;
+  margin: 24px auto;
   padding: 40px;
+  border: 1px solid rgba(140, 90, 60, 0.15);
+  border-radius: 18px;
   text-align: center;
   color: var(--text-secondary, #5c4d4c);
-  font-size: 14px;
+  background: rgba(255, 253, 249, 0.86);
+  box-shadow: 0 12px 30px rgba(75, 46, 43, 0.08);
+  font-size: 0.8rem;
   min-width: 0;
-  width: 100%;
-  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,5 +100,24 @@
 @media (max-width: 430px) {
   .rb-pdf-page-wrap {
     padding: 16px 8px 48px;
+  }
+
+  .rb-pdf-page-container {
+    box-shadow:
+      0 2px 2px rgba(75, 46, 43, 0.05),
+      0 12px 28px rgba(75, 46, 43, 0.16);
+  }
+}
+
+@media (max-width: 760px) {
+  .rb-pdf-page-wrap,
+  .rb-pdf-page-inner {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-pdf-page-wrap {
+    scroll-behavior: auto;
   }
 }

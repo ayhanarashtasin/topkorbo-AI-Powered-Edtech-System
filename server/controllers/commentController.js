@@ -19,6 +19,7 @@ const {
   validateHtmlLength
 } = require('../utils/forumValidation');
 const { hideComment } = require('../services/forumCommentService');
+const { withMongoTransaction } = require('../utils/mongoTransaction');
 
 const PAGE_SIZE = 30;
 const POPULATE_AUTHOR =
@@ -61,19 +62,6 @@ async function uploadCommentImages(req) {
     );
     throw error;
   }
-}
-
-async function decrementPostComments(postId) {
-  await Post.updateOne(
-    { _id: postId },
-    [{
-      $set: {
-        commentsCount: {
-          $max: [0, { $subtract: [{ $ifNull: ['$commentsCount', 0] }, 1] }]
-        }
-      }
-    }]
-  );
 }
 
 const commentController = {
@@ -140,103 +128,122 @@ const commentController = {
         return res.status(400).json({ success: false, message: 'Comment cannot be empty.' });
       }
 
-      let parent = null;
-      let depth = 0;
-      if (parentId) {
-        // eslint-disable-next-line no-await-in-loop
-        parent = await Comment.findById(parentId);
-        if (!parent || parent.isHidden || String(parent.post) !== String(post._id)) {
-          return res.status(400).json({ success: false, message: 'Invalid parent comment' });
-        }
-        depth = Math.min((parent.depth || 0) + 1, 12); // visual cap
-      }
-
       const { ids: mentionIds } = await resolveMentions(safe);
       const images = await uploadCommentImages(req);
-      let comment;
-      let postCounterChanged = false;
+      let created;
       try {
-        comment = await Comment.create({
-          post: post._id,
-          author: author._id,
-          parent: parent ? parent._id : null,
-          depth,
-          contentHtml: safe,
-          contentText: htmlToText(safe, 2000),
-          images,
-          mentions: mentionIds
-        });
-
-        const postCounter = await Post.updateOne(
-          { _id: post._id, isHidden: false },
-          { $inc: { commentsCount: 1 } }
-        );
-        if (postCounter.modifiedCount !== 1) {
-          const error = new Error('Post is no longer available.');
-          error.statusCode = 409;
-          throw error;
-        }
-        postCounterChanged = true;
-
-        if (parent) {
-          const parentCounter = await Comment.updateOne(
-            { _id: parent._id, isHidden: false },
-            { $inc: { repliesCount: 1 } }
-          );
-          if (parentCounter.modifiedCount !== 1) {
-            const error = new Error('Parent comment is no longer available.');
+        created = await withMongoTransaction(async (session) => {
+          const currentPost = await Post.findOne({ _id: post._id, isHidden: false })
+            .session(session);
+          if (!currentPost) {
+            const error = new Error('Post is no longer available.');
             error.statusCode = 409;
             throw error;
           }
-        }
+
+          let parent = null;
+          let depth = 0;
+          if (parentId) {
+            parent = await Comment.findOne({
+              _id: parentId,
+              post: currentPost._id,
+              isHidden: false
+            }).session(session);
+            if (!parent) {
+              const error = new Error('Invalid parent comment');
+              error.statusCode = 400;
+              throw error;
+            }
+            depth = Math.min((parent.depth || 0) + 1, 12);
+          }
+
+          const [comment] = await Comment.create([{
+            post: currentPost._id,
+            author: author._id,
+            parent: parent ? parent._id : null,
+            depth,
+            contentHtml: safe,
+            contentText: htmlToText(safe, 2000),
+            images,
+            mentions: mentionIds
+          }], { session });
+
+          const updatedPost = await Post.findOneAndUpdate(
+            { _id: currentPost._id, isHidden: false },
+            { $inc: { commentsCount: 1 } },
+            { new: true, session, timestamps: false }
+          );
+          if (!updatedPost) {
+            const error = new Error('Post is no longer available.');
+            error.statusCode = 409;
+            throw error;
+          }
+
+          if (parent) {
+            const parentCounter = await Comment.updateOne(
+              { _id: parent._id, isHidden: false },
+              { $inc: { repliesCount: 1 } },
+              { session, timestamps: false }
+            );
+            if (parentCounter.modifiedCount !== 1) {
+              const error = new Error('Parent comment is no longer available.');
+              error.statusCode = 409;
+              throw error;
+            }
+          }
+
+          if (String(currentPost.author) !== String(author._id)) {
+            await addReputation(currentPost.author, 2, { session });
+          }
+          await recomputePostScore(currentPost._id, { session });
+
+          return {
+            commentId: comment._id,
+            parentAuthor: parent ? String(parent.author) : null,
+            postAuthor: String(currentPost.author),
+            commentsCount: updatedPost.commentsCount || 0
+          };
+        });
       } catch (error) {
-        const cleanup = images.map((image) =>
-          deleteImage(image.publicId, image.url)
+        await Promise.allSettled(
+          images.map((image) => deleteImage(image.publicId, image.url))
         );
-        if (comment?._id) {
-          cleanup.push(Comment.deleteOne({ _id: comment._id }));
-        }
-        if (postCounterChanged) {
-          cleanup.push(decrementPostComments(post._id));
-        }
-        await Promise.allSettled(cleanup);
         throw error;
       }
 
-      const populated = await Comment.findById(comment._id).populate(
+      const populated = await Comment.findById(created.commentId).populate(
         'author',
         POPULATE_AUTHOR
       );
 
       const sideEffects = [];
 
-      // Reputation to post author
-      if (String(post.author) !== String(author._id)) {
-        sideEffects.push(addReputation(post.author, 2));
-      }
-
       // Notifications
       const io = getIO();
       io.to(`post:${String(post._id)}`).emit('comment:new', populated);
-      if (parent && String(parent.author) !== String(author._id)) {
+      io.to('forum').emit('post:stats', {
+        postId: String(post._id),
+        commentsCount: created.commentsCount
+      });
+      if (created.parentAuthor && created.parentAuthor !== String(author._id)) {
         sideEffects.push(notify(io, {
-          recipient: parent.author,
+          recipient: created.parentAuthor,
           actor: author._id,
           type: 'reply',
           post: post._id,
-          comment: comment._id,
+          comment: created.commentId,
           message: `${author.name} replied to your comment.`,
-          preview: comment.contentText.slice(0, 120)
+          preview: populated.contentText.slice(0, 120)
         }));
-      } else if (!parent && String(post.author) !== String(author._id)) {
+      } else if (!created.parentAuthor && created.postAuthor !== String(author._id)) {
         sideEffects.push(notify(io, {
           recipient: post.author,
           actor: author._id,
           type: 'comment',
           post: post._id,
-          comment: comment._id,
+          comment: created.commentId,
           message: `${author.name} commented on your post.`,
-          preview: comment.contentText.slice(0, 120)
+          preview: populated.contentText.slice(0, 120)
         }));
       }
       for (const uid of mentionIds) {
@@ -245,19 +252,12 @@ const commentController = {
           actor: author._id,
           type: 'mention',
           post: post._id,
-          comment: comment._id,
+          comment: created.commentId,
           message: `${author.name} mentioned you in a comment.`,
-          preview: comment.contentText.slice(0, 120)
+          preview: populated.contentText.slice(0, 120)
         }));
       }
       await Promise.allSettled(sideEffects);
-
-      // Recompute trending score
-      try {
-        await recomputePostScore(post._id);
-      } catch (e) {
-        /* best-effort */
-      }
 
       return res.status(201).json({ success: true, data: populated });
     } catch (err) {
@@ -327,6 +327,11 @@ const commentController = {
       io.to(`post:${String(comment.post)}`).emit('comment:delete', {
         commentId: comment._id,
         postId: comment.post
+      });
+      const updatedPost = await Post.findById(comment.post).select('commentsCount').lean();
+      io.to('forum').emit('post:stats', {
+        postId: String(comment.post),
+        commentsCount: updatedPost?.commentsCount || 0
       });
       return res.json({ success: true, data: { _id: comment._id } });
     } catch (err) {

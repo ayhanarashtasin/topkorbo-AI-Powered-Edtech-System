@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { normalizeSearchText } = require('../utils/searchNormalization');
 
 const INTERESTED_TO_GUIDE_VALUES = ['Medical', 'Engineering', 'University', 'Academic', 'IELTS'];
 
@@ -33,6 +34,12 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true
+  },
+  searchName: {
+    type: String,
+    default: '',
+    index: true,
+    select: false
   },
   email: {
     type: String,
@@ -108,8 +115,6 @@ const userSchema = new mongoose.Schema({
   // ============ Forum / Community additions ============
   username: { type: String, unique: true, sparse: true, index: true, lowercase: true, trim: true },
   bio: { type: String, default: '', maxlength: 280 },
-  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   reputation: { type: Number, default: 0 },
   warnings: [
     {
@@ -129,7 +134,6 @@ const userSchema = new mongoose.Schema({
   banExpiresAt: { type: Date },
   suspendedAt: { type: Date, default: null },
   statusChangedAt: { type: Date, default: null },
-  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
   forumRole: {
     type: String,
     enum: ['user', 'moderator', 'admin'],
@@ -205,6 +209,22 @@ userSchema.index({ forumRole: 1, createdAt: -1 });
 userSchema.pre('validate', function normalizeLegacyGuideValues(next) {
   if (Array.isArray(this.interestedToGuide)) {
     this.interestedToGuide = normalizeInterestedToGuide(this.interestedToGuide);
+  }
+  this.searchName = normalizeSearchText(this.name);
+  next();
+});
+
+userSchema.pre(['findOneAndUpdate', 'updateOne'], function normalizeUpdatedName(next) {
+  const update = this.getUpdate() || {};
+  const name = update.$set?.name ?? update.name;
+  if (name !== undefined) {
+    update.$set = {
+      ...(update.$set || {}),
+      name,
+      searchName: normalizeSearchText(name)
+    };
+    if (Object.hasOwn(update, 'name')) delete update.name;
+    this.setUpdate(update);
   }
   next();
 });

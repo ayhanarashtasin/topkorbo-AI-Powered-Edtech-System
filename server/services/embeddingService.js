@@ -16,7 +16,7 @@ function flattenEmbedding(output) {
 
 async function getExtractor() {
   if (!extractorPromise) {
-    extractorPromise = import('@xenova/transformers').then(({ pipeline }) => {
+    extractorPromise = import('@huggingface/transformers').then(({ pipeline }) => {
       const model = process.env.EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2';
       return pipeline('feature-extraction', model);
     });

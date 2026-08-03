@@ -11,7 +11,7 @@ const planService = require('../services/planService');
 module.exports = function requirePlan(minPlan = 'pro') {
   return async (req, res, next) => {
     try {
-      const user = await planService.loadUser(req.user.id);
+      const user = req.authUserDoc || await planService.loadUser(req.user.id);
       planService.assertPlanAtLeast(user, minPlan);
       req.fullUser = user; // hand the loaded doc downstream to avoid a re-query
       next();

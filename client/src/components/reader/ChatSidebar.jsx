@@ -49,8 +49,10 @@ export default function ChatSidebar({
   onSourceClick
 }) {
   const [draft, setDraft] = useState('');
+  const [showQuickActions, setShowQuickActions] = useState(false);
   const listRef = useRef(null);
   const textareaRef = useRef(null);
+  const quickActionsRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -58,6 +60,17 @@ export default function ChatSidebar({
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [isOpen, messages, sending]);
+
+  useEffect(() => {
+    if (!showQuickActions) return;
+    const handleClickOutside = (e) => {
+      if (quickActionsRef.current && !quickActionsRef.current.contains(e.target)) {
+        setShowQuickActions(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [showQuickActions]);
 
   if (!isOpen) return null;
 
@@ -202,28 +215,6 @@ export default function ChatSidebar({
           ))}
         </div>
 
-        <div className="rb-chat-action-grid">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            const active = scope === action.scope && (
-              action.scope === 'page'
-                ? action.id === 'summary-page' || action.id === 'ask-page'
-                : action.id === 'summary-book' || action.id === 'ask-book'
-            );
-            return (
-              <button
-                key={action.id}
-                type="button"
-                className={`rb-chat-action-card ${active ? 'rb-chat-action-card--active' : ''}`}
-                onClick={() => handleQuickAction(action)}
-              >
-                <Icon size={16} />
-                <span>{action.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
         <div className="rb-chat-content" ref={listRef}>
           {loading && messages.length === 0 ? (
             <div className="rb-chat-empty">
@@ -310,16 +301,51 @@ export default function ChatSidebar({
             <span className={`rb-chat-footer-context ${scope === 'page' && !pageTextReady ? 'rb-chat-footer-context--missing' : ''}`}>
               Context: {contextLabel}
             </span>
-            <button
-              type="button"
-              className="rb-chat-send-btn"
-              onClick={handleSend}
-              disabled={!canSend}
-              aria-label="Send question"
-            >
-              <HiOutlinePaperAirplane size={14} />
-              Send
-            </button>
+            <div className="rb-chat-footer-actions" ref={quickActionsRef}>
+              <button
+                type="button"
+                className={`rb-chat-quick-trigger ${showQuickActions ? 'rb-chat-quick-trigger--active' : ''}`}
+                onClick={() => setShowQuickActions((prev) => !prev)}
+                aria-label="Quick actions"
+                title="Quick actions"
+              >
+                <HiOutlineSparkles size={14} />
+              </button>
+              {showQuickActions && (
+                <div className="rb-chat-quick-popover">
+                  <div className="rb-chat-quick-popover-title">Quick actions</div>
+                  <div className="rb-chat-quick-list">
+                    {QUICK_ACTIONS.map((action) => {
+                      const Icon = action.icon;
+                      return (
+                        <button
+                          key={action.id}
+                          type="button"
+                          className="rb-chat-quick-item"
+                          onClick={() => {
+                            setShowQuickActions(false);
+                            handleQuickAction(action);
+                          }}
+                        >
+                          <Icon size={14} />
+                          <span>{action.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                className="rb-chat-send-btn"
+                onClick={handleSend}
+                disabled={!canSend}
+                aria-label="Send question"
+              >
+                <HiOutlinePaperAirplane size={14} />
+                Send
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -4,22 +4,28 @@ const { uploadImage, deleteImage } = require('../services/uploadService');
 const { notify } = require('../services/notificationService');
 const { getIO } = require('../socket');
 const { ensureUsername } = require('../services/mentionService');
+const Follow = require('../models/Follow');
 
 const PUBLIC_PROFILE_FIELDS =
-  'name username avatar role bio collegeName hscBatch stream universityName department reputation rating maxRating contestPoints contestsPlayed followers following isBanned accountStatus forumRole createdAt';
+  'name username avatar role bio collegeName hscBatch stream universityName department reputation rating maxRating contestPoints contestsPlayed isBanned accountStatus forumRole createdAt';
 const PRIVATE_PROFILE_FIELDS =
   `${PUBLIC_PROFILE_FIELDS} email phoneNumber areaName district division`;
 
 function safeProfile(user) {
   if (!user) return user;
   const profile = { ...user };
-  profile.followerCount = Array.isArray(profile.followers) ? profile.followers.length : 0;
-  profile.followingCount = Array.isArray(profile.following) ? profile.following.length : 0;
-  delete profile.followers;
-  delete profile.following;
   delete profile.isBanned;
   delete profile.accountStatus;
   return profile;
+}
+
+async function profileWithFollowCounts(user) {
+  if (!user) return user;
+  const [followerCount, followingCount] = await Promise.all([
+    Follow.countDocuments({ following: user._id }),
+    Follow.countDocuments({ follower: user._id })
+  ]);
+  return { ...safeProfile(user), followerCount, followingCount };
 }
 
 const userController = {
@@ -40,7 +46,7 @@ const userController = {
           user.username = u.username;
         }
       }
-      return res.json({ success: true, data: safeProfile(user) });
+      return res.json({ success: true, data: await profileWithFollowCounts(user) });
     } catch (err) {
       next(err);
     }
@@ -60,7 +66,7 @@ const userController = {
       if (!user || user.isBanned || (user.accountStatus && user.accountStatus !== 'active')) {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
-      return res.json({ success: true, data: safeProfile(user) });
+      return res.json({ success: true, data: await profileWithFollowCounts(user) });
     } catch (err) {
       next(err);
     }
@@ -100,7 +106,7 @@ const userController = {
         throw error;
       }
       const updated = await User.findById(me._id).select(PRIVATE_PROFILE_FIELDS).lean();
-      return res.json({ success: true, data: safeProfile(updated) });
+      return res.json({ success: true, data: await profileWithFollowCounts(updated) });
     } catch (err) {
       next(err);
     }
@@ -127,35 +133,21 @@ const userController = {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
-      const meUpdate = await User.updateOne(
-        { _id: req.user.id, following: { $ne: target._id } },
-        { $addToSet: { following: target._id } }
-      );
-      if (meUpdate.matchedCount === 0) {
-        return res.status(404).json({ success: false, message: 'User not found' });
-      }
-
+      let created = false;
       try {
-        const targetUpdate = await User.updateOne(
-          { _id: target._id },
-          { $addToSet: { followers: req.user.id } }
+        const follow = await Follow.updateOne(
+          { follower: req.user.id, following: target._id },
+          { $setOnInsert: { follower: req.user.id, following: target._id } },
+          { upsert: true }
         );
-        if (targetUpdate.matchedCount !== 1) {
-          const error = new Error('User not found');
-          error.statusCode = 404;
-          throw error;
-        }
+        created = follow.upsertedCount === 1;
       } catch (error) {
-        if (meUpdate.modifiedCount === 1) {
-          await User.updateOne(
-            { _id: req.user.id },
-            { $pull: { following: target._id } }
-          );
-        }
-        throw error;
+        // A concurrent request may win the unique-key race. The desired state
+        // already exists, so treat it as an idempotent success.
+        if (error.code !== 11000) throw error;
       }
 
-      if (meUpdate.modifiedCount === 1) {
+      if (created) {
         const me = await User.findById(req.user.id).select('name').lean();
         const io = getIO();
         await notify(io, {
@@ -167,16 +159,16 @@ const userController = {
         }).catch(() => {});
       }
 
-      const [targetCounts, meCounts] = await Promise.all([
-        User.findById(target._id).select('followers').lean(),
-        User.findById(req.user.id).select('following').lean()
+      const [followerCount, followingCount] = await Promise.all([
+        Follow.countDocuments({ following: target._id }),
+        Follow.countDocuments({ follower: req.user.id })
       ]);
       return res.json({
         success: true,
         data: {
           following: true,
-          followerCount: targetCounts?.followers?.length || 0,
-          followingCount: meCounts?.following?.length || 0
+          followerCount,
+          followingCount
         }
       });
     } catch (err) {
@@ -196,44 +188,18 @@ const userController = {
       const target = await User.findById(targetId).select('_id');
       if (!target) return res.status(404).json({ success: false, message: 'User not found' });
 
-      const meUpdate = await User.updateOne(
-        { _id: req.user.id, following: target._id },
-        { $pull: { following: target._id } }
-      );
-      if (meUpdate.matchedCount === 0) {
-        return res.status(404).json({ success: false, message: 'User not found' });
-      }
+      await Follow.deleteOne({ follower: req.user.id, following: target._id });
 
-      try {
-        const targetUpdate = await User.updateOne(
-          { _id: target._id },
-          { $pull: { followers: req.user.id } }
-        );
-        if (targetUpdate.matchedCount !== 1) {
-          const error = new Error('User not found');
-          error.statusCode = 404;
-          throw error;
-        }
-      } catch (error) {
-        if (meUpdate.modifiedCount === 1) {
-          await User.updateOne(
-            { _id: req.user.id },
-            { $addToSet: { following: target._id } }
-          );
-        }
-        throw error;
-      }
-
-      const [targetCounts, meCounts] = await Promise.all([
-        User.findById(target._id).select('followers').lean(),
-        User.findById(req.user.id).select('following').lean()
+      const [followerCount, followingCount] = await Promise.all([
+        Follow.countDocuments({ following: target._id }),
+        Follow.countDocuments({ follower: req.user.id })
       ]);
       return res.json({
         success: true,
         data: {
           following: false,
-          followerCount: targetCounts?.followers?.length || 0,
-          followingCount: meCounts?.following?.length || 0
+          followerCount,
+          followingCount
         }
       });
     } catch (err) {
@@ -250,15 +216,17 @@ const userController = {
       if (!mongoose.isValidObjectId(targetId)) {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
-      const me = await User.findById(req.user.id).select('following');
-      const target = await User.findById(targetId).select('followers');
+      const [target, following, followerCount] = await Promise.all([
+        User.findById(targetId).select('_id').lean(),
+        Follow.exists({ follower: req.user.id, following: targetId }),
+        Follow.countDocuments({ following: targetId })
+      ]);
       if (!target) return res.status(404).json({ success: false, message: 'User not found' });
-      const following = !!me?.following.find((id) => String(id) === String(targetId));
       return res.json({
         success: true,
         data: {
-          following,
-          followerCount: target.followers.length
+          following: Boolean(following),
+          followerCount
         }
       });
     } catch (err) {

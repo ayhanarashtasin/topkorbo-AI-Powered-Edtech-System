@@ -10,11 +10,17 @@ const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const planService = require('../services/planService');
 const { queueBookKnowledge, getBookKnowledgeSnapshot } = require('../services/bookRagService');
+const {
+  MAX_ANNOTATIONS_PER_BATCH,
+  MAX_POINTS_PER_BATCH,
+  buildAnnotationDoc,
+  validateClientId,
+  validatePageNumber
+} = require('../utils/annotationValidation');
 
 const VALID_CATEGORIES = ['Academic', 'Admission'];
 const VALID_GROUPS = ['Science', 'Arts', 'Commerce', 'HSC', 'Engineering', 'Medical', 'Varsity'];
 const VALID_PAPERS = ['1st', '2nd', 'N/A'];
-const VALID_ANNOTATION_TYPES = ['pen'];
 
 // Books we've already auto-triggered a mind map rebuild for this server run.
 // Bounds the self-heal to one rebuild per book per process, so a book whose
@@ -815,43 +821,6 @@ exports.deleteChapter = async (req, res, next) => {
  * @access  Private
  */
 /**
- * Validate a single annotation payload and build the Mongoose doc that
- * can be passed to `Annotation.create` or `Annotation.insertMany`.
- * Returns `{ doc }` on success or `{ error }` on failure. The caller
- * picks the right error message format.
- */
-function buildAnnotationDoc(a, ctx) {
-  if (!a || a.type !== 'pen') {
-    return { error: 'type must be pen' };
-  }
-  if (!Array.isArray(a.points) || a.points.length < 1) {
-    return { error: 'pen annotations need at least 1 point' };
-  }
-  const doc = {
-    userId: ctx.userId,
-    bookId: ctx.bookId,
-    chapterId: ctx.chapterId,
-    pageNumber: ctx.pageNumber,
-    type: 'pen',
-    color: a.color || '#EF4444',
-    strokeWidth: a.strokeWidth || 3,
-    points: a.points.map((p) => {
-      const out = { x: Number(p.x), y: Number(p.y) };
-      if (p.w !== undefined && p.w !== null) {
-        const w = Number(p.w);
-        if (Number.isFinite(w) && w > 0) out.w = w;
-      }
-      if (p.p !== undefined && p.p !== null) {
-        const pr = Number(p.p);
-        if (Number.isFinite(pr) && pr >= 0 && pr <= 1) out.p = pr;
-      }
-      return out;
-    })
-  };
-  return { doc };
-}
-
-/**
  * @desc    Create an annotation (pen)
  * @route   POST /api/books/annotations
  * @access  Private
@@ -859,29 +828,34 @@ function buildAnnotationDoc(a, ctx) {
 exports.createAnnotation = async (req, res, next) => {
   try {
     const {
-      chapterId, pageNumber, type, color,
-      points, strokeWidth
+      bookId, chapterId, pageNumber, clientId, type, color,
+      points, strokeWidth, referenceWidth
     } = req.body;
 
-    if (!chapterId) return ApiResponse.error(res, 'chapterId is required', 400);
-    if (!isValidObjectId(chapterId)) {
-      return ApiResponse.error(res, 'Chapter not found', 404);
+    if (!bookId || !isValidObjectId(bookId) || !chapterId || !isValidObjectId(chapterId)) {
+      return ApiResponse.error(res, 'Valid bookId and chapterId are required', 400);
     }
-    if (!pageNumber || pageNumber < 1) return ApiResponse.error(res, 'Valid pageNumber is required', 400);
+    const pageResult = validatePageNumber(pageNumber);
+    if (pageResult.error) return ApiResponse.error(res, pageResult.error, 400);
 
-    // Verify the chapter exists
-    const book = await Book.findOne({ 'chapters._id': chapterId }).select('_id').lean();
+    // Bind the chapter to the book supplied by the client. Looking up only by
+    // the embedded chapter id would allow inconsistent cross-book records.
+    const book = await Book.findOne({ _id: bookId, 'chapters._id': chapterId }).select('_id').lean();
     if (!book) {
-      return ApiResponse.error(res, 'Chapter not found', 404);
+      return ApiResponse.error(res, 'Book or chapter not found', 404);
     }
 
     const { doc, error } = buildAnnotationDoc(
-      { type, color, points, strokeWidth },
-      { userId: req.user.id, bookId: book._id, chapterId, pageNumber }
+      { clientId, type, color, points, strokeWidth, referenceWidth },
+      { userId: req.user.id, bookId: book._id, chapterId, pageNumber: pageResult.value }
     );
     if (error) return ApiResponse.error(res, error, 400);
 
-    const annotation = await Annotation.create(doc);
+    const annotation = await Annotation.findOneAndUpdate(
+      { userId: req.user.id, clientId: doc.clientId },
+      { $setOnInsert: doc },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    ).lean();
     return ApiResponse.success(res, annotation, 'Annotation saved', 201);
   } catch (err) {
     next(err);
@@ -889,7 +863,7 @@ exports.createAnnotation = async (req, res, next) => {
 };
 
 /**
- * @desc    List user's annotations for a chapter (optional page filter)
+ * @desc    List user's annotations for one chapter page
  * @route   GET /api/books/annotations?chapterId=...&page=...
  * @access  Private
  */
@@ -902,13 +876,10 @@ exports.listAnnotations = async (req, res, next) => {
     if (!isValidObjectId(chapterId)) {
       return ApiResponse.error(res, 'Invalid chapter id', 400);
     }
-    const match = { userId: req.user.id, chapterId };
-    if (page) {
-      const pageNum = parseInt(page);
-      if (!isNaN(pageNum) && pageNum > 0) {
-        match.pageNumber = pageNum;
-      }
-    }
+    if (!page) return ApiResponse.error(res, 'page is required', 400);
+    const pageResult = validatePageNumber(page);
+    if (pageResult.error) return ApiResponse.error(res, pageResult.error, 400);
+    const match = { userId: req.user.id, chapterId, pageNumber: pageResult.value };
     const annotations = await Annotation.find(match)
       .sort({ createdAt: 1 })
       .lean();
@@ -928,14 +899,10 @@ exports.deleteAnnotation = async (req, res, next) => {
     if (!isValidObjectId(req.params.id)) {
       return ApiResponse.error(res, 'Annotation not found', 404);
     }
-    const annotation = await Annotation.findById(req.params.id);
-    if (!annotation) {
+    const result = await Annotation.deleteOne({ _id: req.params.id, userId: req.user.id });
+    if (result.deletedCount === 0) {
       return ApiResponse.error(res, 'Annotation not found', 404);
     }
-    if (annotation.userId.toString() !== req.user.id) {
-      return ApiResponse.error(res, 'You can only delete your own annotations', 403);
-    }
-    await annotation.deleteOne();
     return ApiResponse.success(res, { id: req.params.id }, 'Annotation deleted');
   } catch (err) {
     next(err);
@@ -956,59 +923,218 @@ exports.createAnnotationsBulk = async (req, res, next) => {
   try {
     const { bookId, chapterId, pageNumber, annotations } = req.body;
 
-    if (!chapterId || !isValidObjectId(chapterId)) {
-      return ApiResponse.error(res, 'Valid chapterId is required', 400);
+    if (!bookId || !isValidObjectId(bookId) || !chapterId || !isValidObjectId(chapterId)) {
+      return ApiResponse.error(res, 'Valid bookId and chapterId are required', 400);
     }
-    if (!pageNumber || pageNumber < 1) {
-      return ApiResponse.error(res, 'Valid pageNumber is required', 400);
-    }
+    const pageResult = validatePageNumber(pageNumber);
+    if (pageResult.error) return ApiResponse.error(res, pageResult.error, 400);
     if (!Array.isArray(annotations) || annotations.length === 0) {
       return ApiResponse.error(res, 'annotations[] is required and must not be empty', 400);
     }
-    if (annotations.length > 500) {
-      // Sanity cap. A full page of dense drawing is well under 500 strokes.
-      return ApiResponse.error(res, 'Too many annotations in one batch (max 500)', 413);
+    if (annotations.length > MAX_ANNOTATIONS_PER_BATCH) {
+      return ApiResponse.error(res, `Too many annotations in one batch (max ${MAX_ANNOTATIONS_PER_BATCH})`, 413);
     }
 
-    // Verify the chapter exists. We also need the parent bookId to record on
-    // each row (even though the existing single endpoint also derives it).
-    let resolvedBookId = bookId;
-    if (!resolvedBookId || !isValidObjectId(resolvedBookId)) {
-      const book = await Book.findOne({ 'chapters._id': chapterId }).select('_id').lean();
-      if (!book) return ApiResponse.error(res, 'Chapter not found', 404);
-      resolvedBookId = book._id.toString();
-    } else {
-      const book = await Book.findOne({ _id: resolvedBookId, 'chapters._id': chapterId }).select('_id').lean();
-      if (!book) return ApiResponse.error(res, 'Chapter not found', 404);
-    }
+    const book = await Book.findOne({ _id: bookId, 'chapters._id': chapterId }).select('_id').lean();
+    if (!book) return ApiResponse.error(res, 'Book or chapter not found', 404);
 
-    // Build the docs with the same validation the single endpoint uses.
     const docs = [];
-    const ctx = { userId: req.user.id, bookId: resolvedBookId, chapterId, pageNumber };
+    const seenClientIds = new Set();
+    let totalPoints = 0;
+    const ctx = {
+      userId: req.user.id,
+      bookId: book._id,
+      chapterId,
+      pageNumber: pageResult.value
+    };
     for (let i = 0; i < annotations.length; i += 1) {
       const { doc, error } = buildAnnotationDoc(annotations[i], ctx);
       if (error) {
         return ApiResponse.error(res, `annotations[${i}]: ${error}`, 400);
       }
+      if (seenClientIds.has(doc.clientId)) {
+        return ApiResponse.error(res, `annotations[${i}]: duplicate clientId`, 400);
+      }
+      seenClientIds.add(doc.clientId);
+      totalPoints += doc.points.length;
+      if (totalPoints > MAX_POINTS_PER_BATCH) {
+        return ApiResponse.error(res, `Annotation batch may contain at most ${MAX_POINTS_PER_BATCH} points`, 413);
+      }
       docs.push(doc);
     }
 
-    // insertMany does not accept `lean` (that's a query option). To
-    // return plain objects we map with `.toObject()` after the insert.
-    // Mongoose also respects the schema's `pre('save')` updatedAt hook
-    // for individual saves; for insertMany we stamp updatedAt
-    // explicitly so the response carries the canonical timestamp.
     const now = new Date();
-    docs.forEach((d) => { d.updatedAt = now; d.createdAt = now; });
-    const inserted = await Annotation.insertMany(docs);
-    const insertedPlain = inserted.map((d) => d.toObject());
+    await Annotation.bulkWrite(
+      docs.map((doc) => ({
+        updateOne: {
+          filter: { userId: req.user.id, clientId: doc.clientId },
+          update: { $setOnInsert: { ...doc, createdAt: now, updatedAt: now } },
+          upsert: true
+        }
+      })),
+      { ordered: false }
+    );
+
+    const stored = await Annotation.find({
+      userId: req.user.id,
+      clientId: { $in: docs.map((doc) => doc.clientId) }
+    }).lean();
+    const byClientId = new Map(stored.map((doc) => [doc.clientId, doc]));
+    const saved = docs.map((doc) => byClientId.get(doc.clientId)).filter(Boolean);
 
     return ApiResponse.success(
       res,
-      { annotations: insertedPlain, insertedCount: insertedPlain.length },
-      `Saved ${insertedPlain.length} annotation${insertedPlain.length === 1 ? '' : 's'}`,
+      { annotations: saved, insertedCount: saved.length },
+      `Saved ${saved.length} annotation${saved.length === 1 ? '' : 's'}`,
       201
     );
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Reconcile pen-stroke operations for one page. Each clientId has a single
+ * final intent (upsert or delete), making retries, undo, redo, and pagehide
+ * replay idempotent.
+ *
+ * @route POST /api/books/annotations/sync
+ * @body  { bookId, chapterId, pageNumber, upserts: [...], deletes: [{clientId,id?}] }
+ */
+exports.syncAnnotations = async (req, res, next) => {
+  try {
+    const { bookId, chapterId, pageNumber } = req.body;
+    const upserts = req.body.upserts === undefined ? [] : req.body.upserts;
+    const deletes = req.body.deletes === undefined ? [] : req.body.deletes;
+
+    if (!bookId || !isValidObjectId(bookId) || !chapterId || !isValidObjectId(chapterId)) {
+      return ApiResponse.error(res, 'Valid bookId and chapterId are required', 400);
+    }
+    const pageResult = validatePageNumber(pageNumber);
+    if (pageResult.error) return ApiResponse.error(res, pageResult.error, 400);
+    if (!Array.isArray(upserts) || !Array.isArray(deletes) || (upserts.length === 0 && deletes.length === 0)) {
+      return ApiResponse.error(res, 'At least one upsert or delete operation is required', 400);
+    }
+    if (upserts.length > MAX_ANNOTATIONS_PER_BATCH || deletes.length > MAX_ANNOTATIONS_PER_BATCH) {
+      return ApiResponse.error(res, `A sync batch may contain at most ${MAX_ANNOTATIONS_PER_BATCH} operations of each type`, 413);
+    }
+
+    const book = await Book.findOne({ _id: bookId, 'chapters._id': chapterId }).select('_id').lean();
+    if (!book) return ApiResponse.error(res, 'Book or chapter not found', 404);
+
+    const context = {
+      userId: req.user.id,
+      bookId: book._id,
+      chapterId,
+      pageNumber: pageResult.value
+    };
+    const docs = [];
+    const legacySources = [];
+    const clientIds = new Set();
+    let totalPoints = 0;
+    for (let index = 0; index < upserts.length; index += 1) {
+      const result = buildAnnotationDoc(upserts[index], context);
+      if (result.error) return ApiResponse.error(res, `upserts[${index}]: ${result.error}`, 400);
+      if (clientIds.has(result.doc.clientId)) {
+        return ApiResponse.error(res, `upserts[${index}]: duplicate clientId`, 400);
+      }
+      clientIds.add(result.doc.clientId);
+      totalPoints += result.doc.points.length;
+      if (totalPoints > MAX_POINTS_PER_BATCH) {
+        return ApiResponse.error(res, `Sync batch may contain at most ${MAX_POINTS_PER_BATCH} points`, 413);
+      }
+      docs.push(result.doc);
+      if (upserts[index].id !== undefined) {
+        if (!isValidObjectId(upserts[index].id)) {
+          return ApiResponse.error(res, `upserts[${index}].id is not a valid ObjectId`, 400);
+        }
+        legacySources.push({ id: upserts[index].id, clientId: result.doc.clientId });
+      }
+    }
+
+    const deleteClientIds = [];
+    const deleteIds = [];
+    for (let index = 0; index < deletes.length; index += 1) {
+      const operation = deletes[index];
+      if (!operation || typeof operation !== 'object' || Array.isArray(operation)) {
+        return ApiResponse.error(res, `deletes[${index}] must be an object`, 400);
+      }
+      if (operation.clientId !== undefined) {
+        const clientId = validateClientId(operation.clientId);
+        if (clientId.error) return ApiResponse.error(res, `deletes[${index}]: ${clientId.error}`, 400);
+        if (clientIds.has(clientId.value)) {
+          return ApiResponse.error(res, `clientId ${clientId.value} cannot be upserted and deleted in one batch`, 400);
+        }
+        clientIds.add(clientId.value);
+        deleteClientIds.push(clientId.value);
+      }
+      if (operation.id !== undefined) {
+        if (!isValidObjectId(operation.id)) {
+          return ApiResponse.error(res, `deletes[${index}].id is not a valid ObjectId`, 400);
+        }
+        deleteIds.push(operation.id);
+      }
+      if (operation.clientId === undefined && operation.id === undefined) {
+        return ApiResponse.error(res, `deletes[${index}] needs clientId or id`, 400);
+      }
+    }
+
+    const now = new Date();
+    if (legacySources.length > 0) {
+      await Annotation.bulkWrite(legacySources.map((source) => ({
+        updateOne: {
+          filter: {
+            _id: source.id,
+            userId: req.user.id,
+            chapterId,
+            pageNumber: pageResult.value,
+            $or: [{ clientId: { $exists: false } }, { clientId: null }, { clientId: '' }]
+          },
+          update: { $set: { clientId: source.clientId, updatedAt: now } }
+        }
+      })), { ordered: false });
+    }
+    if (docs.length > 0) {
+      await Annotation.bulkWrite(
+        docs.map((doc) => ({
+          updateOne: {
+            filter: { userId: req.user.id, clientId: doc.clientId },
+            update: { $setOnInsert: { ...doc, createdAt: now, updatedAt: now } },
+            upsert: true
+          }
+        })),
+        { ordered: false }
+      );
+    }
+
+    let deletedCount = 0;
+    if (deleteClientIds.length > 0 || deleteIds.length > 0) {
+      const identifiers = [];
+      if (deleteClientIds.length > 0) identifiers.push({ clientId: { $in: deleteClientIds } });
+      if (deleteIds.length > 0) identifiers.push({ _id: { $in: deleteIds } });
+      const result = await Annotation.deleteMany({
+        userId: req.user.id,
+        chapterId,
+        pageNumber: pageResult.value,
+        $or: identifiers
+      });
+      deletedCount = result.deletedCount || 0;
+    }
+
+    const stored = docs.length > 0
+      ? await Annotation.find({
+        userId: req.user.id,
+        clientId: { $in: docs.map((doc) => doc.clientId) }
+      }).lean()
+      : [];
+    const byClientId = new Map(stored.map((doc) => [doc.clientId, doc]));
+    const saved = docs.map((doc) => byClientId.get(doc.clientId)).filter(Boolean);
+
+    return ApiResponse.success(res, {
+      annotations: saved,
+      deletedClientIds: deleteClientIds,
+      deletedCount
+    }, 'Annotation sync complete');
   } catch (err) {
     next(err);
   }

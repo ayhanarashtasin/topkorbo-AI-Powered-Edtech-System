@@ -1,89 +1,212 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tree from 'react-d3-tree';
-import { HiOutlineSparkles, HiOutlineZoomIn, HiOutlineZoomOut } from 'react-icons/hi';
+import {
+  HiOutlineChevronDown,
+  HiOutlineChevronRight,
+  HiOutlineRefresh,
+  HiOutlineSparkles,
+  HiOutlineZoomIn,
+  HiOutlineZoomOut
+} from 'react-icons/hi';
+import {
+  TREE_NODE_SIZE,
+  TREE_ZOOM,
+  buildVisibleKnowledgeTree,
+  calculateTreeFit,
+  clampTreeZoom,
+  formatKnowledgeNodeType,
+  getDefaultExpandedNodeIds,
+  getKnowledgeNodeChildren,
+  getKnowledgeNodeId,
+  getKnowledgeNodeType,
+  getVisibleTreeKey,
+  normalizeKnowledgeNodeType
+} from './knowledgeTreeLayout';
 import './KnowledgeTreeGraph.css';
 
-const NODE_WIDTH = 260;
-const NODE_HEIGHT = 156;
-// react-d3-tree (horizontal) builds the layout with
-// d3.tree().nodeSize([nodeSize.y, nodeSize.x]), so `nodeSize.x` becomes the gap
-// between depth levels (horizontal on screen) and `nodeSize.y` the gap between
-// siblings (vertical). Both must stay comfortably larger than the card box or
-// neighbouring cards overlap. Keep depth spacing > NODE_WIDTH and sibling
-// spacing > NODE_HEIGHT with room to spare.
-const DEPTH_SPACING = 420;   // horizontal distance between parent and child levels
-const SIBLING_SPACING = 210; // vertical distance between sibling cards
-const MIN_ZOOM = 0.35;
-const MAX_ZOOM = 1.8;
-const ZOOM_STEP = 0.15;
+const MAP_LEGEND = [
+  { type: 'book', label: 'Book' },
+  { type: 'chapter', label: 'Chapter' },
+  { type: 'topic', label: 'Topic' },
+  { type: 'point', label: 'Key point' }
+];
 
-function getNodeId(node) {
-  return String(node?.nodeId || node?.topicId || node?.chapterId || node?.title || '');
-}
-
-function getChildren(node) {
-  return node?.children || node?.subtopics || node?.topics || [];
-}
-
-function getNodeType(node) {
-  return node?.nodeType || (node?.chapterId ? 'chapter' : 'topic');
-}
-
-function toRawNode(node, depth = 0, index = 1) {
-  const children = getChildren(node)
-    .map((child, childIndex) => toRawNode(child, depth + 1, childIndex + 1))
-    .filter(Boolean);
-  const pageRange = node?.pageRange || {};
-  return {
-    name: node?.title || (depth === 0 ? 'Whole PDF' : 'Untitled'),
-    nodeId: getNodeId(node),
-    nodeType: getNodeType(node),
-    title: node?.title || '',
-    pageRange,
-    summary: node?.summary || '',
-    detailedNotes: node?.detailedNotes || '',
-    keyPoints: node?.keyPoints || [],
-    definitions: node?.definitions || [],
-    examples: node?.examples || [],
-    quizQuestions: node?.quizQuestions || [],
-    stepLabel: depth === 0 ? 'Start' : `Step ${depth}.${index}`,
-    attributes: {
-      type: getNodeType(node),
-      pages: pageRange.start ? `${pageRange.start}-${pageRange.end || pageRange.start}` : ''
-    },
-    children: children.length > 0 ? children : undefined
-  };
-}
-
-function getTreeLayoutStats(node, depth = 0) {
-  if (!node) return { maxDepth: 0, leafCount: 1 };
-  const children = getChildren(node);
-  if (!children.length) return { maxDepth: depth, leafCount: 1 };
-
-  return children.reduce((stats, child) => {
-    const childStats = getTreeLayoutStats(child, depth + 1);
-    return {
-      maxDepth: Math.max(stats.maxDepth, childStats.maxDepth),
-      leafCount: stats.leafCount + childStats.leafCount
-    };
-  }, { maxDepth: depth, leafCount: 0 });
-}
-
-function useDesktopLayout() {
-  const [isDesktop, setIsDesktop] = useState(() => (
-    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => (
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
   ));
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const query = window.matchMedia('(min-width: 1024px)');
-    const update = () => setIsDesktop(query.matches);
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
     update();
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [query]);
 
-  return isDesktop;
+  return matches;
+}
+
+function useElementDimensions(ref) {
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return undefined;
+
+    const measure = () => {
+      const next = element.getBoundingClientRect();
+      const width = Math.round(next.width);
+      const height = Math.round(next.height);
+      setDimensions((current) => (
+        current.width === width && current.height === height
+          ? current
+          : { width, height }
+      ));
+    };
+
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return dimensions;
+}
+
+function NodeTypeLegend() {
+  return (
+    <div className="rb-ktree__legend" aria-label="Concept map key">
+      {MAP_LEGEND.map((item) => (
+        <span key={item.type} className={`rb-ktree__legend-item rb-ktree__legend-item--${item.type}`}>
+          <i aria-hidden="true" />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function KnowledgeNodeCard({ nodeDatum, active, onSelect, onToggle }) {
+  const type = normalizeKnowledgeNodeType(nodeDatum.nodeType || nodeDatum.attributes?.type);
+  const typeLabel = formatKnowledgeNodeType(type);
+  const pageLabel = nodeDatum.attributes?.pages || '';
+  const childLabel = nodeDatum.childCount === 1 ? '1 branch' : `${nodeDatum.childCount} branches`;
+
+  return (
+    <div
+      xmlns="http://www.w3.org/1999/xhtml"
+      className={`rb-ktree__node rb-ktree__node--${type} ${active ? 'rb-ktree__node--active' : ''}`}
+    >
+      <button
+        type="button"
+        className="rb-ktree__node-select"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelect(nodeDatum);
+        }}
+        aria-pressed={active}
+      >
+        <span className="rb-ktree__node-top">
+          <span className="rb-ktree__pill">{typeLabel}</span>
+          {pageLabel ? <span className="rb-ktree__pages">p. {pageLabel}</span> : null}
+        </span>
+        <strong className="rb-ktree__title">{nodeDatum.name}</strong>
+        <span className="rb-ktree__meta">
+          {nodeDatum.hasChildren ? childLabel : 'Open details'}
+        </span>
+      </button>
+      {nodeDatum.hasChildren ? (
+        <button
+          type="button"
+          className="rb-ktree__node-toggle"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onToggle(nodeDatum.nodeId);
+          }}
+          aria-expanded={nodeDatum.isExpanded}
+          aria-label={`${nodeDatum.isExpanded ? 'Hide' : 'Show'} branches under ${nodeDatum.name}`}
+        >
+          {nodeDatum.isExpanded ? <HiOutlineChevronDown size={16} /> : <HiOutlineChevronRight size={16} />}
+          <span>{nodeDatum.isExpanded ? 'Hide' : 'Explore'}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function KnowledgeOutlineNode({ node, path, depth, expandedNodeIds, selectedNodeId, onSelect, onToggle }) {
+  const nodeId = getKnowledgeNodeId(node, path);
+  const children = getKnowledgeNodeChildren(node);
+  const type = normalizeKnowledgeNodeType(getKnowledgeNodeType(node));
+  const pageRange = node?.pageRange || {};
+  const pages = pageRange.start
+    ? `${pageRange.start}${pageRange.end && pageRange.end !== pageRange.start ? `–${pageRange.end}` : ''}`
+    : '';
+  const isExpanded = expandedNodeIds.has(nodeId);
+  const active = String(selectedNodeId || '') === nodeId;
+
+  return (
+    <li
+      className="rb-ktree__outline-item"
+      style={{ '--outline-depth': Math.min(depth, 5) }}
+      role="treeitem"
+      aria-expanded={children.length ? isExpanded : undefined}
+    >
+      <div className={`rb-ktree__outline-card rb-ktree__outline-card--${type} ${active ? 'rb-ktree__outline-card--active' : ''}`}>
+        <button
+          type="button"
+          className="rb-ktree__outline-select"
+          onClick={() => onSelect(node)}
+          aria-pressed={active}
+        >
+          <span className="rb-ktree__outline-marker" aria-hidden="true" />
+          <span className="rb-ktree__outline-copy">
+            <span className="rb-ktree__outline-type">{formatKnowledgeNodeType(type)}</span>
+            <strong>{node?.title || 'Untitled concept'}</strong>
+            <small>
+              {pages ? `Pages ${pages}` : children.length ? `${children.length} connected ideas` : 'Read details'}
+            </small>
+          </span>
+        </button>
+        {children.length ? (
+          <button
+            type="button"
+            className="rb-ktree__outline-toggle"
+            onClick={() => onToggle(nodeId)}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${node?.title || 'concept'}`}
+          >
+            {isExpanded ? <HiOutlineChevronDown size={18} /> : <HiOutlineChevronRight size={18} />}
+          </button>
+        ) : null}
+      </div>
+      {children.length && isExpanded ? (
+        <ul className="rb-ktree__outline-children" role="group">
+          {children.map((child, index) => (
+            <KnowledgeOutlineNode
+              key={getKnowledgeNodeId(child, `${nodeId}.${index}`)}
+              node={child}
+              path={`${nodeId}.${index}`}
+              depth={depth + 1}
+              expandedNodeIds={expandedNodeIds}
+              selectedNodeId={selectedNodeId}
+              onSelect={onSelect}
+              onToggle={onToggle}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
 }
 
 export default function KnowledgeTreeGraph({
@@ -92,143 +215,165 @@ export default function KnowledgeTreeGraph({
   onSelectNode,
   showOnMobile = false
 }) {
-  const isDesktop = useDesktopLayout();
-  const [zoom, setZoom] = useState(0.78);
+  const canvasRef = useRef(null);
+  const isPhone = useMediaQuery('(max-width: 639px), (max-height: 500px) and (max-width: 900px)');
+  const dimensions = useElementDimensions(canvasRef);
+  const defaultExpandedNodeIds = useMemo(
+    () => getDefaultExpandedNodeIds(rootNode, false),
+    [rootNode]
+  );
+  const [expandedNodeIds, setExpandedNodeIds] = useState(() => (
+    getDefaultExpandedNodeIds(rootNode, false)
+  ));
+  const [manualZoom, setManualZoom] = useState(null);
+  const [viewportReset, setViewportReset] = useState(0);
 
-  const data = useMemo(() => {
-    if (!rootNode) return [];
-    return [toRawNode(rootNode)];
-  }, [rootNode]);
+  const data = useMemo(
+    () => buildVisibleKnowledgeTree(rootNode, expandedNodeIds),
+    [rootNode, expandedNodeIds]
+  );
+  const visibleTree = data[0];
+  const visibleTreeKey = useMemo(() => getVisibleTreeKey(visibleTree), [visibleTree]);
+  const fitView = useMemo(
+    () => calculateTreeFit(visibleTree, dimensions),
+    [visibleTree, dimensions]
+  );
+  const zoom = manualZoom ?? fitView.zoom;
 
-  const layout = useMemo(() => {
-    const { maxDepth, leafCount } = getTreeLayoutStats(rootNode);
-    const width = Math.max(980, (maxDepth * DEPTH_SPACING) + NODE_WIDTH + 280);
-    const height = Math.max(560, (Math.max(1, leafCount) * SIBLING_SPACING) + NODE_HEIGHT + 160);
+  const handleToggle = useCallback((nodeId) => {
+    setExpandedNodeIds((current) => {
+      const next = new Set(current);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+    setManualZoom(null);
+  }, []);
 
-    return {
-      dimensions: { width, height },
-      // Leave room on the left so the root card (centred on the node point) is
-      // fully visible instead of being clipped by the canvas edge.
-      translate: { x: (NODE_WIDTH / 2) + 48, y: height / 2 }
-    };
-  }, [rootNode]);
+  const resetToOverview = useCallback(() => {
+    setExpandedNodeIds(new Set(defaultExpandedNodeIds));
+    setManualZoom(null);
+    setViewportReset((value) => value + 1);
+  }, [defaultExpandedNodeIds]);
 
-  const setBoundedZoom = (nextZoom) => {
-    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(nextZoom.toFixed(2)))));
-  };
+  const setBoundedZoom = useCallback((nextZoom) => {
+    setManualZoom(Number(clampTreeZoom(nextZoom).toFixed(2)));
+    setViewportReset((value) => value + 1);
+  }, []);
 
-  const renderCustomNodeElement = ({ nodeDatum }) => {
-    const active = String(selectedNodeId) === String(nodeDatum.nodeId);
-    const isRoot = (nodeDatum.nodeType || '').toLowerCase() === 'book' || (nodeDatum.attributes?.type || '').toLowerCase() === 'book';
-    const pageLabel = nodeDatum.attributes?.pages || '';
-    const typeLabel = nodeDatum.nodeType || nodeDatum.attributes?.type || 'node';
-    const normalizedType = String(typeLabel).toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-    const isPoint = normalizedType === 'point';
-    const previewPoints = Array.isArray(nodeDatum.keyPoints)
-      ? nodeDatum.keyPoints.filter(Boolean).slice(0, 3)
-      : [];
+  const renderCustomNodeElement = useCallback(({ nodeDatum }) => (
+    <g>
+      <foreignObject
+        x={-TREE_NODE_SIZE.width / 2}
+        y={-TREE_NODE_SIZE.height / 2}
+        width={TREE_NODE_SIZE.width}
+        height={TREE_NODE_SIZE.height}
+      >
+        <KnowledgeNodeCard
+          nodeDatum={nodeDatum}
+          active={String(selectedNodeId || '') === String(nodeDatum.nodeId)}
+          onSelect={onSelectNode}
+          onToggle={handleToggle}
+        />
+      </foreignObject>
+    </g>
+  ), [handleToggle, onSelectNode, selectedNodeId]);
 
-    return (
-      <g>
-        <foreignObject
-          x={-NODE_WIDTH / 2}
-          y={-NODE_HEIGHT / 2}
-          width={NODE_WIDTH}
-          height={NODE_HEIGHT}
-        >
-          <button
-            type="button"
-            className={`rb-ktree__node rb-ktree__node--${normalizedType} ${active ? 'rb-ktree__node--active' : ''} ${isRoot ? 'rb-ktree__node--root' : ''}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onSelectNode?.(nodeDatum);
-            }}
-          >
-            <div className="rb-ktree__node-top">
-              <span className="rb-ktree__pill">{typeLabel}</span>
-              <span className="rb-ktree__step">{nodeDatum.stepLabel}</span>
-            </div>
-            <div className="rb-ktree__title">{nodeDatum.name}</div>
-            <div className="rb-ktree__meta">
-              {pageLabel ? `Pages ${pageLabel}` : 'Knowledge node'}
-            </div>
-            {!isPoint && previewPoints.length > 0 ? (
-              <ul className="rb-ktree__points">
-                {previewPoints.map((point, idx) => <li key={idx}>{point}</li>)}
-              </ul>
-            ) : nodeDatum.summary && (
-              <div className="rb-ktree__summary">
-                {nodeDatum.summary.slice(0, 90)}
-                {nodeDatum.summary.length > 90 ? '…' : ''}
-              </div>
-            )}
-          </button>
-        </foreignObject>
-      </g>
-    );
-  };
-
-  if (!isDesktop && !showOnMobile) {
-    return null;
+  if (!rootNode) {
+    return <div className="rb-ktree__empty">No concept map is available yet.</div>;
   }
 
+  if (isPhone && !showOnMobile) return null;
+
+  const mapSummary = `${fitView.stats.nodeCount} visible ${fitView.stats.nodeCount === 1 ? 'idea' : 'ideas'}`;
+
   return (
-    <div className="rb-ktree">
-      <div className="rb-ktree__header">
-        <div className="rb-ktree__header-title">
-          <HiOutlineSparkles size={14} />
-          <span>Step Graph</span>
+    <section className="rb-ktree" aria-label="Interactive book concept map">
+      <header className="rb-ktree__header">
+        <div className="rb-ktree__heading">
+          <span className="rb-ktree__heading-icon" aria-hidden="true">
+            <HiOutlineSparkles size={15} />
+          </span>
+          <span>
+            <strong>{isPhone ? 'Reading outline' : 'Concept map'}</strong>
+            <small>{isPhone ? 'Open one branch at a time' : `${mapSummary} · drag the canvas to move`}</small>
+          </span>
         </div>
-        <div className="rb-ktree__zoom" aria-label="Mind map zoom controls">
-          <button
-            type="button"
-            onClick={() => setBoundedZoom(zoom - ZOOM_STEP)}
-            disabled={zoom <= MIN_ZOOM}
-            aria-label="Zoom out"
-          >
-            <HiOutlineZoomOut size={14} />
+        {isPhone ? (
+          <button type="button" className="rb-ktree__overview" onClick={resetToOverview}>
+            <HiOutlineRefresh size={14} />
+            Overview
           </button>
-          <button type="button" onClick={() => setBoundedZoom(0.78)} aria-label="Reset zoom">
-            {Math.round(zoom * 100)}%
-          </button>
-          <button
-            type="button"
-            onClick={() => setBoundedZoom(zoom + ZOOM_STEP)}
-            disabled={zoom >= MAX_ZOOM}
-            aria-label="Zoom in"
-          >
-            <HiOutlineZoomIn size={14} />
-          </button>
+        ) : (
+          <div className="rb-ktree__zoom" aria-label="Concept map zoom controls">
+            <button type="button" onClick={resetToOverview} aria-label="Fit concept map to screen">
+              <HiOutlineRefresh size={15} />
+              <span>Fit</span>
+            </button>
+            <i aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => setBoundedZoom(zoom - TREE_ZOOM.step)}
+              disabled={zoom <= TREE_ZOOM.min}
+              aria-label="Zoom out"
+            >
+              <HiOutlineZoomOut size={15} />
+            </button>
+            <output aria-live="polite">{Math.round(zoom * 100)}%</output>
+            <button
+              type="button"
+              onClick={() => setBoundedZoom(zoom + TREE_ZOOM.step)}
+              disabled={zoom >= TREE_ZOOM.max}
+              aria-label="Zoom in"
+            >
+              <HiOutlineZoomIn size={15} />
+            </button>
+          </div>
+        )}
+      </header>
+
+      <NodeTypeLegend />
+
+      {isPhone ? (
+        <div className="rb-ktree__outline" role="tree" aria-label="Book concepts">
+          <ul role="group">
+            <KnowledgeOutlineNode
+              node={rootNode}
+              path="root"
+              depth={0}
+              expandedNodeIds={expandedNodeIds}
+              selectedNodeId={selectedNodeId}
+              onSelect={onSelectNode}
+              onToggle={handleToggle}
+            />
+          </ul>
         </div>
-      </div>
-      <div className="rb-ktree__canvas">
-        {data.length > 0 ? (
-          <div
-            className="rb-ktree__stage"
-            style={{ width: layout.dimensions.width, height: layout.dimensions.height }}
-          >
+      ) : (
+        <div className="rb-ktree__canvas" ref={canvasRef}>
+          {dimensions.width > 0 && dimensions.height > 0 ? (
             <Tree
+              key={`${visibleTreeKey}-${viewportReset}`}
               data={data}
-              dimensions={layout.dimensions}
+              dataKey={visibleTreeKey}
+              dimensions={dimensions}
               orientation="horizontal"
-              pathFunc="diagonal"
+              pathFunc="step"
               pathClassFunc={() => 'rb-ktree__link'}
               collapsible={false}
-              zoomable
+              zoomable={false}
               draggable
+              hasInteractiveNodes
               zoom={zoom}
-              scaleExtent={{ min: MIN_ZOOM, max: MAX_ZOOM }}
-              translate={layout.translate}
-              nodeSize={{ x: DEPTH_SPACING, y: SIBLING_SPACING }}
-              separation={{ siblings: 1.15, nonSiblings: 1.5 }}
+              scaleExtent={{ min: TREE_ZOOM.min, max: TREE_ZOOM.max }}
+              translate={fitView.translate}
+              nodeSize={{ x: TREE_NODE_SIZE.depthGap, y: TREE_NODE_SIZE.siblingGap }}
+              separation={{ siblings: 1, nonSiblings: 1.12 }}
+              transitionDuration={180}
               renderCustomNodeElement={renderCustomNodeElement}
             />
-          </div>
-        ) : (
-          <div className="rb-ktree__empty">No knowledge tree yet.</div>
-        )}
-      </div>
-    </div>
+          ) : null}
+        </div>
+      )}
+    </section>
   );
 }

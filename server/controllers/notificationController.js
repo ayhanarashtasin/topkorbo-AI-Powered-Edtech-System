@@ -1,6 +1,10 @@
 const Notification = require('../models/Notification');
 const { getIO } = require('../socket');
-const { clampLimit } = require('../utils/forumPagination');
+const {
+  clampLimit,
+  descendingCursorFilter,
+  finalizePage
+} = require('../utils/forumPagination');
 
 const notificationController = {
   /**
@@ -10,14 +14,18 @@ const notificationController = {
     try {
       const limit = clampLimit(req.query.limit, 30, 100);
       const filter = { recipient: req.user.id };
-      if (req.query.before) {
+      const cursorFields = ['createdAt'];
+      const cursorFilter = descendingCursorFilter(req.query.cursor, cursorFields);
+      if (cursorFilter) {
+        Object.assign(filter, cursorFilter);
+      } else if (req.query.before) {
         const before = new Date(req.query.before);
         if (!Number.isNaN(before.getTime())) filter.createdAt = { $lt: before };
       }
       const [items, unreadCount] = await Promise.all([
         Notification.find(filter)
           .sort({ createdAt: -1, _id: -1 })
-          .limit(limit)
+          .limit(limit + 1)
           .populate('actor', 'name username avatar role')
           .populate('post', 'title contentText')
           .lean(),
@@ -27,7 +35,13 @@ const notificationController = {
         })
       ]);
 
-      return res.json({ success: true, data: items, unreadCount });
+      const page = finalizePage(items, limit, cursorFields);
+      return res.json({
+        success: true,
+        data: page.items,
+        nextCursor: page.nextCursor,
+        unreadCount
+      });
     } catch (err) {
       next(err);
     }

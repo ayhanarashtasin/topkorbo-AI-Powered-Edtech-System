@@ -50,7 +50,7 @@ export default function FollowButton({ userId, initialFollowing, onChange }) {
       disabled={busy || following === null}
     >
       {following ? <HiUserRemove size={16} /> : <HiUserAdd size={16} />}
-      <span>{following === null ? 'Loadingâ€¦' : following ? 'Following' : 'Follow'}</span>
+      <span>{following === null ? 'Loading…' : following ? 'Following' : 'Follow'}</span>
     </button>
   );
 }

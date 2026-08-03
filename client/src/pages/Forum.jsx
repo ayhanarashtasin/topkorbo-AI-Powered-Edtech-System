@@ -122,6 +122,9 @@ export default function Forum() {
     (cursor) => forumApi.feed({ feed, category, cursor, limit: 15 }),
     [category, feed]
   );
+  const acceptNewPost = useCallback((post) => (
+    feed === 'latest' && (category === 'All' || post.category === category)
+  ), [category, feed]);
 
   return (
     <div className="forum-home">
@@ -160,6 +163,7 @@ export default function Forum() {
               <InfiniteFeed
                 feedKey={`${feed}|${category}`}
                 fetchPage={fetchPage}
+                acceptNewPost={acceptNewPost}
                 emptyTitle="No discussions here yet"
                 emptyMessage={
                   feed === 'following'

@@ -120,7 +120,7 @@ function getStatusLabel(status, language) {
   return localize(language, 'Queued', 'অপেক্ষমাণ');
 }
 
-function LibraryHero({ bookCount, language, role, shelfLabels, onUpload }) {
+function LibraryHero({ bookCount, language, role, onUpload }) {
   const numberFormatter = React.useMemo(
     () => new Intl.NumberFormat(language === 'en' ? 'en-US' : 'bn-BD'),
     [language]
@@ -128,7 +128,11 @@ function LibraryHero({ bookCount, language, role, shelfLabels, onUpload }) {
 
   return (
     <header className="rb-hero">
-      <div className="rb-hero__content">
+      <div className="rb-hero__icon" aria-hidden="true">
+        <HiLibrary size={24} />
+      </div>
+
+      <div className="rb-hero__copy">
         <div className="rb-hero__eyebrow">
           <HiSparkles aria-hidden="true" size={16} />
           <span>{localize(language, 'TopKorbo Reading Room', 'টপকরবো রিডিং রুম')}</span>
@@ -143,6 +147,13 @@ function LibraryHero({ bookCount, language, role, shelfLabels, onUpload }) {
             'অধ্যায় ধরে বই খুলুন এবং মনোযোগ দিয়ে পড়ার সব টুল এক জায়গায় পান।'
           )}
         </p>
+      </div>
+
+      <div className="rb-hero__meta">
+        <div className="rb-hero__count">
+          <strong>{numberFormatter.format(bookCount)}</strong>
+          <span>{localize(language, 'Books Available', 'বই আছে')}</span>
+        </div>
         <div className="rb-hero__actions">
           <a className="rb-hero__browse" href="#library-catalog">
             <span>{localize(language, 'Browse the Shelf', 'বইয়ের তাক দেখুন')}</span>
@@ -155,21 +166,6 @@ function LibraryHero({ bookCount, language, role, shelfLabels, onUpload }) {
             </button>
           ) : null}
         </div>
-      </div>
-
-      <div className="rb-hero__shelf" aria-hidden="true">
-        <div className="rb-hero__count">
-          <strong>{numberFormatter.format(bookCount)}</strong>
-          <span>{localize(language, 'books on the shelf', 'টি বই রয়েছে')}</span>
-        </div>
-        <div className="rb-hero__book-stack">
-          {shelfLabels.map((label, index) => (
-            <div className={`rb-hero__book rb-hero__book--${index + 1}`} key={`${label}-${index}`}>
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
-        <div className="rb-hero__shelf-edge" />
       </div>
     </header>
   );
@@ -961,18 +957,6 @@ export default function ReadingBooks() {
   ) + (myUploadsOnly ? 1 : 0);
   const hasFilters = activeFilterCount > 0;
 
-  const shelfLabels = useMemo(() => {
-    const fallbacks = language === 'en'
-      ? ['Academic', 'Admission', 'Practice']
-      : ['একাডেমিক', 'ভর্তি', 'অনুশীলন'];
-    const subjects = books
-      .map((book) => book.subject)
-      .filter(Boolean)
-      .filter((item, index, array) => array.indexOf(item) === index)
-      .slice(0, 3);
-    return [...subjects, ...fallbacks].slice(0, 3);
-  }, [books, language]);
-
   const updateSearchParams = useCallback((updates) => {
     setSearchParams((currentParams) => {
       const nextParams = new URLSearchParams(currentParams);
@@ -1093,7 +1077,6 @@ export default function ReadingBooks() {
               bookCount={books.length}
               language={language}
               role={user.role}
-              shelfLabels={shelfLabels}
               onUpload={handleUploadClick}
             />
             <LibraryFilters

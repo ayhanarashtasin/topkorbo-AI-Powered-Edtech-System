@@ -5,8 +5,7 @@ const reportSchema = new mongoose.Schema(
     reporter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      index: true
+      required: true
     },
     targetType: {
       type: String,
@@ -40,8 +39,7 @@ const reportSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['open', 'under_review', 'resolved', 'dismissed', 'action_taken'],
-      default: 'open',
-      index: true
+      default: 'open'
     },
     reviewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     reviewedAt: { type: Date },

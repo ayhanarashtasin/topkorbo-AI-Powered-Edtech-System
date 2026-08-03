@@ -2,13 +2,21 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const { configureSocketAdapter } = require('../config/redis');
+const User = require('../models/User');
+const Post = require('../models/Post');
+const {
+  resolveAccountStatus,
+  reactivateExpiredBan
+} = require('../services/accountStatusService');
 
 let io = null;
 
 // Same allowlist strategy as the REST CORS config in server.js.
 function buildOriginAllowlist() {
+  const port = process.env.PORT || 5000;
   return [
     process.env.FRONTEND_URL,
+    process.env.SERVER_URL,
     ...(process.env.CORS_ORIGINS || '').split(','),
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
     process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : '',
@@ -17,10 +25,42 @@ function buildOriginAllowlist() {
       : '',
     ...(process.env.NODE_ENV === 'production'
       ? []
-      : ['http://localhost:5173', 'http://127.0.0.1:5173'])
+      : [
+          'http://localhost:5173',
+          'http://127.0.0.1:5173',
+          `http://localhost:${port}`,
+          `http://127.0.0.1:${port}`
+        ])
   ]
     .map((s) => (s || '').trim())
     .filter(Boolean);
+}
+
+async function authenticateSocketHandshake(socket, next) {
+  try {
+    const token =
+      socket.handshake.auth?.token ||
+      (socket.handshake.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!token) {
+      socket.userId = null;
+      return next();
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let user = await User.findById(decoded.id).select(
+      '_id role forumRole isBanned accountStatus banExpiresAt'
+    );
+    if (!user) return next(new Error('Unauthorized'));
+    user = await reactivateExpiredBan(user);
+    if (resolveAccountStatus(user) !== 'active') {
+      return next(new Error('Account unavailable'));
+    }
+    socket.userId = String(user._id);
+    socket.userRole = user.role || 'student';
+    socket.forumRole = user.forumRole || 'user';
+    return next();
+  } catch (_err) {
+    return next(new Error('Unauthorized'));
+  }
 }
 
 function initSocket(httpServer) {
@@ -49,42 +89,31 @@ function initSocket(httpServer) {
     });
 
   // JWT auth on the handshake
-  io.use((socket, next) => {
-    try {
-      const token =
-        socket.handshake.auth?.token ||
-        (socket.handshake.headers.authorization || '').replace(/^Bearer\s+/i, '');
-      if (!token) {
-        // Allow anonymous socket connections (e.g. browsing public feed)
-        socket.userId = null;
-        return next();
-      }
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userId = String(decoded.id);
-      socket.userRole = decoded.role || 'student';
-      socket.forumRole = decoded.forumRole || 'user';
-      next();
-    } catch (err) {
-      socket.userId = null;
-      next();
-    }
-  });
+  // Anonymous sockets may still use public, non-forum features such as
+  // contest leaderboards, but never receive forum or personal events.
+  io.use(authenticateSocketHandshake);
 
   io.on('connection', (socket) => {
-    socket.join('forum');
-
     // Auto-join personal room for authenticated users
     if (socket.userId) {
+      socket.join('forum');
       socket.join(`user:${socket.userId}`);
     }
 
-    socket.on('join:post', (postId) => {
-      if (postId && mongoose.isValidObjectId(postId)) {
-        socket.join(`post:${String(postId)}`);
-      }
+    socket.on('join:post', async (postId) => {
+      if (!socket.userId || !postId || !mongoose.isValidObjectId(postId)) return;
+      const post = await Post.findById(postId).select('author isHidden').lean().catch(() => null);
+      if (!post) return;
+      const canSeeHidden =
+        String(post.author) === socket.userId ||
+        ['moderator', 'admin'].includes(socket.forumRole);
+      if (post.isHidden && !canSeeHidden) return;
+      socket.join(`post:${String(postId)}`);
     });
     socket.on('leave:post', (postId) => {
-      if (postId) socket.leave(`post:${String(postId)}`);
+      if (postId && mongoose.isValidObjectId(postId)) {
+        socket.leave(`post:${String(postId)}`);
+      }
     });
 
     socket.on('join:contest', async (contestId) => {
@@ -106,15 +135,15 @@ function initSocket(httpServer) {
       if (contestId) socket.leave(`contest:${String(contestId)}`);
     });
 
-    socket.on('typing:start', ({ postId }) => {
-      if (!postId || !socket.userId) return;
+    socket.on('typing:start', ({ postId } = {}) => {
+      if (!postId || !socket.userId || !socket.rooms.has(`post:${String(postId)}`)) return;
       socket.to(`post:${String(postId)}`).emit('typing:update', {
         userId: socket.userId,
         isTyping: true
       });
     });
-    socket.on('typing:stop', ({ postId }) => {
-      if (!postId || !socket.userId) return;
+    socket.on('typing:stop', ({ postId } = {}) => {
+      if (!postId || !socket.userId || !socket.rooms.has(`post:${String(postId)}`)) return;
       socket.to(`post:${String(postId)}`).emit('typing:update', {
         userId: socket.userId,
         isTyping: false
@@ -132,4 +161,4 @@ function getIO() {
   return io;
 }
 
-module.exports = { initSocket, getIO };
+module.exports = { initSocket, getIO, authenticateSocketHandshake, buildOriginAllowlist };

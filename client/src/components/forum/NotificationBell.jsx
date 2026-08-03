@@ -30,7 +30,16 @@ function timeAgo(date) {
 
 export default function NotificationBell() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markNotificationRead, markAllNotificationsRead, refreshNotifications } = useForum();
+  const {
+    notifications,
+    unreadCount,
+    hasMoreNotifications,
+    notificationLoadingMore,
+    markNotificationRead,
+    markAllNotificationsRead,
+    refreshNotifications,
+    loadMoreNotifications
+  } = useForum();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -105,6 +114,16 @@ export default function NotificationBell() {
                 </button>
               );
             })}
+            {hasMoreNotifications && (
+              <button
+                type="button"
+                className="forum-bell__markall"
+                onClick={loadMoreNotifications}
+                disabled={notificationLoadingMore}
+              >
+                {notificationLoadingMore ? 'Loading…' : 'Load older notifications'}
+              </button>
+            )}
           </div>
         </div>
       )}

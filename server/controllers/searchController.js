@@ -1,5 +1,9 @@
 const Post = require('../models/Post');
 const User = require('../models/User');
+const {
+  normalizeSearchText,
+  escapeRegex
+} = require('../utils/searchNormalization');
 
 const CATEGORIES = [
   'Mathematics',
@@ -44,7 +48,7 @@ const searchController = {
       if (!q) return res.json({ success: true, data: { posts: [], users: [], categories: [] } });
 
       const result = { posts: [], users: [], categories: [] };
-      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegex(q);
 
       const postsPromise = type === 'all' || type === 'post' || type === 'posts'
         ? Post.find(
@@ -60,10 +64,11 @@ const searchController = {
       const usersPromise = type === 'all' || type === 'user' || type === 'users'
         ? User.find({
           $or: [
-            { name: new RegExp(`^${escaped}`, 'i') },
-            { username: new RegExp(`^${escaped.toLowerCase()}`) }
+            { searchName: new RegExp(`^${escapeRegex(normalizeSearchText(q))}`) },
+            { username: new RegExp(`^${escapeRegex(q.toLowerCase())}`) }
           ],
-          isBanned: { $ne: true }
+          isBanned: { $ne: true },
+          accountStatus: { $in: [null, 'active'] }
         })
           .select('name username avatar role collegeName universityName reputation forumRole')
           .limit(20)

@@ -6,10 +6,12 @@ import CommentTree from '../components/forum/CommentTree';
 import LoadingSkeleton from '../components/forum/LoadingSkeleton';
 import EmptyState from '../components/forum/EmptyState';
 import forumApi from '../services/forumApi';
+import { useForum } from '../context/ForumContext';
 
 export default function ForumPostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { subscribePost } = useForum();
   const [post, setPost] = useState(null);
   const [error, setError] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
@@ -39,6 +41,30 @@ export default function ForumPostDetail() {
     return () => { cancelled = true; };
   }, [id]);
 
+  useEffect(() => subscribePost({
+    onUpdate: (updated) => {
+      if (String(updated._id) !== String(id)) return;
+      setPost((current) => current ? {
+        ...current,
+        ...updated,
+        userReaction: current.userReaction,
+        bookmarked: current.bookmarked
+      } : updated);
+      setCommentCount(updated.commentsCount || 0);
+    },
+    onDelete: ({ postId }) => {
+      if (String(postId) === String(id)) {
+        setPost(null);
+        setError('This post is no longer available.');
+      }
+    },
+    onStats: ({ postId, commentsCount, ...stats }) => {
+      if (String(postId) !== String(id)) return;
+      setPost((current) => current ? { ...current, ...stats, commentsCount } : current);
+      if (commentsCount !== undefined) setCommentCount(commentsCount);
+    }
+  }), [id, subscribePost]);
+
   if (loadedId !== id) return <LoadingSkeleton count={1} />;
   if (error) {
     return (
@@ -65,7 +91,7 @@ export default function ForumPostDetail() {
       <PostCard
         post={post}
         detail
-        onChange={(updated) => setPost(updated)}
+        onBookmarkChange={(bookmarked) => setPost((current) => ({ ...current, bookmarked }))}
         onDelete={() => navigate('/forum')}
       />
 

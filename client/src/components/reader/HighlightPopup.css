@@ -1,119 +1,116 @@
 .rb-highlight-popup {
   position: fixed;
-  background: white;
+  background: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 6px;
   z-index: 100;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 150px;
-  max-width: calc(100vw - 24px);
+  gap: 0;
   transform: translate(-50%, -110%);
-  animation: popupIn 0.2s ease-out;
+  animation: rbPopupIn 0.15s ease-out;
+  user-select: none;
 }
 
-@keyframes popupIn {
-  from { opacity: 0; transform: translate(-50%, -100%) scale(0.95); }
+@keyframes rbPopupIn {
+  from { opacity: 0; transform: translate(-50%, -100%) scale(0.96); }
   to { opacity: 1; transform: translate(-50%, -110%) scale(1); }
 }
 
-.rb-highlight-popup-actions {
+.rb-popup-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
 }
 
-.rb-highlight-colors {
+.rb-colors {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
-.rb-color-btn {
-  width: 24px;
-  height: 24px;
+.rb-color-dot {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  padding: 0;
 }
 
-.rb-color-btn:hover {
-  transform: scale(1.1);
+.rb-color-dot:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-.rb-action-btn {
-  background: transparent;
-  border: none;
-  font-size: 13px;
-  color: #555;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.rb-action-btn:hover {
-  background: #f5f5f5;
-  color: #000;
-}
-
-.rb-action-btn--primary {
-  background: linear-gradient(135deg, #c08552, #8c5a3c);
-  color: white;
-  font-weight: 700;
-}
-
-.rb-action-btn--primary:hover {
-  background: linear-gradient(135deg, #b97541, #7d4f33);
-  color: white;
-}
-
-.rb-highlight-note-input {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rb-highlight-note-input textarea {
-  width: min(200px, calc(100vw - 56px));
-  height: 60px;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  resize: none;
-  font-family: inherit;
-  font-size: 13px;
-}
-
-.rb-color-btn,
-.rb-action-btn,
-.rb-note-actions button {
-  min-width: 36px;
-  min-height: 36px;
-}
-
-.rb-note-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.rb-note-actions button {
-  padding: 4px 12px;
-  font-size: 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: none;
-}
-
-.rb-note-actions button:first-child {
-  background: #3b82f6;
-  color: white;
-}
-
-.rb-note-actions button:last-child {
+.rb-divider {
+  width: 1px;
+  height: 18px;
   background: #e5e7eb;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.rb-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.rb-icon-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.rb-icon-btn--sm {
+  width: 32px;
+  height: 32px;
+}
+
+.rb-icon-btn--sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+.rb-note-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 4px;
+}
+
+.rb-note-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
   color: #374151;
+  outline: none;
+  transition: border-color 0.1s ease;
+}
+
+.rb-note-input:focus {
+  border-color: #9ca3af;
+}
+
+.rb-note-input::placeholder {
+  color: #9ca3af;
 }

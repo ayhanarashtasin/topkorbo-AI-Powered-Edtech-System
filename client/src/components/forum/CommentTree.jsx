@@ -204,7 +204,7 @@ export default function CommentTree({ postId, onCountChange }) {
 
       {loading ? (
         <p className="forum-muted" style={{ textAlign: 'center', padding: 16 }}>
-          Loading commentsâ€¦
+          Loading comments…
         </p>
       ) : (tree.get('__root__') || []).length === 0 ? (
         <p className="forum-muted" style={{ textAlign: 'center', padding: 16 }}>
@@ -221,7 +221,7 @@ export default function CommentTree({ postId, onCountChange }) {
           disabled={loadingMore}
           onClick={loadMore}
         >
-          {loadingMore ? 'Loadingâ€¦' : 'Load more comments'}
+          {loadingMore ? 'Loading…' : 'Load more comments'}
         </button>
       ) : null}
     </div>

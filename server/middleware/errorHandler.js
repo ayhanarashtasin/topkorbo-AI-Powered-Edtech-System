@@ -74,6 +74,15 @@ const errorHandler = (err, req, res, next) => {
   if (err.code === 'LIMIT_UNEXPECTED_FILE') {
     return ApiResponse.error(res, 'Unexpected file field', 400);
   }
+  if (err.code === 'LIMIT_TOTAL_FILE_SIZE') {
+    return ApiResponse.error(res, 'Combined forum images are limited to 4MB per request.', 413);
+  }
+  if (err.code === 'LIMIT_FIELD_VALUE') {
+    return ApiResponse.error(res, 'A form field is too large.', 413);
+  }
+  if (err.code === 'LIMIT_FIELD_COUNT' || err.code === 'LIMIT_PART_COUNT') {
+    return ApiResponse.error(res, 'Too many multipart form fields.', 400);
+  }
 
   // JWT errors
   if (err.name === 'JsonWebTokenError') {

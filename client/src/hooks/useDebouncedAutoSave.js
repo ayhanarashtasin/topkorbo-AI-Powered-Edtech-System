@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 /**
  * Debounce a save callback. Useful for autosave flows that fire on every
  * keystroke / pointer move (e.g. pen strokes, page changes, bookmark adds).
  *
- *   const save = useDebouncedAutoSave((value) => api.save(value), 800);
+ *   const { save } = useDebouncedAutoSave((value) => api.save(value), 800);
  *   save(nextValue);
  *
  * The latest call wins; in-flight saves are not aborted (the caller owns its
@@ -33,7 +33,6 @@ export function useDebouncedAutoSave(fn, delay = 800) {
           fnRef.current(pendingValueRef.current);
         } catch (err) {
           // Swallow on unmount; nothing useful to do with the error here.
-          // eslint-disable-next-line no-console
           console.error('DebouncedAutoSave flush on unmount failed:', err);
         }
         hasPendingRef.current = false;
@@ -41,7 +40,7 @@ export function useDebouncedAutoSave(fn, delay = 800) {
     };
   }, []);
 
-  function debounced(value) {
+  const schedule = useCallback((value) => {
     pendingValueRef.current = value;
     hasPendingRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -52,14 +51,12 @@ export function useDebouncedAutoSave(fn, delay = 800) {
       try {
         fnRef.current(v);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('DebouncedAutoSave failed:', err);
       }
     }, delay);
-  }
+  }, [delay]);
 
-  // Optional: force-flush right now (e.g. before navigating away).
-  debounced.flush = () => {
+  const flush = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -70,13 +67,12 @@ export function useDebouncedAutoSave(fn, delay = 800) {
       try {
         fnRef.current(v);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error('DebouncedAutoSave flush failed:', err);
       }
     }
-  };
+  }, []);
 
-  return debounced;
+  return useMemo(() => ({ save: schedule, flush }), [flush, schedule]);
 }
 
 export default useDebouncedAutoSave;

@@ -1,11 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../hooks/useLanguage';
 import {
   HiCursorClick,
   HiOutlinePencil,
-  HiOutlineTrash,
   HiOutlineBookOpen,
-  HiOutlineHand,
   HiOutlineBookmark,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
@@ -72,23 +70,25 @@ export default function ReaderToolbar({
   const [openPopover, setOpenPopover] = useState(null);
   const eraserTypeRef = useRef(null);
   const eraserSettingsRef = useRef(null);
-  const [pageInputVal, setPageInputVal] = useState(String(pageNumber));
-
-  useEffect(() => {
-    setPageInputVal(String(pageNumber));
-  }, [pageNumber]);
+  const [pageDraft, setPageDraft] = useState({
+    sourcePage: pageNumber,
+    value: String(pageNumber)
+  });
+  const pageInputVal = pageDraft.sourcePage === pageNumber
+    ? pageDraft.value
+    : String(pageNumber);
 
   const triggerPageChange = (val) => {
     const parsed = parseInt(val, 10);
     if (Number.isInteger(parsed) && parsed >= 1 && parsed <= (pageCount || 1)) {
       onPageChange?.(parsed);
     } else {
-      setPageInputVal(String(pageNumber));
+      setPageDraft({ sourcePage: pageNumber, value: String(pageNumber) });
     }
   };
 
   const handlePageInputChange = (e) => {
-    setPageInputVal(e.target.value);
+    setPageDraft({ sourcePage: pageNumber, value: e.target.value });
   };
 
   const handlePageInputBlur = () => {
@@ -100,7 +100,7 @@ export default function ReaderToolbar({
       triggerPageChange(pageInputVal);
       e.target.blur();
     } else if (e.key === 'Escape') {
-      setPageInputVal(String(pageNumber));
+      setPageDraft({ sourcePage: pageNumber, value: String(pageNumber) });
       e.target.blur();
     }
   };
@@ -120,14 +120,25 @@ export default function ReaderToolbar({
     };
   }, [openPopover]);
 
+  useEffect(() => {
+    if (!openPopover) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenPopover(null);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [openPopover]);
+
   // Pen / highlighter / eraser are Pro+ reading tools. Free & Pro readers see
   // only the (read-only) select cursor; the annotation APIs are enforced
   // server-side regardless.
   const allTools = [
-    { id: 'select',      icon: <HiCursorClick size={16} />,    label: t('rb.reader.tools.select') },
-    { id: 'pen',         icon: <HiOutlinePencil size={16} />,  label: t('rb.reader.tools.pen') },
-    { id: 'highlighter', icon: <LuHighlighter size={16} />,    label: 'Highlight' },
-    { id: 'eraser',      icon: <LuEraser size={16} />,         label: t('rb.reader.tools.eraser') }
+    { id: 'select',      icon: <HiCursorClick size={16} aria-hidden="true" />,    label: t('rb.reader.tools.select') },
+    { id: 'pen',         icon: <HiOutlinePencil size={16} aria-hidden="true" />,  label: t('rb.reader.tools.pen') },
+    { id: 'highlighter', icon: <LuHighlighter size={16} aria-hidden="true" />,    label: 'Highlight' },
+    { id: 'eraser',      icon: <LuEraser size={16} aria-hidden="true" />,         label: t('rb.reader.tools.eraser') }
   ];
   const tools = canAnnotate ? allTools : allTools.filter((tl) => tl.id === 'select');
 
@@ -139,8 +150,8 @@ export default function ReaderToolbar({
   const hint = toolHint || hintByTool[activeTool] || '';
 
   return (
-    <div className="rb-toolbar">
-      <div className="rb-toolbar__group">
+    <div className="rb-toolbar" role="toolbar" aria-label="PDF Reading Tools">
+      <div className="rb-toolbar__group" role="group" aria-label="Reading Tools">
         {tools.map((tool) => (
           <button
             key={tool.id}
@@ -149,6 +160,7 @@ export default function ReaderToolbar({
             onClick={() => onToolChange(tool.id)}
             title={hintByTool[tool.id] || tool.label}
             aria-label={tool.label}
+            aria-pressed={activeTool === tool.id}
           >
             {tool.icon}
             <span className="rb-toolbar__btn-label">{tool.label}</span>
@@ -157,22 +169,11 @@ export default function ReaderToolbar({
         {!canAnnotate && (
           <a
             href="/pricing"
+            className="rb-toolbar__upgrade"
             title="Pen, highlighter & notes are a Pro+ feature"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              color: '#8C5A3C',
-              textDecoration: 'none',
-              padding: '4px 10px',
-              borderRadius: 8,
-              background: '#f6efe8',
-              whiteSpace: 'nowrap'
-            }}
           >
-            🔒 Upgrade for tools
+            <span aria-hidden="true">🔒</span>
+            Upgrade Tools
           </a>
         )}
       </div>
@@ -188,7 +189,8 @@ export default function ReaderToolbar({
               }`}
               style={{ background: c.value }}
               onClick={() => onPenColorChange(c.value)}
-              aria-label={c.id}
+              aria-label={c.id + ' Ink Color'}
+              aria-pressed={penColor === c.value}
             />
           ))}
         </div>
@@ -207,6 +209,7 @@ export default function ReaderToolbar({
                   onClick={() => onPenWidthChange(s.value)}
                   title={t(s.labelKey)}
                   aria-label={t(s.labelKey)}
+                  aria-pressed={active}
                 >
                   <span
                     className="rb-toolbar__size-dot"
@@ -229,8 +232,9 @@ export default function ReaderToolbar({
               onClick={onPressureSimToggle}
               title={t('rb.reader.pen.pressure')}
               aria-label={t('rb.reader.pen.pressure')}
+              aria-pressed={pressureSimEnabled}
             >
-              <HiOutlineAdjustments size={16} />
+              <HiOutlineAdjustments size={16} aria-hidden="true" />
               <span className="rb-toolbar__btn-label">{t('rb.reader.pen.pressure')}</span>
             </button>
           </div>
@@ -244,48 +248,54 @@ export default function ReaderToolbar({
               type="button"
               className={`rb-toolbar__btn ${openPopover === 'eraserType' ? 'rb-toolbar__btn--active' : ''}`}
               onClick={() => setOpenPopover(openPopover === 'eraserType' ? null : 'eraserType')}
-              aria-label="Toggle Eraser Type"
+              aria-label="Choose Eraser Type"
+              aria-expanded={openPopover === 'eraserType'}
+              aria-haspopup="dialog"
             >
-              <LuEraser size={16} />
+              <LuEraser size={16} aria-hidden="true" />
               <span className="rb-toolbar__btn-label">
                 {eraserType === 'stroke'
                   ? (t('rb.reader.eraser.stroke') || 'Stroke')
                   : (t('rb.reader.eraser.standard') || 'Standard')}
               </span>
-              <span style={{ fontSize: 9, marginLeft: 2, color: '#8C5A3C' }}>▼</span>
+              <span className="rb-toolbar__chevron" aria-hidden="true">▼</span>
             </button>
 
             {openPopover === 'eraserType' && (
-              <div className="rb-eraser-popover">
+              <div className="rb-eraser-popover" role="dialog" aria-label="Choose Eraser Type">
                 <div className="rb-eraser-popover__title">
                   {eraserType === 'stroke' ? 'Stroke Type' : 'Standard Type'}
                 </div>
                 <div className="rb-eraser-popover__cards">
-                  <div
+                  <button
+                    type="button"
                     className={`rb-eraser-card ${eraserType === 'standard' ? 'rb-eraser-card--active' : ''}`}
                     onClick={() => {
                       onEraserTypeChange('standard');
                       setOpenPopover(null);
                     }}
+                    aria-pressed={eraserType === 'standard'}
                   >
                     <div className="rb-eraser-card__icon-wrapper">
-                      <LuEraser size={20} color="#8C5A3C" />
+                      <LuEraser size={20} color="#8C5A3C" aria-hidden="true" />
                     </div>
-                    <div className="rb-eraser-card__label">Standard Eraser</div>
-                  </div>
+                    <span className="rb-eraser-card__label">Standard Eraser</span>
+                  </button>
 
-                  <div
+                  <button
+                    type="button"
                     className={`rb-eraser-card ${eraserType === 'stroke' ? 'rb-eraser-card--active' : ''}`}
                     onClick={() => {
                       onEraserTypeChange('stroke');
                       setOpenPopover(null);
                     }}
+                    aria-pressed={eraserType === 'stroke'}
                   >
                     <div className="rb-eraser-card__icon-wrapper">
-                      <LuEraser size={20} color="#8C5A3C" style={{ opacity: 0.6 }} />
+                      <LuEraser size={20} color="#8C5A3C" style={{ opacity: 0.6 }} aria-hidden="true" />
                     </div>
-                    <div className="rb-eraser-card__label">Stroke Eraser</div>
-                  </div>
+                    <span className="rb-eraser-card__label">Stroke Eraser</span>
+                  </button>
                 </div>
                 <div className="rb-eraser-popover__caption">
                   {eraserType === 'standard'
@@ -309,6 +319,7 @@ export default function ReaderToolbar({
                   onClick={() => onEraserWidthChange(size.value)}
                   title={`Eraser size: ${size.id}`}
                   aria-label={`Eraser size: ${size.id}`}
+                  aria-pressed={isActive}
                 >
                   <span
                     className="rb-eraser-size-dot"
@@ -331,12 +342,14 @@ export default function ReaderToolbar({
               onClick={() => setOpenPopover(openPopover === 'eraserSettings' ? null : 'eraserSettings')}
               title="Eraser Settings"
               aria-label="Eraser Settings"
+              aria-expanded={openPopover === 'eraserSettings'}
+              aria-haspopup="dialog"
             >
-              <HiOutlineAdjustments size={16} />
+              <HiOutlineAdjustments size={16} aria-hidden="true" />
             </button>
 
             {openPopover === 'eraserSettings' && (
-              <div className="rb-eraser-settings-popover">
+              <div className="rb-eraser-settings-popover" role="dialog" aria-label="Eraser Settings">
                 <div className="rb-eraser-settings-popover__title">Eraser Settings</div>
                 <button
                   type="button"
@@ -354,11 +367,11 @@ export default function ReaderToolbar({
         </div>
       )}
 
-      <div className="rb-toolbar__divider" />
+      <div className="rb-toolbar__divider" aria-hidden="true" />
 
       {/* Undo / Redo — always rendered (disabled when empty) so the
           toolbar layout doesn't shift when history becomes available. */}
-      <div className="rb-toolbar__group">
+      <div className="rb-toolbar__group" role="group" aria-label="Edit History">
         <button
           type="button"
           className="rb-toolbar__btn rb-toolbar__btn--icon"
@@ -367,7 +380,7 @@ export default function ReaderToolbar({
           title={`${t('rb.reader.tools.undo')} (Ctrl+Z)`}
           aria-label={t('rb.reader.tools.undo')}
         >
-          <LuUndo2 size={16} />
+          <LuUndo2 size={16} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -377,13 +390,13 @@ export default function ReaderToolbar({
           title={`${t('rb.reader.tools.redo')} (Ctrl+Y)`}
           aria-label={t('rb.reader.tools.redo')}
         >
-          <LuRedo2 size={16} />
+          <LuRedo2 size={16} aria-hidden="true" />
         </button>
       </div>
 
-      <div className="rb-toolbar__divider" />
+      <div className="rb-toolbar__divider" aria-hidden="true" />
 
-      <div className="rb-toolbar__group">
+      <div className="rb-toolbar__group" role="group" aria-label="Page Navigation">
         <button
           type="button"
           className="rb-toolbar__btn rb-toolbar__btn--icon"
@@ -392,16 +405,21 @@ export default function ReaderToolbar({
           title={t('rb.reader.prev')}
           aria-label={t('rb.reader.prev')}
         >
-          <HiOutlineChevronLeft size={16} />
+          <HiOutlineChevronLeft size={16} aria-hidden="true" />
         </button>
         <span className="rb-toolbar__pages">
           <input
-            type="text"
+            type="number"
             className="rb-toolbar__page-input"
+            name="reader-page"
             value={pageInputVal}
             onChange={handlePageInputChange}
             onBlur={handlePageInputBlur}
             onKeyDown={handlePageInputKeyDown}
+            min={1}
+            max={pageCount || 1}
+            inputMode="numeric"
+            autoComplete="off"
             aria-label="Go to page"
           />
           <span className="rb-toolbar__page-count">/ {pageCount || 1}</span>
@@ -414,35 +432,37 @@ export default function ReaderToolbar({
           title={t('rb.reader.next')}
           aria-label={t('rb.reader.next')}
         >
-          <HiOutlineChevronRight size={16} />
+          <HiOutlineChevronRight size={16} aria-hidden="true" />
         </button>
       </div>
 
-      <div className="rb-toolbar__divider" />
+      <div className="rb-toolbar__divider" aria-hidden="true" />
 
-      <div className="rb-toolbar__group">
+      <div className="rb-toolbar__group" role="group" aria-label="Document Zoom">
         <button
           type="button"
           className="rb-toolbar__btn rb-toolbar__btn--icon"
           onClick={onZoomOut}
+          disabled={scale <= 0.5}
           title={t('rb.reader.zoom_out')}
           aria-label={t('rb.reader.zoom_out')}
         >
-          <HiOutlineZoomOut size={16} />
+          <HiOutlineZoomOut size={16} aria-hidden="true" />
         </button>
         <span className="rb-toolbar__zoom-val">{Math.round(scale * 100)}%</span>
         <button
           type="button"
           className="rb-toolbar__btn rb-toolbar__btn--icon"
           onClick={onZoomIn}
+          disabled={scale >= 2.5}
           title={t('rb.reader.zoom_in')}
           aria-label={t('rb.reader.zoom_in')}
         >
-          <HiOutlineZoomIn size={16} />
+          <HiOutlineZoomIn size={16} aria-hidden="true" />
         </button>
       </div>
 
-      <div className="rb-toolbar__divider" />
+      <div className="rb-toolbar__divider" aria-hidden="true" />
 
       <button
         type="button"
@@ -450,8 +470,9 @@ export default function ReaderToolbar({
         onClick={onToggleBookmark}
         title={t('rb.reader.bookmark')}
         aria-label={t('rb.reader.bookmark')}
+        aria-pressed={isBookmarked}
       >
-        <HiOutlineBookmark size={16} />
+        <HiOutlineBookmark size={16} aria-hidden="true" />
         <span className="rb-toolbar__btn-label">
           {isBookmarked ? t('rb.reader.bookmarked') : t('rb.reader.bookmark')}
         </span>
@@ -459,7 +480,7 @@ export default function ReaderToolbar({
 
       {hint && (
         <div className="rb-toolbar__hint">
-          <HiOutlineBookOpen size={14} />
+          <HiOutlineBookOpen size={14} aria-hidden="true" />
           <span>{hint}</span>
         </div>
       )}
