@@ -7,9 +7,8 @@ import httpClient from '../../services/httpClient';
 import { clearAuthStorage } from '../../utils/authStorage';
 import './SignUpModal.css';
 
-const GUEST_LOGIN_ENABLED = import.meta.env.VITE_ENABLE_GUEST_LOGIN === 'true';
-const GUEST_ADMIN_ENABLED =
-  import.meta.env.DEV && import.meta.env.VITE_ENABLE_GUEST_ADMIN === 'true';
+const GUEST_LOGIN_ENABLED = import.meta.env.VITE_ENABLE_GUEST_LOGIN !== 'false';
+const GUEST_ADMIN_ENABLED = import.meta.env.VITE_ENABLE_GUEST_ADMIN !== 'false';
 
 export default function SignUpModal({ isOpen, onClose, initialMode = 'signup' }) {
   const { t } = useLanguage();

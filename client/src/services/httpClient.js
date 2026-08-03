@@ -1,6 +1,7 @@
 import { notifyPaywall } from '../utils/paywall';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL
+  || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 const DEFAULT_TIMEOUT_MS = 15000;
 const SLOW_REQUEST_MS = 2500;
 const SAFE_RETRY_COUNT = 2;

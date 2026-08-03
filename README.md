@@ -652,11 +652,31 @@ The root `vercel.json` is configured for a frontend-only Vercel deployment:
 }
 ```
 
-Set `VITE_API_URL` in the Vercel project environment so the frontend points to the deployed backend.
+For a Vercel frontend with the API hosted on Render, set these Vercel project
+environment variables for Production and Preview, then redeploy:
+
+```bash
+VITE_API_URL=https://YOUR-RENDER-SERVICE.onrender.com/api
+VITE_SOCKET_URL=https://YOUR-RENDER-SERVICE.onrender.com
+VITE_ENABLE_GUEST_LOGIN=true
+VITE_ENABLE_GUEST_ADMIN=true
+```
 
 ### Backend
 
 Deploy `server/` to a Node-capable host with MongoDB access and the required environment variables. If the backend is also serving the React build, run the frontend build first so `client/dist` exists beside the server. In production the server enables `trust proxy` for correct client-IP-based rate limiting behind a proxy.
+
+For a Render backend serving a Vercel frontend, configure at least:
+
+```bash
+FRONTEND_URL=https://YOUR-VERCEL-PROJECT.vercel.app
+CORS_ORIGINS=https://YOUR-VERCEL-PROJECT.vercel.app
+ENABLE_GUEST_LOGIN=true
+ENABLE_GUEST_ADMIN=true
+```
+
+Guest roles are enabled when their flag is absent or `true`; set a flag to the
+literal string `false` to disable that guest feature after the demo.
 
 Render free web services may sleep after inactivity, so the first request can take roughly 30 to 90 seconds while the backend wakes up. Use `/health` or `/api/health` to confirm the API process is up. For production, a paid Render plan or another always-on host is recommended; an external uptime monitor can also help for demo environments.
 

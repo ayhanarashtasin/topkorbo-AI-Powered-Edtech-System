@@ -142,12 +142,11 @@ const authController = {
   guestLogin: async (req, res, next) => {
     try {
       const { guestType, config } = getGuestConfig(req.body?.guestType || req.body?.role);
-      if (process.env.ENABLE_GUEST_LOGIN !== 'true') {
+      if (process.env.ENABLE_GUEST_LOGIN === 'false') {
         return res.status(404).json({ success: false, message: 'Guest login is disabled.' });
       }
-      if (guestType === 'admin' && (
-        process.env.NODE_ENV === 'production' || process.env.ENABLE_GUEST_ADMIN !== 'true'
-      )) {
+      const guestAdminEnabled = process.env.ENABLE_GUEST_ADMIN !== 'false';
+      if (guestType === 'admin' && !guestAdminEnabled) {
         return res.status(403).json({
           success: false,
           message: 'The demo administrator account is disabled.'
