@@ -7,6 +7,9 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
+const VISION_MODEL = "qwen/qwen3.6-27b";
+const TEXT_MODEL = "openai/gpt-oss-120b";
+
 // Helper for file logging
 function logToFile(msg) {
   try {
@@ -60,10 +63,11 @@ No markdown, no extra text.
 CRITICAL FORMATTING INSTRUCTIONS FOR FEEDBACK:
 1. You MUST wrap all mathematical variables, formulas, equations, or numbers with units in single dollar signs (e.g. $t \\\\approx 6$ s, $\\\\theta \\\\approx 107.46^\\\\circ$, $BC \\\\approx 65.92$ m, $\\\\cos\\\\theta = -\\\\frac{3}{10}$) so they can be rendered correctly.
 2. You MUST double-escape all backslashes in your JSON string (use \\\\theta instead of \\theta, and \\\\approx instead of \\approx, \\\\frac instead of \\frac).
-3. Do not use raw math symbols or variables without the dollar sign wrappers. Every mathematical term must be enclosed in single dollar signs (e.g., $x$, $y$).`;
+3. Do not use raw math symbols or variables without the dollar sign wrappers. Every mathematical term must be enclosed in single dollar signs (e.g., $x$, $y$).
+4. NEVER use \\(...\\) or \\[...\\] delimiters. ONLY use $...$ for inline math and $$...$$ for display math.`;
 
       const completion = await groq.chat.completions.create({
-        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+        model: VISION_MODEL,
         messages: [
           {
             role: "user",
@@ -187,7 +191,7 @@ Instructions:
 1. First, read and understand the student's handwritten solution from the image.
 2. Provide the COMPLETE correct step-by-step solution with detailed mathematical working.
 3. Then, compare the student's work to the correct solution and clearly point out WHERE and WHY the student made mistakes.
-4. Use LaTeX math notation: use $...$ for inline math and $$...$$ for display/block math equations.
+4. CRITICAL: Use ONLY $...$ for inline math and $$...$$ for display/block math. NEVER use \\(...\\) or \\[...\\] delimiters.
 5. Use clear headings with ** for bold text.
 6. Number each step.
 7. At the end, add a section titled "**Your Mistakes:**" that specifically addresses the student's errors.
@@ -213,7 +217,7 @@ ${manualSolution ? `Reference Solution:\n${manualSolution}` : ''}
 Instructions:
 1. Provide a COMPLETE step-by-step solution with detailed mathematical working.
 2. Explain each step clearly so a student can understand the reasoning.
-3. Use LaTeX math notation: use $...$ for inline math and $$...$$ for display/block math equations.
+3. CRITICAL: Use ONLY $...$ for inline math and $$...$$ for display/block math. NEVER use \\(...\\) or \\[...\\] delimiters.
 4. Use clear headings with ** for bold text.
 5. Number each step.
 6. If there are multiple parts, solve each part separately with its own heading.
@@ -227,7 +231,7 @@ Return ONLY the formatted explanation text. No JSON wrapping.`;
     logToFile(`--- AI EXPLANATION REQUEST for ${questionId} (image: ${!!studentImageBase64}) ---`);
 
     const completion = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: studentImageBase64 ? VISION_MODEL : TEXT_MODEL,
       messages: [{ role: "user", content: messageContent }],
       temperature: 0.7,
       max_completion_tokens: 2048,
@@ -301,7 +305,7 @@ Instructions:
 1. Guide the student step-by-step to understand the concept and solve the question.
 2. Be helpful, encouraging, and mathematically precise.
 3. If they upload an image, read and analyze their work, pointing out where they did well and where they made errors.
-4. Use LaTeX math notation: use $...$ for inline math and $$...$$ for display/block math equations.
+4. CRITICAL: Use ONLY $...$ for inline math and $$...$$ for display/block math. NEVER use \\(...\\) or \\[...\\] delimiters.
 5. Keep your tone encouraging and clean. Use standard markdown formatting (like ** for bold, numbered steps, bullet points) as needed.
 6. Do NOT output raw emojis.`;
 
@@ -350,8 +354,9 @@ Instructions:
 
     logToFile(`--- AI CHAT REQUEST for ${questionId} (history length: ${history ? history.length : 0}, image: ${!!studentImageBase64}) ---`);
 
+    const hasImage = studentImageBase64 || (history && history.some(msg => msg.image));
     const completion = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: hasImage ? VISION_MODEL : TEXT_MODEL,
       messages: messages,
       temperature: 0.7,
       max_completion_tokens: 1536,

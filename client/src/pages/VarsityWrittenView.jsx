@@ -38,7 +38,7 @@ const renderMarkdownWithMath = (text) => {
 
   const mathBlocks = [];
 
-  // 1. Extract and render display math: $$...$$
+  // 1. Extract and render display math: $$...$$ and \[...\]
   let processed = normalizedText.replace(/\$\$([\s\S]+?)\$\$/g, (match, p1) => {
     try {
       const rendered = katex.renderToString(p1.trim(), {
@@ -53,8 +53,36 @@ const renderMarkdownWithMath = (text) => {
     }
   });
 
-  // 2. Extract and render inline math: $...$
+  processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (match, p1) => {
+    try {
+      const rendered = katex.renderToString(p1.trim(), {
+        displayMode: true,
+        throwOnError: false,
+      });
+      const index = mathBlocks.length;
+      mathBlocks.push(rendered);
+      return `%%MATH_BLOCK_${index}%%`;
+    } catch (e) {
+      return match;
+    }
+  });
+
+  // 2. Extract and render inline math: $...$ and \(...\)
   processed = processed.replace(/\$([^\$]+)\$/g, (match, p1) => {
+    try {
+      const rendered = katex.renderToString(p1.trim(), {
+        displayMode: false,
+        throwOnError: false,
+      });
+      const index = mathBlocks.length;
+      mathBlocks.push(rendered);
+      return `%%MATH_BLOCK_${index}%%`;
+    } catch (e) {
+      return match;
+    }
+  });
+
+  processed = processed.replace(/\\\((.+?)\\\)/g, (match, p1) => {
     try {
       const rendered = katex.renderToString(p1.trim(), {
         displayMode: false,
