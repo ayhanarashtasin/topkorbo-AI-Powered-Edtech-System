@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiFire, HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiMinusCircle, HiAcademicCap, HiBeaker, HiBookOpen, HiCollection, HiPencil, HiDocumentText, HiPhotograph, HiLightningBolt, HiChevronDown, HiChevronUp, HiX } from 'react-icons/hi';
+import { HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiMinusCircle, HiAcademicCap, HiBookOpen, HiBeaker, HiCollection, HiPencil, HiDocumentText, HiLightningBolt, HiChevronDown, HiChevronUp, HiX } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import { notifyPaywall } from '../utils/paywall';
@@ -1035,7 +1035,7 @@ export default function MockTest() {
 
               <div className="mock-selection-info">
                 <h3>{language === 'en' ? 'Exam Settings' : 'পরীক্ষার সেটিংস'}</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>
                   {language === 'en' ? 'Configure your exam preferences before starting.' : 'শুরু করার আগে আপনার পরীক্ষার পছন্দ সেট করুন।'}
                 </p>
               </div>
@@ -1048,7 +1048,7 @@ export default function MockTest() {
                   onClick={() => setShowSelectedTopics(!showSelectedTopics)}
                 >
                   <span>{language === 'en' ? 'Tap here to see selected topics' : 'সিলেক্টেড টপিকস দেখতে এখানে ট্যাপ করো'}</span>
-                  {showSelectedTopics ? <HiChevronUp size={20} /> : <HiChevronDown size={20} />}
+                  {showSelectedTopics ? <HiChevronUp size={18} /> : <HiChevronDown size={18} />}
                 </button>
                 {showSelectedTopics && (
                   <div className="mock-topics-tree animate-slide-down">
@@ -1105,7 +1105,7 @@ export default function MockTest() {
               {/* ── Section 1: Question Standard ── */}
               <div className="mock-config-section">
                 <div className="mock-config-section-header">
-                  <HiAcademicCap size={20} className="mock-config-section-icon" />
+                  <HiAcademicCap size={18} className="mock-config-section-icon" />
                   <h4>{language === 'en' ? 'Question Standard' : 'প্রশ্নের মান'}</h4>
                 </div>
                 <p className="mock-config-section-desc">
@@ -1280,135 +1280,137 @@ export default function MockTest() {
                 )}
               </div>
 
-              {/* ── Section 2: Question Type ── */}
-              <div className="mock-config-section">
-                <div className="mock-config-section-header">
-                  <HiCollection size={20} className="mock-config-section-icon" />
-                  <h4>{language === 'en' ? 'Question Type' : 'প্রশ্নের ধরন'}</h4>
+              {/* ── Settings Grid: Question Type + Questions + Duration ── */}
+              <div className="mock-settings-grid">
+                {/* Question Type */}
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiCollection size={18} className="mock-config-section-icon" />
+                    <h4>{language === 'en' ? 'Question Type' : 'প্রশ্নের ধরন'}</h4>
+                  </div>
+                  <div className="mock-type-pills">
+                    {QUESTION_TYPES.map(qt => {
+                      const isActive = questionType === qt.id;
+                      return (
+                        <button
+                          key={qt.id}
+                          type="button"
+                          className={`mock-type-pill ${isActive ? 'mock-type-pill--selected' : ''}`}
+                          onClick={() => setQuestionType(isActive ? '' : qt.id)}
+                        >
+                          {qt.icon}
+                          <span>{language === 'en' ? qt.labelEn : qt.labelBn}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="mock-type-pills">
-                  {QUESTION_TYPES.map(qt => {
-                    const isActive = questionType === qt.id;
-                    return (
+
+                {/* Total Questions */}
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiDocumentText size={18} className="mock-config-section-icon" />
+                    <h4>{language === 'en' ? 'Total Questions' : 'মোট প্রশ্ন সংখ্যা'}</h4>
+                  </div>
+                  <div className="mock-presets-row">
+                    {QUESTION_PRESETS.map(n => (
                       <button
-                        key={qt.id}
+                        key={n}
                         type="button"
-                        className={`mock-type-pill ${isActive ? 'mock-type-pill--selected' : ''}`}
-                        onClick={() => setQuestionType(isActive ? '' : qt.id)}
+                        className={`mock-preset-chip ${totalQuestions === n && !customQuestionInput ? 'mock-preset-chip--selected' : ''}`}
+                        onClick={() => { setTotalQuestions(n); setCustomQuestionInput(''); }}
                       >
-                        {qt.icon}
-                        <span>{language === 'en' ? qt.labelEn : qt.labelBn}</span>
+                        {n}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── Section 3: Total Questions ── */}
-              <div className="mock-config-section">
-                <div className="mock-config-section-header">
-                  <HiDocumentText size={20} className="mock-config-section-icon" />
-                  <h4>{language === 'en' ? 'Total Questions' : 'মোট প্রশ্ন সংখ্যা'}</h4>
-                </div>
-                <div className="mock-presets-row">
-                  {QUESTION_PRESETS.map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={`mock-preset-chip ${totalQuestions === n && !customQuestionInput ? 'mock-preset-chip--selected' : ''}`}
-                      onClick={() => { setTotalQuestions(n); setCustomQuestionInput(''); }}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                  <div className="mock-preset-custom">
-                    <input
-                      type="number"
-                      min="1"
-                      max="200"
-                      placeholder={language === 'en' ? 'Custom' : 'কাস্টম'}
-                      value={customQuestionInput}
-                      onChange={e => {
-                        setCustomQuestionInput(e.target.value);
-                        const v = parseInt(e.target.value);
-                        if (v > 0 && v <= 200) setTotalQuestions(v);
-                      }}
-                      className="mock-custom-input"
-                    />
+                    ))}
+                    <div className="mock-preset-custom">
+                      <input
+                        type="number"
+                        min="1"
+                        max="200"
+                        placeholder={language === 'en' ? 'Custom' : 'কাস্টম'}
+                        value={customQuestionInput}
+                        onChange={e => {
+                          setCustomQuestionInput(e.target.value);
+                          const v = parseInt(e.target.value);
+                          if (v > 0 && v <= 200) setTotalQuestions(v);
+                        }}
+                        className="mock-custom-input"
+                      />
+                    </div>
                   </div>
-                </div>
-                <span className="mock-preset-current">
-                  {language === 'en' ? `Selected: ${totalQuestions} questions` : `নির্বাচিত: ${totalQuestions}টি প্রশ্ন`}
-                </span>
-              </div>
-
-              {/* ── Section 4: Time Duration ── */}
-              <div className="mock-config-section">
-                <div className="mock-config-section-header">
-                  <HiClock size={20} className="mock-config-section-icon" />
-                  <h4>{language === 'en' ? 'Time Duration' : 'সময়কাল'}</h4>
-                </div>
-                <div className="mock-presets-row">
-                  {TIME_PRESETS.map(m => (
-                    <button
-                      key={m}
-                      type="button"
-                      className={`mock-preset-chip ${examDuration === m && !customTimeInput ? 'mock-preset-chip--selected' : ''}`}
-                      onClick={() => { setExamDuration(m); setCustomTimeInput(''); }}
-                    >
-                      {m}{language === 'en' ? 'm' : 'মি'}
-                    </button>
-                  ))}
-                  <div className="mock-preset-custom">
-                    <input
-                      type="number"
-                      min="1"
-                      max="300"
-                      placeholder={language === 'en' ? 'Custom' : 'কাস্টম'}
-                      value={customTimeInput}
-                      onChange={e => {
-                        setCustomTimeInput(e.target.value);
-                        const v = parseInt(e.target.value);
-                        if (v > 0 && v <= 300) setExamDuration(v);
-                      }}
-                      className="mock-custom-input"
-                    />
-                  </div>
-                </div>
-                <span className="mock-preset-current">
-                  {language === 'en' ? `Selected: ${examDuration} minutes` : `নির্বাচিত: ${examDuration} মিনিট`}
-                </span>
-              </div>
-
-              {/* ── Section 5: Negative Marking Toggle ── */}
-              <div className="mock-config-section">
-                <div className="mock-config-section-header">
-                  <HiMinusCircle size={20} className="mock-config-section-icon" />
-                  <h4>{language === 'en' ? 'Negative Marking' : 'নেগেটিভ মার্কিং'}</h4>
-                </div>
-                <div className="mock-toggle-row">
-                  <span className="mock-toggle-label">
-                    {language === 'en'
-                      ? (negativeMarking ? 'Enabled — wrong answers will deduct marks' : 'Disabled — no penalty for wrong answers')
-                      : (negativeMarking ? 'চালু — ভুল উত্তরে নম্বর কাটা যাবে' : 'বন্ধ — ভুল উত্তরে নম্বর কাটা যাবে না')}
+                  <span className="mock-preset-current">
+                    {language === 'en' ? `Selected: ${totalQuestions} questions` : `নির্বাচিত: ${totalQuestions}টি প্রশ্ন`}
                   </span>
-                  <button
-                    type="button"
-                    className={`mock-toggle-switch ${negativeMarking ? 'mock-toggle-switch--on' : ''}`}
-                    onClick={() => setNegativeMarking(prev => !prev)}
-                    aria-label="Toggle negative marking"
-                  >
-                    <span className="mock-toggle-knob" />
-                  </button>
+                </div>
+              </div>
+
+              {/* ── Settings Grid: Duration + Negative Marking ── */}
+              <div className="mock-settings-grid">
+                {/* Time Duration */}
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiClock size={18} className="mock-config-section-icon" />
+                    <h4>{language === 'en' ? 'Time Duration' : 'সময়কাল'}</h4>
+                  </div>
+                  <div className="mock-presets-row">
+                    {TIME_PRESETS.map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`mock-preset-chip ${examDuration === m && !customTimeInput ? 'mock-preset-chip--selected' : ''}`}
+                        onClick={() => { setExamDuration(m); setCustomTimeInput(''); }}
+                      >
+                        {m}{language === 'en' ? 'm' : 'মি'}
+                      </button>
+                    ))}
+                    <div className="mock-preset-custom">
+                      <input
+                        type="number"
+                        min="1"
+                        max="300"
+                        placeholder={language === 'en' ? 'Custom' : 'কাস্টম'}
+                        value={customTimeInput}
+                        onChange={e => {
+                          setCustomTimeInput(e.target.value);
+                          const v = parseInt(e.target.value);
+                          if (v > 0 && v <= 300) setExamDuration(v);
+                        }}
+                        className="mock-custom-input"
+                      />
+                    </div>
+                  </div>
+                  <span className="mock-preset-current">
+                    {language === 'en' ? `Selected: ${examDuration} minutes` : `নির্বাচিত: ${examDuration} মিনিট`}
+                  </span>
+                </div>
+
+                {/* Negative Marking Toggle */}
+                <div className="mock-config-section">
+                  <div className="mock-config-section-header">
+                    <HiMinusCircle size={18} className="mock-config-section-icon" />
+                    <h4>{language === 'en' ? 'Negative Marking' : 'নেগেটিভ মার্কিং'}</h4>
+                  </div>
+                  <div className="mock-toggle-row">
+                    <span className="mock-toggle-label">
+                      {language === 'en'
+                        ? (negativeMarking ? 'Enabled — wrong answers will deduct marks' : 'Disabled — no penalty for wrong answers')
+                        : (negativeMarking ? 'চালু — ভুল উত্তরে নম্বর কাটা যাবে' : 'বন্ধ — ভুল উত্তরে নম্বর কাটা যাবে না')}
+                    </span>
+                    <button
+                      type="button"
+                      className={`mock-toggle-switch ${negativeMarking ? 'mock-toggle-switch--on' : ''}`}
+                      onClick={() => setNegativeMarking(prev => !prev)}
+                      aria-label="Toggle negative marking"
+                    >
+                      <span className="mock-toggle-knob" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* ── Selection Summary ── */}
               <div className="mock-config-section mock-summary-section">
-                <div className="mock-config-section-header">
-                  <HiPhotograph size={20} className="mock-config-section-icon" />
-                  <h4>{language === 'en' ? 'Selection Summary' : 'নির্বাচনের সারাংশ'}</h4>
-                </div>
                 <div className="mock-summary-grid">
                   <div className="mock-summary-stat">
                     <span className="mock-summary-stat-value">{summary.subjectCount}</span>
