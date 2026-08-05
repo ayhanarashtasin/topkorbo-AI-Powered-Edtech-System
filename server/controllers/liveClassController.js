@@ -111,6 +111,26 @@ function getSocketServer() {
   }
 }
 
+function getLiveSessionExpiryCutoff() {
+  return new Date(Date.now() - RECONNECT_WINDOW_MS);
+}
+
+async function closeExpiredLiveSessions(filter = {}) {
+  return LiveSession.updateMany(
+    {
+      ...filter,
+      status: 'live',
+      actualStart: { $lt: getLiveSessionExpiryCutoff() },
+    },
+    {
+      $set: {
+        status: 'completed',
+        actualEnd: new Date(),
+      },
+    },
+  );
+}
+
 async function createToken({
   roomName,
   identity,
@@ -157,6 +177,8 @@ exports.getMentorLiveClassDashboard = async (req, res, next) => {
     if (!isMentorRole(req.user.role)) {
       return res.status(403).json({ success: false, message: 'Only mentors can access live classes.' });
     }
+
+    await closeExpiredLiveSessions({ mentorId: req.user.id });
 
     const usage = await getWeeklyUsage(req.user.id);
     const activeSession = await LiveSession.findOne({
@@ -292,6 +314,8 @@ exports.startMentorLiveClass = async (req, res, next) => {
 
     let session = null;
     let weeklyUsageIncremented = false;
+
+    await closeExpiredLiveSessions({ mentorId: req.user.id });
 
     if (requestedSessionId) {
       session = await LiveSession.findOne({
@@ -520,6 +544,8 @@ exports.listStudentLiveClasses = async (req, res, next) => {
       return res.json({ success: true, data: [] });
     }
 
+    await closeExpiredLiveSessions({ mentorId: { $in: mentorIds } });
+
     const now = new Date();
     const lookahead = new Date(Date.now() + SCHEDULE_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
     const sessions = await LiveSession.find({
@@ -592,6 +618,13 @@ exports.joinStudentLiveClass = async (req, res, next) => {
 
     if (!session) {
       return res.status(404).json({ success: false, message: 'Live class not found.' });
+    }
+
+    if (session.actualStart && session.actualStart < getLiveSessionExpiryCutoff()) {
+      session.status = 'completed';
+      session.actualEnd = new Date();
+      await session.save();
+      return res.status(404).json({ success: false, message: 'This live class has already ended.' });
     }
 
     const isConnected = await MentorConnection.exists({
