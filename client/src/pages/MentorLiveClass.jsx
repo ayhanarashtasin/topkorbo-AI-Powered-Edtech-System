@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import LiveClassRoom from '../components/liveclass/LiveClassRoom';
-import { endMentorLiveClass, fetchMentorLiveDashboard, scheduleMentorLiveClass, startMentorLiveClass } from '../services/liveClassApi';
+import { endMentorLiveClass, fetchMentorLiveDashboard, scheduleMentorLiveClass, startMentorLiveClass, updateMentorScheduledLiveClass } from '../services/liveClassApi';
 import { fetchMentorDashboard } from '../services/mentorApi';
 import { DisconnectReason } from 'livekit-client';
 import './LiveClassPages.css';
@@ -15,6 +15,7 @@ export default function MentorLiveClass() {
   });
   const [title, setTitle] = useState('Weekly Live Class');
   const [scheduleForm, setScheduleForm] = useState({
+    editingSessionId: '',
     title: 'Weekly Live Class',
     scheduledStart: '',
     durationMinutes: '60',
@@ -53,6 +54,14 @@ export default function MentorLiveClass() {
       dateStyle: 'medium',
       timeStyle: 'short',
     });
+  };
+
+  const toDateTimeInputValue = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 16);
   };
 
   const loadDashboard = async ({ showLoading = true } = {}) => {
@@ -96,26 +105,54 @@ export default function MentorLiveClass() {
     });
   };
 
+  const resetScheduleForm = () => {
+    setScheduleForm({
+      editingSessionId: '',
+      title: 'Weekly Live Class',
+      scheduledStart: '',
+      durationMinutes: '60',
+      description: '',
+      audienceType: 'all_accepted',
+      studentIds: [],
+    });
+  };
+
+  const handleEditScheduledClass = (session) => {
+    setError('');
+    setScheduleForm({
+      editingSessionId: session._id,
+      title: session.title || 'Weekly Live Class',
+      scheduledStart: toDateTimeInputValue(session.scheduledStart),
+      durationMinutes: String(session.durationMinutes || 60),
+      description: session.description || '',
+      audienceType: session.audienceType || 'all_accepted',
+      studentIds: Array.isArray(session.invitedStudents)
+        ? session.invitedStudents.map((id) => String(id))
+        : [],
+    });
+  };
+
   const handleScheduleClass = async () => {
     try {
       setBusy(true);
       setError('');
-      await scheduleMentorLiveClass({
+      const payload = {
         title: scheduleForm.title,
         description: scheduleForm.description,
         scheduledStart: new Date(scheduleForm.scheduledStart).toISOString(),
         durationMinutes: Number(scheduleForm.durationMinutes) || 60,
         audienceType: scheduleForm.audienceType,
         studentIds: scheduleForm.studentIds,
-      });
-      setScheduleForm((prev) => ({
-        ...prev,
-        description: '',
-        studentIds: [],
-      }));
+      };
+      if (scheduleForm.editingSessionId) {
+        await updateMentorScheduledLiveClass(scheduleForm.editingSessionId, payload);
+      } else {
+        await scheduleMentorLiveClass(payload);
+      }
+      resetScheduleForm();
       await loadDashboard({ showLoading: false });
     } catch (err) {
-      setError(err.message || 'Failed to schedule live class.');
+      setError(err.message || `Failed to ${scheduleForm.editingSessionId ? 'update' : 'schedule'} live class.`);
     } finally {
       setBusy(false);
     }
@@ -236,9 +273,14 @@ export default function MentorLiveClass() {
             <section className="live-page__schedule">
               <div className="live-page__section-head">
                 <div>
-                  <h2>Schedule a Class</h2>
-                  <p>Pick a time once, notify accepted students, and start the class when it is time.</p>
+                  <h2>{scheduleForm.editingSessionId ? 'Edit Scheduled Class' : 'Schedule a Class'}</h2>
+                  <p>{scheduleForm.editingSessionId ? 'Save changes and notify students about the updated class time or details.' : 'Pick a time once, notify accepted students, and start the class when it is time.'}</p>
                 </div>
+                {scheduleForm.editingSessionId ? (
+                  <button type="button" className="btn btn-secondary" onClick={resetScheduleForm}>
+                    Cancel Edit
+                  </button>
+                ) : null}
               </div>
 
               <div className="live-page__schedule-grid">
@@ -324,7 +366,7 @@ export default function MentorLiveClass() {
                 }
                 onClick={handleScheduleClass}
               >
-                {busy ? 'Scheduling...' : 'Schedule Class'}
+                {busy ? (scheduleForm.editingSessionId ? 'Saving...' : 'Scheduling...') : (scheduleForm.editingSessionId ? 'Save Changes' : 'Schedule Class')}
               </button>
             </section>
           ) : null}
@@ -347,14 +389,24 @@ export default function MentorLiveClass() {
                         <p>{formatClassTime(session.scheduledStart)} - {session.durationMinutes || 60} minutes</p>
                         <small>{session.description || (session.audienceType === 'selected' ? 'Selected students' : 'All accepted students')}</small>
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        disabled={busy || dashboard.sessionsThisWeek >= dashboard.weeklyLimit}
-                        onClick={() => handleStartClass(session)}
-                      >
-                        Start Class
-                      </button>
+                      <div className="live-page__card-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={busy}
+                          onClick={() => handleEditScheduledClass(session)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={busy || dashboard.sessionsThisWeek >= dashboard.weeklyLimit}
+                          onClick={() => handleStartClass(session)}
+                        >
+                          Start Class
+                        </button>
+                      </div>
                     </article>
                   ))}
                 </div>

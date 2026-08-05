@@ -20,6 +20,14 @@ export async function scheduleMentorLiveClass(payload) {
   });
 }
 
+export async function updateMentorScheduledLiveClass(sessionId, payload) {
+  return httpClient.request(`/live-class/mentor/schedule/${sessionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function endMentorLiveClass(sessionId) {
   return httpClient.request(`/live-class/mentor/${sessionId}/end`, {
     method: 'POST',

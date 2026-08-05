@@ -131,6 +131,30 @@ async function closeExpiredLiveSessions(filter = {}) {
   );
 }
 
+async function getAcceptedStudentIds(mentorId) {
+  const acceptedConnections = await MentorConnection.find({
+    mentor: mentorId,
+    status: 'accepted',
+  }).select('student').lean();
+  return acceptedConnections.map((item) => String(item.student)).filter(Boolean);
+}
+
+function resolveInvitedStudents({ audienceType, studentIds, acceptedStudentIds }) {
+  if (audienceType !== 'selected') return [];
+
+  const acceptedSet = new Set(acceptedStudentIds);
+  return (Array.isArray(studentIds) ? studentIds : [])
+    .map((id) => String(id))
+    .filter((id) => acceptedSet.has(id));
+}
+
+function resolveScheduleRecipients(session, acceptedStudentIds) {
+  if (session?.audienceType === 'selected') {
+    return (session.invitedStudents || []).map((id) => String(id));
+  }
+  return acceptedStudentIds;
+}
+
 async function createToken({
   roomName,
   identity,
@@ -239,25 +263,18 @@ exports.scheduleMentorLiveClass = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Class time cannot be in the past.' });
     }
 
-    const acceptedConnections = await MentorConnection.find({
-      mentor: req.user.id,
-      status: 'accepted',
-    }).select('student').lean();
-    const acceptedStudentIds = acceptedConnections.map((item) => String(item.student)).filter(Boolean);
+    const acceptedStudentIds = await getAcceptedStudentIds(req.user.id);
     if (!acceptedStudentIds.length) {
       return res.status(400).json({ success: false, message: 'Accept at least one student before scheduling a class.' });
     }
 
-    let invitedStudents = [];
-    if (audienceType === 'selected') {
-      const requestedStudentIds = Array.isArray(req.body?.studentIds)
-        ? req.body.studentIds.map((id) => String(id)).filter(Boolean)
-        : [];
-      const acceptedSet = new Set(acceptedStudentIds);
-      invitedStudents = requestedStudentIds.filter((id) => acceptedSet.has(id));
-      if (!invitedStudents.length) {
-        return res.status(400).json({ success: false, message: 'Select at least one accepted student.' });
-      }
+    const invitedStudents = resolveInvitedStudents({
+      audienceType,
+      studentIds: req.body?.studentIds,
+      acceptedStudentIds,
+    });
+    if (audienceType === 'selected' && !invitedStudents.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one accepted student.' });
     }
 
     const session = await LiveSession.create({
@@ -286,6 +303,89 @@ exports.scheduleMentorLiveClass = async (req, res, next) => {
       success: true,
       data: serializeSession(session),
       message: 'Live class scheduled.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateMentorScheduledLiveClass = async (req, res, next) => {
+  try {
+    if (!isMentorRole(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only mentors can edit scheduled live classes.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.sessionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid scheduled class id.' });
+    }
+
+    const mentor = await User.findById(req.user.id).select('name role');
+    if (!mentor || !isMentorRole(mentor.role)) {
+      return res.status(403).json({ success: false, message: 'Mentor account not found.' });
+    }
+
+    const session = await LiveSession.findOne({
+      _id: req.params.sessionId,
+      mentorId: req.user.id,
+      status: 'scheduled',
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Scheduled live class not found.' });
+    }
+
+    const title = String(req.body?.title || '').trim().slice(0, 140);
+    const description = String(req.body?.description || '').trim().slice(0, 500);
+    const scheduledStart = new Date(req.body?.scheduledStart);
+    const durationMinutes = Math.min(180, Math.max(15, Number(req.body?.durationMinutes) || 60));
+    const audienceType = req.body?.audienceType === 'selected' ? 'selected' : 'all_accepted';
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Class title is required.' });
+    }
+    if (Number.isNaN(scheduledStart.getTime())) {
+      return res.status(400).json({ success: false, message: 'Valid class date and time is required.' });
+    }
+    if (scheduledStart.getTime() < Date.now() - 5 * 60 * 1000) {
+      return res.status(400).json({ success: false, message: 'Class time cannot be in the past.' });
+    }
+
+    const acceptedStudentIds = await getAcceptedStudentIds(req.user.id);
+    if (!acceptedStudentIds.length) {
+      return res.status(400).json({ success: false, message: 'Accept at least one student before editing a class.' });
+    }
+
+    const previousRecipients = resolveScheduleRecipients(session, acceptedStudentIds);
+    const invitedStudents = resolveInvitedStudents({
+      audienceType,
+      studentIds: req.body?.studentIds,
+      acceptedStudentIds,
+    });
+    if (audienceType === 'selected' && !invitedStudents.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one accepted student.' });
+    }
+
+    session.title = title;
+    session.description = description;
+    session.scheduledStart = scheduledStart;
+    session.durationMinutes = durationMinutes;
+    session.audienceType = audienceType;
+    session.invitedStudents = invitedStudents;
+    await session.save();
+
+    const nextRecipients = resolveScheduleRecipients(session, acceptedStudentIds);
+    const recipients = Array.from(new Set([...previousRecipients, ...nextRecipients]));
+    const io = getSocketServer();
+    await Promise.allSettled(recipients.map((recipient) => notify(io, {
+      recipient,
+      actor: mentor._id,
+      type: 'live_class',
+      message: `${mentor.name} updated a live class: ${title}`,
+      preview: formatSchedulePreview(scheduledStart, durationMinutes),
+    })));
+
+    return res.json({
+      success: true,
+      data: serializeSession(session),
+      message: 'Scheduled live class updated.',
     });
   } catch (err) {
     next(err);

@@ -179,6 +179,13 @@
   color: var(--text-secondary);
 }
 
+.live-page__card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .live-page__students {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(192, 133, 82, 0.14);
@@ -277,6 +284,11 @@
 
   .live-page__schedule-grid {
     grid-template-columns: 1fr;
+  }
+
+  .live-page__card-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 }
 
