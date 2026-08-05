@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AudioTrack,
   LiveKitRoom,
   useLocalParticipant,
   RoomAudioRenderer,
@@ -11,18 +10,18 @@ import {
   useTracks,
 } from '@livekit/components-react';
 import { LogLevel, RoomEvent, Track, setLogLevel } from 'livekit-client';
-import { HiArrowsExpand, HiDesktopComputer, HiMicrophone, HiPhoneMissedCall, HiVideoCamera } from 'react-icons/hi';
+import { HiArrowsExpand, HiDesktopComputer, HiMicrophone, HiPhoneMissedCall, HiSpeakerphone, HiVideoCamera } from 'react-icons/hi';
 import './LiveClassRoom.css';
 
 function RoomLayout({ mode, onEndClass, sessionTitle }) {
   const room = useRoomContext();
+  const studentAudioMountRef = useRef(null);
   const participants = useParticipants();
   const { localParticipant, isCameraEnabled, isMicrophoneEnabled, isScreenShareEnabled } = useLocalParticipant();
   const tracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
     { source: Track.Source.Camera, withPlaceholder: false },
   ]);
-  const microphoneTracks = useTracks([Track.Source.Microphone], { onlySubscribed: false });
   const [cameraEnabled, setCameraEnabled] = useState(mode === 'mentor');
   const [micEnabled, setMicEnabled] = useState(mode === 'mentor');
   const [screenEnabled, setScreenEnabled] = useState(false);
@@ -50,12 +49,6 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     trackRef.participant.identity.startsWith('student:')
     && trackRef.source === Track.Source.Camera
   ));
-  const studentMicrophoneTracks = microphoneTracks.filter((trackRef) => (
-    trackRef.participant.identity.startsWith('student:')
-    && !trackRef.participant.isLocal
-    && trackRef.source === Track.Source.Microphone
-  ));
-
   const featuredStudentTracks = [...studentTracks]
     .sort((a, b) => {
       const aActive = activeSpeakerIds.has(a.participant.identity) ? 1 : 0;
@@ -106,6 +99,10 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     setScreenEnabled(next);
   };
 
+  const enableSpeakerAudio = async () => {
+    await room?.startAudio();
+  };
+
   const leaveClass = async () => {
     await room?.disconnect();
   };
@@ -135,11 +132,54 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
   useEffect(() => {
     if (mode !== 'mentor') return;
 
+    const attachedAudio = new Map();
+
+    const isStudentAudioPublication = (publication, participant) => (
+      publication
+      && !participant?.isLocal
+      && participant?.identity?.startsWith('student:')
+      && (publication.source === Track.Source.Microphone || publication.kind === Track.Kind.Audio)
+    );
+
+    const playAudioElement = async (element) => {
+      if (!element) return;
+      element.muted = false;
+      element.volume = 1;
+      try {
+        await element.play();
+      } catch {
+        room.startAudio().catch(() => {});
+      }
+    };
+
+    const attachStudentAudio = (track, publication, participant) => {
+      if (!track || !isStudentAudioPublication(publication, participant)) return;
+      const mount = studentAudioMountRef.current;
+      if (!mount) return;
+
+      const key = publication.trackSid || track.sid || participant.identity;
+      if (attachedAudio.has(key)) {
+        playAudioElement(attachedAudio.get(key).element);
+        return;
+      }
+
+      const element = track.attach();
+      element.autoplay = true;
+      element.controls = false;
+      element.muted = false;
+      element.playsInline = true;
+      element.dataset.studentAudio = participant.identity;
+      mount.appendChild(element);
+      attachedAudio.set(key, { element, track });
+      playAudioElement(element);
+    };
+
     const subscribeToStudentAudio = (publication, participant) => {
       if (!publication || participant?.isLocal) return;
       if (!participant?.identity?.startsWith('student:')) return;
       if (publication.source === Track.Source.Microphone || publication.kind === Track.Kind.Audio) {
         publication.setSubscribed?.(true);
+        attachStudentAudio(publication.track, publication, participant);
       }
     };
 
@@ -156,16 +196,32 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     const handleTrackSubscribed = (track, publication, participant) => {
       subscribeToStudentAudio(publication, participant);
       if (track?.kind === Track.Kind.Audio) {
-        room.startAudio().catch(() => {});
+        attachStudentAudio(track, publication, participant);
       }
+    };
+
+    const handleTrackUnsubscribed = (track, publication) => {
+      const key = publication?.trackSid || track?.sid;
+      const attached = key ? attachedAudio.get(key) : null;
+      if (!attached) return;
+      attached.track.detach(attached.element);
+      attached.element.remove();
+      attachedAudio.delete(key);
     };
 
     room.on(RoomEvent.TrackPublished, handleTrackPublished);
     room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
+    room.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
 
     return () => {
       room.off(RoomEvent.TrackPublished, handleTrackPublished);
       room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);
+      room.off(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
+      attachedAudio.forEach(({ element, track }) => {
+        track.detach(element);
+        element.remove();
+      });
+      attachedAudio.clear();
     };
   }, [mode, room]);
 
@@ -188,6 +244,10 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
                 {micEnabled ? 'Mic On' : 'Mic Off'}
               </button>
               <StartAudio className="live-room__control live-room__control--audio" label="Allow Audio" />
+              <button type="button" className="live-room__control" onClick={enableSpeakerAudio}>
+                <HiSpeakerphone size={18} />
+                Speaker On
+              </button>
               <button type="button" className="live-room__control" onClick={toggleScreen}>
                 <HiDesktopComputer size={18} />
                 {screenEnabled ? 'Stop Share' : 'Share Screen'}
@@ -280,15 +340,8 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
         </aside>
       </div>
 
-      <RoomAudioRenderer />
-      <div className="live-room__student-audio">
-        {mode === 'mentor' ? studentMicrophoneTracks.map((trackRef) => (
-          <AudioTrack
-            key={`${trackRef.participant.identity}-${trackRef.publication?.trackSid || trackRef.source}`}
-            trackRef={trackRef}
-          />
-        )) : null}
-      </div>
+      {mode === 'student' ? <RoomAudioRenderer /> : null}
+      <div ref={studentAudioMountRef} className="live-room__student-audio" />
     </div>
   );
 }
