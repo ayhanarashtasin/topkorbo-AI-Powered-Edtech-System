@@ -28,6 +28,12 @@ export async function updateMentorScheduledLiveClass(sessionId, payload) {
   });
 }
 
+export async function cancelMentorScheduledLiveClass(sessionId) {
+  return httpClient.request(`/live-class/mentor/schedule/${sessionId}/cancel`, {
+    method: 'POST',
+  });
+}
+
 export async function endMentorLiveClass(sessionId) {
   return httpClient.request(`/live-class/mentor/${sessionId}/end`, {
     method: 'POST',

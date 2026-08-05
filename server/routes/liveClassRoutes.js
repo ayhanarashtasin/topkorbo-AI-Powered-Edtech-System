@@ -7,6 +7,7 @@ const router = express.Router();
 router.get('/mentor/dashboard', auth, liveClassController.getMentorLiveClassDashboard);
 router.post('/mentor/schedule', auth, liveClassController.scheduleMentorLiveClass);
 router.patch('/mentor/schedule/:sessionId', auth, liveClassController.updateMentorScheduledLiveClass);
+router.post('/mentor/schedule/:sessionId/cancel', auth, liveClassController.cancelMentorScheduledLiveClass);
 router.post('/mentor/start', auth, liveClassController.startMentorLiveClass);
 router.post('/mentor/:sessionId/end', auth, liveClassController.endMentorLiveClass);
 router.get('/student/sessions', auth, liveClassController.listStudentLiveClasses);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import LiveClassRoom from '../components/liveclass/LiveClassRoom';
-import { endMentorLiveClass, fetchMentorLiveDashboard, scheduleMentorLiveClass, startMentorLiveClass, updateMentorScheduledLiveClass } from '../services/liveClassApi';
+import { cancelMentorScheduledLiveClass, endMentorLiveClass, fetchMentorLiveDashboard, scheduleMentorLiveClass, startMentorLiveClass, updateMentorScheduledLiveClass } from '../services/liveClassApi';
 import { fetchMentorDashboard } from '../services/mentorApi';
 import { DisconnectReason } from 'livekit-client';
 import './LiveClassPages.css';
@@ -196,6 +196,26 @@ export default function MentorLiveClass() {
       await loadDashboard();
     } catch (err) {
       setError(err.message || 'Failed to end live class.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCancelScheduledClass = async (session) => {
+    if (!session?._id) return;
+    const confirmed = window.confirm(`Cancel "${session.title || 'this class'}"? Students will be notified.`);
+    if (!confirmed) return;
+
+    try {
+      setBusy(true);
+      setError('');
+      await cancelMentorScheduledLiveClass(session._id);
+      if (scheduleForm.editingSessionId === session._id) {
+        resetScheduleForm();
+      }
+      await loadDashboard();
+    } catch (err) {
+      setError(err.message || 'Failed to cancel scheduled class.');
     } finally {
       setBusy(false);
     }
@@ -418,6 +438,14 @@ export default function MentorLiveClass() {
                           onClick={() => handleEditScheduledClass(session)}
                         >
                           Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={busy}
+                          onClick={() => handleCancelScheduledClass(session)}
+                        >
+                          Cancel
                         </button>
                         <button
                           type="button"

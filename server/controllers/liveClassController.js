@@ -422,6 +422,60 @@ exports.updateMentorScheduledLiveClass = async (req, res, next) => {
   }
 };
 
+exports.cancelMentorScheduledLiveClass = async (req, res, next) => {
+  try {
+    if (!isMentorRole(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only mentors can cancel scheduled live classes.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.sessionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid scheduled class id.' });
+    }
+
+    const mentor = await User.findById(req.user.id).select('name role');
+    if (!mentor || !isMentorRole(mentor.role)) {
+      return res.status(403).json({ success: false, message: 'Mentor account not found.' });
+    }
+
+    const session = await LiveSession.findOne({
+      _id: req.params.sessionId,
+      mentorId: req.user.id,
+      status: 'scheduled',
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Scheduled live class not found.' });
+    }
+    if (session.scheduledStart && new Date(session.scheduledStart).getTime() <= Date.now()) {
+      return res.status(409).json({
+        success: false,
+        message: 'Class time has already started. You can only cancel before the scheduled start time.',
+      });
+    }
+
+    const acceptedStudentIds = await getAcceptedStudentIds(req.user.id);
+    const recipients = resolveScheduleRecipients(session, acceptedStudentIds);
+
+    session.status = 'cancelled';
+    await session.save();
+
+    const io = getSocketServer();
+    await Promise.allSettled(recipients.map((recipient) => notify(io, {
+      recipient,
+      actor: mentor._id,
+      type: 'live_class',
+      message: `${mentor.name} cancelled a live class: ${session.title}`,
+      preview: formatSchedulePreview(session.scheduledStart, session.durationMinutes),
+    })));
+
+    return res.json({
+      success: true,
+      data: serializeSession(session),
+      message: 'Scheduled live class cancelled.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.startMentorLiveClass = async (req, res, next) => {
   try {
     if (!isMentorRole(req.user.role)) {
