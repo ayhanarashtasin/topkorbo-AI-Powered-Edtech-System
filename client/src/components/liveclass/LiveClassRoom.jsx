@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AudioTrack,
   LiveKitRoom,
   useLocalParticipant,
   RoomAudioRenderer,
+  StartAudio,
   VideoTrack,
   useParticipants,
   useRoomContext,
   useTracks,
 } from '@livekit/components-react';
-import { LogLevel, Track, setLogLevel } from 'livekit-client';
+import { LogLevel, RoomEvent, Track, setLogLevel } from 'livekit-client';
 import { HiArrowsExpand, HiDesktopComputer, HiMicrophone, HiPhoneMissedCall, HiVideoCamera } from 'react-icons/hi';
 import './LiveClassRoom.css';
 
@@ -20,6 +22,7 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     { source: Track.Source.ScreenShare, withPlaceholder: false },
     { source: Track.Source.Camera, withPlaceholder: false },
   ]);
+  const microphoneTracks = useTracks([Track.Source.Microphone], { onlySubscribed: false });
   const [cameraEnabled, setCameraEnabled] = useState(mode === 'mentor');
   const [micEnabled, setMicEnabled] = useState(mode === 'mentor');
   const [screenEnabled, setScreenEnabled] = useState(false);
@@ -31,9 +34,26 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     || null;
 
   const activeSpeakerIds = new Set((room?.activeSpeakers || []).map((participant) => participant.identity));
+  const joinedStudents = participants
+    .filter((participant) => (
+      participant.identity.startsWith('student:')
+      && participant.identity !== localParticipant?.identity
+    ))
+    .map((participant) => ({
+      identity: participant.identity,
+      name: participant.name || participant.identity,
+      isSpeaking: participant.isSpeaking || activeSpeakerIds.has(participant.identity),
+      hasMicrophone: Array.from(participant.audioTrackPublications?.values?.() || [])
+        .some((publication) => publication.source === Track.Source.Microphone && !publication.isMuted),
+    }));
   const studentTracks = tracks.filter((trackRef) => (
     trackRef.participant.identity.startsWith('student:')
     && trackRef.source === Track.Source.Camera
+  ));
+  const studentMicrophoneTracks = microphoneTracks.filter((trackRef) => (
+    trackRef.participant.identity.startsWith('student:')
+    && !trackRef.participant.isLocal
+    && trackRef.source === Track.Source.Microphone
   ));
 
   const featuredStudentTracks = [...studentTracks]
@@ -44,18 +64,9 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     })
     .slice(0, 6);
 
-  const featuredIds = new Set(featuredStudentTracks.map((trackRef) => trackRef.participant.identity));
-  const compactParticipants = participants
-    .filter((participant) => (
-      participant.identity.startsWith('student:')
-      && participant.identity !== localParticipant?.identity
-      && !featuredIds.has(participant.identity)
-    ))
-    .map((participant) => ({
-      identity: participant.identity,
-      name: participant.name || participant.identity,
-      isSpeaking: participant.isSpeaking,
-    }));
+  const studentsWithoutCamera = joinedStudents.filter((student) => (
+    !featuredStudentTracks.some((trackRef) => trackRef.participant.identity === student.identity)
+  ));
 
   const participantCount = participants.length;
   const mentorIdentity = mode === 'mentor'
@@ -121,6 +132,43 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
   }, []);
 
+  useEffect(() => {
+    if (mode !== 'mentor') return;
+
+    const subscribeToStudentAudio = (publication, participant) => {
+      if (!publication || participant?.isLocal) return;
+      if (!participant?.identity?.startsWith('student:')) return;
+      if (publication.source === Track.Source.Microphone || publication.kind === Track.Kind.Audio) {
+        publication.setSubscribed?.(true);
+      }
+    };
+
+    room.remoteParticipants?.forEach((participant) => {
+      participant.audioTrackPublications?.forEach((publication) => {
+        subscribeToStudentAudio(publication, participant);
+      });
+    });
+
+    const handleTrackPublished = (publication, participant) => {
+      subscribeToStudentAudio(publication, participant);
+    };
+
+    const handleTrackSubscribed = (track, publication, participant) => {
+      subscribeToStudentAudio(publication, participant);
+      if (track?.kind === Track.Kind.Audio) {
+        room.startAudio().catch(() => {});
+      }
+    };
+
+    room.on(RoomEvent.TrackPublished, handleTrackPublished);
+    room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed);
+
+    return () => {
+      room.off(RoomEvent.TrackPublished, handleTrackPublished);
+      room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed);
+    };
+  }, [mode, room]);
+
   return (
     <div className="live-room">
       <div className="live-room__header">
@@ -139,6 +187,7 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
                 <HiMicrophone size={18} />
                 {micEnabled ? 'Mic On' : 'Mic Off'}
               </button>
+              <StartAudio className="live-room__control live-room__control--audio" label="Allow Audio" />
               <button type="button" className="live-room__control" onClick={toggleScreen}>
                 <HiDesktopComputer size={18} />
                 {screenEnabled ? 'Stop Share' : 'Share Screen'}
@@ -204,28 +253,27 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
         <aside className="live-room__sidebar">
           <div className="live-room__sidebar-block">
             <h3>Active students</h3>
-            <div className="live-room__active-grid">
-              {featuredStudentTracks.length ? featuredStudentTracks.map((trackRef) => (
+            {featuredStudentTracks.length ? (
+              <div className="live-room__active-grid">
+                {featuredStudentTracks.map((trackRef) => (
                 <div key={`${trackRef.participant.identity}-${trackRef.source}`} className="live-room__active-tile">
                   <VideoTrack trackRef={trackRef} />
                   <span>{trackRef.participant.name || trackRef.participant.identity}</span>
                 </div>
-              )) : (
-                <div className="live-room__compact-empty">Only mentor media is being highlighted right now.</div>
-              )}
-            </div>
-          </div>
-
-          <div className="live-room__sidebar-block">
-            <h3>Other classmates</h3>
+                ))}
+              </div>
+            ) : null}
             <div className="live-room__compact-list">
-              {compactParticipants.length ? compactParticipants.map((participant) => (
-                <div key={participant.identity} className={`live-room__compact-item ${participant.isSpeaking ? 'live-room__compact-item--speaking' : ''}`}>
-                  <div className="live-room__avatar">{participant.name.charAt(0).toUpperCase()}</div>
-                  <span>{participant.name}</span>
+              {studentsWithoutCamera.length ? studentsWithoutCamera.map((student) => (
+                <div key={student.identity} className={`live-room__compact-item ${student.isSpeaking ? 'live-room__compact-item--speaking' : ''}`}>
+                  <div className="live-room__avatar">{student.name.charAt(0).toUpperCase()}</div>
+                  <span>{student.name}</span>
+                  <span className={student.hasMicrophone ? 'live-room__mic-state live-room__mic-state--on' : 'live-room__mic-state'}>
+                    {student.hasMicrophone ? 'Mic on' : 'Muted'}
+                  </span>
                 </div>
               )) : (
-                <div className="live-room__compact-empty">No additional student tiles are being rendered.</div>
+                <div className="live-room__compact-empty">No students have joined yet.</div>
               )}
             </div>
           </div>
@@ -233,6 +281,14 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
       </div>
 
       <RoomAudioRenderer />
+      <div className="live-room__student-audio">
+        {mode === 'mentor' ? studentMicrophoneTracks.map((trackRef) => (
+          <AudioTrack
+            key={`${trackRef.participant.identity}-${trackRef.publication?.trackSid || trackRef.source}`}
+            trackRef={trackRef}
+          />
+        )) : null}
+      </div>
     </div>
   );
 }
@@ -277,6 +333,7 @@ export default function LiveClassRoom({
       audio={mode === 'mentor'}
       video={mode === 'mentor'}
       options={roomOptions}
+      connectOptions={{ autoSubscribe: true }}
       onConnected={onConnected}
       onError={onError}
       onDisconnected={onDisconnected}
