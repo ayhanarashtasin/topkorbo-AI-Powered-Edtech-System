@@ -8,10 +8,12 @@ const Post = require('../../models/Post');
 const Comment = require('../../models/Comment');
 const Follow = require('../../models/Follow');
 const PracticeAttempt = require('../../models/PracticeAttempt');
+const LiveSession = require('../../models/LiveSession');
 const { createAdminAuditLog } = require('./adminAuditService');
 
 const MANAGEABLE_ROLES = ['student', 'tutor', 'teacher', 'moderator', 'admin'];
 const MANAGEABLE_STATUSES = ['active', 'suspended', 'banned'];
+const LIVE_CLASS_WEEKLY_LIMIT = 4;
 
 function escapeRegex(value = '') {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -26,6 +28,39 @@ function resolveAdminRoleLabel(user) {
   if (user.forumRole === 'admin') return 'admin';
   if (user.forumRole === 'moderator') return 'moderator';
   return user.role;
+}
+
+function getWeekRange(baseDate = new Date()) {
+  const date = new Date(baseDate);
+  const day = date.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() + diffToMonday);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+async function getLiveClassUsage(userId, resetAt = null) {
+  const { start, end } = getWeekRange();
+  const effectiveStart = resetAt && resetAt > start ? resetAt : start;
+  const count = await LiveSession.countDocuments({
+    mentorId: userId,
+    actualStart: { $gte: effectiveStart, $lte: end }
+  });
+
+  return {
+    sessionsThisWeek: count,
+    weeklyLimit: LIVE_CLASS_WEEKLY_LIMIT,
+    weekStart: start,
+    weekEnd: end,
+    resetAt
+  };
 }
 
 function isActiveAdmin(user) {
@@ -201,7 +236,7 @@ async function getUserDetails(userId) {
     Follow.countDocuments({ follower: user._id })
   ]);
 
-  return {
+  const details = {
     id: String(user._id),
     name: user.name || '',
     email: user.email || '',
@@ -244,6 +279,12 @@ async function getUserDetails(userId) {
       followingCount
     }
   };
+
+  if (['tutor', 'teacher'].includes(user.role)) {
+    details.liveClassUsage = await getLiveClassUsage(user._id, user.liveClassUsageResetAt || null);
+  }
+
+  return details;
 }
 
 async function updateUserRole({ adminUser, targetUserId, nextRole, reason = '', confirmSelfDowngrade = false }) {

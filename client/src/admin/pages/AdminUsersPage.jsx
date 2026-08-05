@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import AdminActionButton from '../components/AdminActionButton';
 import AdminBadge from '../components/AdminBadge';
@@ -11,6 +11,7 @@ import AdminUserDetailsDrawer from '../components/AdminUserDetailsDrawer';
 import {
   fetchAdminUserDetails,
   fetchAdminUsers,
+  resetAdminTeacherLiveSessions,
   updateAdminUserRole,
   updateAdminUserStatus
 } from '../services/adminApi';
@@ -72,6 +73,7 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUsers(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.page, filters.role, filters.status, filters.createdFrom, filters.createdTo]);
@@ -96,11 +98,6 @@ export default function AdminUsersPage() {
       setDetailsLoading(false);
     }
   }
-
-  const activeUserRow = useMemo(
-    () => users.find((user) => user.id === selectedUserId) || selectedUser,
-    [selectedUser, selectedUserId, users]
-  );
 
   async function handleRoleConfirm(reason) {
     try {
@@ -136,6 +133,22 @@ export default function AdminUsersPage() {
       }
     } catch (err) {
       toast.error(err.message || 'Failed to update account status');
+    }
+  }
+
+  async function handleLiveSessionResetConfirm(reason) {
+    try {
+      await resetAdminTeacherLiveSessions(actionState.userId, { reason });
+      toast.success('Live sessions reset to 0');
+      const currentId = actionState.userId;
+      setActionState(null);
+      await loadUsers();
+      if (selectedUserId === currentId) {
+        const refreshed = await fetchAdminUserDetails(currentId);
+        setSelectedUser(refreshed);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to reset live sessions');
     }
   }
 
@@ -221,6 +234,23 @@ export default function AdminUsersPage() {
                         View
                       </AdminActionButton>
 
+                      {['tutor', 'teacher'].includes(user.baseRole) ? (
+                        <AdminActionButton
+                          tone="warning"
+                          variant="ghost"
+                          onClick={() => {
+                            setActionState({
+                              type: 'liveSessionsReset',
+                              userId: user.id,
+                              title: `Reset live sessions for ${user.name || 'this user'}?`,
+                              description: 'This sets the mentor panel weekly usage back to 0 and allows the teacher to start classes again this week.'
+                            });
+                          }}
+                        >
+                          Reset sessions
+                        </AdminActionButton>
+                      ) : null}
+
                       <select
                         value=""
                         onChange={(event) => {
@@ -286,6 +316,14 @@ export default function AdminUsersPage() {
           setSelectedUserId('');
           setSelectedUser(null);
         }}
+        onLiveSessionReset={() => {
+          setActionState({
+            type: 'liveSessionsReset',
+            userId: selectedUserId,
+            title: `Reset live sessions for ${selectedUser?.name || 'this user'}?`,
+            description: 'This sets the mentor panel weekly usage back to 0 and allows the teacher to start classes again this week.'
+          });
+        }}
       />
 
       <AdminConfirmModal
@@ -306,6 +344,15 @@ export default function AdminUsersPage() {
         confirmLabel="Update status"
         onClose={() => setActionState(null)}
         onConfirm={handleStatusConfirm}
+      />
+
+      <AdminConfirmModal
+        open={actionState?.type === 'liveSessionsReset'}
+        title={actionState?.title}
+        description={actionState?.description}
+        confirmLabel="Reset to 0"
+        onClose={() => setActionState(null)}
+        onConfirm={handleLiveSessionResetConfirm}
       />
     </section>
   );

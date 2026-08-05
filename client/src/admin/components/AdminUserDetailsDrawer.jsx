@@ -25,7 +25,9 @@ function toneForRole(role) {
   return 'neutral';
 }
 
-export default function AdminUserDetailsDrawer({ user, open, loading, onClose }) {
+export default function AdminUserDetailsDrawer({ user, open, loading, onClose, onLiveSessionReset }) {
+  const canResetLiveSessions = ['tutor', 'teacher'].includes(user?.baseRole || user?.role);
+
   return (
     <div className={`admin-drawer ${open ? 'admin-drawer--open' : ''}`}>
       <div className="admin-drawer__backdrop" onClick={onClose} />
@@ -68,6 +70,31 @@ export default function AdminUserDetailsDrawer({ user, open, loading, onClose })
                 <div><strong>Role source</strong><span>{user.baseRole || user.role}</span></div>
               </div>
             </section>
+
+            {canResetLiveSessions ? (
+              <section className="admin-panel">
+                <div className="admin-panel__header">
+                  <div>
+                    <h3>Live class quota</h3>
+                    <p className="admin-panel__subtext">Reset this teacher's weekly count when they need a manual bypass.</p>
+                  </div>
+                  <AdminBadge tone="info">
+                    {user.liveClassUsage?.sessionsThisWeek ?? 0} / {user.liveClassUsage?.weeklyLimit ?? 4}
+                  </AdminBadge>
+                </div>
+
+                <div className="admin-meta-grid">
+                  <div><strong>Week starts</strong><span>{formatDate(user.liveClassUsage?.weekStart)}</span></div>
+                  <div><strong>Last reset</strong><span>{formatDate(user.liveClassUsage?.resetAt)}</span></div>
+                </div>
+
+                <div className="admin-action-row">
+                  <AdminActionButton tone="warning" variant="ghost" onClick={onLiveSessionReset}>
+                    Reset sessions to 0
+                  </AdminActionButton>
+                </div>
+              </section>
+            ) : null}
 
             <section className="admin-panel">
               <h3>Academic and related info</h3>
