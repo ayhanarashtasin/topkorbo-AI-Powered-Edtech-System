@@ -6,6 +6,14 @@ import { fetchMentorDashboard } from '../services/mentorApi';
 import { DisconnectReason } from 'livekit-client';
 import './LiveClassPages.css';
 
+const emptyDashboard = {
+  sessionsThisWeek: 0,
+  weeklyLimit: 4,
+  activeSession: null,
+  scheduledSessions: [],
+  classHistory: [],
+};
+
 export default function MentorLiveClass() {
   const [user] = useState({
     name: localStorage.getItem('topkorbo_name') || 'Mentor',
@@ -22,7 +30,7 @@ export default function MentorLiveClass() {
     audienceType: 'all_accepted',
     studentIds: [],
   });
-  const [dashboard, setDashboard] = useState({ sessionsThisWeek: 0, weeklyLimit: 4, activeSession: null, scheduledSessions: [] });
+  const [dashboard, setDashboard] = useState(emptyDashboard);
   const [acceptedStudents, setAcceptedStudents] = useState([]);
   const [connection, setConnection] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -36,7 +44,7 @@ export default function MentorLiveClass() {
       return 'LiveKit disconnected because another tab/device is already connected with the same mentor identity.';
     }
     if (name === 'ROOM_DELETED') {
-      return 'LiveKit disconnected because the room was deleted on the server.';
+      return 'The video room closed, but the class stays saved until you end it or time finishes. Use Rejoin Class to reconnect.';
     }
     if (name === 'JOIN_FAILURE') {
       return 'LiveKit disconnected while joining the room. Check the token and room permissions.';
@@ -68,7 +76,7 @@ export default function MentorLiveClass() {
         fetchMentorLiveDashboard(),
         fetchMentorDashboard(),
       ]);
-      setDashboard(liveData || { sessionsThisWeek: 0, weeklyLimit: 4, activeSession: null, scheduledSessions: [] });
+      setDashboard({ ...emptyDashboard, ...(liveData || {}) });
       setAcceptedStudents(Array.isArray(mentorData?.students) ? mentorData.students : []);
     } catch (err) {
       setError(err.message || 'Failed to load live class dashboard.');
@@ -233,6 +241,7 @@ export default function MentorLiveClass() {
               onDisconnected={(reason) => {
                 setConnected(false);
                 setConnection(null);
+                loadDashboard();
                 setError((prev) => prev || `Live class disconnected. ${formatDisconnectReason(reason)}`);
               }}
               onEndClass={handleEndClass}
@@ -242,6 +251,43 @@ export default function MentorLiveClass() {
             <div className="live-page__hint">
               Connecting to LiveKit at <strong>{connection.wsUrl}</strong>
             </div>
+          ) : null}
+
+          {!connection && dashboard.activeSession ? (
+            <section className="live-page__schedule">
+              <div className="live-page__section-head">
+                <div>
+                  <h2>Current Live Class</h2>
+                  <p>This class stays available until you end it or the scheduled duration finishes.</p>
+                </div>
+                <span>Live</span>
+              </div>
+              <article className="live-page__card">
+                <div>
+                  <h3>{dashboard.activeSession.title || 'Live Class'}</h3>
+                  <p>{formatClassTime(dashboard.activeSession.actualStart)} - {dashboard.activeSession.durationMinutes || 60} minutes</p>
+                  <small>{dashboard.activeSession.description || 'Class is ready to rejoin.'}</small>
+                </div>
+                <div className="live-page__card-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy}
+                    onClick={handleEndClass}
+                  >
+                    End Class
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={busy}
+                    onClick={() => handleStartClass(dashboard.activeSession)}
+                  >
+                    Rejoin Class
+                  </button>
+                </div>
+              </article>
+            </section>
           ) : null}
 
           {!connection ? (
@@ -387,6 +433,40 @@ export default function MentorLiveClass() {
                 </div>
               ) : (
                 <div className="live-page__empty">No scheduled classes yet.</div>
+              )}
+            </section>
+          ) : null}
+
+          {!connection ? (
+            <section className="live-page__schedule">
+              <div className="live-page__section-head">
+                <div>
+                  <h2>Class History</h2>
+                  <p>Recently completed and cancelled classes.</p>
+                </div>
+                <span>{dashboard.classHistory?.length || 0} classes</span>
+              </div>
+              {dashboard.classHistory?.length ? (
+                <div className="live-page__directory">
+                  {dashboard.classHistory.map((session) => (
+                    <article key={session._id} className="live-page__card">
+                      <div>
+                        <h3>{session.title || 'Live Class'}</h3>
+                        <p>{formatClassTime(session.actualStart || session.scheduledStart)} - {session.durationMinutes || 60} minutes</p>
+                        <small>
+                          {session.status === 'cancelled'
+                            ? 'Cancelled'
+                            : `Ended ${formatClassTime(session.actualEnd || session.actualStart || session.scheduledStart)}`}
+                        </small>
+                      </div>
+                      <button type="button" className="btn btn-secondary" disabled>
+                        {session.status === 'cancelled' ? 'Cancelled' : 'Completed'}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="live-page__empty">No class history yet.</div>
               )}
             </section>
           ) : null}

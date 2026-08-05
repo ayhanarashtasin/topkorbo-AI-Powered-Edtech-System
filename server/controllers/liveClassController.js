@@ -11,8 +11,8 @@ const { notify } = require('../services/notificationService');
 const MENTOR_ROLES = new Set(['tutor', 'teacher']);
 const SESSION_TTL_SECONDS = 7200;
 const WEEKLY_LIMIT = 4;
-const RECONNECT_WINDOW_MS = 2 * 60 * 60 * 1000;
 const SCHEDULE_LOOKAHEAD_DAYS = 30;
+const CLASS_HISTORY_DAYS = 90;
 
 function getLiveKitConfig() {
   const host = process.env.LIVEKIT_HOST || process.env.LIVEKIT_URL;
@@ -111,23 +111,40 @@ function getSocketServer() {
   }
 }
 
-function getLiveSessionExpiryCutoff() {
-  return new Date(Date.now() - RECONNECT_WINDOW_MS);
+function getSessionEndAt(session) {
+  const start = session?.actualStart || session?.scheduledStart;
+  if (!start) return null;
+
+  const startDate = new Date(start);
+  if (Number.isNaN(startDate.getTime())) return null;
+
+  const durationMinutes = Math.min(180, Math.max(15, Number(session.durationMinutes) || 60));
+  return new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+}
+
+function isLiveSessionExpired(session, now = new Date()) {
+  const endAt = getSessionEndAt(session);
+  return Boolean(endAt && endAt <= now);
 }
 
 async function closeExpiredLiveSessions(filter = {}) {
+  const liveSessions = await LiveSession.find({
+    ...filter,
+    status: 'live',
+  }).select('_id actualStart scheduledStart durationMinutes').lean();
+
+  const now = new Date();
+  const expiredSessionIds = liveSessions
+    .filter((session) => isLiveSessionExpired(session, now))
+    .map((session) => session._id);
+
+  if (!expiredSessionIds.length) {
+    return { matchedCount: 0, modifiedCount: 0 };
+  }
+
   return LiveSession.updateMany(
-    {
-      ...filter,
-      status: 'live',
-      actualStart: { $lt: getLiveSessionExpiryCutoff() },
-    },
-    {
-      $set: {
-        status: 'completed',
-        actualEnd: new Date(),
-      },
-    },
+    { _id: { $in: expiredSessionIds }, status: 'live' },
+    { $set: { status: 'completed', actualEnd: now } },
   );
 }
 
@@ -208,7 +225,6 @@ exports.getMentorLiveClassDashboard = async (req, res, next) => {
     const activeSession = await LiveSession.findOne({
       mentorId: req.user.id,
       status: 'live',
-      actualStart: { $gte: new Date(Date.now() - RECONNECT_WINDOW_MS) },
     }).sort({ actualStart: -1 }).lean();
     const scheduledSessions = await LiveSession.find({
       mentorId: req.user.id,
@@ -221,14 +237,28 @@ exports.getMentorLiveClassDashboard = async (req, res, next) => {
       .sort({ scheduledStart: 1 })
       .limit(20)
       .lean();
+    const historyCutoff = new Date(Date.now() - CLASS_HISTORY_DAYS * 24 * 60 * 60 * 1000);
+    const classHistory = await LiveSession.find({
+      mentorId: req.user.id,
+      status: { $in: ['completed', 'cancelled'] },
+      $or: [
+        { actualEnd: { $gte: historyCutoff } },
+        { actualStart: { $gte: historyCutoff } },
+        { scheduledStart: { $gte: historyCutoff } },
+      ],
+    })
+      .sort({ actualEnd: -1, actualStart: -1, scheduledStart: -1 })
+      .limit(30)
+      .lean();
 
     return res.json({
       success: true,
       data: {
         sessionsThisWeek: usage.count,
         weeklyLimit: usage.limit,
-        activeSession,
+        activeSession: activeSession ? serializeSession(activeSession) : null,
         scheduledSessions: scheduledSessions.map(serializeSession),
+        classHistory: classHistory.map(serializeSession),
       },
     });
   } catch (err) {
@@ -399,7 +429,6 @@ exports.startMentorLiveClass = async (req, res, next) => {
     }
 
     const { host, apiKey, apiSecret } = getLiveKitConfig();
-    const roomService = new RoomServiceClient(host, apiKey, apiSecret);
     const mentor = await User.findById(req.user.id).select('name role');
     if (!mentor || !isMentorRole(mentor.role)) {
       return res.status(403).json({ success: false, message: 'Mentor account not found.' });
@@ -410,7 +439,6 @@ exports.startMentorLiveClass = async (req, res, next) => {
     const requestedSessionId = req.body?.sessionId && mongoose.Types.ObjectId.isValid(req.body.sessionId)
       ? String(req.body.sessionId)
       : '';
-    const reconnectThreshold = new Date(Date.now() - RECONNECT_WINDOW_MS);
 
     let session = null;
     let weeklyUsageIncremented = false;
@@ -429,27 +457,6 @@ exports.startMentorLiveClass = async (req, res, next) => {
         roomName: requestedRoomName,
         status: { $in: ['scheduled', 'live'] },
       });
-    }
-
-    if (session?.status === 'live') {
-      if (session) {
-        const activeRooms = await roomService.listRooms([session.roomName]);
-        if (!activeRooms.length) {
-          // The database still has a live session, but LiveKit has already
-          // deleted the room (usually because the previous browser session
-          // dropped and the room was cleaned up). Mark the stale row closed
-          // so we can mint a fresh room instead of rejoining a dead one.
-          session.status = 'completed';
-          session.actualEnd = new Date();
-          await session.save();
-          session = null;
-        } else if (session.actualStart < reconnectThreshold) {
-          return res.status(409).json({
-            success: false,
-            message: 'This live class is too old to rejoin. Please end it and start a new one.',
-          });
-        }
-      }
     }
 
     if (session?.status === 'scheduled') {
@@ -531,11 +538,8 @@ exports.startMentorLiveClass = async (req, res, next) => {
           session = await LiveSession.findOne({
             mentorId: req.user.id,
             status: 'live',
-            actualStart: { $gte: reconnectThreshold },
           });
           if (!session) {
-            // Race produced a stale live row (>RECONNECT_WINDOW_MS old).
-            // Surface a clear 409 so the client knows to end and restart.
             return res.status(409).json({
               success: false,
               message: 'A live session already exists for your account. Please end it first.',
@@ -648,9 +652,10 @@ exports.listStudentLiveClasses = async (req, res, next) => {
 
     const now = new Date();
     const lookahead = new Date(Date.now() + SCHEDULE_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
+    const historyCutoff = new Date(Date.now() - CLASS_HISTORY_DAYS * 24 * 60 * 60 * 1000);
     const sessions = await LiveSession.find({
       mentorId: { $in: mentorIds },
-      status: { $in: ['live', 'scheduled'] },
+      status: { $in: ['live', 'scheduled', 'completed', 'cancelled'] },
       $or: [
         { audienceType: 'all_accepted' },
         { audienceType: { $exists: false } },
@@ -665,6 +670,14 @@ exports.listStudentLiveClasses = async (req, res, next) => {
               $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
               $lte: lookahead,
             },
+          },
+          {
+            status: { $in: ['completed', 'cancelled'] },
+            $or: [
+              { actualEnd: { $gte: historyCutoff } },
+              { actualStart: { $gte: historyCutoff } },
+              { scheduledStart: { $gte: historyCutoff } },
+            ],
           },
         ],
       }],
@@ -683,6 +696,7 @@ exports.listStudentLiveClasses = async (req, res, next) => {
         scheduledStart: session.scheduledStart || null,
         durationMinutes: session.durationMinutes || 60,
         actualStart: session.actualStart,
+        actualEnd: session.actualEnd || null,
         status: session.status,
         canJoin: session.status === 'live',
         mentor: session.mentorId ? {
@@ -720,7 +734,7 @@ exports.joinStudentLiveClass = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Live class not found.' });
     }
 
-    if (session.actualStart && session.actualStart < getLiveSessionExpiryCutoff()) {
+    if (isLiveSessionExpired(session)) {
       session.status = 'completed';
       session.actualEnd = new Date();
       await session.save();

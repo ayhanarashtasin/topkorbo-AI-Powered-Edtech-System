@@ -26,7 +26,7 @@ export default function StudentLiveClass() {
       return 'LiveKit disconnected because another tab/device is already connected with the same student identity.';
     }
     if (name === 'ROOM_DELETED') {
-      return 'LiveKit disconnected because the room was deleted on the server.';
+      return 'The video room closed. If the mentor has not ended the class, you can join again from Live Now.';
     }
     if (name === 'JOIN_FAILURE') {
       return 'LiveKit disconnected while joining the room. Check the token and room permissions.';
@@ -46,6 +46,7 @@ export default function StudentLiveClass() {
 
   const liveSessions = sessions.filter((session) => session.status === 'live');
   const upcomingSessions = sessions.filter((session) => session.status === 'scheduled');
+  const historySessions = sessions.filter((session) => ['completed', 'cancelled'].includes(session.status));
 
   const loadSessions = async () => {
     try {
@@ -160,6 +161,38 @@ export default function StudentLiveClass() {
                 ))
               )}
             </section>
+
+            <section className="live-page__directory">
+              <div className="live-page__section-head">
+                <div>
+                  <h2>Class History</h2>
+                  <p>Classes from your accepted mentors that already ended.</p>
+                </div>
+                <span>{historySessions.length} classes</span>
+              </div>
+              {loading ? (
+                <div className="live-page__empty">Loading class history...</div>
+              ) : historySessions.length === 0 ? (
+                <div className="live-page__empty">No completed classes yet.</div>
+              ) : (
+                historySessions.map((session) => (
+                  <article key={session._id} className="live-page__card">
+                    <div>
+                      <h3>{session.title}</h3>
+                      <p>{session.mentor?.name || 'Mentor'}</p>
+                      <small>
+                        {session.status === 'cancelled'
+                          ? `Cancelled - ${formatClassTime(session.scheduledStart)}`
+                          : `Completed - ${formatClassTime(session.actualEnd || session.actualStart || session.scheduledStart)}`}
+                      </small>
+                    </div>
+                    <button type="button" className="btn btn-secondary" disabled>
+                      {session.status === 'cancelled' ? 'Cancelled' : 'Completed'}
+                    </button>
+                  </article>
+                ))
+              )}
+            </section>
             </>
           ) : (
             <LiveClassRoom
@@ -179,6 +212,7 @@ export default function StudentLiveClass() {
               onDisconnected={(reason) => {
                 setConnected(false);
                 setConnection(null);
+                loadSessions();
                 setError((prev) => prev || `Live class disconnected. ${formatDisconnectReason(reason)}`);
               }}
               onEndClass={null}
