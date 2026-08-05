@@ -1,17 +1,33 @@
+/**
+ * Image upload service with dual storage backends.
+ *
+ * When Cloudinary credentials are configured, images are uploaded there
+ * (auto-optimized, globally distributed). Otherwise, files are written to a
+ * local /uploads/forum directory served as static assets. On Vercel or other
+ * serverless platforms without persistent disk, Cloudinary is required — the
+ * service throws a 503 if it's missing.
+ */
+
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { cloudinary, isCloudinaryEnabled } = require('../config/cloudinary');
 
+// Local disk root for forum image storage (relative to server root)
 const LOCAL_ROOT = path.resolve(__dirname, '..', 'uploads', 'forum');
+
+// Vercel and similar platforms have ephemeral filesystems — local storage won't persist
 const requiresExternalStorage =
   Boolean(process.env.VERCEL) ||
   process.env.REQUIRE_EXTERNAL_IMAGE_STORAGE === 'true';
 
 /**
- * Upload a single image buffer.
- * Returns { url, publicId, width, height }
- * Works for both Cloudinary and local-disk fallback.
+ * Upload a single image buffer to the best available storage backend.
+ *
+ * Returns { url, publicId, width, height } where width/height are null for local
+ * storage (no server-side resizing). The file's detectedMime/detectedExt (set by
+ * verifyImageBytes middleware) determine the extension — we never use the client
+ * filename to avoid path traversal or extension spoofing.
  */
 async function uploadImage(file, userId, folder = 'topkorbo/forum') {
   if (!file || !file.buffer) {
@@ -24,6 +40,7 @@ async function uploadImage(file, userId, folder = 'topkorbo/forum') {
         {
           folder,
           resource_type: 'image',
+          // Limit to 1600px max dimension, auto quality for bandwidth savings
           transformation: [{ width: 1600, height: 1600, crop: 'limit', quality: 'auto' }]
         },
         (err, result) => {
@@ -40,9 +57,7 @@ async function uploadImage(file, userId, folder = 'topkorbo/forum') {
     });
   }
 
-  // Local fallback — write to /uploads/forum/<userId>/<timestamp>-<rand>.<ext>
-  // Derive the extension from the *detected* content type (set by
-  // verifyImageBytes), never from the client-supplied filename/mimetype.
+  // Serverless platforms have no persistent disk — reject if Cloudinary isn't configured
   if (requiresExternalStorage) {
     const error = new Error(
       'Forum image storage is not configured. Set the Cloudinary environment variables.'
@@ -51,19 +66,22 @@ async function uploadImage(file, userId, folder = 'topkorbo/forum') {
     throw error;
   }
 
+  // Local fallback: write to /uploads/forum/<userId>/<timestamp>-<rand>.<ext>
   const ext = (file.detectedExt || mimeToExt(file.detectedMime) || mimeToExt(file.mimetype) || '.jpg')
     .toLowerCase()
     .replace(/[^a-z0-9.]/g, '');
   const userDir = path.join(LOCAL_ROOT, String(userId || 'anon'));
   if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+  // Timestamp + random hex ensures uniqueness and prevents overwrites
   const safeName = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
   const fullPath = path.join(userDir, safeName);
   fs.writeFileSync(fullPath, file.buffer);
-  // Public URL — served by app.use('/uploads', ...) in server.js
+  // Public URL served by app.use('/uploads', ...) in server.js
   const publicUrl = `/uploads/forum/${userId || 'anon'}/${safeName}`;
   return { url: publicUrl, publicId: safeName, width: null, height: null };
 }
 
+/** Map a MIME type string to its canonical file extension. */
 function mimeToExt(mime) {
   if (!mime) return null;
   if (mime === 'image/png') return '.png';
@@ -75,7 +93,10 @@ function mimeToExt(mime) {
 }
 
 /**
- * Delete a previously uploaded image (best-effort, swallows errors).
+ * Delete a previously uploaded image (best-effort, never throws).
+ *
+ * Cloudinary: uses the publicId to remove the asset.
+ * Local: converts the public URL path back to an absolute filesystem path and unlinks.
  */
 async function deleteImage(publicId, localUrl) {
   if (isCloudinaryEnabled && publicId) {

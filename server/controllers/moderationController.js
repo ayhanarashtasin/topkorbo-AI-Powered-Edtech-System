@@ -23,10 +23,22 @@ const VALID_REASONS = [
   'other'
 ];
 
+/**
+ * Moderation Controller - Manages the content moderation workflow.
+ *
+ * Provides endpoints for:
+ * - User report submission (create)
+ * - Admin report review (list)
+ * - Admin action execution (dismiss, warn, hide, ban)
+ *
+ * Actions include content hiding, user warnings, and temporary bans.
+ */
 const moderationController = {
   /**
-   * POST /api/reports
-   * Body: { targetType, target, reason, description }
+   * Create a new report for content moderation.
+   *
+   * Validates target existence and prevents duplicate active reports per user+target.
+   * Uses polymorphic references to support reporting different content types.
    */
   async create(req, res, next) {
     try {
@@ -39,7 +51,7 @@ const moderationController = {
         return res.status(400).json({ success: false, message: 'Invalid reason' });
       }
 
-      // Verify target exists
+      // Verify the reported content actually exists before creating a report
       let exists = false;
       if (targetType === 'post') exists = !!(await Post.exists({ _id: target }));
       else if (targetType === 'comment') exists = !!(await Comment.exists({ _id: target }));
@@ -47,6 +59,7 @@ const moderationController = {
       else if (targetType === 'question') exists = !!(await Question.exists({ _id: target }));
       if (!exists) return res.status(404).json({ success: false, message: 'Target not found' });
 
+      // Prevent duplicate reports: only one active report per user+target combination
       const existing = await Report.exists({
         reporter: req.user.id,
         targetType,
@@ -74,7 +87,10 @@ const moderationController = {
   },
 
   /**
-   * GET /api/admin/reports?status=open  (admin)
+   * List reports filtered by status (admin only).
+   *
+   * Supports pagination with configurable limit (max 100).
+   * Populates reporter and reviewer info for admin dashboard display.
    */
   async list(req, res, next) {
     try {
@@ -94,8 +110,16 @@ const moderationController = {
   },
 
   /**
-   * POST /api/admin/reports/:id/action
-   * Body: { action: 'dismiss' | 'warn' | 'hide' | 'ban', note? }
+   * Execute a moderation action on a report (admin only).
+   *
+   * Actions:
+   * - dismiss: Close report without action
+   * - hide: Hide post/comment from public view
+   * - warn: Issue official warning to user
+   * - ban: Temporary 7-day account ban
+   *
+   * Resolves target user from post/comment author when needed.
+   * Sends real-time notifications for warnings.
    */
   async takeAction(req, res, next) {
     try {
@@ -120,6 +144,7 @@ const moderationController = {
         report.status = 'action_taken';
         actionTaken = 'hidden';
       } else if (action === 'warn' || action === 'ban') {
+        // Resolve user ID: direct for 'user' reports, lookup author for content reports
         let userId;
         if (report.targetType === 'user') userId = report.target;
         else if (report.targetType === 'post') {
@@ -136,7 +161,7 @@ const moderationController = {
           await User.findByIdAndUpdate(userId, {
             $push: { warnings: { reason: note || report.reason, issuedBy: req.user.id } }
           });
-          // Also notify the user
+          // Notify user in real-time about the warning via WebSocket
           const io = getIO();
           await notify(io, {
             recipient: userId,
@@ -148,7 +173,7 @@ const moderationController = {
           report.status = 'action_taken';
           actionTaken = 'warned';
         } else {
-          // Ban 7 days by default
+          // Default 7-day ban with automatic expiration
           await User.findByIdAndUpdate(userId, {
             isBanned: true,
             accountStatus: 'banned',

@@ -686,30 +686,44 @@ const COLLEGES = [
 ];
 
 /**
- * @desc    Fetch questions for mock test with filters
- * @route   POST /api/questions/mock-test
- * @access  Private
+ * POST /api/questions/mock-test
+ * ──────────────────────────────
+ * Main question-fetching endpoint for the mock test wizard.
+ *
+ * Shared by: Mock Test, QBank exam, Battle mode (via context param).
+ *
+ * Question selection algorithm:
+ *   1. Build $or conditions from subject/paper/chapter/topic selections
+ *   2. Build $or conditions from standards (engineering/university/academic/medical)
+ *   3. Intersect both with $and → final match stage
+ *   4. Fetch all matching questions from MongoDB
+ *   5. If context='mock': balanced distribution across chapters
+ *      (each chapter gets a fair share, then extras fill round-robin)
+ *   6. Fisher-Yates shuffle for true randomness
+ *   7. Return exactly `totalQuestions` questions
+ *
+ * Plan enforcement: increments usage counter for qbank/mock context
+ * before fetching, so even if the user navigates away, the attempt is counted.
  */
 exports.fetchMockTestQuestions = async (req, res, next) => {
   try {
     const {
-      selections,     // [{ subject, paper, chapters: [{ name, topics: [string] }] }]
-      standard,       // 'engineering' | 'university' | 'academic' | 'medical' | '' (legacy)
-      standards,      // ['engineering', 'university', 'academic', 'medical']
-      selectedEngineeringUnis, // ['BUET', 'CKRUET']
-      selectedGeneralUnis,     // ['DU', 'GST']
+      selections,              // [{ subject, paper, chapters: [{ name, topics }] }]
+      standard,                // legacy single standard string
+      standards,               // ['engineering', 'university', 'academic', 'medical']
+      selectedEngineeringUnis, // e.g. ['BUET', 'CKRUET']
+      selectedGeneralUnis,     // e.g. ['DU', 'GST']
       selectedAcademicTypes,   // ['board', 'college']
       selectedBoards,          // ['Dhaka', 'Rajshahi']
       selectedColleges,        // ['Notre Dame College']
-      questionType,   // 'mcq' | 'cq' | 'written' | ''
-      totalQuestions, // number
-      source,         // { type: 'board' | 'college', name: 'Dhaka', year: '2025' } | null
-      context         // 'qbank' | 'mock' | 'battle' — which feature is starting an exam
+      questionType,            // 'mcq' | 'cq' | 'written'
+      totalQuestions,           // number of questions to return
+      source,                  // { type, name, year } for board/college filter
+      context                  // 'qbank' | 'mock' | 'battle' — determines plan billing
     } = req.body;
 
-    // Free-tier lifetime limits are attributed by which feature is starting the
-    // exam. Battle question fetches are counted at battleController.createRoom
-    // (per room, not per fetch), so they are not gated here.
+    // Plan enforcement: increment usage before returning questions.
+    // Battle questions are billed at room creation, not here.
     if (context === 'qbank') {
       await planService.consume(req.user.id, 'qbankExams');
     } else if (context === 'mock') {
@@ -900,6 +914,15 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
     let questions;
 
     if (context === 'mock') {
+      // Balanced distribution: ensures each chapter contributes proportionally
+      // to the final question set. Without this, chapters with more questions
+      // would dominate the exam.
+      //
+      // Algorithm:
+      //   1. Group questions into chapter buckets
+      //   2. Each bucket gets baseQuota = floor(limit / numBuckets) questions
+      //   3. Remaining slots fill round-robin from buckets that still have questions
+      //   4. Final shuffle so chapter order doesn't leak into the exam
       const bucketMap = new Map();
       let hasWildcardChapter = false;
 
@@ -937,6 +960,8 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
         });
       });
 
+      // Wildcard chapters ('*') skip bucketing — used when filtering by
+      // source/board/college instead of specific chapters
       const chapterBuckets = hasWildcardChapter ? [] : Array.from(bucketMap.values());
 
       if (chapterBuckets.length > 0) {
@@ -988,7 +1013,9 @@ exports.fetchMockTestQuestions = async (req, res, next) => {
     }
 
     if (!questions) {
-      // Fisher-Yates shuffle for true randomization, then take exactly `limit` questions
+      // Fisher-Yates shuffle: unbiased randomization in O(n) time.
+      // Used as fallback when balanced distribution isn't needed
+      // (e.g. source-based fetch or wildcard chapters).
       questions = shuffleInPlace(allMatching).slice(0, limit);
     }
 

@@ -2,13 +2,10 @@ import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { HiCode, HiLink } from 'react-icons/hi';
 import { MdFormatBold, MdFormatItalic, MdFormatListBulleted, MdFormatQuote } from 'react-icons/md';
 
-// RichTextEditor — controlled contentEditable wrapper.
-//
-// Toolbar: bold / italic / code block / blockquote / bulleted list / link.
-// Pasted images are forwarded to the parent via onImageFiles (the parent
-// uploads them). HTML is re-sanitized server-side with sanitize-html.
-//
-// No third-party editor is used to keep the bundle small.
+// RichTextEditor — lightweight contentEditable wrapper for forum composition.
+// Provides toolbar formatting (bold, italic, code block, blockquote, list, link)
+// and clipboard image forwarding without bundling a full editor library.
+// Server-side sanitization is required before rendering user content.
 function RichTextEditor(
   {
     ref,
@@ -21,15 +18,15 @@ function RichTextEditor(
 ) {
   const editorRef = useRef(null);
 
-  // NOTE: `handleInput` must be declared before the `useImperativeHandle`
-  // that captures it. Otherwise the imperative methods would reference a
-  // TDZ variable and crash the compose page with a blank render.
+  // Must be declared before useImperativeHandle to avoid TDZ reference errors.
   const handleInput = useCallback(() => {
     const html = editorRef.current?.innerHTML || '';
     const text = (editorRef.current?.innerText || '').trim();
     onChange && onChange(html, text);
   }, [onChange]);
 
+  // Expose imperative methods for parent components to interact with the editor
+  // without direct DOM access (focus, insert HTML, get text, clear content).
   useImperativeHandle(ref, () => ({
     get node() { return editorRef.current; },
     focus: () => editorRef.current && editorRef.current.focus(),
@@ -46,24 +43,29 @@ function RichTextEditor(
     }
   }), [handleInput, onChange]);
 
+  // Sync initial HTML from props when it changes externally (e.g., reset after submit).
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== initialHtml) {
       editorRef.current.innerHTML = initialHtml || '';
     }
   }, [initialHtml]);
 
+  // Wrapper around document.execCommand that triggers input callback and refocuses.
   function exec(cmd, value = null) {
     document.execCommand(cmd, false, value);
     handleInput();
     editorRef.current && editorRef.current.focus();
   }
 
+  // Prompt user for URL and create hyperlink at current selection.
   function insertLink() {
     const url = window.prompt('Link URL (https://…)');
     if (!url) return;
     exec('createLink', url);
   }
 
+  // Intercept paste events to extract images and forward them to parent for upload.
+  // Non-image paste content is handled normally by contentEditable.
   function handlePaste(e) {
     const items = e.clipboardData?.items || [];
     const imageFiles = [];

@@ -1,5 +1,13 @@
+/**
+ * Comment model for the forum system.
+ *
+ * Supports threaded discussions with nested replies, rich HTML content,
+ * image attachments, mentions, and reactions. Comments are soft-deleted
+ * (isHidden) rather than physically removed to preserve thread structure.
+ */
 const mongoose = require('mongoose');
 
+/** Schema for image attachments stored via Cloudinary. */
 const imageSchema = new mongoose.Schema(
   {
     url: { type: String, required: true },
@@ -25,15 +33,24 @@ const commentSchema = new mongoose.Schema(
       like: { type: Number, default: 0 },
       love: { type: Number, default: 0 }
     },
+    /** Denormalized count of direct replies to avoid aggregation on every page load. */
     repliesCount: { type: Number, default: 0 },
-    depth: { type: Number, default: 0 }, // visual indent level
+    /** Nesting level used for client-side indentation (capped at 12). */
+    depth: { type: Number, default: 0 },
     isEdited: { type: Boolean, default: false },
     editedAt: { type: Date },
+    /** Soft-delete flag: hides comment without removing it or breaking reply chains. */
     isHidden: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
 
+/**
+ * Composite indexes for efficient query patterns:
+ * 1. Fetching visible comments for a post, ordered by creation time
+ * 2. Loading child comments under a specific parent
+ * 3. User profile pages listing their recent comments
+ */
 commentSchema.index({ post: 1, isHidden: 1, createdAt: 1, _id: 1 });
 commentSchema.index({ post: 1, parent: 1, isHidden: 1, createdAt: 1 });
 commentSchema.index({ author: 1, createdAt: -1 });

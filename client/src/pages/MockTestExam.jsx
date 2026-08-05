@@ -25,6 +25,10 @@ import { buildAttemptPayload, submitAttempt as savePracticeAttempt } from "../se
 import { submitAnswer as submitContestAnswer } from "../services/contestApi";
 import "./MockTestExam.css";
 
+// ── Abbreviation Maps ───────────────────────────────────────────────────────
+// Used to render compact source tags on questions (e.g., "DB-24" for Dhaka Board 2024).
+// These mirror the server-side tag schema for board/college/university sources.
+
 const BOARD_ABBRS = {
   Dhaka: "DB",
   Comilla: "CB",
@@ -134,10 +138,31 @@ const getTagTitle = (tag) => {
   }
 };
 
+/**
+ * MockTestExam – The main exam interface for mock tests, QBank exams, and contests.
+ *
+ * Features:
+ *   - Countdown timer with auto-submit on expiry
+ *   - Question navigation with colored dots (answered/not/flagged)
+ *   - MCQ option selection with instant visual feedback
+ *   - Written/CQ answer upload via camera capture or file upload
+ *   - KaTeX math rendering in question text
+ *   - Review mode with answer filtering and AI evaluation display
+ *   - AI explanation modal (manual solution, AI explanation, tutor chat, video)
+ *   - Contest anti-cheat: tab switch/blur/screenshot detection
+ *   - Real-time contest leaderboard via Socket.IO
+ *
+ * All exam state is persisted to sessionStorage for crash recovery.
+ * The timer stores an end timestamp (not a countdown) so it survives page refreshes.
+ */
 export default function MockTestExam() {
   const { language } = useLanguage();
   const navigate = useNavigate();
 
+  // ── Core Exam State ────────────────────────────────────────────────────────
+  // questions/config come from sessionStorage (set by MockTest.jsx wizard).
+  // answers tracks the current selection per question key.
+  // writtenAnswers stores base64 image data for handwritten CQ/written answers.
   const [questions, setQuestions] = useState([]);
   const [config, setConfig] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -148,13 +173,17 @@ export default function MockTestExam() {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [explanationModalQuestion, setExplanationModalQuestion] =
     useState(null);
-  const [explanationTab, setExplanationTab] = useState("manual"); // 'manual' | 'ai' | 'video'
-  const [filterType, setFilterType] = useState("all"); // 'all' | 'correct' | 'skipped' | 'wrong'
+  const [explanationTab, setExplanationTab] = useState("manual");
+  const [filterType, setFilterType] = useState("all");
   const [fromQbank, setFromQbank] = useState(false);
   const [writtenAnswers, setWrittenAnswers] = useState({});
   const [aiEvaluations, setAiEvaluations] = useState({});
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [activeCameraQuestionKey, setActiveCameraQuestionKey] = useState(null);
+
+  // ── AI Explanation State ───────────────────────────────────────────────────
+  // aiExplanations stores the generated explanation text per question.
+  // aiChatThreads stores the full chat history per question for the tutor feature.
   const [aiExplanations, setAiExplanations] = useState({});
   const [aiExplainLoading, setAiExplainLoading] = useState(false);
   const [aiExplainImage, setAiExplainImage] = useState(null);
@@ -162,6 +191,11 @@ export default function MockTestExam() {
   const [followUpText, setFollowUpText] = useState("");
   const [followUpImage, setFollowUpImage] = useState(null);
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
+
+  // ── Refs ───────────────────────────────────────────────────────────────────
+  // videoRef/streamRef: webcam stream management for camera capture
+  // hasCheatedRef: prevents multiple disqualification submissions
+  // lastMetaTimeRef: detects Windows+PrtScn screenshot combo
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const aiExplainFileRef = useRef(null);
@@ -169,6 +203,9 @@ export default function MockTestExam() {
   const hasCheatedRef = useRef(false);
   const lastMetaTimeRef = useRef(0);
 
+  // ── Navigation State ───────────────────────────────────────────────────────
+  // Tracks which question is active, which have been submitted (contest mode),
+  // and which have been visited (for the colored-dot navigator).
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [submittedQuestionKeys, setSubmittedQuestionKeys] = useState({});
   const [visitedQuestionIndexes, setVisitedQuestionIndexes] = useState(new Set([0]));
@@ -427,6 +464,9 @@ export default function MockTestExam() {
     navigate("/contests");
   };
 
+  // ── Contest Anti-Cheat ─────────────────────────────────────────────────────
+  // Detects tab switching, window blur, screenshots, and print attempts.
+  // On violation, automatically submits the contest with score 0 and redirects.
   useEffect(() => {
     if (!isContestActive) return;
 
@@ -436,7 +476,7 @@ export default function MockTestExam() {
       submitDisqualification(reason);
     };
 
-    // Tab Switch / Window Blur / Minimization Detection
+    // Window lost focus (tab switch, alt-tab, minimization)
     const handleBlur = () => {
       handleViolation(
         language === "en"
@@ -522,7 +562,7 @@ export default function MockTestExam() {
       }
     };
 
-    // Copy / Text Selection Prevention
+    // Prevent copying question text during contests
     const preventCopy = (e) => {
       e.preventDefault();
       toast.error(
@@ -561,6 +601,8 @@ export default function MockTestExam() {
   const getQuestionKey = (question, index) =>
     question._id || `question-${index}`;
 
+  // Finds the next question that hasn't been submitted yet (for contest mode).
+  // Searches forward first, then wraps around to the beginning.
   const findNextUnsubmittedIndex = (currentIndex, currentSubmittedKeys) => {
     // 1. Search forward from currentIndex + 1
     for (let i = currentIndex + 1; i < questions.length; i++) {
@@ -602,6 +644,10 @@ export default function MockTestExam() {
     return question.options.findIndex((option) => option.isCorrect);
   };
 
+  // ── Result Computation ─────────────────────────────────────────────────────
+  // Computes score, correct/wrong/skipped counts from the answers map.
+  // For MCQ: +1 for correct, -0.25 for wrong (if negative marking), 0 for skipped.
+  // For written/CQ: uses AI evaluation score (0-1) or 0 if not uploaded.
   const resultStats = useMemo(() => {
     let correct = 0;
     let wrong = 0;
@@ -656,6 +702,8 @@ export default function MockTestExam() {
     };
   }, [answers, config, questions, timeLeft, writtenAnswers, aiEvaluations]);
 
+  // Groups results by subject for the analytics/ranking breakdown.
+  // Returns [{ subject, correct, wrong, skipped, total, score }]
   const buildSubjectBreakdown = (evaluationMap = aiEvaluations) => {
     const subjectMap = new Map();
 
@@ -711,6 +759,10 @@ export default function MockTestExam() {
     }));
   };
 
+  // ── Timer ──────────────────────────────────────────────────────────────────
+  // Uses setInterval to count down every second. When timeLeft hits 0,
+  // handleSubmit is called automatically. The timer stores an end timestamp
+  // in sessionStorage so it survives page refreshes.
   useEffect(() => {
     if (isSubmitted || timeLeft <= 0) return;
 
@@ -845,6 +897,14 @@ export default function MockTestExam() {
     }
   };
 
+  // ── Submit Handler ─────────────────────────────────────────────────────────
+  // Handles exam submission for both mock tests and contests.
+  // Flow:
+  //   1. Evaluate written answers via AI (if any)
+  //   2. Save the attempt to practice history (POST /api/practice)
+  //   3. Save to mock test attempts for ranking (POST /api/mock-tests/attempts)
+  //   4. For contests: submit to contest endpoint and redirect
+  //   5. For mock tests: show result modal, then allow review mode
   const handleSubmit = async () => {
     if (isSubmitted || isEvaluating) return;
 
@@ -1063,6 +1123,8 @@ export default function MockTestExam() {
     setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
+  // Client-side image processing: resizes to max 800x800 and compresses to JPEG 0.7
+  // to reduce base64 payload size before storing in sessionStorage.
   const processImageFile = (file, callback) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -1127,6 +1189,9 @@ export default function MockTestExam() {
     });
   };
 
+  // ── Camera Capture ─────────────────────────────────────────────────────────
+  // Activates the device camera (prefers back-facing for document capture),
+  // captures a photo, resizes it, and stores as base64 in writtenAnswers.
   const startCamera = async (questionKey) => {
     setActiveCameraQuestionKey(questionKey);
     try {
@@ -1232,6 +1297,9 @@ export default function MockTestExam() {
     return language === "en" ? normalized : toBnNum(normalized);
   };
 
+  // ── Math Rendering ─────────────────────────────────────────────────────────
+  // Converts $...$ (inline) and $$...$$ (display) LaTeX delimiters to HTML
+  // using KaTeX. Non-math text is sanitized before HTML injection.
   const renderMath = (text) => {
     if (!text) return { __html: "" };
 
@@ -1261,6 +1329,9 @@ export default function MockTestExam() {
     return { __html: sanitizeHtml(renderedText) };
   };
 
+  // Renders Markdown with inline LaTeX math support.
+  // Used for AI-generated explanations that contain both text formatting and math.
+  // Process: extract math blocks → render markdown → restore math blocks → sanitize HTML
   const renderMarkdownWithMath = (text) => {
     if (!text) return { __html: "" };
 
@@ -1346,6 +1417,8 @@ export default function MockTestExam() {
     return { __html: sanitizeHtml(processed) };
   };
 
+  // Sends a follow-up message in the AI tutor chat.
+  // Maintains the full conversation thread per question for context.
   const handleSendFollowUp = async () => {
     if (!explanationModalQuestion || isSendingFollowUp) return;
     const text = followUpText.trim();
@@ -1425,6 +1498,7 @@ export default function MockTestExam() {
     return ["ক", "খ", "গ", "ঘ"][index] || "";
   };
 
+  // Returns the visual state of an MCQ option in review mode: 'correct' | 'wrong' | ''
   const getOptionState = (question, questionIndex, optionIndex) => {
     if (!isReviewMode) return "";
     const key = getQuestionKey(question, questionIndex);

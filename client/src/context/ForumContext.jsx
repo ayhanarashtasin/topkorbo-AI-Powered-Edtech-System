@@ -3,19 +3,26 @@ import forumApi from '../services/forumApi';
 import useSocket from '../hooks/useSocket';
 
 /**
- * ForumContext — central store for the entire Community feature.
+ * Central state provider for the entire Community/Forum feature.
  *
- * Mirrors the ergonomics of an RTK Query slice: it owns the user,
- * categories, notifications and unread-count state, exposes action
- * helpers (createPost, toggleReaction, follow, …) and accepts
- * `subscribeReaction` / `subscribeComment` callbacks for components that
- * need live updates. Socket.IO events keep state fresh across tabs in
- * real time.
+ * Owns user profile, categories, notifications, and unread count. Exposes
+ * action helpers (createPost, toggleReaction, follow, etc.) and live-update
+ * subscription hooks (subscribeReaction, subscribeComment, subscribePost) so
+ * child components can react to Socket.IO events without managing their own
+ * socket listeners. Boot data (user, categories, initial notifications) is
+ * loaded once on mount; subsequent updates arrive via socket in real time.
  */
 
 const ForumContext = createContext(null);
 
 export function ForumProvider({ children }) {
+  // --- Core state ---
+  // User: the currently authenticated forum user (null until boot completes).
+  // Categories: available post categories, fetched once on mount.
+  // Notifications + unreadCount: in-app notification list and badge count.
+  // notificationCursor: server cursor for paginated notification loading.
+  // bootDone/bootError: gate rendering until initial data is loaded; errors
+  // surface a non-blocking banner rather than blocking the entire app.
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -26,9 +33,11 @@ export function ForumProvider({ children }) {
   const [bootDone, setBootDone] = useState(false);
 
   const { socket, connected, on } = useSocket();
+  // Tracks which notification IDs are currently unread so we can deduplicate
+  // incoming socket events and only increment the count once per notification.
   const unreadNotificationIdsRef = useRef(new Set());
 
-  // ---- Boot: load user + categories + notifications ----
+  // --- Boot sequence: load initial data on mount ---
   const refreshUser = useCallback(async () => {
     try {
       const json = await forumApi.me();
@@ -110,7 +119,9 @@ export function ForumProvider({ children }) {
     }
   }, []);
 
-  // ---- Socket subscriptions ----
+  // --- Real-time socket subscriptions ---
+  // Listens for server-pushed notification events to keep the badge count and
+  // notification list in sync across all open tabs without polling.
   useEffect(() => {
     if (!socket || !connected) return;
 
@@ -143,7 +154,10 @@ export function ForumProvider({ children }) {
     };
   }, [applyNotificationRead, socket, connected, on]);
 
-  // ---- Action helpers ----
+  // --- Action helpers ---
+  // Thin wrappers around forumApi that return the unwrapped `data` field.
+  // Components call these instead of forumApi directly so the context
+  // controls all state mutations and can trigger re-renders.
   const toggleReaction = useCallback(async ({ targetType, target, type }) => {
     const json = await forumApi.toggleReaction({ targetType, target, type });
     return json.data;

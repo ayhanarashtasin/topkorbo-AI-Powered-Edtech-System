@@ -6,6 +6,8 @@ import ReportModal from './ReportModal';
 import forumApi from '../../services/forumApi';
 import { sanitizeHtml } from '../../utils/safeHtml';
 
+// Converts timestamps into human-readable relative strings (e.g., "3m", "2h", "1d").
+// Returns locale-formatted date for entries older than 7 days.
 function formatRelative(date) {
   if (!date) return '';
   const t = new Date(date).getTime();
@@ -20,8 +22,8 @@ function formatRelative(date) {
   return new Date(date).toLocaleDateString();
 }
 
-// CommentItem — single comment with reply, edit, delete, and reactions.
-// Recursive: descendant comments are passed in via the `children` slot.
+// CommentItem — renders a single comment with action bar (reactions, reply, edit, delete).
+// Supports recursive nesting: descendant comments are passed via the `children` prop.
 export default function CommentItem({
   comment,
   onReply,
@@ -42,6 +44,8 @@ export default function CommentItem({
   const isOwner = user && String(user._id) === String(comment.author?._id);
   const userId = user?._id ? String(user._id) : null;
 
+  // Subscribe to real-time reaction updates via socket for this specific comment.
+  // Updates are applied only when the event matches this comment's ID.
   useEffect(() => {
     if (!comment?._id) return;
     const off = subscribeReaction('comment', comment._id, (payload) => {
@@ -53,6 +57,8 @@ export default function CommentItem({
     return () => off && off();
   }, [comment?._id, subscribeReaction, userId]);
 
+  // Optimistic toggle for reactions: immediately updates local state, then syncs with server.
+  // On failure, reverts to the original reaction state from the comment prop.
   async function react(type) {
     if (busy) return;
     setBusy(true);
@@ -82,6 +88,7 @@ export default function CommentItem({
     }
   }
 
+  // Persists edited comment content to server and notifies parent component on success.
   async function saveEdit() {
     if (!editHtml.trim()) return;
     setBusy(true);
@@ -96,6 +103,7 @@ export default function CommentItem({
     }
   }
 
+  // Removes comment from server and triggers parent callback to update UI.
   async function deleteThis() {
     if (!window.confirm('Delete this comment?')) return;
     try {

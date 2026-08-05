@@ -1,3 +1,14 @@
+/**
+ * Socket.IO server setup — real-time communication layer for the forum.
+ *
+ * Responsibilities:
+ *  - CORS origin validation matching the REST API config
+ *  - JWT-based handshake authentication (anonymous users allowed for public features)
+ *  - Room management: per-user rooms, post discussion rooms, contest live rooms
+ *  - Typing indicator broadcast within post rooms
+ *  - Redis adapter integration for horizontal scaling across server instances
+ */
+
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
@@ -11,7 +22,8 @@ const {
 
 let io = null;
 
-// Same allowlist strategy as the REST CORS config in server.js.
+// Mirrors the CORS origin allowlist used in server.js so WebSocket connections
+// are subject to the same origin restrictions as HTTP requests.
 function buildOriginAllowlist() {
   const port = process.env.PORT || 5000;
   return [
@@ -36,6 +48,14 @@ function buildOriginAllowlist() {
     .filter(Boolean);
 }
 
+/**
+ * Middleware applied to every incoming socket handshake.
+ *
+ * Extracts the JWT from auth.token or the Authorization header, verifies it,
+ * and attaches userId / userRole / forumRole to the socket for downstream use.
+ * Anonymous connections (no token) are allowed through with userId=null so they
+ * can access public features like contest leaderboards without authentication.
+ */
 async function authenticateSocketHandshake(socket, next) {
   try {
     const token =
@@ -50,10 +70,13 @@ async function authenticateSocketHandshake(socket, next) {
       '_id role forumRole isBanned accountStatus banExpiresAt'
     );
     if (!user) return next(new Error('Unauthorized'));
+
+    // Reactivate bans that have passed their expiry before checking status.
     user = await reactivateExpiredBan(user);
     if (resolveAccountStatus(user) !== 'active') {
       return next(new Error('Account unavailable'));
     }
+
     socket.userId = String(user._id);
     socket.userRole = user.role || 'student';
     socket.forumRole = user.forumRole || 'user';
@@ -63,6 +86,12 @@ async function authenticateSocketHandshake(socket, next) {
   }
 }
 
+/**
+ * Initialise the Socket.IO server on top of the existing HTTP server.
+ *
+ * Sets up CORS, attaches the Redis adapter for multi-instance deployments,
+ * registers the auth middleware, and wires up connection/event handlers.
+ */
 function initSocket(httpServer) {
   const allowlist = buildOriginAllowlist();
   io = new Server(httpServer, {
@@ -80,6 +109,7 @@ function initSocket(httpServer) {
     pingInterval: 25000
   });
 
+  // Redis adapter enables broadcasting across multiple server processes.
   configureSocketAdapter(io)
     .then((configured) => {
       if (configured) console.log('Socket.IO Redis adapter connected');
@@ -88,18 +118,21 @@ function initSocket(httpServer) {
       console.error('Socket.IO Redis adapter failed:', error.message);
     });
 
-  // JWT auth on the handshake
-  // Anonymous sockets may still use public, non-forum features such as
-  // contest leaderboards, but never receive forum or personal events.
+  // Every connection must pass authentication before reaching event handlers.
   io.use(authenticateSocketHandshake);
 
   io.on('connection', (socket) => {
-    // Auto-join personal room for authenticated users
+    // Authenticated users automatically join their personal room (for targeted
+    // notifications) and the global "forum" room (for site-wide broadcasts).
     if (socket.userId) {
       socket.join('forum');
       socket.join(`user:${socket.userId}`);
     }
 
+    // --- Post room management ------------------------------------------------
+    // Users join a post room to receive live comment updates and typing
+    // indicators for that specific thread. Hidden posts are only accessible
+    // to the author and moderators/admins.
     socket.on('join:post', async (postId) => {
       if (!socket.userId || !postId || !mongoose.isValidObjectId(postId)) return;
       const post = await Post.findById(postId).select('author isHidden').lean().catch(() => null);
@@ -116,6 +149,10 @@ function initSocket(httpServer) {
       }
     });
 
+    // --- Contest room management ---------------------------------------------
+    // Contest rooms push live leaderboard updates to viewers. The initial
+    // leaderboard is sent immediately on join so the client doesn't have to
+    // poll for the current state.
     socket.on('join:contest', async (contestId) => {
       // Validate the id before it reaches a Mongo query to avoid cast errors and
       // query amplification from malformed/abusive room-join spam.
@@ -135,6 +172,9 @@ function initSocket(httpServer) {
       if (contestId) socket.leave(`contest:${String(contestId)}`);
     });
 
+    // --- Typing indicators ---------------------------------------------------
+    // Broadcasts a ephemeral "user is typing" event to everyone else in the
+    // post room. Only works if the sender is actually in that room.
     socket.on('typing:start', ({ postId } = {}) => {
       if (!postId || !socket.userId || !socket.rooms.has(`post:${String(postId)}`)) return;
       socket.to(`post:${String(postId)}`).emit('typing:update', {
@@ -154,6 +194,10 @@ function initSocket(httpServer) {
   return io;
 }
 
+/**
+ * Returns the singleton Socket.IO instance.
+ * Throws if initSocket() has not been called yet.
+ */
 function getIO() {
   if (!io) {
     throw new Error('Socket.IO not initialised — call initSocket() first.');

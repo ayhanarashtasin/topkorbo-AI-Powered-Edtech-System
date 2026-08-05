@@ -5,9 +5,9 @@ import RichTextEditor from './RichTextEditor';
 import MentionInput from './MentionInput';
 import forumApi from '../../services/forumApi';
 
-// CommentTree — loads a post's comments, groups them by parent into a
-// tree, and renders them recursively. Also subscribes to live
-// `comment:new / update / delete` socket events for real-time updates.
+// CommentTree — manages the full comment thread for a post.
+// Handles loading, tree construction from flat list, live socket updates,
+// pagination via cursor, and top-level comment composition.
 export default function CommentTree({ postId, onCountChange }) {
   const { user, createComment, subscribeComment } = useForum();
   const [allComments, setAllComments] = useState([]);
@@ -19,8 +19,10 @@ export default function CommentTree({ postId, onCountChange }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const editorRef = useRef(null);
+  // Deduplication set prevents duplicate comments from socket re-emissions.
   const commentIdsRef = useRef(new Set());
 
+  // Adds a comment to state if not already present; returns true if actually added.
   const addComment = useCallback((comment) => {
     const id = String(comment._id);
     if (commentIdsRef.current.has(id)) return false;
@@ -30,6 +32,7 @@ export default function CommentTree({ postId, onCountChange }) {
     return true;
   }, [onCountChange]);
 
+  // Removes a comment from state; returns true if it was present.
   const removeComment = useCallback((commentId) => {
     const id = String(commentId);
     if (!commentIdsRef.current.has(id)) return false;
@@ -41,7 +44,7 @@ export default function CommentTree({ postId, onCountChange }) {
     return true;
   }, [onCountChange]);
 
-  // Initial load of the comment thread.
+  // Fetch initial comment thread on mount or postId change.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -62,7 +65,8 @@ export default function CommentTree({ postId, onCountChange }) {
     return () => { cancelled = true; };
   }, [postId]);
 
-  // Live updates from the socket: new / edited / deleted comments.
+  // Subscribe to real-time comment events (new, edited, deleted) via socket.
+  // Updates are applied incrementally without full re-fetch.
   useEffect(() => {
     const off = subscribeComment(postId, {
       onNew: (c) => {
@@ -78,8 +82,8 @@ export default function CommentTree({ postId, onCountChange }) {
     return () => off && off();
   }, [addComment, postId, removeComment, subscribeComment]);
 
-  // Group comments by their parent ID so we can render them as a tree.
-  // `__root__` is the synthetic bucket for top-level comments.
+  // Build a parent→children map from the flat comment array.
+  // Comments whose parent is not in the dataset are treated as top-level.
   const tree = useMemo(() => {
     const byParent = new Map();
     const knownIds = new Set(allComments.map((comment) => String(comment._id)));
@@ -95,6 +99,7 @@ export default function CommentTree({ postId, onCountChange }) {
     return byParent;
   }, [allComments]);
 
+  // Recursively renders a comment node and its children from the tree map.
   function renderNode(c) {
     return (
       <CommentItem
@@ -133,6 +138,7 @@ export default function CommentTree({ postId, onCountChange }) {
     );
   }
 
+  // Submits a new top-level comment, resets the editor, and appends to state.
   async function submitTop() {
     const text = (editorRef.current?.getText() || '').trim();
     if (!text) return;
@@ -149,6 +155,8 @@ export default function CommentTree({ postId, onCountChange }) {
     }
   }
 
+  // Fetches the next page of comments using cursor-based pagination.
+  // Deduplicates against existing comments to avoid double-rendering.
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
@@ -228,6 +236,7 @@ export default function CommentTree({ postId, onCountChange }) {
   );
 }
 
+// Inline reply composer that appears nested under a specific comment.
 function ReplyBox({ parent, onSubmit, onCancel }) {
   const [html, setHtml] = useState('');
   const editorRef = useRef(null);

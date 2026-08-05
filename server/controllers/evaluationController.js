@@ -1,3 +1,20 @@
+/**
+ * Evaluation Controller
+ * ─────────────────────────────────────────────────────────────────────────────
+ * AI-powered evaluation and tutoring for written/CQ answers.
+ *
+ * Endpoints (mounted at /api/evaluate):
+ *   POST /written  → grade handwritten answers via Groq vision model
+ *   POST /explain  → generate step-by-step solution explanation
+ *   POST /chat     → multi-turn tutoring chat about a question
+ *
+ * AI models used:
+ *   - qwen/qwen3.6-27b  → vision model (analyzes handwritten images)
+ *   - openai/gpt-oss-120b → text model (generates explanations)
+ *
+ * All endpoints enforce AI quota via enforceAiQuota middleware.
+ */
+
 const { Groq } = require('groq-sdk');
 const Question = require('../models/Question');
 const fs = require('fs');
@@ -10,7 +27,6 @@ const groq = new Groq({
 const VISION_MODEL = "qwen/qwen3.6-27b";
 const TEXT_MODEL = "openai/gpt-oss-120b";
 
-// Helper for file logging
 function logToFile(msg) {
   try {
     const logPath = path.join(__dirname, '..', 'evaluation.log');
@@ -18,11 +34,25 @@ function logToFile(msg) {
   } catch (e) {}
 }
 
+/**
+ * POST /api/evaluate/written
+ * ──────────────────────────
+ * Evaluates one or more handwritten answers by comparing student images
+ * against the manual solution stored on each Question document.
+ *
+ * Flow:
+ *   1. For each answer, fetch the Question to get the manual solution
+ *   2. Send the student's image + solution to the vision model
+ *   3. Parse the JSON response for score (0-1) and feedback
+ *   4. Fall back to regex extraction if JSON parsing fails
+ *
+ * Returns: { [questionId]: { score, feedback } }
+ */
 exports.evaluateWrittenAnswers = async (req, res) => {
   try {
     logToFile(`--- NEW EVALUATION REQUEST ---`);
-    const { answers } = req.body; 
-    
+    const { answers } = req.body;
+
     if (!answers || !Array.isArray(answers)) {
       return res.status(400).json({ msg: 'Invalid answers format' });
     }
@@ -32,15 +62,16 @@ exports.evaluateWrittenAnswers = async (req, res) => {
     for (const answer of answers) {
       const { questionId, studentImageBase64 } = answer;
       const question = await Question.findById(questionId);
-      
+
       logToFile(`Evaluating question: ${questionId}`);
-      
+
       if (!question) {
         logToFile(`Question not found: ${questionId}`);
         continue;
       }
-      logToFile(`Found question, sending to Groq...`);
 
+      // Build the grading prompt: student image is compared against
+      // the manually authored solution to determine partial credit.
       const manualSolution = question.solution || 'No manual solution provided.';
 
       const promptText = `You are an expert examiner grading a student's written exam.
@@ -72,16 +103,8 @@ CRITICAL FORMATTING INSTRUCTIONS FOR FEEDBACK:
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: promptText
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: studentImageBase64
-                }
-              }
+              { type: "text", text: promptText },
+              { type: "image_url", image_url: { url: studentImageBase64 } }
             ]
           }
         ],
@@ -95,17 +118,17 @@ CRITICAL FORMATTING INSTRUCTIONS FOR FEEDBACK:
 
       const responseText = completion.choices[0].message.content;
       logToFile(`Raw Groq Response for ${questionId}: ${responseText.replace(/\n/g, ' ')}`);
-      
+
+      // Parse AI response — fall back to regex if the model returns malformed JSON
       let evalData = { score: 0, feedback: "Failed to evaluate." };
       try {
         evalData = JSON.parse(responseText);
       } catch (e) {
         logToFile(`JSON Parse error for ${questionId}. Falling back to regex.`);
-        
-        // Fallback regex extraction if JSON is completely broken
+
         const scoreMatch = responseText.match(/"score"\s*:\s*([\d.]+)/);
         const feedbackMatch = responseText.match(/"feedback"\s*:\s*"([\s\S]*?)"\s*\}/);
-        
+
         if (scoreMatch) evalData.score = parseFloat(scoreMatch[1]);
         if (feedbackMatch) evalData.feedback = feedbackMatch[1].replace(/\\"/g, '"');
         else evalData.feedback = responseText;
@@ -134,9 +157,17 @@ CRITICAL FORMATTING INSTRUCTIONS FOR FEEDBACK:
 };
 
 /**
- * @desc    Generate a detailed AI explanation for a question
- * @route   POST /api/evaluate/explain
- * @access  Private
+ * POST /api/evaluate/explain
+ * ──────────────────────────
+ * Generates a step-by-step solution explanation for a question.
+ *
+ * Two modes:
+ *   - With student image: analyzes the student's mistakes and provides
+ *     a corrected solution pointing out where they went wrong
+ *   - Without image: generates a clean step-by-step solution from scratch
+ *
+ * Uses vision model when an image is provided, text model otherwise.
+ * Returns plain text with $...$ math delimiters for KaTeX rendering.
  */
 exports.explainQuestion = async (req, res) => {
   try {
@@ -154,7 +185,7 @@ exports.explainQuestion = async (req, res) => {
     const manualSolution = question.solution || '';
     const questionText = question.questionText || '';
 
-    // Build options text for MCQ questions
+    // Build full question context for the AI prompt
     let optionsText = '';
     if (question.options && question.options.length > 0) {
       optionsText = '\nOptions:\n' + question.options.map((opt, i) => {
@@ -164,7 +195,6 @@ exports.explainQuestion = async (req, res) => {
       }).join('\n');
     }
 
-    // Build CQ parts text
     let cqText = '';
     if (question.type === 'cq' && question.cq) {
       cqText = '\nStem: ' + (question.cq.description || '');
@@ -252,9 +282,15 @@ Return ONLY the formatted explanation text. No JSON wrapping.`;
 };
 
 /**
- * @desc    Handle student follow-up chat message regarding a question
- * @route   POST /api/evaluate/chat
- * @access  Private
+ * POST /api/evaluate/chat
+ * ──────────────────────────
+ * Multi-turn tutoring chat about a specific question.
+ *
+ * Maintains conversation context by accepting the full chat history
+ * from the client and prepending a system prompt with the question context.
+ *
+ * Supports image analysis — if the student uploads a handwritten work
+ * image in any message, the vision model is used automatically.
  */
 exports.chatQuestion = async (req, res) => {
   try {
@@ -272,7 +308,6 @@ exports.chatQuestion = async (req, res) => {
     const manualSolution = question.solution || '';
     const questionText = question.questionText || '';
 
-    // Build options text for MCQ questions
     let optionsText = '';
     if (question.options && question.options.length > 0) {
       optionsText = '\nOptions:\n' + question.options.map((opt, i) => {
@@ -282,7 +317,6 @@ exports.chatQuestion = async (req, res) => {
       }).join('\n');
     }
 
-    // Build CQ parts text
     let cqText = '';
     if (question.type === 'cq' && question.cq) {
       cqText = '\nStem: ' + (question.cq.description || '');
@@ -291,7 +325,7 @@ exports.chatQuestion = async (req, res) => {
       }
     }
 
-    // Construct the messages array for Groq starting with system prompt
+    // System prompt establishes the tutor persona and question context
     const systemPrompt = `You are a world-class math and science tutor. The student is asking follow-up questions about the exam question described below.
 
 Question:
@@ -316,13 +350,13 @@ Instructions:
       }
     ];
 
-    // Append conversation history
+    // Replay conversation history so the model has full context.
+    // Messages with images use the content array format; plain text uses a string.
     if (history && Array.isArray(history)) {
       history.forEach((msg) => {
         const role = msg.role === 'user' ? 'user' : 'assistant';
         const msgContent = [];
 
-        // If there's an image in the history, we must use content array format
         if (msg.image) {
           msgContent.push({ type: "text", text: msg.content || "" });
           msgContent.push({
@@ -331,13 +365,12 @@ Instructions:
           });
           messages.push({ role, content: msgContent });
         } else {
-          // Standard text message
           messages.push({ role, content: msg.content || "" });
         }
       });
     }
 
-    // Append the new user follow-up message
+    // Append the new user message
     const userMessageContent = [];
     userMessageContent.push({ type: "text", text: message || "" });
     if (studentImageBase64) {
@@ -354,6 +387,7 @@ Instructions:
 
     logToFile(`--- AI CHAT REQUEST for ${questionId} (history length: ${history ? history.length : 0}, image: ${!!studentImageBase64}) ---`);
 
+    // Use vision model if any message in the conversation contains an image
     const hasImage = studentImageBase64 || (history && history.some(msg => msg.image));
     const completion = await groq.chat.completions.create({
       model: hasImage ? VISION_MODEL : TEXT_MODEL,

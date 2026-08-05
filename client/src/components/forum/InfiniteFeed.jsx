@@ -1,3 +1,14 @@
+/**
+ * InfiniteFeed - Cursor-based paginated feed with infinite scroll.
+ *
+ * Uses react-intersection-observer to detect when the user scrolls near the
+ * bottom and automatically loads the next page. Supports real-time updates
+ * via WebSocket subscriptions so new posts, reactions, and deletions appear
+ * instantly without a manual refresh.
+ *
+ * The `feedKey` prop forces a full remount when the feed context changes
+ * (e.g., switching between "All" and "My Posts"), resetting pagination state.
+ */
 import { useCallback, useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import PostCard from './PostCard';
@@ -19,6 +30,12 @@ function PaginatedFeed({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /**
+   * Load the first page on mount. The `cancelled` flag prevents state updates
+   * if the component unmounts before the request completes (strict-mode safe).
+   * Duplicate IDs are filtered so hot-reloaded or pre-populated posts aren't
+   * rendered twice.
+   */
   useEffect(() => {
     let cancelled = false;
     async function loadFirstPage() {
@@ -42,6 +59,11 @@ function PaginatedFeed({
     return () => { cancelled = true; };
   }, [fetchPage]);
 
+  /**
+   * Real-time updates: when a WebSocket event arrives, update the local list
+   * immediately so the UI stays in sync with other users' actions without
+   * waiting for the next poll or page reload.
+   */
   useEffect(() => subscribePost({
     onNew: (post) => {
       if (!acceptNewPost?.(post)) return;
@@ -74,6 +96,11 @@ function PaginatedFeed({
     }
   }), [acceptNewPost, subscribePost]);
 
+  /**
+   * Fetch the next page using the cursor from the previous response.
+   * Deduplicates items by ID to avoid rendering the same post twice if the
+   * server returns overlapping results (e.g., after a new post is created).
+   */
   const loadMore = useCallback(async () => {
     if (loading || done) return;
     setLoading(true);
@@ -96,6 +123,11 @@ function PaginatedFeed({
     }
   }, [cursor, done, fetchPage, loading]);
 
+  /**
+   * Intersection observer sentinel: triggers `loadMore` when the sentinel div
+   * enters the viewport. The 200px rootMargin starts loading before the user
+   * reaches the actual bottom, making the scroll feel seamless.
+   */
   const { ref: sentinelRef } = useInView({
     rootMargin: '200px',
     onChange: (inView) => {

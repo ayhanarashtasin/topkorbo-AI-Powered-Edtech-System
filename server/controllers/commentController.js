@@ -1,3 +1,12 @@
+/**
+ * Comment controller — CRUD operations for forum comments.
+ *
+ * Each method follows a consistent pattern:
+ * 1. Validate input and permissions
+ * 2. Perform atomic mutations inside a MongoDB transaction
+ * 3. Emit real-time updates via Socket.IO
+ * 4. Send async notifications (fire-and-forget)
+ */
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
 const User = require('../models/User');
@@ -25,6 +34,10 @@ const PAGE_SIZE = 30;
 const POPULATE_AUTHOR =
   'name username avatar role collegeName universityName department hscBatch stream forumRole reputation';
 
+/**
+ * Enriches comment documents with the current user's reaction type.
+ * Batch-fetches reactions for all comments in one query instead of N+1 lookups.
+ */
 async function attachUserReactions(docs, userId, targetType) {
   if (!userId || !docs || docs.length === 0) return docs;
   const ids = docs.map(d => d._id);
@@ -43,6 +56,11 @@ async function attachUserReactions(docs, userId, targetType) {
   return docs;
 }
 
+/**
+ * Uploads comment images to Cloudinary.
+ * Rolls back (deletes) any already-uploaded images if a later upload fails.
+ * Capped at 3 images per comment.
+ */
 async function uploadCommentImages(req) {
   const images = [];
   try {
@@ -67,7 +85,8 @@ async function uploadCommentImages(req) {
 const commentController = {
   /**
    * GET /api/posts/:postId/comments?cursor=
-   * Returns a flat list of comments for the post (caller assembles tree).
+   * Cursor-paginated list of comments for a post.
+   * Returns a flat list; the client assembles the tree using `parent` and `depth`.
    */
   async list(req, res, next) {
     try {
@@ -88,7 +107,7 @@ const commentController = {
         .limit(limit + 1)
         .populate('author', POPULATE_AUTHOR)
         .lean();
-        
+
       const page = finalizePage(comments, limit, ['createdAt']);
       await attachUserReactions(page.items, req.user?.id, 'comment');
       return res.json({
@@ -103,7 +122,14 @@ const commentController = {
 
   /**
    * POST /api/posts/:postId/comments
-   * Body: { contentHtml, parentId? } + multipart images[] (up to 3)
+   * Creates a new comment (or reply) with optional image attachments.
+   *
+   * Workflow:
+   * 1. Validate post exists, author is not banned, content is safe
+   * 2. Upload images (with rollback on failure)
+   * 3. Inside a transaction: create comment, increment counters,
+   *    award reputation to post author, recompute post score
+   * 4. Emit real-time updates and send notifications asynchronously
    */
   async create(req, res, next) {
     try {
@@ -132,6 +158,8 @@ const commentController = {
       const images = await uploadCommentImages(req);
       let created;
       try {
+        // Transaction ensures comment creation, counter increments,
+        // and score recomputation all succeed or all fail atomically.
         created = await withMongoTransaction(async (session) => {
           const currentPost = await Post.findOne({ _id: post._id, isHidden: false })
             .session(session);
@@ -154,6 +182,7 @@ const commentController = {
               error.statusCode = 400;
               throw error;
             }
+            // Cap nesting depth to prevent UI overflow on deep threads.
             depth = Math.min((parent.depth || 0) + 1, 12);
           }
 
@@ -192,6 +221,7 @@ const commentController = {
             }
           }
 
+          // Award reputation points to the post author for receiving engagement.
           if (String(currentPost.author) !== String(author._id)) {
             await addReputation(currentPost.author, 2, { session });
           }
@@ -205,6 +235,7 @@ const commentController = {
           };
         });
       } catch (error) {
+        // Roll back uploaded images if the transaction fails.
         await Promise.allSettled(
           images.map((image) => deleteImage(image.publicId, image.url))
         );
@@ -218,13 +249,14 @@ const commentController = {
 
       const sideEffects = [];
 
-      // Notifications
       const io = getIO();
       io.to(`post:${String(post._id)}`).emit('comment:new', populated);
       io.to('forum').emit('post:stats', {
         postId: String(post._id),
         commentsCount: created.commentsCount
       });
+      // Notify the parent comment author (reply notification)
+      // or the post author (top-level comment notification).
       if (created.parentAuthor && created.parentAuthor !== String(author._id)) {
         sideEffects.push(notify(io, {
           recipient: created.parentAuthor,
@@ -246,6 +278,7 @@ const commentController = {
           preview: populated.contentText.slice(0, 120)
         }));
       }
+      // Notify all mentioned users.
       for (const uid of mentionIds) {
         sideEffects.push(notify(io, {
           recipient: uid,
@@ -266,7 +299,9 @@ const commentController = {
   },
 
   /**
-   * PATCH /api/comments/:id  (author only)
+   * PATCH /api/comments/:id
+   * Allows the comment author to edit their own comment.
+   * Updates HTML content, plain-text version, mentions, and edit timestamp.
    */
   async update(req, res, next) {
     try {
@@ -306,7 +341,10 @@ const commentController = {
   },
 
   /**
-   * DELETE /api/comments/:id  (owner or admin)
+   * DELETE /api/comments/:id
+   * Soft-deletes a comment. Only the author or an admin/moderator can delete.
+   * Delegates to forumCommentService which handles the transactional
+   * hide logic, counter decrements, and score recomputation.
    */
   async remove(req, res, next) {
     try {

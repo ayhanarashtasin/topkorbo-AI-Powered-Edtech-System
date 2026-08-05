@@ -16,12 +16,15 @@ import DOMPurify from 'dompurify';
  * `dangerouslySetInnerHTML` expects.
  */
 const SANITIZE_CONFIG = {
-  // Keep KaTeX's HTML + MathML output and the inline formatting these renderers
-  // produce. DOMPurify still removes <script>, event-handler attributes, and
-  // javascript:/data: URLs regardless of what is allowed here.
+  // Enable HTML, MathML, and SVG profiles to preserve KaTeX output.
+  // DOMPurify still strips <script>, event-handler attributes, and
+  // javascript:/data: URLs regardless of these profiles.
   USE_PROFILES: { html: true, mathMl: true, svg: true },
+  // Allow target attribute so links can open in new tabs
   ADD_ATTR: ['target'],
+  // Explicitly forbid structural/interactive tags that could embed external content
   FORBID_TAGS: ['style', 'iframe', 'object', 'embed', 'form'],
+  // Explicitly forbid event handler attributes as defense-in-depth
   FORBID_ATTR: ['onerror', 'onload', 'onclick']
 };
 

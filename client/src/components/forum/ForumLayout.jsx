@@ -1,3 +1,14 @@
+/**
+ * ForumLayout - Persistent chrome for the community section.
+ *
+ * Provides the top navigation bar (branding, global search, quick-action
+ * links) and renders child routes via <Outlet/>. The sidebar is rendered
+ * alongside the main content area so navigation remains accessible while
+ * browsing different forum views.
+ *
+ * Auth guard: redirects unauthenticated users to the landing page on mount
+ * by checking for the presence of a JWT in localStorage.
+ */
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { HiBookmark, HiPlus, HiSearch, HiUserCircle } from 'react-icons/hi';
@@ -14,11 +25,13 @@ export default function ForumLayout() {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
 
+  /** Auth guard: bounce unauthenticated visitors back to the home page. */
   useEffect(() => {
     const token = localStorage.getItem('topkorbo_token');
     if (!token) window.location.href = '/';
   }, []);
 
+  /** Submit the search form and navigate to the search results page. */
   function onSearch(event) {
     event.preventDefault();
     const nextQuery = query.trim();
@@ -26,6 +39,10 @@ export default function ForumLayout() {
     navigate(`/forum/search?q=${encodeURIComponent(nextQuery)}`);
   }
 
+  /**
+   * Derive the active sidebar tab from the current URL so the sidebar can
+   * visually highlight the matching link without extra state management.
+   */
   const activeTab = (() => {
     if (location.pathname.startsWith('/forum/compose')) return 'compose';
     if (location.pathname.startsWith('/forum/search')) return 'search';
@@ -34,6 +51,7 @@ export default function ForumLayout() {
     return 'forum';
   })();
 
+  /** Build a localized search placeholder, stripping any trailing punctuation. */
   const localizedPlaceholder = t('forum.search_placeholder')
     || 'Search discussions, people, or topics';
   const searchPlaceholder = `${localizedPlaceholder.replace(/[.\u2026]+$/, '')}\u2026`;
@@ -44,6 +62,7 @@ export default function ForumLayout() {
       <Sidebar activeTab={activeTab} user={user} />
 
       <div className="forum-main">
+        {/* Top bar: brand identity, global search, and quick-action buttons. */}
         <header className="forum-header">
           <Link className="forum-header__identity" to="/forum" aria-label="TopKorbo Community home">
             <span className="forum-header__mark" aria-hidden="true">TK</span>
@@ -53,6 +72,7 @@ export default function ForumLayout() {
             </span>
           </Link>
 
+          {/* Global search: submits on Enter, navigates to /forum/search with the query. */}
           <form className="forum-search" onSubmit={onSearch} role="search">
             <label className="forum-visually-hidden" htmlFor="forum-global-search">
               Search the community
@@ -70,6 +90,7 @@ export default function ForumLayout() {
             <kbd aria-hidden="true">Enter</kbd>
           </form>
 
+          {/* Quick-action links: notifications, bookmarks, profile, and new post. */}
           <nav className="forum-header__actions" aria-label="Community shortcuts">
             <NotificationBell />
             <Link
@@ -97,6 +118,7 @@ export default function ForumLayout() {
           </nav>
         </header>
 
+        {/* Main content area: child routes render here via React Router. */}
         <main id="forum-main-content" className="forum-content" tabIndex="-1">
           <Outlet />
         </main>

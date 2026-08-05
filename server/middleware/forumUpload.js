@@ -1,18 +1,32 @@
+/**
+ * Forum image upload middleware using Multer.
+ *
+ * Provides three upload configurations (post, comment, avatar) with different
+ * file/field limits. Uses bounded memory storage to enforce a request-wide
+ * byte budget instead of per-file limits, preventing abuse from many small files.
+ * After multer buffers the files, verifyImageBytes checks magic bytes to reject
+ * spoofed uploads (e.g., a .exe renamed to .png).
+ */
+
 const multer = require('multer');
 const { detectImage } = require('../utils/imageSignature');
 
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
 const MAX_FORUM_IMAGE_MB = 4;
 const MAX_FORUM_IMAGE_BYTES = MAX_FORUM_IMAGE_MB * 1024 * 1024;
+// Aggregate budget across all files in a single request (prevents multi-file bypass)
 const MAX_FORUM_REQUEST_BYTES = 4 * 1024 * 1024;
 
+// Symbol to track per-request byte usage across multiple file streams
 const REQUEST_BYTES = Symbol('forumUploadBytes');
 
 /**
- * Multer's memoryStorage enforces fileSize per file, so eight concurrent files
- * could be buffered before the old aggregate check ran. This storage engine
- * accounts for chunks as they arrive and aborts as soon as the request-wide
- * budget is exceeded.
+ * Custom memory storage that enforces a total request-wide byte limit.
+ *
+ * Multer's built-in memoryStorage only enforces `fileSize` per individual file.
+ * With e.g. 8 concurrent uploads, a client could buffer 8× the intended limit
+ * before the aggregate check runs. This engine tracks bytes as chunks arrive and
+ * aborts immediately when the combined budget is exceeded.
  */
 function boundedMemoryStorage(maxRequestBytes) {
   return {
@@ -61,10 +75,14 @@ function boundedMemoryStorage(maxRequestBytes) {
   };
 }
 
+/**
+ * First-pass filter on the client-declared MIME type.
+ *
+ * This is a cheap, early rejection before buffering starts. The real validation
+ * happens in verifyImageBytes after the file content is in memory — the client
+ * can trivially set any MIME header, so we never trust it alone.
+ */
 function fileFilter(req, file, cb) {
-  // First-pass filter on the declared mimetype; the authoritative check is the
-  // magic-byte validation below (verifyImageBytes), which runs after multer has
-  // buffered the file and can inspect the real content.
   if (ALLOWED_MIME.includes(file.mimetype)) return cb(null, true);
   const error = new Error('Only PNG, JPEG, GIF, or WebP images are allowed.');
   error.statusCode = 400;
@@ -72,9 +90,9 @@ function fileFilter(req, file, cb) {
 }
 
 /**
- * Post-multer middleware: verify every buffered file is a real image by its
- * magic bytes and stamp the detected mime/ext onto the file object so the
- * storage layer never trusts the client filename/mimetype.
+ * Post-multer middleware: verify every buffered file is a real image via magic
+ * bytes, then stamp the detected MIME/extension onto the file object so the
+ * storage layer never trusts client-supplied filenames or types.
  */
 function verifyImageBytes(req, res, next) {
   const files = [];
@@ -109,6 +127,9 @@ function verifyImageBytes(req, res, next) {
   next();
 }
 
+// --- Upload configurations for different forum actions ---
+
+// Posts allow up to 8 images with generous field limits for title/content
 const postUpload = multer({
   storage: boundedMemoryStorage(MAX_FORUM_REQUEST_BYTES),
   fileFilter,
@@ -121,6 +142,7 @@ const postUpload = multer({
   }
 });
 
+// Comments allow up to 3 images with smaller fields (shorter text)
 const commentUpload = multer({
   storage: boundedMemoryStorage(MAX_FORUM_REQUEST_BYTES),
   fileFilter,
@@ -133,6 +155,7 @@ const commentUpload = multer({
   }
 });
 
+// Avatar is a single 2MB image upload
 const avatarUpload = multer({
   storage: boundedMemoryStorage(2 * 1024 * 1024),
   fileFilter,

@@ -1,3 +1,13 @@
+/**
+ * Express server entry point for the TopKorbo platform.
+ *
+ * Configures middleware (CORS, body parsing, rate limiting, security headers),
+ * mounts all API route modules (auth, questions, contests, forum, payments, etc.),
+ * sets up Socket.IO for real-time features, and starts the HTTP server with
+ * graceful shutdown on uncaught errors. Also runs periodic background tasks
+ * (contest settlement, trending-score refresh) after boot.
+ */
+
 const originalEmitWarning = process.emitWarning;
 process.emitWarning = function emitWarningExceptKnownDependencyNoise(warning, ...args) {
   const options = args[0] && typeof args[0] === "object" ? args[0] : null;
@@ -296,7 +306,10 @@ app.use("/api/ielts", ieltsRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 
-// === Forum / Community routes ===
+// --- Forum / Community routes ---
+// Posts use two mounts: postComments handles nested comments under a specific
+// post (/api/posts/:postId/comments), while commentRoutes handles standalone
+// comment operations (edit, delete) at /api/comments/:id.
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/posts/:postId/comments", postComments);
@@ -406,9 +419,10 @@ const server = httpServer.listen(PORT, () => {
   setTimeout(runSettlement, 5000);
   setInterval(runSettlement, 5 * 60 * 1000);
 
-  // Persist time decay even when a post receives no new reactions/comments.
-  // The trending endpoint also performs a throttled refresh, which covers
-  // short-lived/serverless instances where this interval may not run.
+  // Start the periodic trending-score refresh. This applies time decay to
+  // forum posts so older content naturally fades even without new engagement.
+  // The trending API endpoint also triggers a throttled refresh as a fallback
+  // for short-lived serverless instances where this setInterval may not run.
   const { startTrendingScoreRefresh, refreshTrendingScores } = require('./services/forumScoreService');
   setTimeout(() => refreshTrendingScores({ force: true }).catch((err) =>
     console.error('Initial forum trending-score refresh failed:', err.message)

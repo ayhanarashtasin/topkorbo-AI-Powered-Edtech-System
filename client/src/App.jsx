@@ -1,3 +1,14 @@
+/**
+ * Root application component for the TopKorbo client.
+ *
+ * Defines all client-side routes, wraps the app in the language provider and
+ * router, and renders global chrome (Navbar, Footer, toast notifications).
+ * Heavy page components are code-split via React.lazy so each route only
+ * downloads its own bundle on first visit, keeping the initial payload small.
+ * The forum routes are nested inside a shared ForumShell layout that provides
+ * sidebar navigation and context for the community feature.
+ */
+
 import { Component, lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
@@ -151,7 +162,9 @@ function AppContent() {
 
           {renderAdminRoutes()}
 
-          {/* === Forum / Community === */}
+          {/* Forum routes are nested under ForumShell, which provides the
+              shared sidebar layout, forum context, and real-time socket
+              connection for all community pages. */}
           <Route element={<ForumShell />}>
             <Route path="/forum" element={<Forum />} />
             <Route path="/forum/compose" element={<ForumCompose />} />

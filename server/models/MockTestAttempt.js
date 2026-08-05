@@ -1,3 +1,21 @@
+/**
+ * MockTestAttempt Model
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Stores the final result of a completed mock test session.
+ *
+ * Design decisions:
+ *   - ranking is computed at insert time (not on read) so percentile queries
+ *     are O(1) reads at the cost of a countDocuments on insert. This is fine
+ *     for < 100k total attempts; revisit if volume grows significantly.
+ *   - subjectBreakdown is an embedded array (not a separate collection) because
+ *     each attempt has a small, fixed number of subjects and we always read
+ *     the full breakdown — no need for a separate query.
+ *
+ * Indexes:
+ *   - (student, createdAt)   → "my recent tests" query in student dashboard
+ *   - (summary.score, -1)   → percentile calculation via countDocuments
+ */
+
 const mongoose = require('mongoose');
 
 const subjectBreakdownSchema = new mongoose.Schema(

@@ -1,3 +1,17 @@
+/**
+ * PostCard - Renders a single post within the forum feed.
+ *
+ * Handles optimistic UI updates for reactions and bookmarks so the interface
+ * feels instant, then reconciles with the server response. Subscribes to
+ * live WebSocket `reaction:update` events so other users' reactions appear
+ * in real time.
+ *
+ * Props:
+ *   post             - The post data object from the API.
+ *   onDelete         - Callback invoked after a successful deletion.
+ *   onBookmarkChange - Callback fired when the bookmark state changes.
+ *   detail           - When true, renders the full post view (no link wrapper).
+ */
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HiDotsHorizontal, HiOutlineHeart, HiHeart, HiOutlineBookmark, HiBookmark, HiFlag, HiPencilAlt, HiTrash } from 'react-icons/hi';
@@ -8,6 +22,7 @@ import forumApi from '../../services/forumApi';
 import ReportModal from './ReportModal';
 import { sanitizeHtml } from '../../utils/safeHtml';
 
+/** Convert a timestamp into a short human-readable relative string. */
 function formatRelative(date) {
   if (!date) return '';
   const t = new Date(date).getTime();
@@ -22,12 +37,6 @@ function formatRelative(date) {
   return new Date(date).toLocaleDateString();
 }
 
-/**
- * PostCard — single post in the feed.
- *
- * Optimistically updates reactions and the bookmark toggle, then subscribes
- * to live `reaction:update` socket events to reconcile with the server.
- */
 export default function PostCard({ post, onDelete, onBookmarkChange, detail = false }) {
   const navigate = useNavigate();
   const { user, toggleReaction, subscribeReaction, toggleBookmark } = useForum();
@@ -38,13 +47,16 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
   const isOwner = user && String(user._id) === String(post.author?._id);
   const userId = user?._id ? String(user._id) : null;
 
-  // Local state for the reaction counts / which one the current user picked
-  // and the bookmark flag — all updated optimistically for snappy UI.
+  /** Local reaction/bookmark state — updated optimistically for instant feedback. */
   const [counts, setCounts] = useState(post.reactionsCount || { like: 0, love: 0 });
   const [myReaction, setMyReaction] = useState(post.userReaction || null);
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked);
 
-  // Subscribe to live reaction updates for this post.
+  /**
+   * Subscribe to live reaction updates for this specific post. When another
+   * user reacts, the WebSocket payload arrives and we patch the local counts
+   * so the UI stays consistent across all open clients.
+   */
   useEffect(() => {
     if (!post?._id) return;
     const off = subscribeReaction('post', post._id, (payload) => {
@@ -56,6 +68,11 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
     return () => off && off();
   }, [post?._id, subscribeReaction, userId]);
 
+  /**
+   * Toggle a reaction (like/love). Uses optimistic updates so the counter
+   * changes instantly, then rolls back to the previous state if the API call
+   * fails. This avoids the "laggy click" feel on slow connections.
+   */
   async function react(type) {
     if (busy) return;
     setBusy(true);
@@ -86,6 +103,11 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
     }
   }
 
+  /**
+   * Toggle the bookmark state optimistically. If the API call fails, the
+   * previous state is restored. Notifies the parent (InfiniteFeed) so the
+   * bookmark can be removed from the list when viewing "Saved" posts.
+   */
   async function bookmark() {
     const prev = bookmarked;
     setBookmarked(!prev);
@@ -100,6 +122,7 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
 
   return (
     <article className="forum-post">
+      {/* Author info: avatar, name, role badge, reputation, and timestamp. */}
       <div className="forum-post__header">
         <UserAvatarLink user={post.author} />
         <div className="forum-post__author-block">
@@ -133,8 +156,8 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
         </h2>
       ) : null}
 
-      {/* `contentHtml` is sanitized server-side; we sanitize again client-side
-          (defense in depth) so a stale/compromised payload still can't run JS. */}
+      {/* Rendered HTML content — sanitized server-side and again here (defense
+          in depth) to prevent XSS from a stale or compromised payload. */}
       <div
         className="forum-post__body"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.contentHtml || '') }}
@@ -171,6 +194,7 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
         </div>
       )}
 
+      {/* Action bar: like, love, comments, bookmark, and overflow menu. */}
       <div className="forum-post__actions">
         <button
           type="button"
@@ -213,6 +237,7 @@ export default function PostCard({ post, onDelete, onBookmarkChange, detail = fa
           <span>{bookmarked ? 'Saved' : 'Save'}</span>
         </button>
 
+        {/* Overflow menu: edit/delete for owners, report for others. */}
         <div className="forum-post__menu">
           <button
             type="button"

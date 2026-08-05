@@ -1,7 +1,14 @@
-// Thin fetch wrapper for the /api forum endpoints. Returns the standard
-// `{ success, data, nextCursor, unreadCount }` envelope and throws an
-// Error (with `.status` and `.payload`) on non-2xx responses so callers
-// can `try/catch` cleanly.
+/**
+ * API client for all forum/community endpoints.
+ *
+ * Wraps fetch with automatic auth-token injection, consistent error handling,
+ * and support for both JSON and FormData requests. Every method returns the
+ * standard `{ success, data, nextCursor, unreadCount }` envelope from the
+ * server. On failure, it throws an Error with `.status` and `.payload` so
+ * callers can distinguish 401/403/404/500 responses in try/catch blocks.
+ */
+// Base URL: in production the Vite proxy or same-origin serves /api, in
+// development the explicit localhost URL avoids CORS issues during HMR.
 const DEFAULT_BASE = import.meta.env.VITE_API_URL
   || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
@@ -9,6 +16,11 @@ function token() {
   return localStorage.getItem('topkorbo_token');
 }
 
+/**
+ * Core request helper. Handles auth headers, content-type negotiation,
+ * and normalizes the server's JSON response into the expected envelope.
+ * Non-OK responses are thrown as errors with status and payload attached.
+ */
 async function request(path, { method = 'GET', body, headers = {}, isForm = false } = {}) {
   const url = path.startsWith('http') ? path : `${DEFAULT_BASE}${path}`;
   const init = {
@@ -102,7 +114,7 @@ const forumApi = {
     return request(`/posts/bookmarks/mine${q ? `?${q}` : ''}`);
   },
 
-  // ---- Comments ----
+  // --- Comments ---
   comments(postId, cursor) {
     const qs = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
     return request(`/posts/${postId}/comments${qs}`);
@@ -121,12 +133,12 @@ const forumApi = {
     return request(`/comments/${id}`, { method: 'DELETE' });
   },
 
-  // ---- Reactions ----
+  // --- Reactions ---
   toggleReaction({ targetType, target, type }) {
     return request('/reactions', { method: 'POST', body: { targetType, target, type } });
   },
 
-  // ---- Notifications ----
+  // --- Notifications ---
   notifications({ limit, cursor, before } = {}) {
     const qs = new URLSearchParams();
     if (limit) qs.set('limit', String(limit));
@@ -142,7 +154,7 @@ const forumApi = {
     return request('/notifications/read-all', { method: 'POST' });
   },
 
-  // ---- Search / Categories ----
+  // --- Search / Categories ---
   categories() {
     return request('/search/categories');
   },
@@ -151,7 +163,7 @@ const forumApi = {
     return request(`/search?${qs.toString()}`);
   },
 
-  // ---- Users / Follow ----
+  // --- Users / Follow ---
   me() {
     return request('/users/me');
   },
@@ -175,7 +187,7 @@ const forumApi = {
     return request(`/users/${id}/follow-state`);
   },
 
-  // ---- Reports / Moderation ----
+  // --- Reports / Moderation ---
   report({ targetType, target, reason, description }) {
     return request('/reports', { method: 'POST', body: { targetType, target, reason, description } });
   }

@@ -7,6 +7,11 @@ import toast from 'react-hot-toast';
 import { notifyPaywall } from '../utils/paywall';
 import './MockTest.css';
 
+// ── Static Data ─────────────────────────────────────────────────────────────
+// Hardcoded subject list, university/board/college names, and chapter syllabi.
+// These could eventually be fetched from the server, but keeping them client-side
+// avoids extra API calls and lets the wizard render instantly.
+
 const MOCK_SUBJECTS = [
   { id: 'bangla', labelEn: 'Bangla', labelBn: 'বাংলা', letter: 'অ', color: '#C08552', bg: 'rgba(192, 133, 82, 0.08)', prefixType: 'letter' },
   { id: 'english', labelEn: 'English', labelBn: 'English', letter: 'Aa', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)', prefixType: 'letter' },
@@ -40,6 +45,8 @@ const COLLEGES = [
   'Sylhet Cadet College', 'Faujdarhat Cadet College'
 ];
 
+// Chapter lists per subject per paper (1st/2nd). Used in Step 2 for chapter selection.
+// Keyed by subject ID → paper → array of chapter names.
 const MOCK_CHAPTERS = {
   bangla: {
     '1st': [
@@ -173,6 +180,17 @@ const MOCK_CHAPTERS = {
   }
 };
 
+/**
+ * MockTest – Three-step wizard for configuring a mock test exam.
+ *
+ * Step 1: Subject selection (checkboxes)
+ * Step 2: Paper & chapter selection (with topic drill-down)
+ * Step 3: Exam settings (question count, duration, negative marking) + start
+ *
+ * State is persisted to sessionStorage so users can navigate away and come back.
+ * On successful config, questions are fetched from /api/questions/mock-test
+ * and stored in sessionStorage before navigating to the exam page.
+ */
 export default function MockTest() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
@@ -554,6 +572,8 @@ export default function MockTest() {
     return { subjectCount, chapterCount, topicCount };
   };
 
+  // Validates all selections, fetches questions from the API, and navigates to the exam page.
+  // Also handles the case where not enough questions are available for the given filters.
   const handleStartExam = async () => {
     if (isStartingExam) return;
 
@@ -606,7 +626,7 @@ export default function MockTest() {
         selectedBoards,
         questionType,
         totalQuestions,
-        context: 'mock' // attributes a free-tier mock-test usage
+        context: 'mock' // Tells the server to bill this as a mock test usage
       };
       const res = await fetch(`${base}/questions/mock-test`, {
         method: 'POST',
@@ -723,7 +743,7 @@ export default function MockTest() {
             ))}
           </div>
           {step === 1 ? (
-            /* STEP 1: SUBJECT LIST SELECTION VIEW */
+            /* Step 1: Pick one or more subjects */
             <div className="mock-subject-selection">
               <div className="mock-selection-info">
                 <h3>{t('mock.select_subject')}</h3>
@@ -776,7 +796,7 @@ export default function MockTest() {
               </div>
             </div>
           ) : step === 2 ? (
-            /* STEP 2: PAPER & CHAPTER SELECTION VIEW */
+            /* Step 2: Pick papers, chapters, and topics per subject */
             <div className="mock-config-selection animate-fade-in">
               <button
                 type="button"
@@ -1022,7 +1042,7 @@ export default function MockTest() {
               </div>
             </div>
           ) : step === 3 ? (
-            /* STEP 3: EXAM CONFIGURATION */
+            /* Step 3: Configure exam parameters and start */
             <div className="mock-exam-config animate-fade-in">
               <button
                 type="button"
