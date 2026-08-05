@@ -36,6 +36,7 @@ export default function MentorLiveClass() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
+  const [cancelSession, setCancelSession] = useState(null);
 
   const formatDisconnectReason = (reason) => {
     if (reason === undefined || reason === null) return '';
@@ -203,13 +204,12 @@ export default function MentorLiveClass() {
 
   const handleCancelScheduledClass = async (session) => {
     if (!session?._id) return;
-    const confirmed = window.confirm(`Cancel "${session.title || 'this class'}"? Students will be notified.`);
-    if (!confirmed) return;
 
     try {
       setBusy(true);
       setError('');
       await cancelMentorScheduledLiveClass(session._id);
+      setCancelSession(null);
       if (scheduleForm.editingSessionId === session._id) {
         resetScheduleForm();
       }
@@ -443,9 +443,9 @@ export default function MentorLiveClass() {
                           type="button"
                           className="btn btn-secondary"
                           disabled={busy}
-                          onClick={() => handleCancelScheduledClass(session)}
+                          onClick={() => setCancelSession(session)}
                         >
-                          Cancel
+                          Cancel Class
                         </button>
                         <button
                           type="button"
@@ -530,6 +530,50 @@ export default function MentorLiveClass() {
               </div>
             )}
           </section>
+
+          {cancelSession ? (
+            <div
+              className="live-page__modal-backdrop"
+              role="presentation"
+              onClick={() => {
+                if (!busy) setCancelSession(null);
+              }}
+            >
+              <div
+                className="live-page__modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cancel-class-title"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="cancel-class-title">Cancel Class</h2>
+                <p>
+                  Cancel <strong>{cancelSession.title || 'this scheduled class'}</strong>? Students will be notified that this class is cancelled.
+                </p>
+                <div className="live-page__modal-meta">
+                  {formatClassTime(cancelSession.scheduledStart)} - {cancelSession.durationMinutes || 60} minutes
+                </div>
+                <div className="live-page__modal-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={busy}
+                    onClick={() => setCancelSession(null)}
+                  >
+                    Keep Class
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary live-page__danger-btn"
+                    disabled={busy}
+                    onClick={() => handleCancelScheduledClass(cancelSession)}
+                  >
+                    {busy ? 'Cancelling...' : 'Cancel Class'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </main>
     </div>
