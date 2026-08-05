@@ -5,6 +5,7 @@ const liveClassController = require('../controllers/liveClassController');
 const router = express.Router();
 
 router.get('/mentor/dashboard', auth, liveClassController.getMentorLiveClassDashboard);
+router.post('/mentor/schedule', auth, liveClassController.scheduleMentorLiveClass);
 router.post('/mentor/start', auth, liveClassController.startMentorLiveClass);
 router.post('/mentor/:sessionId/end', auth, liveClassController.endMentorLiveClass);
 router.get('/student/sessions', auth, liveClassController.listStudentLiveClasses);

@@ -39,11 +39,48 @@
 }
 
 .live-page__launcher,
-.live-page__directory {
+.live-page__directory,
+.live-page__schedule {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(192, 133, 82, 0.14);
   border-radius: 28px;
   padding: 24px;
+}
+
+.live-page__section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.live-page__section-head h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+}
+
+.live-page__section-head p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.live-page__section-head span {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(192, 133, 82, 0.1);
+  color: #8c5a3c;
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+
+.live-page__schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .live-page__field {
@@ -57,11 +94,35 @@
   font-weight: 700;
 }
 
-.live-page__field input {
+.live-page__field input,
+.live-page__field select,
+.live-page__field textarea {
   border: 1px solid rgba(192, 133, 82, 0.18);
   border-radius: 16px;
   padding: 14px 16px;
   font: inherit;
+}
+
+.live-page__field textarea {
+  resize: vertical;
+}
+
+.live-page__invite-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.live-page__invite-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(192, 133, 82, 0.16);
+  border-radius: 999px;
+  background: #fffaf5;
+  padding: 9px 12px;
+  font-weight: 700;
 }
 
 .live-page__hint {
@@ -208,9 +269,14 @@
 
   .live-page__intro,
   .live-page__card,
-  .live-page__students-head {
+  .live-page__students-head,
+  .live-page__section-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .live-page__schedule-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -221,6 +287,7 @@
 
   .live-page__launcher,
   .live-page__directory,
+  .live-page__schedule,
   .live-page__students,
   .live-page__intro {
     padding: 18px;

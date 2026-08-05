@@ -12,6 +12,14 @@ export async function startMentorLiveClass(payload) {
   });
 }
 
+export async function scheduleMentorLiveClass(payload) {
+  return httpClient.request('/live-class/mentor/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function endMentorLiveClass(sessionId) {
   return httpClient.request(`/live-class/mentor/${sessionId}/end`, {
     method: 'POST',
