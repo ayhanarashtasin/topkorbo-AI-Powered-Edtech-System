@@ -28,9 +28,10 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
   const [isStageFullscreen, setIsStageFullscreen] = useState(false);
 
   const mentorTracks = tracks.filter((trackRef) => trackRef.participant.identity.startsWith('mentor:'));
-  const mainMentorTrack = mentorTracks.find((trackRef) => trackRef.source === Track.Source.ScreenShare)
-    || mentorTracks.find((trackRef) => trackRef.source === Track.Source.Camera)
-    || null;
+  const mentorScreenShareTrack = mentorTracks.find((trackRef) => trackRef.source === Track.Source.ScreenShare) || null;
+  const mentorCameraTrack = mentorTracks.find((trackRef) => trackRef.source === Track.Source.Camera) || null;
+  const mainMentorTrack = mentorScreenShareTrack || mentorCameraTrack;
+  const showMentorCameraTile = Boolean(mentorScreenShareTrack && mentorCameraTrack);
 
   const activeSpeakerIds = new Set((room?.activeSpeakers || []).map((participant) => participant.identity));
   const joinedStudents = participants
@@ -283,7 +284,15 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
           </div>
           <div className="live-room__stage-video">
             {mainMentorTrack ? (
-              <VideoTrack trackRef={mainMentorTrack} />
+              <>
+                <VideoTrack trackRef={mainMentorTrack} />
+                {showMentorCameraTile ? (
+                  <div className="live-room__mentor-pip">
+                    <VideoTrack trackRef={mentorCameraTrack} />
+                    <span>Mentor camera</span>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <div className="live-room__placeholder live-room__placeholder--card">
                 <div className="live-room__fallback-avatar">{fallbackInitial}</div>
