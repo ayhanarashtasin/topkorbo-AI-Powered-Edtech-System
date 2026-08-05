@@ -47,9 +47,23 @@ async function updateTeacherVerificationStatus(req, res, next) {
   }
 }
 
+async function resetTeacherLiveSessions(req, res, next) {
+  try {
+    const data = await adminTeacherService.resetTeacherLiveSessions({
+      adminUser: req.user,
+      targetUserId: req.params.userId,
+      reason: req.body.reason
+    });
+    return res.json({ success: true, data, message: 'Teacher live sessions reset successfully.' });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listTeachers,
   getTeacherDetails,
   updateTeacherApplicationStatus,
-  updateTeacherVerificationStatus
+  updateTeacherVerificationStatus,
+  resetTeacherLiveSessions
 };

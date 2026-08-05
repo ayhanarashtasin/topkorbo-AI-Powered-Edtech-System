@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-const { AccessToken, RoomServiceClient, WebhookReceiver } = require('livekit-server-sdk');
+const { AccessToken, RoomServiceClient, TrackSource, WebhookReceiver } = require('livekit-server-sdk');
 const LiveSession = require('../models/LiveSession');
 const ClassAttendance = require('../models/ClassAttendance');
 const MentorConnection = require('../models/MentorConnection');
@@ -53,9 +53,12 @@ function isMentorRole(role) {
 
 async function getWeeklyUsage(mentorId) {
   const { start, end } = getWeekRange();
+  const mentor = await User.findById(mentorId).select('liveClassUsageResetAt').lean();
+  const resetAt = mentor?.liveClassUsageResetAt || null;
+  const effectiveStart = resetAt && resetAt > start ? resetAt : start;
   const count = await LiveSession.countDocuments({
     mentorId,
-    actualStart: { $gte: start, $lte: end },
+    actualStart: { $gte: effectiveStart, $lte: end },
   });
 
   return {
@@ -63,6 +66,7 @@ async function getWeeklyUsage(mentorId) {
     limit: WEEKLY_LIMIT,
     weekStart: start,
     weekEnd: end,
+    resetAt,
   };
 }
 
@@ -102,6 +106,7 @@ async function createToken({
     roomJoin: true,
     room: roomName,
     canPublish: !!grants.canPublish,
+    ...(Array.isArray(grants.canPublishSources) ? { canPublishSources: grants.canPublishSources } : {}),
     canPublishData: true,
     canSubscribe: grants.canSubscribe !== false,
     canUpdateOwnMetadata: false,
@@ -409,7 +414,8 @@ exports.joinStudentLiveClass = async (req, res, next) => {
       apiKey,
       apiSecret,
       grants: {
-        canPublish: false,
+        canPublish: true,
+        canPublishSources: [TrackSource.MICROPHONE],
         canSubscribe: true,
       },
     });

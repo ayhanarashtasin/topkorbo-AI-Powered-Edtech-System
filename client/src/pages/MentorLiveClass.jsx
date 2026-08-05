@@ -37,9 +37,9 @@ export default function MentorLiveClass() {
     return `Disconnect reason: ${name}.`;
   };
 
-  const loadDashboard = async () => {
+  const loadDashboard = async ({ showLoading = true } = {}) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [liveData, mentorData] = await Promise.all([
         fetchMentorLiveDashboard(),
         fetchMentorDashboard(),
@@ -49,7 +49,7 @@ export default function MentorLiveClass() {
     } catch (err) {
       setError(err.message || 'Failed to load live class dashboard.');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -58,7 +58,11 @@ export default function MentorLiveClass() {
       window.location.href = '/dashboard';
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
+    const timer = window.setInterval(() => loadDashboard({ showLoading: false }), 15000);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleStartClass = async () => {

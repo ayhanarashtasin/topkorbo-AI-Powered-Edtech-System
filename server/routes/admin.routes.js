@@ -46,6 +46,7 @@ router.get('/teachers', teacherManagementController.listTeachers);
 router.get('/teachers/:userId', teacherManagementController.getTeacherDetails);
 router.patch('/teachers/:userId/application', teacherManagementController.updateTeacherApplicationStatus);
 router.patch('/teachers/:userId/verification', teacherManagementController.updateTeacherVerificationStatus);
+router.patch('/teachers/:userId/live-sessions/reset', teacherManagementController.resetTeacherLiveSessions);
 router.get('/questions', questionManagementController.listQuestions);
 router.get('/questions/reports', questionManagementController.listQuestionReports);
 router.get('/questions/quality', questionManagementController.getQuestionQualityStats);

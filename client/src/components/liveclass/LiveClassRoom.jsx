@@ -124,28 +124,33 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
           <h2>{sessionTitle}</h2>
           <p>{participantCount} participants connected</p>
         </div>
-        {mode === 'mentor' ? (
-          <div className="live-room__controls">
-            <button type="button" className="live-room__control" onClick={toggleCamera}>
-              <HiVideoCamera size={18} />
-              {cameraEnabled ? 'Camera On' : 'Camera Off'}
-            </button>
+        <div className="live-room__controls">
+          {mode === 'mentor' ? (
+            <>
+              <button type="button" className="live-room__control" onClick={toggleCamera}>
+                <HiVideoCamera size={18} />
+                {cameraEnabled ? 'Camera On' : 'Camera Off'}
+              </button>
+              <button type="button" className="live-room__control" onClick={toggleMic}>
+                <HiMicrophone size={18} />
+                {micEnabled ? 'Mic On' : 'Mic Off'}
+              </button>
+              <button type="button" className="live-room__control" onClick={toggleScreen}>
+                <HiDesktopComputer size={18} />
+                {screenEnabled ? 'Stop Share' : 'Share Screen'}
+              </button>
+              <button type="button" className="live-room__control live-room__control--danger" onClick={onEndClass}>
+                <HiPhoneMissedCall size={18} />
+                End Class
+              </button>
+            </>
+          ) : (
             <button type="button" className="live-room__control" onClick={toggleMic}>
               <HiMicrophone size={18} />
-              {micEnabled ? 'Mic On' : 'Mic Off'}
+              {micEnabled ? 'Mute Mic' : 'Talk'}
             </button>
-            <button type="button" className="live-room__control" onClick={toggleScreen}>
-              <HiDesktopComputer size={18} />
-              {screenEnabled ? 'Stop Share' : 'Share Screen'}
-            </button>
-            <button type="button" className="live-room__control live-room__control--danger" onClick={onEndClass}>
-              <HiPhoneMissedCall size={18} />
-              End Class
-            </button>
-          </div>
-        ) : (
-          <div className="live-room__badge">Mic & camera join muted for performance</div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="live-room__content">

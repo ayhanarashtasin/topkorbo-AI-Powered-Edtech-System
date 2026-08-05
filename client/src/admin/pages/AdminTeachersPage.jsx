@@ -12,6 +12,7 @@ import AdminTeacherDetailsDrawer from '../components/AdminTeacherDetailsDrawer';
 import {
   fetchAdminTeacherDetails,
   fetchAdminTeachers,
+  resetAdminTeacherLiveSessions,
   updateAdminTeacherApplication,
   updateAdminTeacherVerification
 } from '../services/adminApi';
@@ -75,11 +76,13 @@ export default function AdminTeachersPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTeachers({ ...filters, page: 1 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTeachers(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.page, filters.status, filters.verificationStatus, filters.createdFrom, filters.createdTo]);
@@ -119,12 +122,15 @@ export default function AdminTeachersPage() {
           note: reason
         });
         toast.success('Teacher application updated');
-      } else {
+      } else if (actionState.type === 'verification') {
         await updateAdminTeacherVerification(actionState.userId, {
           status: actionState.value,
           note: reason
         });
         toast.success('Teacher verification updated');
+      } else if (actionState.type === 'liveSessionsReset') {
+        await resetAdminTeacherLiveSessions(actionState.userId, { reason });
+        toast.success('Teacher live sessions reset to 0');
       }
 
       const currentId = actionState.userId;
@@ -279,6 +285,15 @@ export default function AdminTeachersPage() {
             requireReason: value === 'rejected'
           });
         }}
+        onLiveSessionReset={() => {
+          setActionState({
+            type: 'liveSessionsReset',
+            userId: selectedTeacherId,
+            title: `Reset live sessions for ${selectedTeacher?.profile?.name || 'this teacher'}?`,
+            description: 'This sets the mentor panel weekly usage back to 0 and allows the teacher to start classes again this week.',
+            requireReason: false
+          });
+        }}
       />
 
       <AdminConfirmModal
@@ -287,7 +302,7 @@ export default function AdminTeachersPage() {
         description={actionState?.description}
         requireReason={actionState?.requireReason}
         reasonLabel={actionState?.type === 'verification' ? 'Verification note' : 'Admin reason'}
-        confirmLabel="Save update"
+        confirmLabel={actionState?.type === 'liveSessionsReset' ? 'Reset to 0' : 'Save update'}
         onClose={() => setActionState(null)}
         onConfirm={handleActionConfirm}
       />

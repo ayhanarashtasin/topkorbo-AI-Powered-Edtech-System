@@ -159,6 +159,7 @@ const userSchema = new mongoose.Schema({
     battleRooms: { type: Number, default: 0 },
     aiActions: { type: Number, default: 0 }
   },
+  liveClassUsageResetAt: { type: Date, default: null },
   // Mentor / Tutor Profile Information
   studentIdNumber: {
     type: String
