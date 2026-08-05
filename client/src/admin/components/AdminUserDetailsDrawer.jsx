@@ -75,8 +75,8 @@ export default function AdminUserDetailsDrawer({ user, open, loading, onClose, o
               <section className="admin-panel">
                 <div className="admin-panel__header">
                   <div>
-                    <h3>Live class quota</h3>
-                    <p className="admin-panel__subtext">Reset this teacher's weekly count when they need a manual bypass.</p>
+                    <h3>Mentor panel live class quota</h3>
+                    <p className="admin-panel__subtext">Reset this mentor's weekly live-class count when they need a manual bypass.</p>
                   </div>
                   <AdminBadge tone="info">
                     {user.liveClassUsage?.sessionsThisWeek ?? 0} / {user.liveClassUsage?.weeklyLimit ?? 4}
@@ -90,7 +90,7 @@ export default function AdminUserDetailsDrawer({ user, open, loading, onClose, o
 
                 <div className="admin-action-row">
                   <AdminActionButton tone="warning" variant="ghost" onClick={onLiveSessionReset}>
-                    Reset sessions to 0
+                    Reset mentor sessions to 0
                   </AdminActionButton>
                 </div>
               </section>

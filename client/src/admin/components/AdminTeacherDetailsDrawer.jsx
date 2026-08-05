@@ -24,8 +24,7 @@ export default function AdminTeacherDetailsDrawer({
   loading,
   onClose,
   onApplicationAction,
-  onVerificationAction,
-  onLiveSessionReset
+  onVerificationAction
 }) {
   return (
     <div className={`admin-drawer ${open ? 'admin-drawer--open' : ''}`}>
@@ -68,29 +67,6 @@ export default function AdminTeacherDetailsDrawer({
                 <div><strong>University</strong><span>{teacher.profile?.universityName || 'Not provided'}</span></div>
                 <div><strong>Department</strong><span>{teacher.profile?.department || 'Not provided'}</span></div>
                 <div><strong>Semester</strong><span>{teacher.profile?.currentYearSemester || 'Not provided'}</span></div>
-              </div>
-            </section>
-
-            <section className="admin-panel">
-              <div className="admin-panel__header">
-                <div>
-                  <h3>Live class quota</h3>
-                  <p className="admin-panel__subtext">Reset the weekly class count when a teacher needs a manual bypass.</p>
-                </div>
-                <AdminBadge tone="info">
-                  {teacher.liveClassUsage?.sessionsThisWeek ?? 0} / {teacher.liveClassUsage?.weeklyLimit ?? 4}
-                </AdminBadge>
-              </div>
-
-              <div className="admin-meta-grid">
-                <div><strong>Week starts</strong><span>{formatDate(teacher.liveClassUsage?.weekStart)}</span></div>
-                <div><strong>Last reset</strong><span>{formatDate(teacher.liveClassUsage?.resetAt)}</span></div>
-              </div>
-
-              <div className="admin-action-row">
-                <AdminActionButton tone="warning" variant="ghost" onClick={onLiveSessionReset}>
-                  Reset to 0
-                </AdminActionButton>
               </div>
             </section>
 

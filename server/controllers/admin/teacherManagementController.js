@@ -47,14 +47,14 @@ async function updateTeacherVerificationStatus(req, res, next) {
   }
 }
 
-async function resetTeacherLiveSessions(req, res, next) {
+async function resetMentorLiveSessions(req, res, next) {
   try {
-    const data = await adminTeacherService.resetTeacherLiveSessions({
+    const data = await adminTeacherService.resetMentorLiveSessions({
       adminUser: req.user,
       targetUserId: req.params.userId,
       reason: req.body.reason
     });
-    return res.json({ success: true, data, message: 'Teacher live sessions reset successfully.' });
+    return res.json({ success: true, data, message: 'Mentor live sessions reset successfully.' });
   } catch (err) {
     return next(err);
   }
@@ -65,5 +65,5 @@ module.exports = {
   getTeacherDetails,
   updateTeacherApplicationStatus,
   updateTeacherVerificationStatus,
-  resetTeacherLiveSessions
+  resetMentorLiveSessions
 };

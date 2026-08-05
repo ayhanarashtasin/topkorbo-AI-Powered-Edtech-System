@@ -12,7 +12,6 @@ import AdminTeacherDetailsDrawer from '../components/AdminTeacherDetailsDrawer';
 import {
   fetchAdminTeacherDetails,
   fetchAdminTeachers,
-  resetAdminTeacherLiveSessions,
   updateAdminTeacherApplication,
   updateAdminTeacherVerification
 } from '../services/adminApi';
@@ -128,9 +127,6 @@ export default function AdminTeachersPage() {
           note: reason
         });
         toast.success('Teacher verification updated');
-      } else if (actionState.type === 'liveSessionsReset') {
-        await resetAdminTeacherLiveSessions(actionState.userId, { reason });
-        toast.success('Teacher live sessions reset to 0');
       }
 
       const currentId = actionState.userId;
@@ -285,15 +281,6 @@ export default function AdminTeachersPage() {
             requireReason: value === 'rejected'
           });
         }}
-        onLiveSessionReset={() => {
-          setActionState({
-            type: 'liveSessionsReset',
-            userId: selectedTeacherId,
-            title: `Reset live sessions for ${selectedTeacher?.profile?.name || 'this teacher'}?`,
-            description: 'This sets the mentor panel weekly usage back to 0 and allows the teacher to start classes again this week.',
-            requireReason: false
-          });
-        }}
       />
 
       <AdminConfirmModal
@@ -302,7 +289,7 @@ export default function AdminTeachersPage() {
         description={actionState?.description}
         requireReason={actionState?.requireReason}
         reasonLabel={actionState?.type === 'verification' ? 'Verification note' : 'Admin reason'}
-        confirmLabel={actionState?.type === 'liveSessionsReset' ? 'Reset to 0' : 'Save update'}
+        confirmLabel="Save update"
         onClose={() => setActionState(null)}
         onConfirm={handleActionConfirm}
       />

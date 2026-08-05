@@ -183,8 +183,8 @@ export async function updateAdminTeacherVerification(userId, payload) {
   });
 }
 
-export async function resetAdminTeacherLiveSessions(userId, payload = {}) {
-  return httpClient.request(`/admin/teachers/${userId}/live-sessions/reset`, {
+export async function resetAdminMentorLiveSessions(userId, payload = {}) {
+  return httpClient.request(`/admin/mentors/${userId}/live-sessions/reset`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)

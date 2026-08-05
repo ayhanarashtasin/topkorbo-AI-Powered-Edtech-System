@@ -306,8 +306,7 @@ async function getTeacherDetails(userId) {
       },
       updatedAt: verification?.updatedAt || null,
       history: Array.isArray(verification?.verificationHistory) ? verification.verificationHistory : []
-    },
-    liveClassUsage: await getLiveClassUsage(user._id, user.liveClassUsageResetAt || null)
+    }
   };
 }
 
@@ -535,7 +534,7 @@ async function updateTeacherVerificationStatus({
   };
 }
 
-async function resetTeacherLiveSessions({
+async function resetMentorLiveSessions({
   adminUser,
   targetUserId,
   reason = ''
@@ -563,7 +562,7 @@ async function resetTeacherLiveSessions({
   await createAdminAuditLog({
     adminId: adminUser.id,
     targetUserId: user._id,
-    actionType: 'TEACHER_LIVE_SESSIONS_RESET',
+    actionType: 'MENTOR_LIVE_SESSIONS_RESET',
     previousValue: {
       liveClassUsageResetAt: previousResetAt,
       sessionsThisWeek: previousUsage.sessionsThisWeek,
@@ -588,7 +587,7 @@ module.exports = {
   getTeacherDetails,
   updateTeacherApplicationStatus,
   updateTeacherVerificationStatus,
-  resetTeacherLiveSessions,
+  resetMentorLiveSessions,
   resolveApplicationState,
   resolveVerificationState
 };

@@ -11,7 +11,7 @@ import AdminUserDetailsDrawer from '../components/AdminUserDetailsDrawer';
 import {
   fetchAdminUserDetails,
   fetchAdminUsers,
-  resetAdminTeacherLiveSessions,
+  resetAdminMentorLiveSessions,
   updateAdminUserRole,
   updateAdminUserStatus
 } from '../services/adminApi';
@@ -138,8 +138,8 @@ export default function AdminUsersPage() {
 
   async function handleLiveSessionResetConfirm(reason) {
     try {
-      await resetAdminTeacherLiveSessions(actionState.userId, { reason });
-      toast.success('Live sessions reset to 0');
+      await resetAdminMentorLiveSessions(actionState.userId, { reason });
+      toast.success('Mentor panel live sessions reset to 0');
       const currentId = actionState.userId;
       setActionState(null);
       await loadUsers();
@@ -242,12 +242,12 @@ export default function AdminUsersPage() {
                             setActionState({
                               type: 'liveSessionsReset',
                               userId: user.id,
-                              title: `Reset live sessions for ${user.name || 'this user'}?`,
-                              description: 'This sets the mentor panel weekly usage back to 0 and allows the teacher to start classes again this week.'
+                              title: `Reset mentor panel live sessions for ${user.name || 'this user'}?`,
+                              description: 'This sets the mentor panel weekly usage back to 0 and allows this mentor to start live classes again this week.'
                             });
                           }}
                         >
-                          Reset sessions
+                          Reset mentor sessions
                         </AdminActionButton>
                       ) : null}
 
@@ -320,8 +320,8 @@ export default function AdminUsersPage() {
           setActionState({
             type: 'liveSessionsReset',
             userId: selectedUserId,
-            title: `Reset live sessions for ${selectedUser?.name || 'this user'}?`,
-            description: 'This sets the mentor panel weekly usage back to 0 and allows the teacher to start classes again this week.'
+            title: `Reset mentor panel live sessions for ${selectedUser?.name || 'this user'}?`,
+            description: 'This sets the mentor panel weekly usage back to 0 and allows this mentor to start live classes again this week.'
           });
         }}
       />
