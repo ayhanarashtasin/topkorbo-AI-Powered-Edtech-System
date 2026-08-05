@@ -95,6 +95,10 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
     setScreenEnabled(next);
   };
 
+  const leaveClass = async () => {
+    await room?.disconnect();
+  };
+
   const toggleStageFullscreen = async () => {
     const stageEl = document.querySelector('.live-room__stage-video');
     if (!stageEl) return;
@@ -145,10 +149,16 @@ function RoomLayout({ mode, onEndClass, sessionTitle }) {
               </button>
             </>
           ) : (
-            <button type="button" className="live-room__control" onClick={toggleMic}>
-              <HiMicrophone size={18} />
-              {micEnabled ? 'Mute Mic' : 'Talk'}
-            </button>
+            <>
+              <button type="button" className="live-room__control" onClick={toggleMic}>
+                <HiMicrophone size={18} />
+                {micEnabled ? 'Mute Mic' : 'Talk'}
+              </button>
+              <button type="button" className="live-room__control live-room__control--danger" onClick={leaveClass}>
+                <HiPhoneMissedCall size={18} />
+                Leave Class
+              </button>
+            </>
           )}
         </div>
       </div>
