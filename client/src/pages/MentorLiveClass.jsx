@@ -13,7 +13,6 @@ export default function MentorLiveClass() {
     email: localStorage.getItem('topkorbo_email') || '',
     role: localStorage.getItem('topkorbo_role') || 'tutor',
   });
-  const [title, setTitle] = useState('Weekly Live Class');
   const [scheduleForm, setScheduleForm] = useState({
     editingSessionId: '',
     title: 'Weekly Live Class',
@@ -26,7 +25,6 @@ export default function MentorLiveClass() {
   const [dashboard, setDashboard] = useState({ sessionsThisWeek: 0, weeklyLimit: 4, activeSession: null, scheduledSessions: [] });
   const [acceptedStudents, setAcceptedStudents] = useState([]);
   const [connection, setConnection] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
@@ -64,9 +62,8 @@ export default function MentorLiveClass() {
     return localDate.toISOString().slice(0, 16);
   };
 
-  const loadDashboard = async ({ showLoading = true } = {}) => {
+  const loadDashboard = async () => {
     try {
-      if (showLoading) setLoading(true);
       const [liveData, mentorData] = await Promise.all([
         fetchMentorLiveDashboard(),
         fetchMentorDashboard(),
@@ -75,8 +72,6 @@ export default function MentorLiveClass() {
       setAcceptedStudents(Array.isArray(mentorData?.students) ? mentorData.students : []);
     } catch (err) {
       setError(err.message || 'Failed to load live class dashboard.');
-    } finally {
-      if (showLoading) setLoading(false);
     }
   };
 
@@ -87,7 +82,7 @@ export default function MentorLiveClass() {
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
-    const timer = window.setInterval(() => loadDashboard({ showLoading: false }), 15000);
+    const timer = window.setInterval(loadDashboard, 15000);
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -150,7 +145,7 @@ export default function MentorLiveClass() {
         await scheduleMentorLiveClass(payload);
       }
       resetScheduleForm();
-      await loadDashboard({ showLoading: false });
+      await loadDashboard();
     } catch (err) {
       setError(err.message || `Failed to ${scheduleForm.editingSessionId ? 'update' : 'schedule'} live class.`);
     } finally {
@@ -163,7 +158,7 @@ export default function MentorLiveClass() {
       setBusy(true);
       setError('');
       const data = await startMentorLiveClass({
-        title: session?.title || title,
+        title: session?.title || 'Live Class',
         roomName: dashboard.activeSession?.roomName || session?.roomName || '',
         sessionId: session?._id || '',
       });
@@ -215,33 +210,13 @@ export default function MentorLiveClass() {
 
           {error ? <div className="live-page__error">{error}</div> : null}
 
-          {!connection ? (
-            <section className="live-page__launcher">
-              <label className="live-page__field">
-                <span>Class title</span>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140} />
-              </label>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={busy || loading || (!dashboard.activeSession && dashboard.sessionsThisWeek >= dashboard.weeklyLimit)}
-                onClick={() => handleStartClass()}
-              >
-                {busy ? 'Starting...' : dashboard.activeSession ? 'Rejoin Live Class' : 'Start Live Class'}
-              </button>
-              {dashboard.sessionsThisWeek >= dashboard.weeklyLimit ? (
-                <p className="live-page__hint">Weekly limit reached. You can host up to 4 sessions per week.</p>
-              ) : (
-                <p className="live-page__hint">Each session is capped at 2 hours and can support up to 30 students with optimized rendering.</p>
-              )}
-            </section>
-          ) : (
+          {connection ? (
             <LiveClassRoom
               token={connection.token}
               wsUrl={connection.wsUrl}
               mode="mentor"
               connect={true}
-              sessionTitle={connection.session?.title || title}
+              sessionTitle={connection.session?.title || 'Live Class'}
               onConnected={() => {
                 setConnected(true);
                 setError('');
@@ -262,7 +237,7 @@ export default function MentorLiveClass() {
               }}
               onEndClass={handleEndClass}
             />
-          )}
+          ) : null}
           {connection && !connected ? (
             <div className="live-page__hint">
               Connecting to LiveKit at <strong>{connection.wsUrl}</strong>
