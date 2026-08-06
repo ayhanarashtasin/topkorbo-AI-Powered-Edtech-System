@@ -5,11 +5,14 @@ const LiveSession = require('../models/LiveSession');
 const ClassAttendance = require('../models/ClassAttendance');
 const MentorConnection = require('../models/MentorConnection');
 const User = require('../models/User');
+const { getIO } = require('../socket');
+const { notify } = require('../services/notificationService');
 
 const MENTOR_ROLES = new Set(['tutor', 'teacher']);
 const SESSION_TTL_SECONDS = 7200;
 const WEEKLY_LIMIT = 4;
-const RECONNECT_WINDOW_MS = 2 * 60 * 60 * 1000;
+const SCHEDULE_LOOKAHEAD_DAYS = 30;
+const CLASS_HISTORY_DAYS = 90;
 
 function getLiveKitConfig() {
   const host = process.env.LIVEKIT_HOST || process.env.LIVEKIT_URL;
@@ -71,15 +74,102 @@ async function getWeeklyUsage(mentorId) {
 }
 
 function serializeSession(session) {
+  const raw = session.toObject ? session.toObject() : session;
   return {
-    _id: session._id,
-    roomName: session.roomName,
-    title: session.title,
-    mentorId: session.mentorId,
-    actualStart: session.actualStart,
-    actualEnd: session.actualEnd,
-    status: session.status,
+    _id: raw._id,
+    roomName: raw.roomName,
+    title: raw.title,
+    description: raw.description || '',
+    mentorId: raw.mentorId,
+    scheduledStart: raw.scheduledStart || null,
+    durationMinutes: raw.durationMinutes || 60,
+    audienceType: raw.audienceType || 'all_accepted',
+    invitedStudents: Array.isArray(raw.invitedStudents) ? raw.invitedStudents : [],
+    actualStart: raw.actualStart,
+    actualEnd: raw.actualEnd,
+    status: raw.status,
   };
+}
+
+function formatSchedulePreview(date, durationMinutes) {
+  const when = new Date(date);
+  const readable = Number.isNaN(when.getTime())
+    ? 'the scheduled class time'
+    : when.toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Dhaka',
+      });
+  return `${readable} - ${durationMinutes || 60} minutes`;
+}
+
+function getSocketServer() {
+  try {
+    return getIO();
+  } catch (_err) {
+    return null;
+  }
+}
+
+function getSessionEndAt(session) {
+  const start = session?.actualStart || session?.scheduledStart;
+  if (!start) return null;
+
+  const startDate = new Date(start);
+  if (Number.isNaN(startDate.getTime())) return null;
+
+  const durationMinutes = Math.min(180, Math.max(15, Number(session.durationMinutes) || 60));
+  return new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+}
+
+function isLiveSessionExpired(session, now = new Date()) {
+  const endAt = getSessionEndAt(session);
+  return Boolean(endAt && endAt <= now);
+}
+
+async function closeExpiredLiveSessions(filter = {}) {
+  const liveSessions = await LiveSession.find({
+    ...filter,
+    status: 'live',
+  }).select('_id actualStart scheduledStart durationMinutes').lean();
+
+  const now = new Date();
+  const expiredSessionIds = liveSessions
+    .filter((session) => isLiveSessionExpired(session, now))
+    .map((session) => session._id);
+
+  if (!expiredSessionIds.length) {
+    return { matchedCount: 0, modifiedCount: 0 };
+  }
+
+  return LiveSession.updateMany(
+    { _id: { $in: expiredSessionIds }, status: 'live' },
+    { $set: { status: 'completed', actualEnd: now } },
+  );
+}
+
+async function getAcceptedStudentIds(mentorId) {
+  const acceptedConnections = await MentorConnection.find({
+    mentor: mentorId,
+    status: 'accepted',
+  }).select('student').lean();
+  return acceptedConnections.map((item) => String(item.student)).filter(Boolean);
+}
+
+function resolveInvitedStudents({ audienceType, studentIds, acceptedStudentIds }) {
+  if (audienceType !== 'selected') return [];
+
+  const acceptedSet = new Set(acceptedStudentIds);
+  return (Array.isArray(studentIds) ? studentIds : [])
+    .map((id) => String(id))
+    .filter((id) => acceptedSet.has(id));
+}
+
+function resolveScheduleRecipients(session, acceptedStudentIds) {
+  if (session?.audienceType === 'selected') {
+    return (session.invitedStudents || []).map((id) => String(id));
+  }
+  return acceptedStudentIds;
 }
 
 async function createToken({
@@ -129,20 +219,257 @@ exports.getMentorLiveClassDashboard = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Only mentors can access live classes.' });
     }
 
+    await closeExpiredLiveSessions({ mentorId: req.user.id });
+
     const usage = await getWeeklyUsage(req.user.id);
     const activeSession = await LiveSession.findOne({
       mentorId: req.user.id,
       status: 'live',
-      actualStart: { $gte: new Date(Date.now() - RECONNECT_WINDOW_MS) },
     }).sort({ actualStart: -1 }).lean();
+    const scheduledSessions = await LiveSession.find({
+      mentorId: req.user.id,
+      status: 'scheduled',
+      scheduledStart: {
+        $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        $lte: new Date(Date.now() + SCHEDULE_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000),
+      },
+    })
+      .sort({ scheduledStart: 1 })
+      .limit(20)
+      .lean();
+    const historyCutoff = new Date(Date.now() - CLASS_HISTORY_DAYS * 24 * 60 * 60 * 1000);
+    const classHistory = await LiveSession.find({
+      mentorId: req.user.id,
+      status: { $in: ['completed', 'cancelled'] },
+      $or: [
+        { actualEnd: { $gte: historyCutoff } },
+        { actualStart: { $gte: historyCutoff } },
+        { scheduledStart: { $gte: historyCutoff } },
+      ],
+    })
+      .sort({ actualEnd: -1, actualStart: -1, scheduledStart: -1 })
+      .limit(30)
+      .lean();
 
     return res.json({
       success: true,
       data: {
         sessionsThisWeek: usage.count,
         weeklyLimit: usage.limit,
-        activeSession,
+        activeSession: activeSession ? serializeSession(activeSession) : null,
+        scheduledSessions: scheduledSessions.map(serializeSession),
+        classHistory: classHistory.map(serializeSession),
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.scheduleMentorLiveClass = async (req, res, next) => {
+  try {
+    if (!isMentorRole(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only mentors can schedule live classes.' });
+    }
+
+    const mentor = await User.findById(req.user.id).select('name role');
+    if (!mentor || !isMentorRole(mentor.role)) {
+      return res.status(403).json({ success: false, message: 'Mentor account not found.' });
+    }
+
+    const title = String(req.body?.title || 'Live Class').trim().slice(0, 140);
+    const description = String(req.body?.description || '').trim().slice(0, 500);
+    const scheduledStart = new Date(req.body?.scheduledStart);
+    const durationMinutes = Math.min(180, Math.max(15, Number(req.body?.durationMinutes) || 60));
+    const audienceType = req.body?.audienceType === 'selected' ? 'selected' : 'all_accepted';
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Class title is required.' });
+    }
+    if (Number.isNaN(scheduledStart.getTime())) {
+      return res.status(400).json({ success: false, message: 'Valid class date and time is required.' });
+    }
+    if (scheduledStart.getTime() < Date.now() - 5 * 60 * 1000) {
+      return res.status(400).json({ success: false, message: 'Class time cannot be in the past.' });
+    }
+
+    const acceptedStudentIds = await getAcceptedStudentIds(req.user.id);
+    if (!acceptedStudentIds.length) {
+      return res.status(400).json({ success: false, message: 'Accept at least one student before scheduling a class.' });
+    }
+
+    const invitedStudents = resolveInvitedStudents({
+      audienceType,
+      studentIds: req.body?.studentIds,
+      acceptedStudentIds,
+    });
+    if (audienceType === 'selected' && !invitedStudents.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one accepted student.' });
+    }
+
+    const session = await LiveSession.create({
+      roomName: buildRoomName(req.user.id),
+      mentorId: req.user.id,
+      title,
+      description,
+      scheduledStart,
+      durationMinutes,
+      audienceType,
+      invitedStudents,
+      status: 'scheduled',
+    });
+
+    const recipients = audienceType === 'selected' ? invitedStudents : acceptedStudentIds;
+    const io = getSocketServer();
+    await Promise.allSettled(recipients.map((recipient) => notify(io, {
+      recipient,
+      actor: mentor._id,
+      type: 'live_class',
+      message: `${mentor.name} scheduled a live class: ${title}`,
+      preview: formatSchedulePreview(scheduledStart, durationMinutes),
+    })));
+
+    return res.status(201).json({
+      success: true,
+      data: serializeSession(session),
+      message: 'Live class scheduled.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateMentorScheduledLiveClass = async (req, res, next) => {
+  try {
+    if (!isMentorRole(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only mentors can edit scheduled live classes.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.sessionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid scheduled class id.' });
+    }
+
+    const mentor = await User.findById(req.user.id).select('name role');
+    if (!mentor || !isMentorRole(mentor.role)) {
+      return res.status(403).json({ success: false, message: 'Mentor account not found.' });
+    }
+
+    const session = await LiveSession.findOne({
+      _id: req.params.sessionId,
+      mentorId: req.user.id,
+      status: 'scheduled',
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Scheduled live class not found.' });
+    }
+
+    const title = String(req.body?.title || '').trim().slice(0, 140);
+    const description = String(req.body?.description || '').trim().slice(0, 500);
+    const scheduledStart = new Date(req.body?.scheduledStart);
+    const durationMinutes = Math.min(180, Math.max(15, Number(req.body?.durationMinutes) || 60));
+    const audienceType = req.body?.audienceType === 'selected' ? 'selected' : 'all_accepted';
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: 'Class title is required.' });
+    }
+    if (Number.isNaN(scheduledStart.getTime())) {
+      return res.status(400).json({ success: false, message: 'Valid class date and time is required.' });
+    }
+    if (scheduledStart.getTime() < Date.now() - 5 * 60 * 1000) {
+      return res.status(400).json({ success: false, message: 'Class time cannot be in the past.' });
+    }
+
+    const acceptedStudentIds = await getAcceptedStudentIds(req.user.id);
+    if (!acceptedStudentIds.length) {
+      return res.status(400).json({ success: false, message: 'Accept at least one student before editing a class.' });
+    }
+
+    const previousRecipients = resolveScheduleRecipients(session, acceptedStudentIds);
+    const invitedStudents = resolveInvitedStudents({
+      audienceType,
+      studentIds: req.body?.studentIds,
+      acceptedStudentIds,
+    });
+    if (audienceType === 'selected' && !invitedStudents.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one accepted student.' });
+    }
+
+    session.title = title;
+    session.description = description;
+    session.scheduledStart = scheduledStart;
+    session.durationMinutes = durationMinutes;
+    session.audienceType = audienceType;
+    session.invitedStudents = invitedStudents;
+    await session.save();
+
+    const nextRecipients = resolveScheduleRecipients(session, acceptedStudentIds);
+    const recipients = Array.from(new Set([...previousRecipients, ...nextRecipients]));
+    const io = getSocketServer();
+    await Promise.allSettled(recipients.map((recipient) => notify(io, {
+      recipient,
+      actor: mentor._id,
+      type: 'live_class',
+      message: `${mentor.name} updated a live class: ${title}`,
+      preview: formatSchedulePreview(scheduledStart, durationMinutes),
+    })));
+
+    return res.json({
+      success: true,
+      data: serializeSession(session),
+      message: 'Scheduled live class updated.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.cancelMentorScheduledLiveClass = async (req, res, next) => {
+  try {
+    if (!isMentorRole(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only mentors can cancel scheduled live classes.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.sessionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid scheduled class id.' });
+    }
+
+    const mentor = await User.findById(req.user.id).select('name role');
+    if (!mentor || !isMentorRole(mentor.role)) {
+      return res.status(403).json({ success: false, message: 'Mentor account not found.' });
+    }
+
+    const session = await LiveSession.findOne({
+      _id: req.params.sessionId,
+      mentorId: req.user.id,
+      status: 'scheduled',
+    });
+    if (!session) {
+      return res.status(404).json({ success: false, message: 'Scheduled live class not found.' });
+    }
+    if (session.scheduledStart && new Date(session.scheduledStart).getTime() <= Date.now()) {
+      return res.status(409).json({
+        success: false,
+        message: 'Class time has already started. You can only cancel before the scheduled start time.',
+      });
+    }
+
+    const acceptedStudentIds = await getAcceptedStudentIds(req.user.id);
+    const recipients = resolveScheduleRecipients(session, acceptedStudentIds);
+
+    session.status = 'cancelled';
+    await session.save();
+
+    const io = getSocketServer();
+    await Promise.allSettled(recipients.map((recipient) => notify(io, {
+      recipient,
+      actor: mentor._id,
+      type: 'live_class',
+      message: `${mentor.name} cancelled a live class: ${session.title}`,
+      preview: formatSchedulePreview(session.scheduledStart, session.durationMinutes),
+    })));
+
+    return res.json({
+      success: true,
+      data: serializeSession(session),
+      message: 'Scheduled live class cancelled.',
     });
   } catch (err) {
     next(err);
@@ -156,40 +483,82 @@ exports.startMentorLiveClass = async (req, res, next) => {
     }
 
     const { host, apiKey, apiSecret } = getLiveKitConfig();
-    const roomService = new RoomServiceClient(host, apiKey, apiSecret);
     const mentor = await User.findById(req.user.id).select('name role');
     if (!mentor || !isMentorRole(mentor.role)) {
       return res.status(403).json({ success: false, message: 'Mentor account not found.' });
     }
 
-    const requestedTitle = String(req.body?.title || 'Live Class').trim().slice(0, 140);
+    const requestedTitle = req.body?.title ? String(req.body.title).trim().slice(0, 140) : '';
     const requestedRoomName = req.body?.roomName ? String(req.body.roomName).trim() : '';
-    const reconnectThreshold = new Date(Date.now() - RECONNECT_WINDOW_MS);
+    const requestedSessionId = req.body?.sessionId && mongoose.Types.ObjectId.isValid(req.body.sessionId)
+      ? String(req.body.sessionId)
+      : '';
 
     let session = null;
     let weeklyUsageIncremented = false;
 
-    if (requestedRoomName) {
+    await closeExpiredLiveSessions({ mentorId: req.user.id });
+
+    if (requestedSessionId) {
+      session = await LiveSession.findOne({
+        _id: requestedSessionId,
+        mentorId: req.user.id,
+        status: { $in: ['scheduled', 'live'] },
+      });
+    } else if (requestedRoomName) {
       session = await LiveSession.findOne({
         mentorId: req.user.id,
         roomName: requestedRoomName,
-        status: 'live',
-        actualStart: { $gte: reconnectThreshold },
+        status: { $in: ['scheduled', 'live'] },
       });
+    }
 
-      if (session) {
-        const activeRooms = await roomService.listRooms([requestedRoomName]);
-        if (!activeRooms.length) {
-          // The database still has a live session, but LiveKit has already
-          // deleted the room (usually because the previous browser session
-          // dropped and the room was cleaned up). Mark the stale row closed
-          // so we can mint a fresh room instead of rejoining a dead one.
-          session.status = 'completed';
-          session.actualEnd = new Date();
-          await session.save();
-          session = null;
-        }
+    if (session?.status === 'scheduled') {
+      const usage = await getWeeklyUsage(req.user.id);
+      if (usage.count >= WEEKLY_LIMIT) {
+        return res.status(403).json({
+          success: false,
+          message: 'Weekly live class limit reached. You can run up to 4 sessions per week.',
+          data: {
+            sessionsThisWeek: usage.count,
+            weeklyLimit: usage.limit,
+          },
+        });
       }
+
+      session.status = 'live';
+      session.actualStart = new Date();
+      if (requestedTitle) session.title = requestedTitle;
+
+      try {
+        await session.save();
+        weeklyUsageIncremented = true;
+      } catch (saveErr) {
+        if (saveErr && saveErr.code === 11000) {
+          return res.status(409).json({
+            success: false,
+            message: 'Another live class is already running. End it before starting this scheduled class.',
+          });
+        }
+        throw saveErr;
+      }
+
+      const acceptedConnections = await MentorConnection.find({
+        mentor: req.user.id,
+        status: 'accepted',
+      }).select('student').lean();
+      const acceptedStudentIds = acceptedConnections.map((item) => String(item.student)).filter(Boolean);
+      const recipients = session.audienceType === 'selected'
+        ? (session.invitedStudents || []).map((id) => String(id))
+        : acceptedStudentIds;
+      const io = getSocketServer();
+      await Promise.allSettled(recipients.map((recipient) => notify(io, {
+        recipient,
+        actor: mentor._id,
+        type: 'live_class',
+        message: `${mentor.name} started the live class: ${session.title}`,
+        preview: 'Join from the Live Class page.',
+      })));
     }
 
     if (!session) {
@@ -223,11 +592,8 @@ exports.startMentorLiveClass = async (req, res, next) => {
           session = await LiveSession.findOne({
             mentorId: req.user.id,
             status: 'live',
-            actualStart: { $gte: reconnectThreshold },
           });
           if (!session) {
-            // Race produced a stale live row (>RECONNECT_WINDOW_MS old).
-            // Surface a clear 409 so the client knows to end and restart.
             return res.status(409).json({
               success: false,
               message: 'A live session already exists for your account. Please end it first.',
@@ -336,12 +702,42 @@ exports.listStudentLiveClasses = async (req, res, next) => {
       return res.json({ success: true, data: [] });
     }
 
+    await closeExpiredLiveSessions({ mentorId: { $in: mentorIds } });
+
+    const now = new Date();
+    const lookahead = new Date(Date.now() + SCHEDULE_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
+    const historyCutoff = new Date(Date.now() - CLASS_HISTORY_DAYS * 24 * 60 * 60 * 1000);
     const sessions = await LiveSession.find({
       mentorId: { $in: mentorIds },
-      status: 'live',
+      status: { $in: ['live', 'scheduled', 'completed', 'cancelled'] },
+      $or: [
+        { audienceType: 'all_accepted' },
+        { audienceType: { $exists: false } },
+        { invitedStudents: req.user.id },
+      ],
+      $and: [{
+        $or: [
+          { status: 'live' },
+          {
+            status: 'scheduled',
+            scheduledStart: {
+              $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+              $lte: lookahead,
+            },
+          },
+          {
+            status: { $in: ['completed', 'cancelled'] },
+            $or: [
+              { actualEnd: { $gte: historyCutoff } },
+              { actualStart: { $gte: historyCutoff } },
+              { scheduledStart: { $gte: historyCutoff } },
+            ],
+          },
+        ],
+      }],
     })
       .populate('mentorId', 'name avatar universityName department')
-      .sort({ actualStart: -1 })
+      .sort({ status: 1, scheduledStart: 1, actualStart: -1 })
       .lean();
 
     return res.json({
@@ -350,8 +746,13 @@ exports.listStudentLiveClasses = async (req, res, next) => {
         _id: session._id,
         roomName: session.roomName,
         title: session.title,
+        description: session.description || '',
+        scheduledStart: session.scheduledStart || null,
+        durationMinutes: session.durationMinutes || 60,
         actualStart: session.actualStart,
+        actualEnd: session.actualEnd || null,
         status: session.status,
+        canJoin: session.status === 'live',
         mentor: session.mentorId ? {
           _id: session.mentorId._id,
           name: session.mentorId.name,
@@ -387,6 +788,13 @@ exports.joinStudentLiveClass = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Live class not found.' });
     }
 
+    if (isLiveSessionExpired(session)) {
+      session.status = 'completed';
+      session.actualEnd = new Date();
+      await session.save();
+      return res.status(404).json({ success: false, message: 'This live class has already ended.' });
+    }
+
     const isConnected = await MentorConnection.exists({
       student: req.user.id,
       mentor: session.mentorId._id,
@@ -397,6 +805,16 @@ exports.joinStudentLiveClass = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: 'You can only join live classes from mentors who accepted your connection.',
+      });
+    }
+
+    if (
+      session.audienceType === 'selected'
+      && !(session.invitedStudents || []).some((id) => String(id) === String(req.user.id))
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not invited to this scheduled class.',
       });
     }
 

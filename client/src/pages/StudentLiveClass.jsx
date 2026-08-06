@@ -3,7 +3,6 @@ import Sidebar from '../components/layout/Sidebar';
 import LiveClassRoom from '../components/liveclass/LiveClassRoom';
 import { fetchStudentLiveSessions, joinStudentLiveClass } from '../services/liveClassApi';
 import { DisconnectReason } from 'livekit-client';
-import { HiVideoCamera, HiUsers, HiClock } from 'react-icons/hi';
 import './LiveClassPages.css';
 
 export default function StudentLiveClass() {
@@ -27,13 +26,27 @@ export default function StudentLiveClass() {
       return 'LiveKit disconnected because another tab/device is already connected with the same student identity.';
     }
     if (name === 'ROOM_DELETED') {
-      return 'LiveKit disconnected because the room was deleted on the server.';
+      return 'The video room closed. If the mentor has not ended the class, you can join again from Live Now.';
     }
     if (name === 'JOIN_FAILURE') {
       return 'LiveKit disconnected while joining the room. Check the token and room permissions.';
     }
     return `Disconnect reason: ${name}.`;
   };
+
+  const formatClassTime = (value) => {
+    if (!value) return 'Time not set';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Time not set';
+    return date.toLocaleString([], {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  };
+
+  const liveSessions = sessions.filter((session) => session.status === 'live');
+  const upcomingSessions = sessions.filter((session) => session.status === 'scheduled');
+  const historySessions = sessions.filter((session) => ['completed', 'cancelled'].includes(session.status));
 
   const loadSessions = async () => {
     try {
@@ -51,9 +64,11 @@ export default function StudentLiveClass() {
       window.location.href = '/dashboard';
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions();
     const timer = window.setInterval(loadSessions, 15000);
     return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleJoin = async (roomName) => {
@@ -75,78 +90,110 @@ export default function StudentLiveClass() {
       <Sidebar activeTab="live-class" user={user} />
       <main className="dashboard-main">
         <div className="live-page">
-          {/* Hero Section */}
           <div className="live-page__intro">
-            <div className="live-page__intro-content">
-              <div className="live-page__live-badge">
-                <span className="live-page__live-dot" />
-                Live Sessions
-              </div>
-              <h1>Available Live Classes</h1>
-              <p>Join active classes from mentors who have already accepted your connection request.</p>
-            </div>
-            <div className="live-page__usage">
-              <HiUsers size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
-              {sessions.length} Active Now
+            <div>
+              <h1>Live Classes</h1>
+              <p>Join live classes or keep track of scheduled classes from your accepted mentors.</p>
             </div>
           </div>
 
-          {/* Error State */}
           {error ? <div className="live-page__error">{error}</div> : null}
 
-          {/* Session Directory or Room */}
           {!connection ? (
+            <>
             <section className="live-page__directory">
-              {/* Section Header */}
-              <div className="live-page__section-header">
-                <h2>Your Mentors' Sessions</h2>
-                <span className="live-page__section-count">{sessions.length} running</span>
-              </div>
-
-              {/* Loading */}
-              {loading ? (
-                <>
-                  <div className="live-page__skeleton" />
-                  <div className="live-page__skeleton" />
-                  <div className="live-page__skeleton" />
-                </>
-              ) : sessions.length === 0 ? (
-                /* Empty State */
-                <div className="live-page__empty">
-                  <div className="live-page__empty-icon">
-                    <HiVideoCamera size={24} />
-                  </div>
-                  <h3>No live classes right now</h3>
-                  <p>Mentors you're connected with aren't hosting sessions at the moment. Check back soon!</p>
+              <div className="live-page__section-head">
+                <div>
+                  <h2>Live Now</h2>
+                  <p>Classes you can join right now.</p>
                 </div>
+                <span>{liveSessions.length} live</span>
+              </div>
+              {loading ? (
+                <div className="live-page__empty">Loading live classes...</div>
+              ) : liveSessions.length === 0 ? (
+                <div className="live-page__empty">No live classes are running from your mentors right now.</div>
               ) : (
-                /* Session Cards */
-                sessions.map((session) => (
+                liveSessions.map((session) => (
                   <article key={session._id} className="live-page__card">
-                    <div className="live-page__card-left">
-                      <div className="live-page__card-avatar">
-                        {(session.mentor?.name || 'M').charAt(0).toUpperCase()}
-                      </div>
-                      <div className="live-page__card-info">
-                        <h3>{session.title}</h3>
-                        <p>{session.mentor?.name || 'Mentor'}</p>
-                        <small>{session.mentor?.department || session.mentor?.universityName || 'Live mentor session'}</small>
-                      </div>
+                    <div>
+                      <h3>{session.title}</h3>
+                      <p>{session.mentor?.name || 'Mentor'}</p>
+                      <small>{session.mentor?.department || session.mentor?.universityName || 'Live mentor session'}</small>
                     </div>
-                    <div className="live-page__card-right">
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        disabled={joiningRoom === session.roomName}
-                        onClick={() => handleJoin(session.roomName)}
-                      >
-                        {joiningRoom === session.roomName ? 'Joining...' : 'Join Class'}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={joiningRoom === session.roomName}
+                      onClick={() => handleJoin(session.roomName)}
+                    >
+                      {joiningRoom === session.roomName ? 'Joining...' : 'Join Live Class'}
+                    </button>
                   </article>
                 ))
               )}
             </section>
+
+            <section className="live-page__directory">
+              <div className="live-page__section-head">
+                <div>
+                  <h2>Upcoming Classes</h2>
+                  <p>Scheduled classes from mentors who accepted you.</p>
+                </div>
+                <span>{upcomingSessions.length} upcoming</span>
+              </div>
+              {loading ? (
+                <div className="live-page__empty">Loading scheduled classes...</div>
+              ) : upcomingSessions.length === 0 ? (
+                <div className="live-page__empty">No upcoming classes scheduled yet.</div>
+              ) : (
+                upcomingSessions.map((session) => (
+                  <article key={session._id} className="live-page__card">
+                    <div>
+                      <h3>{session.title}</h3>
+                      <p>{formatClassTime(session.scheduledStart)} - {session.durationMinutes || 60} minutes</p>
+                      <small>{session.description || session.mentor?.name || 'Scheduled live class'}</small>
+                    </div>
+                    <button type="button" className="btn btn-secondary" disabled>
+                      Not Started
+                    </button>
+                  </article>
+                ))
+              )}
+            </section>
+
+            <section className="live-page__directory">
+              <div className="live-page__section-head">
+                <div>
+                  <h2>Class History</h2>
+                  <p>Classes from your accepted mentors that already ended.</p>
+                </div>
+                <span>{historySessions.length} classes</span>
+              </div>
+              {loading ? (
+                <div className="live-page__empty">Loading class history...</div>
+              ) : historySessions.length === 0 ? (
+                <div className="live-page__empty">No completed classes yet.</div>
+              ) : (
+                historySessions.map((session) => (
+                  <article key={session._id} className="live-page__card">
+                    <div>
+                      <h3>{session.title}</h3>
+                      <p>{session.mentor?.name || 'Mentor'}</p>
+                      <small>
+                        {session.status === 'cancelled'
+                          ? `Cancelled - ${formatClassTime(session.scheduledStart)}`
+                          : `Completed - ${formatClassTime(session.actualEnd || session.actualStart || session.scheduledStart)}`}
+                      </small>
+                    </div>
+                    <button type="button" className="btn btn-secondary" disabled>
+                      {session.status === 'cancelled' ? 'Cancelled' : 'Completed'}
+                    </button>
+                  </article>
+                ))
+              )}
+            </section>
+            </>
           ) : (
             <LiveClassRoom
               token={connection.token}
@@ -165,16 +212,14 @@ export default function StudentLiveClass() {
               onDisconnected={(reason) => {
                 setConnected(false);
                 setConnection(null);
+                loadSessions();
                 setError((prev) => prev || `Live class disconnected. ${formatDisconnectReason(reason)}`);
               }}
               onEndClass={null}
             />
           )}
-
-          {/* Connecting Hint */}
           {connection && !connected ? (
             <div className="live-page__hint">
-              <HiClock size={16} />
               Connecting to LiveKit at <strong>{connection.wsUrl}</strong>
             </div>
           ) : null}

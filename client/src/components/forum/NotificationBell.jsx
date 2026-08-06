@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiBell, HiHeart, HiChatAlt2, HiUserAdd, HiAtSymbol, HiExclamationCircle } from 'react-icons/hi';
+import { HiBell, HiHeart, HiChatAlt2, HiUserAdd, HiAtSymbol, HiExclamationCircle, HiVideoCamera } from 'react-icons/hi';
 import { useForum } from '../../context/ForumContext';
 
 const ICONS = {
@@ -11,7 +11,8 @@ const ICONS = {
   mention: HiAtSymbol,
   follow: HiUserAdd,
   warning: HiExclamationCircle,
-  admin_update: HiBell
+  admin_update: HiBell,
+  live_class: HiVideoCamera
 };
 
 function timeAgo(date) {
@@ -58,7 +59,9 @@ export default function NotificationBell() {
   function openItem(n) {
     if (!n.read) markNotificationRead(n._id);
     setOpen(false);
-    if (n.post) {
+    if (n.type === 'live_class') {
+      navigate('/student/live-class');
+    } else if (n.post) {
       navigate(`/forum/post/${n.post._id || n.post}`);
     } else if (n.actor) {
       navigate(`/forum/u/${n.actor._id || n.actor}`);

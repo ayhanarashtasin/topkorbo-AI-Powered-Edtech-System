@@ -20,9 +20,35 @@ const liveSessionSchema = new mongoose.Schema(
       trim: true,
       maxlength: 140,
     },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: '',
+    },
+    scheduledStart: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    durationMinutes: {
+      type: Number,
+      min: 15,
+      max: 180,
+      default: 60,
+    },
+    audienceType: {
+      type: String,
+      enum: ['all_accepted', 'selected'],
+      default: 'all_accepted',
+    },
+    invitedStudents: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
     actualStart: {
       type: Date,
-      required: true,
+      default: null,
       index: true,
     },
     actualEnd: {
@@ -31,8 +57,8 @@ const liveSessionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['live', 'completed'],
-      default: 'live',
+      enum: ['scheduled', 'live', 'completed', 'cancelled'],
+      default: 'scheduled',
       index: true,
     },
   },
@@ -40,6 +66,7 @@ const liveSessionSchema = new mongoose.Schema(
 );
 
 liveSessionSchema.index({ mentorId: 1, actualStart: -1 });
+liveSessionSchema.index({ mentorId: 1, scheduledStart: 1 });
 
 // At most ONE LIVE session per mentor at any time.
 //
