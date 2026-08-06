@@ -15,8 +15,12 @@
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(circle at top right, rgba(192, 133, 82, 0.08), transparent 26%),
-    linear-gradient(180deg, #faf4ee 0%, #f6efe7 100%);
+    /* Vertical margin line (notebook left margin) */
+    linear-gradient(90deg, transparent 79px, rgba(192, 133, 82, 0.25) 79px, rgba(192, 133, 82, 0.25) 80px, transparent 80px),
+    /* Horizontal ruled lines */
+    linear-gradient(rgba(192, 133, 82, 0.12) 1px, transparent 1px),
+    #FAF4EE;
+  background-size: 100% 100%, 100% 32px, 100% 100%;
 }
 
 .ielts-writing-demo-header {

@@ -718,35 +718,35 @@ export default function MockTest() {
     <div className="dashboard-container">
       <Sidebar activeTab={activeTab} user={user} />
 
-      <main className="dashboard-main">
+      <main className="dashboard-main mock-dashboard-main">
         <div className="mock-workspace animate-fade-in">
-          <div className="mock-step-indicator">
+          <div className="mock-stepper">
             {STEP_LABELS.map((s, idx) => (
-              <Fragment key={s.num}>
-                <div className="mock-step-indicator-item">
-                  <button
-                    type="button"
-                    className={`mock-step-dot ${step >= s.num ? 'mock-step-dot--active' : ''} ${step === s.num ? 'mock-step-dot--current' : ''}`}
-                    onClick={() => { if (s.num < step) setStep(s.num); }}
-                    disabled={s.num > step}
-                  >
-                    {step > s.num ? <HiCheck size={14} /> : s.num}
-                  </button>
-                  <span className={`mock-step-label ${step >= s.num ? 'mock-step-label--active' : ''}`}>
-                    {language === 'en' ? s.labelEn : s.labelBn}
-                  </span>
-                </div>
+              <div key={s.num} className="mock-stepper__item">
+                <button
+                  type="button"
+                  className={`mock-stepper__dot ${step >= s.num ? 'mock-stepper__dot--done' : ''} ${step === s.num ? 'mock-stepper__dot--current' : ''}`}
+                  onClick={() => { if (s.num < step) setStep(s.num); }}
+                  disabled={s.num > step}
+                >
+                  {step > s.num ? <HiCheck size={12} /> : s.num}
+                </button>
+                <span className={`mock-stepper__label ${step >= s.num ? 'mock-stepper__label--active' : ''}`}>
+                  {language === 'en' ? s.labelEn : s.labelBn}
+                </span>
                 {idx < STEP_LABELS.length - 1 && (
-                  <div className={`mock-step-connector ${step > s.num ? 'mock-step-connector--done' : ''}`} />
+                  <div className={`mock-stepper__line ${step > s.num ? 'mock-stepper__line--done' : ''}`} />
                 )}
-              </Fragment>
+              </div>
             ))}
           </div>
+          <div className="mock-content">
           {step === 1 ? (
             /* Step 1: Pick one or more subjects */
             <div className="mock-subject-selection">
               <div className="mock-selection-info">
-                <h3>{t('mock.select_subject')}</h3>
+                <h3>{language === 'en' ? 'Select Subjects' : 'বিষয় নির্বাচন করুন'}</h3>
+                <p>{language === 'en' ? 'Choose one, multiple, or all subjects for the live room.' : 'লাইভ রুমের জন্য এক, একাধিক, বা সমস্ত বিষয় নির্বাচন করুন।'}</p>
               </div>
 
               <div className="mock-subjects-grid">
@@ -786,11 +786,24 @@ export default function MockTest() {
               <div className="mock-selection-actions">
                 <button
                   type="button"
-                  className="btn btn-primary mock-next-btn animate-fade-in"
+                  className="mock-select-all-btn"
+                  onClick={() => {
+                    if (selectedSubjectIds.length === MOCK_SUBJECTS.length) {
+                      setSelectedSubjectIds([]);
+                    } else {
+                      setSelectedSubjectIds(MOCK_SUBJECTS.map(s => s.id));
+                    }
+                  }}
+                >
+                  {language === 'en' ? 'Select All' : 'সব নির্বাচন করুন'}
+                </button>
+                <button
+                  type="button"
+                  className="mock-next-btn"
                   disabled={selectedSubjectIds.length === 0}
                   onClick={() => setStep(2)}
                 >
-                  <span>{language === 'en' ? 'Next Step' : 'পরবর্তী ধাপ'}</span>
+                  <span>{language === 'en' ? 'Next' : 'পরবর্তী'}</span>
                   <HiArrowRight size={18} />
                 </button>
               </div>
@@ -804,7 +817,7 @@ export default function MockTest() {
                 className="mock-back-btn"
               >
                 <HiArrowLeft size={16} />
-                <span>{language === 'en' ? 'Back to subjects' : 'পেছনে ফিরে যাও'}</span>
+                <span>{language === 'en' ? 'Back to subjects' : 'বিষয়ে ফিরে যাও'}</span>
               </button>
 
               <div className="mock-selection-info">
@@ -1488,6 +1501,7 @@ export default function MockTest() {
               </div>
             </div>
           ) : null}
+          </div>
         </div>
       </main>
 
