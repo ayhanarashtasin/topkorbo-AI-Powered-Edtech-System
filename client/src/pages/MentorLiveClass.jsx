@@ -4,6 +4,7 @@ import LiveClassRoom from '../components/liveclass/LiveClassRoom';
 import { endMentorLiveClass, fetchMentorLiveDashboard, startMentorLiveClass } from '../services/liveClassApi';
 import { fetchMentorDashboard } from '../services/mentorApi';
 import { DisconnectReason } from 'livekit-client';
+import { HiVideoCamera, HiUsers, HiClock, HiLightningBolt } from 'react-icons/hi';
 import './LiveClassPages.css';
 
 export default function MentorLiveClass() {
@@ -103,41 +104,89 @@ export default function MentorLiveClass() {
     }
   };
 
+  const weeklyUsagePercent = Math.round((dashboard.sessionsThisWeek / dashboard.weeklyLimit) * 100);
+
   return (
     <div className="dashboard-container">
       <Sidebar activeTab="live-class" user={user} />
       <main className="dashboard-main">
         <div className="live-page">
+          {/* Hero Section */}
           <div className="live-page__intro">
-            <div>
-              <h1>Mentor Live Classroom</h1>
+            <div className="live-page__intro-content">
+              <div className="live-page__live-badge">
+                <span className="live-page__live-dot" />
+                Mentor Studio
+              </div>
+              <h1>Live Classroom</h1>
               <p>Run LiveKit-powered sessions with adaptive streaming, top-speaker rendering, and weekly usage guardrails.</p>
             </div>
             <div className="live-page__usage">
-              Sessions This Week: <strong>{dashboard.sessionsThisWeek} / {dashboard.weeklyLimit}</strong>
+              <HiLightningBolt size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              {dashboard.sessionsThisWeek} / {dashboard.weeklyLimit} Sessions
             </div>
           </div>
 
+          {/* Error State */}
           {error ? <div className="live-page__error">{error}</div> : null}
 
+          {/* Launcher or Room */}
           {!connection ? (
             <section className="live-page__launcher">
+              <div className="live-page__launcher-header">
+                <h2>{dashboard.activeSession ? 'Resume Your Session' : 'Start a New Session'}</h2>
+                <p>Set up your class title and go live for your accepted students.</p>
+              </div>
+
               <label className="live-page__field">
-                <span>Class title</span>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140} />
+                <span>Class Title</span>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={140}
+                  placeholder="e.g., Calculus Week 5 — Integration Techniques"
+                />
               </label>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={busy || loading || dashboard.sessionsThisWeek >= dashboard.weeklyLimit}
-                onClick={handleStartClass}
-              >
-                {busy ? 'Starting...' : dashboard.activeSession ? 'Rejoin Live Class' : 'Start Live Class'}
-              </button>
+
+              <div className="live-page__launcher-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={busy || loading || dashboard.sessionsThisWeek >= dashboard.weeklyLimit}
+                  onClick={handleStartClass}
+                >
+                  {busy ? 'Starting...' : dashboard.activeSession ? 'Rejoin Live Class' : 'Start Live Class'}
+                </button>
+
+                {/* Weekly usage indicator */}
+                <div style={{ flex: 1, minWidth: '120px' }}>
+                  <div style={{
+                    height: '6px',
+                    borderRadius: '999px',
+                    background: 'rgba(192, 133, 82, 0.15)',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${weeklyUsagePercent}%`,
+                      borderRadius: '999px',
+                      background: weeklyUsagePercent >= 100 ? '#b91c1c' : 'var(--gradient-cta)',
+                      transition: 'width 0.5s ease',
+                    }} />
+                  </div>
+                </div>
+              </div>
+
               {dashboard.sessionsThisWeek >= dashboard.weeklyLimit ? (
-                <p className="live-page__hint">Weekly limit reached. You can host up to 4 sessions per week.</p>
+                <p className="live-page__hint">
+                  <HiClock size={16} />
+                  Weekly limit reached. You can host up to {dashboard.weeklyLimit} sessions per week.
+                </p>
               ) : (
-                <p className="live-page__hint">Each session is capped at 2 hours and can support up to 30 students with optimized rendering.</p>
+                <p className="live-page__hint">
+                  <HiClock size={16} />
+                  Each session is capped at 2 hours and can support up to 30 students with optimized rendering.
+                </p>
               )}
             </section>
           ) : (
@@ -168,23 +217,36 @@ export default function MentorLiveClass() {
               onEndClass={handleEndClass}
             />
           )}
+
+          {/* Connecting Hint */}
           {connection && !connected ? (
             <div className="live-page__hint">
+              <HiClock size={16} />
               Connecting to LiveKit at <strong>{connection.wsUrl}</strong>
             </div>
           ) : null}
 
+          {/* Accepted Students Section */}
           <section className="live-page__students">
             <div className="live-page__students-head">
               <div>
                 <h2>Accepted Students</h2>
                 <p>Only these accepted students can see and join your live sessions.</p>
               </div>
-              <span>{acceptedStudents.length} student{acceptedStudents.length === 1 ? '' : 's'}</span>
+              <span>
+                <HiUsers size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                {acceptedStudents.length}
+              </span>
             </div>
 
             {acceptedStudents.length === 0 ? (
-              <div className="live-page__empty">No accepted students yet. Accept student requests from your dashboard first.</div>
+              <div className="live-page__empty">
+                <div className="live-page__empty-icon">
+                  <HiUsers size={24} />
+                </div>
+                <h3>No accepted students yet</h3>
+                <p>Accept student requests from your dashboard first.</p>
+              </div>
             ) : (
               <div className="live-page__student-grid">
                 {acceptedStudents.map((entry) => (
@@ -193,7 +255,7 @@ export default function MentorLiveClass() {
                       {entry.student?.avatar ? (
                         <img src={entry.student.avatar} alt={entry.student.name} referrerPolicy="no-referrer" />
                       ) : (
-                        (entry.student?.name || 'S').charAt(0)
+                        (entry.student?.name || 'S').charAt(0).toUpperCase()
                       )}
                     </div>
                     <div>
