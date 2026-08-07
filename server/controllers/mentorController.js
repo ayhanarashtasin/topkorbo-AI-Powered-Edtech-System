@@ -649,6 +649,7 @@ const mentorController = {
 
       const attempts = studentIds.length
         ? await MockTestAttempt.find({ student: { $in: studentIds } })
+          .select('student summary subjectBreakdown ranking createdAt')
           .sort({ createdAt: -1 })
           .lean()
         : [];

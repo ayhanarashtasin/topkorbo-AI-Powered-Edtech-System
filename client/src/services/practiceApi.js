@@ -98,6 +98,17 @@ export function getStats() {
   return request('/practice/stats/summary', { headers: buildHeaders() });
 }
 
+/**
+ * Fetch the compact daily solved totals used by the dashboard heatmap.
+ * Unlike listMyAttempts, this does not transfer question snapshots.
+ */
+export function getDashboardActivity(timezone) {
+  const params = new URLSearchParams();
+  if (timezone) params.set('timezone', timezone);
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return request(`/practice/dashboard-activity${suffix}`, { headers: buildHeaders() });
+}
+
 /* ------------------------------------------------------------------ */
 /*  Convenience builder used by the Mock Test submit flow             */
 /* ------------------------------------------------------------------ */
@@ -126,7 +137,6 @@ export function buildAttemptPayload(input) {
     mode,
     title,
     contestId = null,
-    config = {},
     questions = [],
     answers = {},
     writtenAnswers = {},
@@ -144,19 +154,19 @@ export function buildAttemptPayload(input) {
 
   const perQuestion = questions.map((q, idx) => {
     const qid = q._id || q.id || String(idx);
-    const isWritten = q.type === 'written' || q.type === 'cq';
     const isMCQ = q.type === 'mcq';
     const selectedIndex = answers[qid];
     const writtenImg = writtenAnswers[qid] || '';
     const evalEntry = writtenEvaluations[qid];
 
-    let isAttempted = false;
+    const isAttempted = isMCQ
+      ? selectedIndex !== undefined && selectedIndex !== null
+      : Boolean(writtenImg);
     let isCorrect = null;
     let score = 0;
     const maxScore = typeof q.marks === 'number' ? q.marks : 1;
 
     if (isMCQ) {
-      isAttempted = selectedIndex !== undefined && selectedIndex !== null;
       if (isAttempted) {
         const correctIdx = findCorrectIndex(q);
         isCorrect = selectedIndex === correctIdx;
@@ -164,7 +174,6 @@ export function buildAttemptPayload(input) {
         else if (negativeMarking) score = -0.25 * maxScore;
       }
     } else {
-      isAttempted = !!writtenImg;
       if (isAttempted && evalEntry) {
         const s = parseFloat(evalEntry.score);
         if (!isNaN(s)) score = Math.max(0, Math.min(maxScore, s * maxScore));
@@ -312,6 +321,7 @@ export default {
   deleteAttempt,
   updateNotes,
   getStats,
+  getDashboardActivity,
   buildAttemptPayload,
   buildInlinePayload
 };

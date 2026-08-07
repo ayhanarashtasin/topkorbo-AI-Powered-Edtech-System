@@ -20,6 +20,7 @@
 const PracticeAttempt = require('../models/PracticeAttempt');
 const ApiResponse = require('../utils/apiResponse');
 const mongoose = require('mongoose');
+const { getDashboardActivity } = require('../services/dashboardActivityService');
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -252,6 +253,26 @@ exports.listMyAttempts = async (req, res) => {
   } catch (err) {
     console.error('[practiceAttempt] listMyAttempts error:', err);
     return ApiResponse.error(res, err.message || 'Failed to list attempts', 500);
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/*  GET /api/practice/dashboard-activity                               */
+/* ------------------------------------------------------------------ */
+
+exports.getDashboardActivity = async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+    if (!userId) return ApiResponse.error(res, 'Unauthorized', 401);
+
+    const activity = await getDashboardActivity(userId, req.query.timezone);
+    return ApiResponse.success(res, activity);
+  } catch (err) {
+    if (err.code === 'INVALID_TIME_ZONE') {
+      return ApiResponse.error(res, 'Invalid timezone.', 400);
+    }
+    console.error('[practiceAttempt] getDashboardActivity error:', err);
+    return ApiResponse.error(res, 'Failed to compute dashboard activity', 500);
   }
 };
 

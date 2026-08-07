@@ -160,6 +160,7 @@ const practiceAttemptSchema = new mongoose.Schema(
 
 // Indexes for the most common queries
 practiceAttemptSchema.index({ userId: 1, mode: 1, createdAt: -1 });
+practiceAttemptSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
 practiceAttemptSchema.index({ userId: 1, 'questions.subject': 1 });
 practiceAttemptSchema.index({ userId: 1, 'questions.chapter': 1 });
 practiceAttemptSchema.index({ userId: 1, 'marks.percentage': -1 });

@@ -42,5 +42,6 @@ const ratingHistorySchema = new mongoose.Schema(
 
 // A student is rated at most once per contest.
 ratingHistorySchema.index({ student: 1, contest: 1 }, { unique: true });
+ratingHistorySchema.index({ student: 1, contestDate: 1 });
 
 module.exports = mongoose.model('RatingHistory', ratingHistorySchema);

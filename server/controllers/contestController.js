@@ -958,7 +958,7 @@ exports.getMyRating = async (req, res, next) => {
 
     // Settle any of this student's ended contests that haven't been finalized.
     const myResults = await ContestResult.find({ student: studentId })
-      .populate('contest')
+      .populate('contest', 'date startTime duration ratingsSettled')
       .lean();
     const pendingContestIds = myResults
       .filter((r) => r.contest && !r.contest.ratingsSettled && resolveContestDates(r.contest).endDate < now)
