@@ -610,6 +610,31 @@ async function addSupportTicketNote({ adminUser, ticketId, note }) {
   return getSupportTicketDetails(ticketId);
 }
 
+async function deleteSupportTicket({ adminUser, ticketId }) {
+  const ticket = await SupportTicket.findById(ticketId);
+  if (!ticket) {
+    const err = new Error('Support ticket not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await SupportTicket.findByIdAndDelete(ticketId);
+
+  await createAdminAuditLog({
+    adminId: adminUser.id,
+    targetUserId: ticket.user || undefined,
+    targetEntityId: ticket._id,
+    targetEntityType: 'support_ticket',
+    targetEntityName: ticket.title,
+    actionType: 'SUPPORT_TICKET_DELETED',
+    previousValue: { status: ticket.status },
+    newValue: { status: 'deleted' },
+    reason: 'Admin deleted ticket'
+  });
+
+  return { id: ticketId, deleted: true };
+}
+
 function buildFeedbackQuery({ search = '', status = '', itemType = '', createdFrom = '', createdTo = '' }) {
   const query = {};
 
@@ -855,6 +880,7 @@ module.exports = {
   updateSupportTicketPriority,
   replyToSupportTicket,
   addSupportTicketNote,
+  deleteSupportTicket,
   listFeedbackEntries,
   getFeedbackDetails,
   updateFeedbackStatus,

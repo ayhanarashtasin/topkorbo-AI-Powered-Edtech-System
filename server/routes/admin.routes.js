@@ -94,6 +94,7 @@ router.patch('/support/tickets/:ticketId/status', communicationsManagementContro
 router.patch('/support/tickets/:ticketId/priority', communicationsManagementController.updateSupportTicketPriority);
 router.post('/support/tickets/:ticketId/reply', communicationsManagementController.replyToSupportTicket);
 router.patch('/support/tickets/:ticketId/note', communicationsManagementController.addSupportTicketNote);
+router.delete('/support/tickets/:ticketId', communicationsManagementController.deleteSupportTicket);
 router.get('/support/feedback', communicationsManagementController.listFeedbackEntries);
 router.get('/support/feedback/:feedbackId', communicationsManagementController.getFeedbackDetails);
 router.patch('/support/feedback/:feedbackId/status', communicationsManagementController.updateFeedbackStatus);

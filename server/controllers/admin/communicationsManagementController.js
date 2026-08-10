@@ -107,6 +107,18 @@ async function addSupportTicketNote(req, res, next) {
   }
 }
 
+async function deleteSupportTicket(req, res, next) {
+  try {
+    const data = await communicationsService.deleteSupportTicket({
+      adminUser: req.user,
+      ticketId: req.params.ticketId
+    });
+    return res.json({ success: true, data, message: 'Support ticket deleted successfully.' });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 async function listFeedbackEntries(req, res, next) {
   try {
     const data = await communicationsService.listFeedbackEntries(req.query);
@@ -162,6 +174,7 @@ module.exports = {
   updateSupportTicketPriority,
   replyToSupportTicket,
   addSupportTicketNote,
+  deleteSupportTicket,
   listFeedbackEntries,
   getFeedbackDetails,
   updateFeedbackStatus,

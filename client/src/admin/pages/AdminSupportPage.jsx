@@ -22,7 +22,8 @@ import {
   replyAdminSupportTicket,
   updateAdminFeedbackStatus,
   updateAdminSupportTicketPriority,
-  updateAdminSupportTicketStatus
+  updateAdminSupportTicketStatus,
+  deleteAdminSupportTicket
 } from '../services/adminApi';
 
 const TICKET_STATUS_OPTIONS = ['open', 'in_progress', 'resolved', 'closed'];
@@ -237,12 +238,18 @@ export default function AdminSupportPage() {
         } else if (actionState.type === 'note') {
           await addAdminSupportTicketNote(actionState.id, { note: reason });
           toast.success('Support ticket note added');
+        } else if (actionState.type === 'delete') {
+          await deleteAdminSupportTicket(actionState.id);
+          toast.success('Support ticket deleted');
         }
 
         await reloadActiveView();
-        if (selectedTicketId === actionState.id) {
+        if (selectedTicketId === actionState.id && actionState.type !== 'delete') {
           const refreshed = await fetchAdminSupportTicketDetails(actionState.id);
           setSelectedTicket(refreshed);
+        } else if (actionState.type === 'delete' && selectedTicketId === actionState.id) {
+          setSelectedTicketId('');
+          setSelectedTicket(null);
         }
       } else if (actionState?.entity === 'feedback') {
         if (actionState.type === 'status') {
@@ -589,6 +596,14 @@ export default function AdminSupportPage() {
           title: 'Add an admin note?',
           description: 'This note stays internal to the support workflow.',
           requireReason: true
+        })}
+        onDelete={() => setActionState({
+          entity: 'ticket',
+          type: 'delete',
+          id: selectedTicketId,
+          title: 'Delete this ticket?',
+          description: 'This action cannot be undone. All replies and notes will be permanently removed.',
+          requireReason: false
         })}
       />
 

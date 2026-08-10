@@ -33,7 +33,8 @@ export default function AdminSupportTicketDrawer({
   onUpdateStatus,
   onUpdatePriority,
   onReply,
-  onAddNote
+  onAddNote,
+  onDelete
 }) {
   return (
     <div className={`admin-drawer ${open ? 'admin-drawer--open' : ''}`}>
@@ -97,6 +98,9 @@ export default function AdminSupportTicketDrawer({
                 </AdminActionButton>
                 <AdminActionButton variant="ghost" onClick={onAddNote}>
                   Add note
+                </AdminActionButton>
+                <AdminActionButton tone="danger" variant="ghost" onClick={onDelete}>
+                  Delete Ticket
                 </AdminActionButton>
               </div>
             </section>

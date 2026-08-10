@@ -58,6 +58,8 @@ const IeltsWritingUpload = lazy(() => import('./pages/IeltsWritingUpload'));
 const IeltsSpeakingUpload = lazy(() => import('./pages/IeltsSpeakingUpload'));
 const IeltsListening = lazy(() => import('./pages/IeltsListening'));
 const IeltsReading = lazy(() => import('./pages/IeltsReading'));
+const Support = lazy(() => import('./pages/Support'));
+const SupportTicketDetails = lazy(() => import('./pages/SupportTicketDetails'));
 const IeltsWriting = lazy(() => import('./pages/IeltsWriting'));
 const IeltsSpeaking = lazy(() => import('./pages/IeltsSpeaking'));
 const IeltsListeningPractice = lazy(() => import('./pages/IeltsListeningPractice'));
@@ -163,6 +165,8 @@ function AppContent() {
           <Route path="/ielts-prep/writing/demo" element={<IeltsWritingDemo />} />
           <Route path="/ielts-prep/speaking/practice" element={<IeltsSpeakingPractice />} />
           <Route path="/ielts-prep/speaking/demo" element={<IeltsSpeakingDemo />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/support/:ticketId" element={<SupportTicketDetails />} />
 
           {renderAdminRoutes()}
 

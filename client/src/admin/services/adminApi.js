@@ -278,6 +278,12 @@ export async function addAdminSupportTicketNote(ticketId, payload) {
   });
 }
 
+export async function deleteAdminSupportTicket(ticketId) {
+  return httpClient.request(`/admin/support/tickets/${ticketId}`, {
+    method: 'DELETE'
+  });
+}
+
 export async function fetchAdminFeedbackEntries(params = {}) {
   const searchParams = new URLSearchParams();
 

@@ -67,6 +67,7 @@ const mockTestRoutes = require("./routes/mockTestRoutes");
 const liveClassRoutes = require("./routes/liveClassRoutes");
 const ieltsRoutes = require("./routes/ieltsRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const supportRoutes = require("./routes/supportRoutes");
 const adminRoutes = require("./routes/admin.routes");
 
 // Community / Forum
@@ -304,6 +305,7 @@ app.use("/api/mock-tests", mockTestRoutes);
 app.use("/api/live-class", liveClassRoutes);
 app.use("/api/ielts", ieltsRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/support", supportRoutes);
 app.use("/api/admin", adminRoutes);
 
 // --- Forum / Community routes ---

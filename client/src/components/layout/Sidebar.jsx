@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX, HiLockClosed, HiSparkles } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX, HiLockClosed, HiSparkles, HiSupport } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import { usePlan } from '../../hooks/usePlan';
@@ -169,6 +169,12 @@ export default function Sidebar({ activeTab, user }) {
     });
   }
 
+  menuItems.push({
+    id: 'support',
+    label: language === 'en' ? 'Support' : 'সাপোর্ট',
+    icon: <HiSupport size={20} />
+  });
+
   return (
     <>
       {/* Mobile Top Bar */}
@@ -264,7 +270,7 @@ export default function Sidebar({ activeTab, user }) {
       <nav className="dashboard-sidebar__nav">
         <ul className="dashboard-sidebar__menu">
           {menuItems.map((item) => {
-            const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'mentor-pricing';
+            const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'mentor-pricing' && item.id !== 'support';
             return (
               <li key={item.id}>
                 <button
@@ -298,6 +304,7 @@ export default function Sidebar({ activeTab, user }) {
                     else if (item.id === 'ielts-prep') navigate('/ielts-prep');
                     else if (item.id === 'reading-books') navigate('/reading-books');
                     else if (item.id === 'forum') navigate('/forum');
+                    else if (item.id === 'support') navigate('/support');
                     else navigate('/dashboard');
                   }}
                   className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''} ${isLockedForTutor ? 'dashboard-sidebar__menu-btn--locked' : ''}`}
