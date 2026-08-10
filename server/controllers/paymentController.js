@@ -4,7 +4,7 @@ const Payment = require('../models/Payment');
 const ApiResponse = require('../utils/apiResponse');
 const { getPlanConfig, PLAN_DURATION_DAYS } = require('../config/plans');
 
-const PURCHASABLE_PLANS = ['pro', 'pro_plus'];
+const PURCHASABLE_PLANS = ['pro', 'pro_plus', 'mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'];
 
 // Lazy-loaded so a missing `sslcommerz-lts` dependency doesn't crash server
 // boot — payment endpoints simply return 503 until it is installed.
@@ -46,15 +46,21 @@ function frontendBase() {
   return process.env.FRONTEND_URL || 'http://localhost:5173';
 }
 
-/**
- * POST /api/payments/init  (auth)
- * Create an SSLCommerz session for a plan and return the GatewayPageURL.
- */
+function resolveProductName(plan) {
+  if (plan === 'mentor_pro') return 'TopKorbo Mentor Pro (1 Month)';
+  if (plan === 'mentor_3months') return 'TopKorbo Mentor Pro (3 Months)';
+  if (plan === 'mentor_6months') return 'TopKorbo Mentor Pro (6 Months)';
+  if (plan === 'mentor_yearly') return 'TopKorbo Mentor Pro (1 Year)';
+  if (plan === 'pro_plus') return 'TopKorbo Pro+ (30 days)';
+  return 'TopKorbo Pro (30 days)';
+}
+
+
 exports.initPayment = async (req, res, next) => {
   try {
     const { plan } = req.body || {};
     if (!PURCHASABLE_PLANS.includes(plan)) {
-      return ApiResponse.error(res, 'Invalid plan. Choose "pro" or "pro_plus".', 400);
+      return ApiResponse.error(res, 'Invalid plan choice.', 400);
     }
 
     const { store_id, store_passwd } = sslConfig();
@@ -83,7 +89,7 @@ exports.initPayment = async (req, res, next) => {
       emi_option: 0,
       shipping_method: 'NO',
       num_of_item: 1,
-      product_name: `TopKorbo ${plan === 'pro_plus' ? 'Pro+' : 'Pro'} (30 days)`,
+      product_name: resolveProductName(plan),
       product_category: 'Subscription',
       product_profile: 'non-physical-goods',
       cus_name: user.name || 'TopKorbo User',
@@ -116,7 +122,7 @@ exports.initPayment = async (req, res, next) => {
 };
 
 /**
- * Grant a validated payment: mark it valid and activate the plan for 30 days.
+ * Grant a validated payment: mark it valid and activate the plan.
  * Returns true if the plan was granted.
  */
 async function grantIfValid(tranId, gatewayData) {
@@ -125,8 +131,7 @@ async function grantIfValid(tranId, gatewayData) {
   if (payment.status === 'valid') return true; // already granted (idempotent)
 
   // SECURITY: the gateway validation payload must be bound to *this* local
-  // transaction. Without this, a valid val_id for one order could be replayed
-  // against another pending row to grant an unpaid upgrade.
+  // transaction.
   if (String(gatewayData.tran_id || '') !== String(tranId)) {
     return false;
   }
@@ -152,9 +157,7 @@ async function grantIfValid(tranId, gatewayData) {
     return false;
   }
 
-  // Atomically transition pending -> valid. If another concurrent callback (IPN
-  // vs browser redirect) already flipped it, the matchedCount is 0 and we do NOT
-  // double-grant. The unique sparse index on valId also rejects replayed val_ids.
+  // Atomically transition pending -> valid.
   const valId = gatewayData.val_id || null;
   const setValid = { status: 'valid', gatewayData };
   if (valId) setValid.valId = valId;
@@ -165,18 +168,17 @@ async function grantIfValid(tranId, gatewayData) {
       { $set: setValid }
     );
   } catch (err) {
-    // Duplicate valId => this validation was already consumed by another order.
     if (err && err.code === 11000) return false;
     throw err;
   }
 
   if (!update.matchedCount) {
-    // Someone else already resolved this payment; treat as granted only if valid.
     const current = await Payment.findOne({ tranId }).lean();
     return !!(current && current.status === 'valid');
   }
 
-  const expiresAt = new Date(Date.now() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000);
+  const durationDays = getPlanConfig(payment.plan).durationDays || PLAN_DURATION_DAYS;
+  const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
   await User.updateOne(
     { _id: payment.user },
     { $set: { plan: payment.plan, planExpiresAt: expiresAt, planIsTrial: false } }
@@ -205,12 +207,23 @@ exports.paymentSuccess = async (req, res) => {
       }
     }
 
-    const url = granted
-      ? `${frontendBase()}/setting?upgraded=1`
-      : `${frontendBase()}/pricing?payment=failed`;
+    let isMentor = false;
+    if (tranId) {
+      const p = await Payment.findOne({ tranId }).select('plan').lean();
+      if (p && ['mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'].includes(p.plan)) {
+        isMentor = true;
+      }
+    }
+
+    let url;
+    if (granted) {
+      url = `${frontendBase()}/dashboard?upgraded=1`;
+    } else {
+      url = `${frontendBase()}/payment-status?status=failed&role=${isMentor ? 'tutor' : 'student'}`;
+    }
     return res.redirect(url);
   } catch (err) {
-    return res.redirect(`${frontendBase()}/pricing?payment=error`);
+    return res.redirect(`${frontendBase()}/payment-status?status=error`);
   }
 };
 

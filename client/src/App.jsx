@@ -41,6 +41,8 @@ const MakeContestQuestionNextTwo = lazy(() => import('./pages/MakeContestQuestio
 const MakeContestQuestionChooseQBank = lazy(() => import('./pages/MakeContestQuestionChooseQBank'));
 const MakeContestQuestionConfirm = lazy(() => import('./pages/MakeContestQuestionConfirm'));
 const Pricing = lazy(() => import('./pages/Pricing'));
+const MentorPricing = lazy(() => import('./pages/MentorPricing'));
+const PaymentStatus = lazy(() => import('./pages/PaymentStatus'));
 const ReadingBooks = lazy(() => import('./pages/ReadingBooks'));
 const UploadBook = lazy(() => import('./pages/UploadBook'));
 const ReadingBookView = lazy(() => import('./pages/ReadingBookView'));
@@ -138,6 +140,8 @@ function AppContent() {
           <Route path="/make-contest-question/choose-qbank" element={<MakeContestQuestionChooseQBank />} />
           <Route path="/make-contest-question/confirm" element={<MakeContestQuestionConfirm />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/mentor-pricing" element={<MentorPricing />} />
+          <Route path="/payment-status" element={<PaymentStatus />} />
           <Route path="/reading-books" element={<ReadingBooks />} />
           <Route path="/reading-books/upload" element={<UploadBook />} />
           <Route path="/reading-books/:bookId/:chapterId" element={<ReadingBookView />} />

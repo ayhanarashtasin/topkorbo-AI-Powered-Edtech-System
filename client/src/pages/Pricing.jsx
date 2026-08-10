@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { HiCheck, HiX } from 'react-icons/hi';
 import { initPayment } from '../services/paymentApi';
 import { usePlan } from '../hooks/usePlan';
+import MentorPricing from './MentorPricing';
 import './Pricing.css';
 
 const TIERS = [
@@ -56,6 +57,11 @@ const TIERS = [
 ];
 
 export default function Pricing() {
+  const userRole = (localStorage.getItem('topkorbo_role') || '').toLowerCase();
+  if (userRole === 'tutor') {
+    return <MentorPricing />;
+  }
+
   const { plan: currentPlan, loading } = usePlan();
   const [busy, setBusy] = useState(null);
   const [searchParams] = useSearchParams();

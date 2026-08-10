@@ -31,6 +31,46 @@ const PLANS = {
     readingBooks: Infinity,
     readingTools: true,
     readingAI: true
+  },
+  mentor_pro: {
+    price: 1499,
+    durationDays: 30,
+    name: 'Mentor Pro 1 Month',
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true,
+    mentorFeatures: true
+  },
+  mentor_3months: {
+    price: 3897,
+    durationDays: 90,
+    name: 'Mentor Pro 3 Months',
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true,
+    mentorFeatures: true
+  },
+  mentor_6months: {
+    price: 5994,
+    durationDays: 180,
+    name: 'Mentor Pro 6 Months',
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true,
+    mentorFeatures: true
+  },
+  mentor_yearly: {
+    price: 8400,
+    durationDays: 365,
+    name: 'Mentor Pro 1 Year',
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true,
+    mentorFeatures: true
   }
 };
 

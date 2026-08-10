@@ -109,10 +109,28 @@ async function assertBookOpenable(user, bookId) {
 
 /**
  * Route/controller guard: require the effective plan to be at least `required`.
- * Ordering: free < pro < pro_plus.
+ * Ordering: free < pro < pro_plus (and mentor_pro / mentor_yearly).
  */
-const PLAN_RANK = { free: 0, pro: 1, pro_plus: 2 };
+const PLAN_RANK = { free: 0, pro: 1, pro_plus: 2, mentor_pro: 2, mentor_3months: 2, mentor_6months: 2, mentor_yearly: 2 };
+
+function canUseMentorFeatures(user) {
+  if (user?.role === 'teacher') return true; // Teachers are exempt
+  const effective = getEffectivePlan(user);
+  return ['mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'].includes(effective);
+}
+
 function assertPlanAtLeast(user, required) {
+  if (['mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'].includes(required)) {
+    if (!canUseMentorFeatures(user)) {
+      throw new PlanError('Mentor Panel features require an active Mentor Pro subscription.', {
+        statusCode: 403,
+        code: 'UPGRADE_REQUIRED',
+        requiredPlan: 'mentor_pro'
+      });
+    }
+    return;
+  }
+
   const effective = getEffectivePlan(user);
   if ((PLAN_RANK[effective] || 0) < (PLAN_RANK[required] || 0)) {
     throw new PlanError('This feature requires an upgraded plan.', {
@@ -132,6 +150,7 @@ module.exports = {
   consume,
   canUseReadingTools,
   canUseReadingAI,
+  canUseMentorFeatures,
   assertBookOpenable,
   assertPlanAtLeast
 };

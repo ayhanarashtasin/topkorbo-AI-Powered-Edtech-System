@@ -89,6 +89,11 @@ export default function MentorLiveClass() {
       window.location.href = '/dashboard';
       return;
     }
+    const currentPlan = localStorage.getItem('topkorbo_plan') || 'free';
+    if (user.role === 'tutor' && !['mentor_pro', 'mentor_yearly'].includes(currentPlan)) {
+      window.location.href = '/mentor-pricing';
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
     const timer = window.setInterval(loadDashboard, 15000);

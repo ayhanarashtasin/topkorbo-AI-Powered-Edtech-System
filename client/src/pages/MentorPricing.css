@@ -1,0 +1,377 @@
+.mentor-pricing {
+  min-height: calc(100vh - 70px);
+  padding: 24px 20px 80px;
+  background: radial-gradient(circle at 50% 0%, rgba(192, 133, 82, 0.12) 0%, rgba(255, 255, 255, 0) 70%),
+              linear-gradient(180deg, #FAF7F2 0%, #F5EFE6 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #2D2321;
+}
+
+.mentor-pricing__header-bar {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.mentor-pricing__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFFFFF;
+  color: #6B5B54;
+  border: 1px solid #E6DDD0;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.mentor-pricing__back-btn:hover {
+  background: #C08552;
+  color: #FFFFFF;
+  border-color: #C08552;
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(192, 133, 82, 0.25);
+}
+
+.mentor-pricing__hero {
+  text-align: center;
+  max-width: 900px;
+  margin-bottom: 36px;
+  width: 100%;
+}
+
+.mentor-pricing__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: rgba(192, 133, 82, 0.12);
+  color: #C08552;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(192, 133, 82, 0.25);
+}
+
+.mentor-pricing__badge-icon {
+  font-size: 15px;
+}
+
+.mentor-pricing__title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1F1614;
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.mentor-pricing__subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #6B5B54;
+  margin: 0 0 32px;
+}
+
+/* 4 Duration Cards Grid */
+.mentor-pricing__duration-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.mentor-pricing__duration-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 20px 16px;
+  border: 2px solid #EAE3D9;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.mentor-pricing__duration-card:hover {
+  border-color: #C08552;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(192, 133, 82, 0.12);
+}
+
+.mentor-pricing__duration-card.is-selected {
+  border-color: #C08552;
+  background: #FFFDF9;
+  box-shadow: 0 8px 24px rgba(192, 133, 82, 0.18);
+}
+
+.mentor-pricing__duration-card.is-highlight {
+  background: linear-gradient(180deg, #FFF9F2 0%, #FFFFFF 100%);
+}
+
+.mentor-pricing__duration-badge {
+  position: absolute;
+  top: -12px;
+  right: 14px;
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(140, 90, 60, 0.25);
+}
+
+.mentor-pricing__duration-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.mentor-pricing__duration-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1F1614;
+}
+
+.mentor-pricing__duration-save {
+  font-size: 12px;
+  font-weight: 700;
+  color: #22C55E;
+}
+
+.mentor-pricing__duration-price {
+  margin-bottom: 4px;
+}
+
+.mentor-pricing__duration-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #1F1614;
+}
+
+.mentor-pricing__duration-unit {
+  font-size: 13px;
+  color: #8C7C75;
+  margin-left: 2px;
+}
+
+.mentor-pricing__duration-total {
+  font-size: 12px;
+  color: #8C7C75;
+  font-weight: 500;
+}
+
+/* Card Section */
+.mentor-pricing__card-wrapper {
+  width: 100%;
+  max-width: 900px;
+}
+
+.mentor-pricing__card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E6DDD0;
+  overflow: hidden;
+}
+
+.mentor-pricing__card-header {
+  padding: 32px 36px;
+  background: linear-gradient(135deg, #3D2622 0%, #251817 100%);
+  color: #FFFFFF;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.mentor-pricing__plan-meta h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #F5EFE6;
+}
+
+.mentor-pricing__plan-meta p {
+  margin: 0;
+  font-size: 14px;
+  color: #C2B4A5;
+}
+
+.mentor-pricing__price-box {
+  text-align: right;
+}
+
+.mentor-pricing__amount-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.mentor-pricing__currency {
+  font-size: 22px;
+  font-weight: 600;
+  color: #D4A373;
+}
+
+.mentor-pricing__amount {
+  font-size: 40px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -1px;
+}
+
+.mentor-pricing__billing-note {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #D4A373;
+  font-weight: 500;
+}
+
+/* Features Section */
+.mentor-pricing__features-section {
+  padding: 36px;
+}
+
+.mentor-pricing__features-section h3 {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8C7C75;
+  margin: 0 0 24px;
+}
+
+.mentor-pricing__features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+.mentor-pricing__feature-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.mentor-pricing__feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(192, 133, 82, 0.1);
+  color: #C08552;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.mentor-pricing__feature-item h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1F1614;
+  margin: 0 0 4px;
+}
+
+.mentor-pricing__feature-item p {
+  font-size: 13px;
+  color: #6B5B54;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Footer / CTA */
+.mentor-pricing__footer {
+  padding: 24px 36px 36px;
+  background: #FAF7F2;
+  border-top: 1px solid #EAE3D9;
+  text-align: center;
+}
+
+.mentor-pricing__cta-btn {
+  width: 100%;
+  max-width: 520px;
+  padding: 16px 28px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  font-size: 17px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 8px 24px rgba(192, 133, 82, 0.35);
+}
+
+.mentor-pricing__cta-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(192, 133, 82, 0.45);
+}
+
+.mentor-pricing__cta-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.mentor-pricing__current-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 30px;
+  background: #DCFCE7;
+  color: #15803D;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.mentor-pricing__secure-text {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: #8C7C75;
+}
+
+@media (max-width: 820px) {
+  .mentor-pricing__duration-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .mentor-pricing__duration-grid {
+    grid-template-columns: 1fr;
+  }
+  .mentor-pricing__card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .mentor-pricing__price-box {
+    text-align: left;
+  }
+  .mentor-pricing__amount-row {
+    justify-content: flex-start;
+  }
+  .mentor-pricing__features-grid {
+    grid-template-columns: 1fr;
+  }
+}

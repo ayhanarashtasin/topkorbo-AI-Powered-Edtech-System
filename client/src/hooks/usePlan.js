@@ -11,16 +11,25 @@ import httpClient from '../services/httpClient';
 export const PLAN_LIMITS = {
   free: { qbankExams: 5, mockTests: 5, battleRooms: 3, aiActions: 20, readingBooks: 2 },
   pro: {},
-  pro_plus: {}
+  pro_plus: {},
+  mentor_pro: {},
+  mentor_3months: {},
+  mentor_6months: {},
+  mentor_yearly: {}
 };
 
 export const PLAN_META = {
   free: { label: 'Free', price: 0 },
   pro: { label: 'Pro', price: 150 },
-  pro_plus: { label: 'Pro+', price: 250 }
+  pro_plus: { label: 'Pro+', price: 250 },
+  mentor_pro: { label: 'Mentor Pro 1 Month', price: 1499 },
+  mentor_3months: { label: 'Mentor Pro 3 Months', price: 3897 },
+  mentor_6months: { label: 'Mentor Pro 6 Months', price: 5994 },
+  mentor_yearly: { label: 'Mentor Pro 1 Year', price: 8400 }
 };
 
-const PLAN_RANK = { free: 0, pro: 1, pro_plus: 2 };
+const MENTOR_PLANS = ['mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'];
+const PLAN_RANK = { free: 0, pro: 1, pro_plus: 2, mentor_pro: 2, mentor_3months: 2, mentor_6months: 2, mentor_yearly: 2 };
 
 export function usePlan() {
   const [plan, setPlan] = useState(() => {
@@ -65,8 +74,9 @@ export function usePlan() {
       isFree: plan === 'free',
       isPro: plan === 'pro',
       isProPlus: plan === 'pro_plus',
-      canReadingTools: plan === 'pro_plus',
-      canReadingAI: plan === 'pro_plus',
+      isMentorPro: MENTOR_PLANS.includes(plan),
+      canReadingTools: ['pro_plus', ...MENTOR_PLANS].includes(plan),
+      canReadingAI: ['pro_plus', ...MENTOR_PLANS].includes(plan),
       atLeast,
       remaining,
       limitOf: (key) => (limits[key] === undefined ? Infinity : limits[key])

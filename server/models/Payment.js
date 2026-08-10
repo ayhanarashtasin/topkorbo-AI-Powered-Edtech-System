@@ -14,7 +14,7 @@ const paymentSchema = new mongoose.Schema({
   },
   plan: {
     type: String,
-    enum: ['pro', 'pro_plus'],
+    enum: ['pro', 'pro_plus', 'mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'],
     required: true
   },
   amount: {

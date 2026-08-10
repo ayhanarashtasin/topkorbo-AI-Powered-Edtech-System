@@ -1,0 +1,120 @@
+.payment-status {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: radial-gradient(circle at 50% 0%, rgba(192, 133, 82, 0.12) 0%, rgba(255, 255, 255, 0) 70%),
+              linear-gradient(180deg, #FAF7F2 0%, #F5EFE6 100%);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.payment-status__card {
+  width: 100%;
+  max-width: 540px;
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 44px 36px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E6DDD0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.payment-status__icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.payment-status__icon-wrapper.is-success {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.payment-status__icon-wrapper.is-failed {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.payment-status__icon {
+  font-size: 56px;
+}
+
+.payment-status__title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1F1614;
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.payment-status__message {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #6B5B54;
+  margin: 0 0 24px;
+}
+
+.payment-status__badge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #F5EFE6;
+  color: #8C5A3C;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 28px;
+  width: 100%;
+}
+
+.payment-status__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.payment-status__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.payment-status__btn.is-primary {
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 6px 20px rgba(192, 133, 82, 0.3);
+}
+
+.payment-status__btn.is-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(192, 133, 82, 0.4);
+}
+
+.payment-status__btn.is-secondary {
+  background: #F5EFE6;
+  color: #3D2622;
+  border: 1px solid #E6DDD0;
+}
+
+.payment-status__btn.is-secondary:hover {
+  background: #EAE3D9;
+}

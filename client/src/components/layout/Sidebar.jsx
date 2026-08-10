@@ -1,12 +1,34 @@
 import { useState, useEffect } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX, HiLockClosed, HiSparkles } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
+import { usePlan } from '../../hooks/usePlan';
 import './Sidebar.css';
 
 export default function Sidebar({ activeTab, user }) {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { isMentorPro, plan: currentPlan, planExpiresAt } = usePlan();
+
+  const getPlanInfoText = () => {
+    if (safeUser.role === 'tutor' || safeUser.role === 'teacher') {
+      if (safeUser.role === 'teacher') return 'Institutional Teacher';
+      if (!isMentorPro) return 'Free Plan (Requests Only)';
+      
+      const labelMap = {
+        mentor_pro: 'Mentor Pro (1 Month)',
+        mentor_3months: 'Mentor Pro (3 Months)',
+        mentor_6months: 'Mentor Pro (6 Months)',
+        mentor_yearly: 'Mentor Pro (1 Year)'
+      };
+      const planName = labelMap[currentPlan] || 'Mentor Pro';
+      
+      if (!planExpiresAt) return planName;
+      const daysLeft = Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      return `${planName} · ${daysLeft}d left`;
+    }
+    return null;
+  };
 
   // Defensive defaults so the sidebar never crashes if the parent passes a
   // partial `user` (e.g. during the initial render before /auth/me resolves).
@@ -95,7 +117,6 @@ export default function Sidebar({ activeTab, user }) {
     });
   }
 
-  // Show Contests tab only for students
   if (safeUser.role === 'student') {
     menuItems.push({
       id: 'contests',
@@ -115,6 +136,15 @@ export default function Sidebar({ activeTab, user }) {
       id: 'teacher',
       label: t('db.menu.teacher'),
       icon: <HiAcademicCap size={20} />
+    });
+  }
+
+  // Dedicated Mentor Plan section for tutors to extend or upgrade plan duration anytime
+  if (safeUser.role === 'tutor') {
+    menuItems.push({
+      id: 'mentor-pricing',
+      label: language === 'en' ? 'Mentor Plans' : 'মেন্টর প্ল্যান',
+      icon: <HiSparkles size={20} />
     });
   }
 
@@ -233,44 +263,54 @@ export default function Sidebar({ activeTab, user }) {
       {/* Sidebar Menu Items */}
       <nav className="dashboard-sidebar__nav">
         <ul className="dashboard-sidebar__menu">
-          {menuItems.map((item) => (
-            <li key={item.id}>
-              <button
-                onClick={() => {
-                  if (item.id === 'teacher') navigate('/teacher');
-                  else if (item.id === 'qbank') {
-                    sessionStorage.removeItem('qbank_selected_subject_id');
-                    sessionStorage.removeItem('qbank_selected_prep_stream');
-                    sessionStorage.removeItem('qbank_selected_source_context');
-                    window.dispatchEvent(new Event('reset-qbank'));
-                    navigate('/qbank');
-                  }
-                  else if (item.id === 'upload-question') navigate('/upload-question');
-                  else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
-
-                  else if (item.id === 'make-contest-question') navigate('/make-contest-question');
-                  else if (item.id === 'mock-test') navigate('/mock-test');
-                  else if (item.id === 'find-mentor') navigate('/student/find-mentor');
-                  else if (item.id === 'study-routine') navigate('/study-routine');
-                  else if (item.id === 'practice-history') navigate('/practice-history');
-                  else if (item.id === 'battle') navigate('/battle');
-                  else if (item.id === 'live-class') {
-                    if (safeUser.role === 'student') navigate('/student/live-class');
-                    else navigate('/mentor/live-class');
-                  }
-                  else if (item.id === 'contests') navigate('/contests');
-                  else if (item.id === 'ielts-prep') navigate('/ielts-prep');
-                  else if (item.id === 'reading-books') navigate('/reading-books');
-                  else if (item.id === 'forum') navigate('/forum');
-                  else navigate('/dashboard');
-                }}
-                className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''}`}
-              >
-                <span className="dashboard-sidebar__menu-icon">{item.icon}</span>
-                <span className="dashboard-sidebar__menu-label">{item.label}</span>
-              </button>
-            </li>
-          ))}
+          {menuItems.map((item) => {
+            const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'mentor-pricing';
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => {
+                    if (isLockedForTutor) {
+                      navigate('/mentor-pricing');
+                      return;
+                    }
+                    if (item.id === 'mentor-pricing') navigate('/mentor-pricing');
+                    else if (item.id === 'teacher') navigate('/teacher');
+                    else if (item.id === 'qbank') {
+                      sessionStorage.removeItem('qbank_selected_subject_id');
+                      sessionStorage.removeItem('qbank_selected_prep_stream');
+                      sessionStorage.removeItem('qbank_selected_source_context');
+                      window.dispatchEvent(new Event('reset-qbank'));
+                      navigate('/qbank');
+                    }
+                    else if (item.id === 'upload-question') navigate('/upload-question');
+                    else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
+                    else if (item.id === 'make-contest-question') navigate('/make-contest-question');
+                    else if (item.id === 'mock-test') navigate('/mock-test');
+                    else if (item.id === 'find-mentor') navigate('/student/find-mentor');
+                    else if (item.id === 'study-routine') navigate('/study-routine');
+                    else if (item.id === 'practice-history') navigate('/practice-history');
+                    else if (item.id === 'battle') navigate('/battle');
+                    else if (item.id === 'live-class') {
+                      if (safeUser.role === 'student') navigate('/student/live-class');
+                      else navigate('/mentor/live-class');
+                    }
+                    else if (item.id === 'contests') navigate('/contests');
+                    else if (item.id === 'ielts-prep') navigate('/ielts-prep');
+                    else if (item.id === 'reading-books') navigate('/reading-books');
+                    else if (item.id === 'forum') navigate('/forum');
+                    else navigate('/dashboard');
+                  }}
+                  className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''} ${isLockedForTutor ? 'dashboard-sidebar__menu-btn--locked' : ''}`}
+                >
+                  <span className="dashboard-sidebar__menu-icon">{item.icon}</span>
+                  <span className="dashboard-sidebar__menu-label">{item.label}</span>
+                  {isLockedForTutor && (
+                    <HiLockClosed className="dashboard-sidebar__menu-lock" title="Requires Mentor Pro Plan" />
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
@@ -294,6 +334,11 @@ export default function Sidebar({ activeTab, user }) {
           </div>
           <div className="dashboard-sidebar__user-info">
             <h4 className="dashboard-sidebar__user-name">{safeUser.name}</h4>
+            {getPlanInfoText() && (
+              <span className={`dashboard-sidebar__user-plan ${isMentorPro ? 'is-active-pro' : ''}`}>
+                {getPlanInfoText()}
+              </span>
+            )}
           </div>
         </div>
       </div>

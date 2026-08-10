@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { HiArrowRight, HiCheck, HiClock, HiOutlineUserGroup, HiSparkles, HiX } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 import { useLanguage } from '../hooks/useLanguage';
+import { usePlan } from '../hooks/usePlan';
 import Sidebar from '../components/layout/Sidebar';
 import {
   fetchMentorDashboard,
@@ -145,9 +147,20 @@ export default function Dashboard() {
   const [dashboardError, setDashboardError] = useState('');
   const [respondingRequestId, setRespondingRequestId] = useState('');
 
+  const { refresh: refreshPlan } = usePlan();
+
   const activeTab = 'dashboard';
   const isMentor = user.role === 'tutor' || user.role === 'teacher';
   const isTeacher = user.role === 'teacher';
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgraded') === '1') {
+      refreshPlan();
+      toast.success('🎉 Congratulations! Your Mentor Pro subscription is active! All features are unlocked.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [refreshPlan]);
 
   const handleDeleteContest = async (contestId, contestName) => {
     const confirmMessage = language === 'en'
