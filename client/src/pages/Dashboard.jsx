@@ -157,10 +157,14 @@ export default function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgraded') === '1') {
       refreshPlan();
-      toast.success('🎉 Congratulations! Your Mentor Pro subscription is active! All features are unlocked.');
+      if (isMentor) {
+        toast.success('🎉 Congratulations! Your Mentor Pro subscription is active! All features are unlocked.');
+      } else {
+        toast.success('🎉 Congratulations! Your TopKorbo Pro subscription is active! All features are unlocked.');
+      }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [refreshPlan]);
+  }, [refreshPlan, isMentor]);
 
   const handleDeleteContest = async (contestId, contestName) => {
     const confirmMessage = language === 'en'
