@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { HiArrowLeft, HiAcademicCap, HiCalendar, HiEye, HiSparkles, HiX, HiPaperAirplane, HiPaperClip } from 'react-icons/hi';
 import { useLanguage } from '../hooks/useLanguage';
@@ -303,9 +303,9 @@ const VarsityWrittenView = () => {
       const backendBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
       const res = await fetch(`${backendBaseUrl}/evaluate/written`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json", 
-          Authorization: `Bearer ${localStorage.getItem("topkorbo_token") || localStorage.getItem("token")}` 
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("topkorbo_token") || localStorage.getItem("token")}`
         },
         body: JSON.stringify({ answers: payload })
       });
@@ -381,17 +381,17 @@ const VarsityWrittenView = () => {
   return (
     <div className="varsity-written-page animate-fade-in">
       <button
-          type="button"
-          className="qbank-back-btn"
-          onClick={() =>
-            navigate(`/qbank?university=${universityParam}&view=chooser`)
-          }
-        >
-          <HiArrowLeft size={16} />
-          <span>
-            {language === "en" ? "Back to Formats" : "ফরম্যাটে ফিরে যান"}
-          </span>
-        </button>
+        type="button"
+        className="qbank-back-btn"
+        onClick={() =>
+          navigate(`/qbank?university=${universityParam}&view=chooser`)
+        }
+      >
+        <HiArrowLeft size={16} />
+        <span>
+          {language === "en" ? "Back to Formats" : "ফরম্যাটে ফিরে যান"}
+        </span>
+      </button>
 
       {/* Subject & Paper Selector Row */}
       <div className="varsity-written-selectors">
@@ -692,12 +692,12 @@ const VarsityWrittenView = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <img src={studentImage} alt="Your Answer" style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }} />
                     <div style={{ display: 'flex', gap: '12px' }}>
-                       <button onClick={() => setStudentImage(null)} disabled={isEvaluating} style={{ padding: '8px 16px', backgroundColor: '#EF4444', color: '#FFF', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
-                         {language === "en" ? "Remove" : "মুছুন"}
-                       </button>
-                       <button onClick={evaluateAnswer} disabled={isEvaluating} style={{ padding: '8px 16px', backgroundColor: '#10B981', color: '#FFF', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                          {isEvaluating ? (language === "en" ? "Evaluating..." : "মূল্যায়ন হচ্ছে...") : (language === "en" ? "Check with AI" : "এআই দিয়ে চেক করুন")}
-                       </button>
+                      <button onClick={() => setStudentImage(null)} disabled={isEvaluating} style={{ padding: '8px 16px', backgroundColor: '#EF4444', color: '#FFF', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
+                        {language === "en" ? "Remove" : "মুছুন"}
+                      </button>
+                      <button onClick={evaluateAnswer} disabled={isEvaluating} style={{ padding: '8px 16px', backgroundColor: '#10B981', color: '#FFF', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                        {isEvaluating ? (language === "en" ? "Evaluating..." : "মূল্যায়ন হচ্ছে...") : (language === "en" ? "Check with AI" : "এআই দিয়ে চেক করুন")}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -708,12 +708,13 @@ const VarsityWrittenView = () => {
                       {language === "en" ? "AI Evaluation" : "এআই মূল্যায়ন"}
                     </h4>
                     <div style={{ marginBottom: '4px', fontWeight: 'bold', color: '#15803D' }}>
-                      {language === "en" ? "Partial Mark: " : "প্রাপ্ত নম্বর: "}
-                      {aiEvaluation.score}
+                      {language === "en" ? "Marks: " : "প্রাপ্ত নম্বর: "}
+                      {aiEvaluation.marks ?? aiEvaluation.score}
+                      {aiEvaluation.totalMarks ? ` / ${aiEvaluation.totalMarks}` : ''}
                     </div>
                     <div style={{ color: '#166534', fontSize: '14px' }}>
                       <strong>{language === "en" ? "Feedback: " : "মতামত: "}</strong>
-                      <div 
+                      <div
                         style={{ display: 'inline', marginLeft: '4px', lineHeight: '1.6' }}
                         dangerouslySetInnerHTML={renderMarkdownWithMath(aiEvaluation.feedback)}
                       />
@@ -954,9 +955,9 @@ const VarsityWrittenView = () => {
                         className="exam-explanation-body-text"
                         dangerouslySetInnerHTML={renderMarkdownWithMath(
                           solutionStr ||
-                            (language === "en"
-                              ? "No explanation added yet."
-                              : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
+                          (language === "en"
+                            ? "No explanation added yet."
+                            : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
                         )}
                       />
                       {explanationModalQuestion.solutionImageUrl && (
@@ -988,8 +989,8 @@ const VarsityWrittenView = () => {
                   {!aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', padding: '32px 16px' }}>
                       <p style={{ margin: '0 0 8px', color: '#64748B', fontSize: '15px', textAlign: 'center', lineHeight: '1.6' }}>
-                        {language === "en" 
-                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat." 
+                        {language === "en"
+                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat."
                           : "এআই টিউটরের কাছ থেকে এই প্রশ্নটির একটি বিস্তারিত সমাধান তৈরি করো। তুমি চ্যাটের মাধ্যমে পরবর্তী প্রশ্ন জিজ্ঞাসা করতে এবং ছবি আপলোড করতে পারবে।"}
                       </p>
                       <button
@@ -1012,7 +1013,7 @@ const VarsityWrittenView = () => {
                             if (res.ok) {
                               const data = await res.json();
                               setAiExplanations(prev => ({ ...prev, [explanationModalQuestion._id]: data.explanation }));
-                              
+
                               const initialThread = [
                                 {
                                   role: "user",
@@ -1023,7 +1024,7 @@ const VarsityWrittenView = () => {
                                   content: data.explanation
                                 }
                               ];
-                              
+
                               setAiChatThreads(prev => ({
                                 ...prev,
                                 [explanationModalQuestion._id]: initialThread
@@ -1084,11 +1085,11 @@ const VarsityWrittenView = () => {
                   {aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       {/* Messages Thread */}
-                      <div 
+                      <div
                         className="ai-chat-thread-container"
-                        style={{ 
-                          maxHeight: '400px', 
-                          overflowY: 'auto', 
+                        style={{
+                          maxHeight: '400px',
+                          overflowY: 'auto',
                           padding: '12px',
                           border: '1px solid #F1F5F9',
                           borderRadius: '12px',
@@ -1103,7 +1104,7 @@ const VarsityWrittenView = () => {
                         ]).map((msg, index) => {
                           const isUser = msg.role === 'user';
                           return (
-                            <div 
+                            <div
                               key={index}
                               style={{
                                 display: 'flex',
@@ -1116,16 +1117,16 @@ const VarsityWrittenView = () => {
                             >
                               {/* Avatar / Name label */}
                               <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px' }}>
-                                {isUser 
-                                  ? (language === "en" ? "You" : "তুমি") 
+                                {isUser
+                                  ? (language === "en" ? "You" : "তুমি")
                                   : (language === "en" ? "AI Tutor" : "এআই টিউটর")}
                               </span>
 
                               {/* Message bubble */}
                               <div
                                 style={{
-                                  background: isUser 
-                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)' 
+                                  background: isUser
+                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)'
                                     : '#FFFFFF',
                                   color: isUser ? '#FFFFFF' : '#1E293B',
                                   border: isUser ? 'none' : '1px solid #E2E8F0',
@@ -1139,24 +1140,24 @@ const VarsityWrittenView = () => {
                                 {/* Thumbnail attachment if present */}
                                 {msg.image && (
                                   <div style={{ marginBottom: '8px' }}>
-                                    <img 
-                                      src={msg.image} 
-                                      alt="Attachment" 
-                                      style={{ 
-                                        maxWidth: '180px', 
-                                        maxHeight: '130px', 
-                                        objectFit: 'contain', 
-                                        borderRadius: '8px', 
-                                        border: '1px solid rgba(255, 255, 255, 0.2)' 
-                                      }} 
+                                    <img
+                                      src={msg.image}
+                                      alt="Attachment"
+                                      style={{
+                                        maxWidth: '180px',
+                                        maxHeight: '130px',
+                                        objectFit: 'contain',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                                      }}
                                     />
                                   </div>
                                 )}
-                                <div 
+                                <div
                                   className="chat-bubble-text"
                                   dangerouslySetInnerHTML={
-                                    isUser 
-                                      ? { __html: msg.content.replace(/\n/g, '<br/>') } 
+                                    isUser
+                                      ? { __html: msg.content.replace(/\n/g, '<br/>') }
                                       : renderMarkdownWithMath(msg.content)
                                   }
                                 />
@@ -1167,7 +1168,7 @@ const VarsityWrittenView = () => {
 
                         {/* Typing / Sending indicator */}
                         {isSendingFollowUp && (
-                          <div 
+                          <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1232,10 +1233,10 @@ const VarsityWrittenView = () => {
                         {followUpImage && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <img 
-                                src={followUpImage} 
-                                alt="Attachment preview" 
-                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }} 
+                              <img
+                                src={followUpImage}
+                                alt="Attachment preview"
+                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }}
                               />
                               <button
                                 type="button"
@@ -1264,15 +1265,15 @@ const VarsityWrittenView = () => {
                         )}
 
                         {/* Input bar */}
-                        <div 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            border: '1.5px solid #CBD5E1', 
-                            borderRadius: '10px', 
-                            padding: '4px 8px', 
-                            backgroundColor: '#FFF' 
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            border: '1.5px solid #CBD5E1',
+                            borderRadius: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#FFF'
                           }}
                         >
                           {/* Image Attach Button */}

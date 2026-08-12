@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import {
   HiUpload,
@@ -319,19 +319,57 @@ function renderLatex(text) {
   if (!text || !text.trim()) return '';
   try {
     const hasDelimitedLatex = /\$\$[\s\S]*?\$\$|\$[^$]+\$|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]/.test(text);
-    if (!hasDelimitedLatex && looksLikeRawLatex(text)) {
+    const isRubricStyle = /\[\s*\d+\s*(?:mark|marks?)\]|\d+\s*mark/i.test(text);
+    if (!hasDelimitedLatex && looksLikeRawLatex(text) && !isRubricStyle) {
       return renderLatexBlock(text, true);
     }
 
     // Replace common LaTeX delimiters with rendered HTML.
-    return text
+    return latexifyCodeIdentifiers(text)
       .replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => renderLatexBlock(math, true))
       .replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => renderLatexBlock(math, false))
+      .replace(/\\texttt\{([^}]*)\}/g, (_m, inner) => renderLatexBlock(`\\texttt{${inner}}`, false))
       .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => renderLatexBlock(math, true))
       .replace(/\$([^$]*?)\$/g, (_, math) => renderLatexBlock(math, false));
   } catch {
     return text;
   }
+}
+
+// ─── LaTeX-ify code identifiers (Java/Python/variables/operators) ────────────
+
+const AIH_PROTECTED_LATEX =
+  /(\$\$[\s\S]*?\$\$|\$[^$\n]*\$|\\texttt\{[^}]*\}|\\text\{[^}]*\}|\\operatorname\{[^}]*\}|\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\])/;
+
+function aihEscapeTt(code) {
+  return (code || '')
+    .replace(/\{/g, '\\{')
+    .replace(/\}/g, '\\}')
+    .replace(/\^/g, '\\^{}')
+    .replace(/_/g, '\\_')
+    .replace(/%/g, '\\%')
+    .replace(/#/g, '\\#')
+    .replace(/&/g, '\\&')
+    .replace(/~/g, '\\~{}')
+    .trim();
+}
+
+function latexifyCodeIdentifiers(text) {
+  if (!text || typeof text !== 'string') return text;
+  const codeRe = new RegExp(
+    '([A-Za-z_$][\\w$]*(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)*(?:\\s*(?:==|!=|<=|>=|\\+\\+|--|&&|\\|\\||->|::|[-+*/%=<>!&|^~])\\s*[A-Za-z_$0-9]+(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)*)+)' +
+    '|(\\b[A-Za-z_$][\\w$]*\\s*\\([^()\\n]*\\))' +
+    '|([A-Za-z_$][\\w$]*(?:\\s*\\.\\s*[A-Za-z_$][\\w$]*)+)' +
+    '|(\\b(?:public|private|protected|static|final|void|int|double|float|long|short|byte|char|boolean|String|class|interface|enum|new|return|if|else|for|while|do|switch|case|break|continue|null|true|false|this|super|extends|implements|import|package|try|catch|finally|throw|throws)\\b)',
+    'g'
+  );
+  return String(text)
+    .split(AIH_PROTECTED_LATEX)
+    .map((part, i) => {
+      if (i % 2 === 1) return part;
+      return part.replace(codeRe, (m) => `\\texttt{${aihEscapeTt(m)}}`);
+    })
+    .join('');
 }
 
 // ─── AI Question Helper Utilities ─────────────────────────────────────────────
@@ -363,7 +401,7 @@ function aihSplitDataUrl(dataUrl) {
 function aihSafeKatexHtml(latex) {
   if (!latex || typeof latex !== 'string') return '';
   try {
-    return katex.renderToString(latex, {
+    return katex.renderToString(latexifyCodeIdentifiers(latex), {
       throwOnError: false,
       displayMode: true,
       output: 'html'
@@ -458,6 +496,7 @@ export default function UploadQuestion() {
   const [topic, setTopic] = useState('');
   const [tags, setTags] = useState([]);
   const [solution, setSolution] = useState('');
+  const [rubricText, setRubricText] = useState('');
   const [cqSolutions, setCqSolutions] = useState([
     { label: 'a', text: '', imageUrl: '' },
     { label: 'b', text: '', imageUrl: '' },
@@ -722,6 +761,137 @@ export default function UploadQuestion() {
     return aihSafeKatexHtml(parts.join('\n\n'));
   }, [aiSolExtracted]);
 
+  // ── AI Rubric Helper state ──
+  const [showAiRubricHelper, setShowAiRubricHelper] = useState(false);
+  const [aiRubricQuestionText, setAiRubricQuestionText] = useState('');
+  const [aiRubricAnswerText, setAiRubricAnswerText] = useState('');
+  const [aiRubricMarks, setAiRubricMarks] = useState('');
+  const [aiRubricQuestionImage, setAiRubricQuestionImage] = useState(null);
+  const [aiRubricAnswerImage, setAiRubricAnswerImage] = useState(null);
+  const [aiRubricDraggingSource, setAiRubricDraggingSource] = useState('');
+  const [aiRubricIsLoading, setAiRubricIsLoading] = useState(false);
+  const [aiRubricExtracted, setAiRubricExtracted] = useState(null);
+  const [aiRubricErrorMsg, setAiRubricErrorMsg] = useState('');
+  const aiRubricQuestionFileInputRef = useRef(null);
+  const aiRubricAnswerFileInputRef = useRef(null);
+
+  const aiRubricQuestionImagePreviewSrc = useMemo(
+    () => (aiRubricQuestionImage ? `data:${aiRubricQuestionImage.mimeType};base64,${aiRubricQuestionImage.base64}` : ''),
+    [aiRubricQuestionImage]
+  );
+  const aiRubricAnswerImagePreviewSrc = useMemo(
+    () => (aiRubricAnswerImage ? `data:${aiRubricAnswerImage.mimeType};base64,${aiRubricAnswerImage.base64}` : ''),
+    [aiRubricAnswerImage]
+  );
+  const aiRubricQuestionHasInput = aiRubricQuestionText.trim().length > 0 || !!aiRubricQuestionImage;
+  const aiRubricAnswerHasInput = aiRubricAnswerText.trim().length > 0 || !!aiRubricAnswerImage;
+  const aiRubricTotalMarks = Number(aiRubricMarks);
+  const aiRubricCanSubmit = aiRubricQuestionHasInput && aiRubricAnswerHasInput
+    && Number.isInteger(aiRubricTotalMarks) && aiRubricTotalMarks >= 1 && aiRubricTotalMarks <= 100
+    && !aiRubricIsLoading;
+
+  const handleAiRubricImageFile = useCallback(async (file, source) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Please choose an image file (PNG, JPG, etc.)'); return; }
+    if (file.size > 4 * 1024 * 1024) { toast.error('Image is too large. Please use a file under ~4 MB.'); return; }
+    try {
+      const dataUrl = await aihReadFileAsDataUrl(file);
+      const { mimeType, base64 } = aihSplitDataUrl(dataUrl);
+      const image = { mimeType, base64, name: file.name };
+      if (source === 'question') setAiRubricQuestionImage(image);
+      else setAiRubricAnswerImage(image);
+      setAiRubricErrorMsg('');
+    } catch (err) {
+      console.error('[AiRubricHelper] failed to read file', err);
+      toast.error('Could not read the selected image.');
+    }
+  }, []);
+
+  const onAiRubricFileInputChange = (event, source) => {
+    const file = event.target.files && event.target.files[0];
+    if (file) handleAiRubricImageFile(file, source);
+    event.target.value = '';
+  };
+  const onAiRubricDrop = (event, source) => {
+    event.preventDefault();
+    setAiRubricDraggingSource('');
+    const file = event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) handleAiRubricImageFile(file, source);
+  };
+  const onAiRubricDragOver = (event, source) => { event.preventDefault(); setAiRubricDraggingSource(source); };
+  const onAiRubricDragLeave = (event) => { event.preventDefault(); setAiRubricDraggingSource(''); };
+  const clearAiRubricImage = (source) => {
+    if (source === 'question') {
+      setAiRubricQuestionImage(null);
+      if (aiRubricQuestionFileInputRef.current) aiRubricQuestionFileInputRef.current.value = '';
+    } else {
+      setAiRubricAnswerImage(null);
+      if (aiRubricAnswerFileInputRef.current) aiRubricAnswerFileInputRef.current.value = '';
+    }
+  };
+
+  const handleAiRubricExtract = async () => {
+    if (!aiRubricCanSubmit) return;
+    setAiRubricIsLoading(true);
+    setAiRubricErrorMsg('');
+    setAiRubricExtracted(null);
+    const payload = {
+      mode: 'rubric',
+      questionText: aiRubricQuestionText.trim(),
+      answerText: aiRubricAnswerText.trim(),
+      totalMarks: aiRubricTotalMarks
+    };
+    if (aiRubricQuestionImage) {
+      payload.questionImageBase64 = aiRubricQuestionImage.base64;
+      payload.questionMimeType = aiRubricQuestionImage.mimeType;
+    }
+    if (aiRubricAnswerImage) {
+      payload.answerImageBase64 = aiRubricAnswerImage.base64;
+      payload.answerMimeType = aiRubricAnswerImage.mimeType;
+    }
+    try {
+      const result = await aiApi.extract(payload);
+      if (!result || !result.extracted) throw new Error('AI returned an empty result.');
+      setAiRubricExtracted(result.extracted);
+      toast.success('Rubric extracted! Review below and apply.');
+    } catch (err) {
+      const message = err?.message || 'Could not extract the rubric.';
+      setAiRubricErrorMsg(message);
+      toast.error(message);
+    } finally {
+      setAiRubricIsLoading(false);
+    }
+  };
+
+  const handleAiRubricReset = () => {
+    setAiRubricQuestionText('');
+    setAiRubricAnswerText('');
+    setAiRubricMarks('');
+    setAiRubricQuestionImage(null);
+    setAiRubricAnswerImage(null);
+    setAiRubricExtracted(null);
+    setAiRubricErrorMsg('');
+    if (aiRubricQuestionFileInputRef.current) aiRubricQuestionFileInputRef.current.value = '';
+    if (aiRubricAnswerFileInputRef.current) aiRubricAnswerFileInputRef.current.value = '';
+    setRubricText('');
+  };
+
+  const handleApplyRubricToForm = () => {
+    if (!aiRubricExtracted) return;
+    if (aiRubricExtracted.questionText) setQuestionText(aiRubricExtracted.questionText);
+    if (aiRubricExtracted.answerText) setSolution(aiRubricExtracted.answerText);
+    if (aiRubricExtracted.totalMarks) setAiRubricMarks(String(aiRubricExtracted.totalMarks));
+    const rubric = aiRubricExtracted.rubric || aiRubricExtracted.solution || '';
+    if (rubric) setRubricText(rubric);
+    toast.success('Rubric applied to form!');
+  };
+
+  const aiRubricRenderedPreview = useMemo(() => {
+    if (!aiRubricExtracted) return '';
+    const rubric = aiRubricExtracted.rubric || aiRubricExtracted.solution || '';
+    return rubric ? renderLatex(rubric) : '';
+  }, [aiRubricExtracted]);
+
   const openEditModal = (q) => {
     setEditingQuestion(q);
     setEditForm({
@@ -734,19 +904,21 @@ export default function UploadQuestion() {
       options: Array.isArray(q.options) && q.options.length
         ? q.options.map((o) => ({ ...o }))
         : [
-            { id: 'A', text: '', isCorrect: false },
-            { id: 'B', text: '', isCorrect: false },
-            { id: 'C', text: '', isCorrect: false },
-            { id: 'D', text: '', isCorrect: false },
-          ],
+          { id: 'A', text: '', isCorrect: false },
+          { id: 'B', text: '', isCorrect: false },
+          { id: 'C', text: '', isCorrect: false },
+          { id: 'D', text: '', isCorrect: false },
+        ],
       cq: q.cq
         ? {
-            description: q.cq.description || '',
-            parts: (q.cq.parts || []).map((p) => ({ ...p })),
-          }
+          description: q.cq.description || '',
+          parts: (q.cq.parts || []).map((p) => ({ ...p })),
+        }
         : { description: '', parts: [{ label: 'a', text: '' }] },
-      solution: q.solution || '',
-      imageUrl: q.imageUrl || '',
+        solution: q.solution || '',
+      rubricText: q.rubricText || '',
+      totalMarks: q.totalMarks || '',
+       imageUrl: q.imageUrl || '',
       solutionImageUrl: q.solutionImageUrl || '',
       tags: Array.isArray(q.tags) ? q.tags.map((t) => ({ ...t })) : [],
     });
@@ -813,6 +985,8 @@ export default function UploadQuestion() {
         imageUrl: editForm.imageUrl,
         solutionImageUrl: editForm.solutionImageUrl,
         solution: editForm.solution,
+        rubricText: editForm.rubricText,
+        totalMarks: editForm.totalMarks === '' ? undefined : Number(editForm.totalMarks),
       };
       if (editForm.type === 'mcq' || editForm.type === 'written') {
         payload.options = editForm.options;
@@ -1005,18 +1179,45 @@ export default function UploadQuestion() {
     setImageUrl('');
   };
 
-  const handleSolutionImageUpload = (e) => {
+  const handleSolutionImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('error', language === 'en' ? 'Image must be under 2MB' : 'ছবি ২ মেগাবাইটের কম হতে হবে');
+    if (file.size > 5 * 1024 * 1024) {
+      if (typeof showToast === 'function') {
+         showToast('error', language === 'en' ? 'Image must be under 5MB' : 'ছবি ৫ মেগাবাইটের নিচে হতে হবে');
+      } else {
+         toast.error(language === 'en' ? 'Image must be under 5MB' : 'ছবি ৫ মেগাবাইটের নিচে হতে হবে');
+      }
       return;
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       setSolutionImageUrl(reader.result);
+
+      try {
+        const { mimeType, base64 } = aihSplitDataUrl(reader.result);
+        toast.loading(language === 'en' ? 'Extracting text from image...' : 'ছবি থেকে টেক্সট এক্সট্র্যাক্ট করা হচ্ছে...', { id: 'sol-extract' });
+
+        const result = await aiApi.extract({ mode: 'solution', imageBase64: base64, mimeType });
+        if (result && result.extracted) {
+          const parts = [];
+          if (result.extracted.questionText) parts.push(result.extracted.questionText);
+          if (result.extracted.solution) parts.push(result.extracted.solution);
+          const combined = parts.join('\n\n');
+          if (combined) {
+            setSolution(prev => prev ? prev + '\n\n' + combined : combined);
+            toast.success(language === 'en' ? 'Text extracted from image!' : 'ছবি থেকে টেক্সট এক্সট্র্যাক্ট হয়েছে!', { id: 'sol-extract' });
+          } else {
+             toast.dismiss('sol-extract');
+          }
+        } else {
+          toast.dismiss('sol-extract');
+        }
+      } catch (err) {
+        toast.error(err.message || 'Failed to extract text', { id: 'sol-extract' });
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -1187,6 +1388,10 @@ export default function UploadQuestion() {
         topic: topic.trim(),
         solution: questionType === 'cq' ? JSON.stringify(cqSolutions) : solution.trim(),
         solutionImageUrl: questionType === 'cq' ? '' : solutionImageUrl,
+        rubricText: questionType === 'cq' || questionType === 'written' ? rubricText.trim() : '',
+        totalMarks: questionType === 'cq' || questionType === 'written'
+          ? (aiRubricMarks ? Number(aiRubricMarks) : undefined)
+          : undefined,
         tags: tags.filter(t => {
           if (t.category === 'board') return t.board && t.year;
           if (t.category === 'college') return t.college && t.year;
@@ -1213,7 +1418,9 @@ export default function UploadQuestion() {
         // Reset form
         setQuestionText('');
         setImageUrl('');
-        setSolution('');
+         setSolution('');
+         setRubricText('');
+         setAiRubricMarks('');
         setSolutionImageUrl('');
         setOptions([
           { text: '', isCorrect: true },
@@ -1537,28 +1744,28 @@ export default function UploadQuestion() {
                       <span className="uq-diagram-upload-icon"><HiUpload size={24} /></span>
                       <span className="uq-diagram-upload-text">
                         {language === 'en'
-                  ? (focusedInput.type === 'question'
-                      ? 'Active Input: Question Text'
-                      : focusedInput.type === 'solution'
-                        ? 'Active Input: Solution'
-                        : focusedInput.type === 'cq-desc'
-                          ? 'Active Input: CQ Description'
-                          : focusedInput.type === 'cq-part'
-                            ? 'Active Input: CQ Sub-question'
-                            : focusedInput.type === 'cq-solution'
-                              ? 'Active Input: CQ Solution'
-                              : 'Active Input: MCQ Option')
-                  : (focusedInput.type === 'question'
-                      ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
-                      : focusedInput.type === 'solution'
-                        ? 'সক্রিয় ইনপুট: সমাধান ব্যাখ্যা'
-                        : focusedInput.type === 'cq-desc'
-                          ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
-                          : focusedInput.type === 'cq-part'
-                            ? 'সক্রিয় ইনপুট: CQ উপ-প্রশ্ন'
-                            : focusedInput.type === 'cq-solution'
-                              ? 'সক্রিয় ইনপুট: CQ সমাধান ব্যাখ্যা'
-                              : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
+                          ? (focusedInput.type === 'question'
+                            ? 'Active Input: Question Text'
+                            : focusedInput.type === 'solution'
+                              ? 'Active Input: Solution'
+                              : focusedInput.type === 'cq-desc'
+                                ? 'Active Input: CQ Description'
+                                : focusedInput.type === 'cq-part'
+                                  ? 'Active Input: CQ Sub-question'
+                                  : focusedInput.type === 'cq-solution'
+                                    ? 'Active Input: CQ Solution'
+                                    : 'Active Input: MCQ Option')
+                          : (focusedInput.type === 'question'
+                            ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
+                            : focusedInput.type === 'solution'
+                              ? 'সক্রিয় ইনপুট: সমাধান ব্যাখ্যা'
+                              : focusedInput.type === 'cq-desc'
+                                ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
+                                : focusedInput.type === 'cq-part'
+                                  ? 'সক্রিয় ইনপুট: CQ উপ-প্রশ্ন'
+                                  : focusedInput.type === 'cq-solution'
+                                    ? 'সক্রিয় ইনপুট: CQ সমাধান ব্যাখ্যা'
+                                    : 'সক্রিয় ইনপুট: MCQ অপশন')}</span>
                       <span className="uq-diagram-upload-subtext">
                         {language === 'en' ? 'PNG, JPG up to 2MB' : 'সর্বোচ্চ ২ মেগাবাইট'}
                       </span>
@@ -1595,8 +1802,8 @@ export default function UploadQuestion() {
                 {language === 'en' ? 'Descriptive Options' : 'বর্ণনামূলক অপশন'}
               </div>
               <p className="uq-section__desc">
-                {language === 'en' 
-                  ? 'Would you like to include multiple choice options for this descriptive/written question?' 
+                {language === 'en'
+                  ? 'Would you like to include multiple choice options for this descriptive/written question?'
                   : 'আপনি কি এই বর্ণনামূলক/লিখিত প্রশ্নের সাথে বহুনির্বাচনী অপশন যুক্ত করতে চান?'}
               </p>
               <div style={{ marginTop: '12px' }}>
@@ -1984,6 +2191,229 @@ export default function UploadQuestion() {
               </div>
             )}
           </div>
+
+          {/* ── Section: Evaluation Rubric (CQ/Written Only) ── */}
+          {(questionType === 'cq' || questionType === 'written') && (
+            <div className="uq-section animate-fade-in" style={{ marginTop: '2rem' }}>
+              <div className="uq-section__title">
+                <span className="uq-section__title-icon"><HiClipboardList size={18} /></span>
+                {language === 'en' ? 'Evaluation Rubric' : 'মূল্যায়ন রুব্রিক'}
+              </div>
+              <p className="uq-section__desc">
+                {language === 'en'
+                  ? 'Define the step-by-step criteria and marks for AI evaluation. Be as specific as possible (e.g. "Identify formula F=ma: 1 mark").'
+                  : 'AI মূল্যায়নের জন্য ধাপে ধাপে মানদণ্ড এবং নম্বর নির্ধারণ করুন। যতটা সম্ভব সুনির্দিষ্ট হোন।'}
+              </p>
+
+              {/* ── Mini AI Rubric Helper ── */}
+              <div style={{ marginBottom: '18px', border: '1.5px dashed rgba(192,133,82,0.3)', borderRadius: 'var(--radius-md)', padding: '14px 18px', background: 'rgba(192,133,82,0.03)' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => setShowAiRubricHelper(prev => !prev)}
+                >
+                  <HiOutlineSparkles size={16} style={{ color: 'var(--sky-blue)' }} />
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                    {language === 'en' ? 'AI Rubric Extractor' : 'এআই রুব্রিক এক্সট্র্যাক্টর'}
+                  </span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    {showAiRubricHelper ? (language === 'en' ? '▲ Collapse' : '▲ সংকুচিত') : (language === 'en' ? '▼ Expand' : '▼ বিস্তারিত')}
+                  </span>
+                </div>
+                {showAiRubricHelper && (
+                  <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                      {language === 'en'
+                        ? 'Give AI the teacher-authored question, answer, and total marks. It will build a marking rubric from all three.'
+                        : 'শিক্ষকের প্রশ্ন, উত্তর এবং মোট নম্বর দিন। AI এই তিনটি তথ্য থেকে মূল্যায়ন রুব্রিক তৈরি করবে।'}
+                    </p>
+                    {/* ── Marks Input ── */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <label htmlFor="uq-rubric-marks" style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        {language === 'en' ? 'Total marks' : 'মোট নম্বর'}
+                      </label>
+                      <input
+                        id="uq-rubric-marks"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={aiRubricMarks}
+                        onChange={(e) => setAiRubricMarks(e.target.value)}
+                        placeholder={language === 'en' ? 'e.g. 5' : 'যেমন ৫'}
+                        disabled={aiRubricIsLoading}
+                        style={{
+                          width: '90px',
+                          padding: '8px 12px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1.5px solid rgba(192,133,82,0.3)',
+                          background: 'var(--bg-primary)',
+                          color: 'var(--text-primary)',
+                          fontWeight: 700,
+                          fontSize: '0.95rem',
+                          textAlign: 'center',
+                          outline: 'none',
+                          transition: 'border-color 0.2s',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--sky-blue)'; }}
+                        onBlur={(e) => { e.target.style.borderColor = 'rgba(192,133,82,0.3)'; }}
+                      />
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        {language === 'en' ? 'Rubric criteria will sum to this' : 'রুব্রিক মানদণ্ড এই নম্বরের সমান হবে'}
+                      </span>
+                    </div>
+                    <div className="uq-rubric-source-grid">
+                      {[
+                        {
+                          source: 'question',
+                          label: language === 'en' ? 'Teacher question' : 'শিক্ষকের প্রশ্ন',
+                          text: aiRubricQuestionText,
+                          setText: setAiRubricQuestionText,
+                          image: aiRubricQuestionImage,
+                          previewSrc: aiRubricQuestionImagePreviewSrc,
+                          fileRef: aiRubricQuestionFileInputRef,
+                          placeholder: language === 'en' ? 'Type or paste the question…' : 'প্রশ্ন টাইপ বা পেস্ট করুন…',
+                          imageLabel: language === 'en' ? 'question image' : 'প্রশ্নের ছবি'
+                        },
+                        {
+                          source: 'answer',
+                          label: language === 'en' ? 'Teacher answer / solution' : 'শিক্ষকের উত্তর / সমাধান',
+                          text: aiRubricAnswerText,
+                          setText: setAiRubricAnswerText,
+                          image: aiRubricAnswerImage,
+                          previewSrc: aiRubricAnswerImagePreviewSrc,
+                          fileRef: aiRubricAnswerFileInputRef,
+                          placeholder: language === 'en' ? 'Type or paste the answer…' : 'উত্তর টাইপ বা পেস্ট করুন…',
+                          imageLabel: language === 'en' ? 'answer image' : 'উত্তরের ছবি'
+                        }
+                      ].map((source) => (
+                        <div className="uq-rubric-source" key={source.source}>
+                          <label className="uq-rubric-source__label" htmlFor={`uq-rubric-${source.source}-text`}>
+                            {source.label}
+                          </label>
+                          <textarea
+                            id={`uq-rubric-${source.source}-text`}
+                            className="aih-textarea"
+                            rows={4}
+                            value={source.text}
+                            onChange={(e) => source.setText(e.target.value)}
+                            placeholder={source.placeholder}
+                            disabled={aiRubricIsLoading}
+                          />
+                          <div className="aih-divider"><span>{language === 'en' ? 'or upload image' : 'অথবা ছবি আপলোড করুন'}</span></div>
+                          <div
+                            className={`aih-dropzone ${aiRubricDraggingSource === source.source ? 'aih-dropzone--active' : ''}`}
+                            onDrop={(e) => onAiRubricDrop(e, source.source)}
+                            onDragOver={(e) => onAiRubricDragOver(e, source.source)}
+                            onDragLeave={onAiRubricDragLeave}
+                            onClick={() => source.fileRef.current && source.fileRef.current.click()}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Upload ${source.imageLabel}`}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); source.fileRef.current && source.fileRef.current.click(); } }}
+                            style={{ padding: '14px 12px' }}
+                          >
+                            <input ref={source.fileRef} type="file" accept="image/*" onChange={(e) => onAiRubricFileInputChange(e, source.source)} style={{ display: 'none' }} />
+                            {source.previewSrc ? (
+                              <div className="aih-dropzone__preview">
+                                <img src={source.previewSrc} alt={`${source.label} upload`} style={{ maxHeight: '150px' }} />
+                                <div className="aih-dropzone__meta">
+                                  <span className="aih-dropzone__name"><HiOutlinePhotograph /> {source.image?.name || 'image'}</span>
+                                  <button type="button" className="aih-dropzone__remove" onClick={(e) => { e.stopPropagation(); clearAiRubricImage(source.source); }}><HiX /> {language === 'en' ? 'Remove' : 'মুছুন'}</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="aih-dropzone__empty">
+                                <HiOutlineUpload size={22} />
+                                <p style={{ fontSize: '0.8rem' }}><strong>{language === 'en' ? 'Click to upload' : 'আপলোড করুন'}</strong> {source.imageLabel}</p>
+                                <span className="aih-dropzone__hint">{language === 'en' ? 'PNG, JPG — up to ~4 MB' : 'PNG, JPG — সর্বোচ্চ ~৪ MB'}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {aiRubricErrorMsg && (
+                      <div className="aih-error"><HiOutlineExclamationCircle /><span>{aiRubricErrorMsg}</span></div>
+                    )}
+                    <div className="aih-actions">
+                      <button
+                        type="button"
+                        className="aih-btn aih-btn--ghost"
+                        onClick={handleAiRubricReset}
+                        disabled={aiRubricIsLoading || (!aiRubricQuestionText && !aiRubricAnswerText && !aiRubricMarks && !aiRubricQuestionImage && !aiRubricAnswerImage)}
+                      >
+                        <HiOutlineRefresh /> {language === 'en' ? 'Clear' : 'মুছুন'}
+                      </button>
+                      <button type="button" className="aih-btn aih-btn--primary" onClick={handleAiRubricExtract} disabled={!aiRubricCanSubmit}>
+                        {aiRubricIsLoading ? (<><span className="aih-spinner" /> {language === 'en' ? 'Building rubric…' : 'রুব্রিক তৈরি হচ্ছে…'}</>) : (<><HiOutlineSparkles /> {language === 'en' ? 'Build rubric' : 'রুব্রিক তৈরি করুন'}</>)}
+                      </button>
+                    </div>
+                    {aiRubricIsLoading && (
+                      <div className="aih-loading" style={{ padding: '18px 10px' }}>
+                        <span className="aih-spinner aih-spinner--lg" />
+                        <p>{language === 'en' ? 'Reading question, answer, and marks…' : 'প্রশ্ন, উত্তর এবং নম্বর পড়া হচ্ছে…'}</p>
+                      </div>
+                    )}
+                    {aiRubricExtracted && !aiRubricIsLoading && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <span className="aih-result-block__label">{language === 'en' ? 'AI RUBRIC' : 'এআই রুব্রিক'}</span>
+                        <div className="uq-rubric-ai-summary">
+                          <div><span>{language === 'en' ? 'Question' : 'প্রশ্ন'}</span><strong>{aiRubricExtracted.questionText || '—'}</strong></div>
+                          <div><span>{language === 'en' ? 'Answer' : 'উত্তর'}</span><strong>{aiRubricExtracted.answerText || aiRubricExtracted.solution || '—'}</strong></div>
+                          <div><span>{language === 'en' ? 'Marks' : 'নম্বর'}</span><strong>{aiRubricExtracted.totalMarks || aiRubricMarks}</strong></div>
+                        </div>
+                        <div
+                          className="aih-katex aih-katex--block"
+                          style={{
+                            border: '1px solid rgba(75,46,43,0.1)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '12px 14px',
+                            background: 'var(--bg-primary)',
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: '1.6'
+                          }}
+                          dangerouslySetInnerHTML={{ __html: aiRubricRenderedPreview }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button type="button" className="aih-btn aih-btn--primary" onClick={handleApplyRubricToForm}>
+                            <HiOutlineSparkles /> {language === 'en' ? 'Apply to Rubric' : 'রুব্রিকে প্রয়োগ করুন'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="uq-latex-editor">
+                <div className="uq-editor-row">
+                  <div className="uq-editor-row__textarea-col" style={{ width: '100%' }}>
+                    <textarea
+                      id="uq-rubric-textarea"
+                      className="uq-textarea"
+                      value={rubricText}
+                      onChange={e => setRubricText(e.target.value)}
+                      onFocus={() => setFocusedInput({ type: 'rubric', index: null })}
+                      placeholder={language === 'en' ? 'Type rubric here (e.g. 1. F=ma [1 mark]\n2. Answer=10N [1 mark])' : 'এখানে রুব্রিক টাইপ করুন...'}
+                      rows={6}
+                    />
+                  </div>
+                </div>
+                <span className="uq-preview-label">{t('uq.preview')}</span>
+                <div
+                  className={`uq-preview-box ${!rubricText.trim() ? 'uq-preview-box--empty' : ''}`}
+                  style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}
+                >
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: rubricText.trim()
+                        ? renderLatex(rubricText)
+                        : (language === 'en' ? 'LaTeX preview of the rubric will appear here…' : 'রুব্রিকের LaTeX প্রিভিউ এখানে দেখা যাবে…')
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Section 4: Subject / Paper / Chapter / Topic ── */}
           <div className="uq-section">
@@ -2626,7 +3056,7 @@ export default function UploadQuestion() {
                             <span className={`uq-tag-badge uq-tag-badge--${tag.category}`}>
                               {tag.category === 'board' ? t('uq.recent.tag.board_label')
                                 : tag.category === 'college' ? t('uq.recent.tag.college_label')
-                                : t('uq.recent.tag.admission_label')}
+                                  : t('uq.recent.tag.admission_label')}
                             </span>
                             <div className="uq-tag-fields">
                               {tag.category === 'board' && (
@@ -2768,23 +3198,23 @@ export default function UploadQuestion() {
               <span>
                 {language === 'en'
                   ? (focusedInput.type === 'question'
-                      ? 'Active Input: Question Text'
-                      : focusedInput.type === 'cq-desc'
-                        ? 'Active Input: CQ Description'
-                        : focusedInput.type === 'cq-part'
-                          ? `Active Input: CQ Sub-question ${focusedInput.index + 1}`
-                          : focusedInput.type === 'cq-solution'
-                            ? `Active Input: CQ Solution Explanation ${String.fromCharCode(65 + focusedInput.index)}`
-                            : `Active Input: MCQ Option ${String.fromCharCode(65 + focusedInput.index)}`)
+                    ? 'Active Input: Question Text'
+                    : focusedInput.type === 'cq-desc'
+                      ? 'Active Input: CQ Description'
+                      : focusedInput.type === 'cq-part'
+                        ? `Active Input: CQ Sub-question ${focusedInput.index + 1}`
+                        : focusedInput.type === 'cq-solution'
+                          ? `Active Input: CQ Solution Explanation ${String.fromCharCode(65 + focusedInput.index)}`
+                          : `Active Input: MCQ Option ${String.fromCharCode(65 + focusedInput.index)}`)
                   : (focusedInput.type === 'question'
-                      ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
-                      : focusedInput.type === 'cq-desc'
-                        ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
-                        : focusedInput.type === 'cq-part'
-                          ? `সক্রিয় ইনপুট: CQ উপ-প্রশ্ন ${focusedInput.index + 1}`
-                          : focusedInput.type === 'cq-solution'
-                            ? `সক্রিয় ইনপুট: CQ সমাধান ব্যাখ্যা ${String.fromCharCode(65 + focusedInput.index)}`
-                            : `সক্রিয় ইনপুট: MCQ অপশন ${String.fromCharCode(65 + focusedInput.index)}`)}
+                    ? 'সক্রিয় ইনপুট: প্রশ্নের টেক্সট'
+                    : focusedInput.type === 'cq-desc'
+                      ? 'সক্রিয় ইনপুট: CQ বর্ণনা'
+                      : focusedInput.type === 'cq-part'
+                        ? `সক্রিয় ইনপুট: CQ উপ-প্রশ্ন ${focusedInput.index + 1}`
+                        : focusedInput.type === 'cq-solution'
+                          ? `সক্রিয় ইনপুট: CQ সমাধান ব্যাখ্যা ${String.fromCharCode(65 + focusedInput.index)}`
+                          : `সক্রিয় ইনপুট: MCQ অপশন ${String.fromCharCode(65 + focusedInput.index)}`)}
               </span>
             </div>
             <div className="uq-keyboard-dock__tabs">

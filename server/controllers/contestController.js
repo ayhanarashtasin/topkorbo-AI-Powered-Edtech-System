@@ -143,7 +143,9 @@ exports.createContest = async (req, res, next) => {
           chapter: q.chapter || 'General',
           topic: q.topic || 'General',
           solution: q.solution || '',
-          solutionImageUrl: q.solutionImageUrl || '',
+           solutionImageUrl: q.solutionImageUrl || '',
+           rubricText: q.rubricText || '',
+           totalMarks: q.totalMarks || null,
           tags: q.tags || []
         });
       }
@@ -414,7 +416,9 @@ exports.updateContest = async (req, res, next) => {
           chapter: q.chapter || 'General',
           topic: q.topic || 'General',
           solution: q.solution || '',
-          solutionImageUrl: q.solutionImageUrl || '',
+           solutionImageUrl: q.solutionImageUrl || '',
+           rubricText: q.rubricText || '',
+           totalMarks: q.totalMarks || null,
           tags: q.tags || []
         });
       }
@@ -508,7 +512,9 @@ exports.getContestById = async (req, res, next) => {
             chapter: originalQ.chapter,
             topic: originalQ.topic,
             solution: originalQ.solution || '',
-            solutionImageUrl: originalQ.solutionImageUrl || '',
+             solutionImageUrl: originalQ.solutionImageUrl || '',
+             rubricText: originalQ.rubricText || '',
+             totalMarks: originalQ.totalMarks || null,
             tags: originalQ.tags || []
           });
           continue;

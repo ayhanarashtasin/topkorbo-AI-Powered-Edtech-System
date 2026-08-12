@@ -615,16 +615,36 @@ async function validateTaxonomySelection({ subject, paper, chapter, topic }) {
     throw err;
   }
 
-  const topicNode = await AcademicTaxonomy.findOne({
+  let topicNode = await AcademicTaxonomy.findOne({
     type: 'topic',
     parentId: chapterNode._id,
     normalizedName: normalizeName(topicName),
     status: 'active'
   }).lean();
+  
   if (!topicNode) {
-    const err = new Error('Selected topic is not available under the chosen chapter');
-    err.statusCode = 400;
-    throw err;
+    try {
+      topicNode = await AcademicTaxonomy.create({
+        type: 'topic',
+        name: topicName,
+        normalizedName: normalizeName(topicName),
+        parentId: chapterNode._id,
+        status: 'active',
+        order: 0,
+        source: 'manual'
+      });
+    } catch (err) {
+      if (err.code === 11000) {
+        topicNode = await AcademicTaxonomy.findOne({
+          type: 'topic',
+          parentId: chapterNode._id,
+          normalizedName: normalizeName(topicName),
+          status: 'active'
+        }).lean();
+      } else {
+        throw err;
+      }
+    }
   }
 
   return {

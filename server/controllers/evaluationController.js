@@ -16,7 +16,10 @@
  */
 
 const { Groq } = require('groq-sdk');
+const mongoose = require('mongoose');
 const Question = require('../models/Question');
+const Evaluation = require('../models/Evaluation');
+const aiEvaluationService = require('../services/aiEvaluationService');
 const fs = require('fs');
 const path = require('path');
 
@@ -33,6 +36,33 @@ function logToFile(msg) {
     fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
   } catch (e) {}
 }
+
+// Extracts JSON from AI output that may contain thinking chains, markdown wrappers, etc.
+// Handles unclosed <think> tags when the model runs out of tokens mid-thinking.
+function extractJson(text) {
+  if (!text) return null;
+  // 1. Remove completed <think>...</think> blocks
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // 2. Remove unclosed <think> tag (model ran out of tokens mid-thinking)
+  cleaned = cleaned.replace(/<think>[\s\S]*/gi, '').trim();
+  // 3. Remove markdown code fences
+  cleaned = cleaned.replace(/```json/gi, '').replace(/```/g, '').trim();
+  
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      // Try fixing common JSON issues
+      try {
+        const fixed = jsonMatch[0].replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+        return JSON.parse(fixed);
+      } catch (e2) {}
+    }
+  }
+  return null;
+}
+
 
 /**
  * POST /api/evaluate/written
@@ -70,75 +100,111 @@ exports.evaluateWrittenAnswers = async (req, res) => {
         continue;
       }
 
-      // Build the grading prompt: student image is compared against
+      // Build the grading prompt: student answer is evaluated against
       // the manually authored solution to determine partial credit.
       const manualSolution = question.solution || 'No manual solution provided.';
+      const totalMarks = question.totalMarks || 10;
+      const rubricText = question.rubricText ? `\nGrading Rubric (use this to determine marks):\n${question.rubricText}` : '';
 
-      const promptText = `You are an expert examiner grading a student's written exam.
-Compare the student's solution (provided as an image) with the manual solution below:
+      const gradingPrompt = `SYSTEM: You are an automated exam grading API. Output ONLY a raw JSON object. No markdown, no code fences, no explanation.
 
-Manual Solution:
+TASK: Grade the student's answer.
+
+REFERENCE ANSWER:
 ${manualSolution}
+${rubricText}
 
-Analyze how well the student's answer matches the manual solution.
-Give partial marks as a score between 0 and 1 (e.g., if it's 60% correct, give 0.6).
-Provide a brief feedback explaining your grading.
+INSTRUCTIONS:
+- Evaluate the mathematical and logical correctness of the student's work.
+- The REFERENCE ANSWER is a guideline. If the student uses a different but valid method to reach the correct answer, award FULL MARKS.
+- Do NOT deduct marks for using alternative correct approaches.
+- Total marks available: ${totalMarks}
+- Award partial marks based on how many steps/concepts the student got correct.
+- Keep feedback SHORT (1-2 sentences max).
 
-Return ONLY a valid JSON object in the following format:
-{
-  "score": 0.6,
-  "feedback": "Your explanation goes here."
-}
-No markdown, no extra text.
+OUTPUT (raw JSON only):
+{"marks":<number 0 to ${totalMarks}>,"totalMarks":${totalMarks},"score":<marks divided by totalMarks>,"feedback":"<short 1-2 sentence feedback>"}`;
 
-CRITICAL FORMATTING INSTRUCTIONS FOR FEEDBACK:
-1. You MUST wrap all mathematical variables, formulas, equations, or numbers with units in single dollar signs (e.g. $t \\\\approx 6$ s, $\\\\theta \\\\approx 107.46^\\\\circ$, $BC \\\\approx 65.92$ m, $\\\\cos\\\\theta = -\\\\frac{3}{10}$) so they can be rendered correctly.
-2. You MUST double-escape all backslashes in your JSON string (use \\\\theta instead of \\theta, and \\\\approx instead of \\approx, \\\\frac instead of \\frac).
-3. Do not use raw math symbols or variables without the dollar sign wrappers. Every mathematical term must be enclosed in single dollar signs (e.g., $x$, $y$).
-4. NEVER use \\(...\\) or \\[...\\] delimiters. ONLY use $...$ for inline math and $$...$$ for display math.`;
+      // ── Step 1: OCR — Transcribe student's handwriting with vision model ──
+      let responseText = null;
 
-      const completion = await groq.chat.completions.create({
-        model: VISION_MODEL,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: promptText },
-              { type: "image_url", image_url: { url: studentImageBase64 } }
-            ]
-          }
-        ],
-        temperature: 1,
-        max_completion_tokens: 1024,
-        top_p: 1,
-        stream: false,
-        stop: null,
-        response_format: { type: "json_object" }
-      });
-
-      const responseText = completion.choices[0].message.content;
-      logToFile(`Raw Groq Response for ${questionId}: ${responseText.replace(/\n/g, ' ')}`);
-
-      // Parse AI response — fall back to regex if the model returns malformed JSON
-      let evalData = { score: 0, feedback: "Failed to evaluate." };
       try {
-        evalData = JSON.parse(responseText);
-      } catch (e) {
-        logToFile(`JSON Parse error for ${questionId}. Falling back to regex.`);
+        logToFile(`[Step 1] OCR transcription for ${questionId}`);
+        const ocrCompletion = await groq.chat.completions.create({
+          model: VISION_MODEL,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Transcribe ALL text, math equations, and symbols from this handwritten answer image. Use LaTeX notation for math. Be precise and complete. Output ONLY the transcription, nothing else." },
+                { type: "image_url", image_url: { url: studentImageBase64 } }
+              ]
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 2048,
+          top_p: 1,
+          stream: false
+        });
 
+        let extractedText = ocrCompletion.choices[0].message.content || '';
+        // Strip <think> blocks from OCR output
+        extractedText = extractedText.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*/gi, '').trim();
+        logToFile(`[Step 1] OCR result (${extractedText.length} chars): ${extractedText.substring(0, 150)}...`);
+
+        if (!extractedText || extractedText.length < 5) {
+          throw new Error('OCR produced empty transcription');
+        }
+
+        // ── Step 2: Grade — Use text model for reliable JSON output ──────────
+        logToFile(`[Step 2] Grading with text model for ${questionId}`);
+        const textCompletion = await groq.chat.completions.create({
+          model: TEXT_MODEL,
+          messages: [
+            {
+              role: "user",
+              content: `${gradingPrompt}\n\nSTUDENT'S ANSWER (transcribed from handwriting):\n${extractedText}`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 1024,
+          top_p: 1,
+          stream: false
+        });
+
+        responseText = textCompletion.choices[0].message.content;
+      } catch (evalError) {
+        logToFile(`Two-step evaluation error for ${questionId}: ${evalError.message}`);
+        throw evalError;
+      }
+
+      if (!responseText) throw new Error("No response generated from models.");
+      
+      logToFile(`Raw Grading Response for ${questionId}: ${responseText.replace(/\n/g, ' ').substring(0, 300)}`);
+
+      // Parse AI response — extract JSON from thinking chains, markdown, etc.
+      let evalData = extractJson(responseText);
+      
+      // Last resort: manual regex
+      if (!evalData || (typeof evalData.marks === 'undefined' && typeof evalData.score === 'undefined')) {
+        logToFile(`extractJson failed for ${questionId}. Falling back to regex.`);
         const scoreMatch = responseText.match(/"score"\s*:\s*([\d.]+)/);
-        const feedbackMatch = responseText.match(/"feedback"\s*:\s*"([\s\S]*?)"\s*\}/);
-
+        const marksMatch = responseText.match(/"marks"\s*:\s*([\d.]+)/);
+        const feedbackMatch = responseText.match(/"feedback"\s*:\s*"([^"]*?)"/);
+        
+        evalData = evalData || {};
         if (scoreMatch) evalData.score = parseFloat(scoreMatch[1]);
+        if (marksMatch) evalData.marks = parseFloat(marksMatch[1]);
         if (feedbackMatch) evalData.feedback = feedbackMatch[1].replace(/\\"/g, '"');
-        else evalData.feedback = responseText;
       }
 
       evaluations[questionId] = {
-        score: evalData.score || 0,
-        feedback: evalData.feedback || ""
+        score: evalData.score || (evalData.marks ? evalData.marks / totalMarks : 0),
+        marks: evalData.marks || 0,
+        totalMarks: evalData.totalMarks || totalMarks,
+        feedback: evalData.feedback || "No feedback provided."
       };
-      logToFile(`Evaluation successful for ${questionId}: ${JSON.stringify(evaluations[questionId])}`);
+      logToFile(`Evaluation result for ${questionId}: ${JSON.stringify(evaluations[questionId])}`);
     }
 
     logToFile(`Returning success response.`);
@@ -264,7 +330,7 @@ Return ONLY the formatted explanation text. No JSON wrapping.`;
       model: studentImageBase64 ? VISION_MODEL : TEXT_MODEL,
       messages: [{ role: "user", content: messageContent }],
       temperature: 0.7,
-      max_completion_tokens: 2048,
+      max_tokens: 2048,
       top_p: 1,
       stream: false
     });
@@ -393,7 +459,7 @@ Instructions:
       model: hasImage ? VISION_MODEL : TEXT_MODEL,
       messages: messages,
       temperature: 0.7,
-      max_completion_tokens: 1536,
+      max_tokens: 1536,
       top_p: 1,
       stream: false
     });
@@ -409,3 +475,106 @@ Instructions:
     res.status(500).json({ msg: err.message || 'Server Error during AI chat' });
   }
 };
+
+/**
+ * POST /api/evaluate/cq
+ * ──────────────────────────
+ * Evaluate a student's handwritten/typed CQ answer from an uploaded image against Rubric.
+ */
+exports.evaluateCQ = async (req, res, next) => {
+  try {
+    const { questionId } = req.body;
+    
+    // 1. Validate inputs (Security Best Practice)
+    if (!questionId) {
+      return res.status(400).json({ success: false, message: 'Question ID is required.' });
+    }
+    
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Question ID format.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Answer image is required.' });
+    }
+
+    // 2. Fetch the Question, Reference Answer, and Rubric
+    const question = await Question.findById(questionId);
+    if (!question) {
+      return res.status(404).json({ success: false, message: 'Question not found.' });
+    }
+    
+    if (question.type !== 'cq' && question.type !== 'written') {
+      return res.status(400).json({ success: false, message: 'Question is not a CQ or Written type.' });
+    }
+
+    const maxScore = question.totalMarks || 10;
+    const manualAnswer = question.solution || '';
+    const rubric = question.rubricText || '';
+
+    // 3. Prepare Image (Base64)
+    const base64Image = req.file.buffer.toString('base64');
+    const mimeType = req.file.mimetype;
+    
+    // Validate mimeType to prevent non-image processing (Security Best Practice)
+    if (!mimeType.startsWith('image/')) {
+       return res.status(400).json({ success: false, message: 'Uploaded file must be an image.' });
+    }
+    const dataURI = `data:${mimeType};base64,${base64Image}`;
+
+    // 4. Call AI Evaluation Service
+    let evaluationResult;
+    try {
+      evaluationResult = await aiEvaluationService.evaluateImageAnswer(
+        dataURI, 
+        question.questionText, 
+        manualAnswer, 
+        rubric,
+        maxScore
+      );
+    } catch (aiError) {
+      console.error('AI Evaluation failed:', aiError);
+      return res.status(502).json({ 
+        success: false, 
+        message: 'Failed to evaluate answer due to AI service error. Please try again later.' 
+      });
+    }
+
+    // 5. Store Evaluation in Database
+    const evaluation = new Evaluation({
+      student: req.user.id,
+      question: questionId,
+      imageUrl: 'processed_in_memory_no_permanent_url_yet', // Can be updated if uploaded to Cloudinary
+      totalScore: evaluationResult.totalScore,
+      maxScore: maxScore,
+      rubricBreakdown: evaluationResult.rubricBreakdown,
+      generalFeedback: evaluationResult.generalFeedback,
+      status: 'graded',
+      rawAiResponse: evaluationResult.rawOutput
+    });
+
+    await evaluation.save();
+
+    // 6. Return response
+    return res.status(200).json({
+      success: true,
+      evaluation: {
+        id: evaluation._id,
+        totalScore: evaluation.totalScore,
+        maxScore: evaluation.maxScore,
+        rubricBreakdown: evaluation.rubricBreakdown,
+        generalFeedback: evaluation.generalFeedback,
+        status: evaluation.status
+      }
+    });
+
+  } catch (error) {
+    console.error('CQ Evaluation Error:', error);
+    // Generic error message to prevent leaking system details
+    return res.status(500).json({ 
+      success: false, 
+      message: 'An unexpected error occurred during evaluation.' 
+    });
+  }
+};
+

@@ -3,6 +3,7 @@ const ChatMessage = require('../models/ChatMessage');
 const StudyRoutine = require('../models/StudyRoutine');
 const { toISODate } = require('../utils/recurrence');
 const { answerBookTutorRequest } = require('../services/bookRagService');
+const { detectImage } = require('../utils/imageSignature');
 
 // ---------------------------------------------------------------------------
 // Routine-specific guards
@@ -82,7 +83,7 @@ function getGroqClient() {
 }
 
 const DEFAULT_MODEL =
-  process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+  process.env.LLM_MODEL || 'qwen/qwen3.6-27b';
 
 // Cap how much context we forward so a single very dense page doesn't blow
 // the LLM's context window or our request latency budget.
@@ -245,7 +246,7 @@ exports.chat = async (req, res, next) => {
       // look like it lost the question — but only if it was a transient LLM
       // failure. We log instead of deleting on auth/permission errors.
       console.error('[aiController] Groq call failed:', llmErr?.message);
-      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => {});
+      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => { });
       const status = llmErr?.statusCode || 502;
       return res.status(status).json({
         success: false,
@@ -254,7 +255,7 @@ exports.chat = async (req, res, next) => {
     }
 
     if (!reply) {
-      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => {});
+      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => { });
       return res.status(502).json({
         success: false,
         message: 'AI tutor returned an empty response.'
@@ -419,7 +420,7 @@ exports.bookChat = async (req, res, next) => {
       contextLabel = result.contextLabel || '';
     } catch (ragErr) {
       console.error('[aiController] bookChat failed:', ragErr?.message);
-      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => {});
+      await ChatMessage.deleteOne({ _id: userMessage._id, userId }).catch(() => { });
       return res.status(ragErr?.statusCode || 502).json({
         success: false,
         message: ragErr?.message || 'AI tutor is unavailable right now. Please try again.'
@@ -517,6 +518,54 @@ exports.bookHistoryClear = async (req, res, next) => {
 // ---------------------------------------------------------------------------
 
 const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
+const MAX_RUBRIC_TEXT_CHARS = 12_000;
+const MAX_RUBRIC_MARKS = 100;
+
+function cleanRubricSourceText(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim()
+    .slice(0, MAX_RUBRIC_TEXT_CHARS);
+}
+
+function isValidImageMimeType(value) {
+  return ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(value);
+}
+
+function getBase64ByteLength(value) {
+  if (typeof value !== 'string' || !value) return 0;
+  const normalized = value.replace(/\s/g, '');
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) return Infinity;
+  return Math.floor((normalized.length * 3) / 4) - (normalized.endsWith('==') ? 2 : normalized.endsWith('=') ? 1 : 0);
+}
+
+function validateRubricImage(base64, mimeType, label) {
+  if (!base64) return null;
+  if (!isValidImageMimeType(mimeType)) {
+    const error = new Error(`${label} image must be PNG, JPG, GIF, or WebP.`);
+    error.statusCode = 400;
+    throw error;
+  }
+  if (getBase64ByteLength(base64) > 4 * 1024 * 1024) {
+    const error = new Error(`${label} image is too large. Please use an image under 4 MB.`);
+    error.statusCode = 413;
+    throw error;
+  }
+  const normalized = base64.replace(/\s/g, '');
+  let detected;
+  try {
+    detected = detectImage(Buffer.from(normalized, 'base64'));
+  } catch (_) {
+    detected = null;
+  }
+  if (!detected || detected.mime !== mimeType) {
+    const error = new Error(`${label} image content does not match its declared type.`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return normalized;
+}
 
 const EXTRACT_SYSTEM_PROMPT =
   'You are a careful, meticulous question formatter. ' +
@@ -545,7 +594,7 @@ const EXTRACT_SYSTEM_PROMPT =
   'circled in the image, or stated in the text), set "correctOption" to its label, otherwise null.\n' +
   '5. Never invent information that is not present in the source. If something is unreadable, ' +
   'write the closest plausible reading but keep it faithful.\n' +
-  '6. Output ONLY the JSON object — no backticks, no "Here is the JSON:" preface, no trailing commentary.';
+  '6. Output ONLY the JSON object — no backticks, no "Here is the JSON:" preface, no trailing commentary. Absolutely DO NOT use <think> tags.';
 
 const EXTRACT_SOLUTION_SYSTEM_PROMPT =
   'You are a careful, meticulous solution formatter. ' +
@@ -564,10 +613,51 @@ const EXTRACT_SOLUTION_SYSTEM_PROMPT =
   'Use proper LaTeX: \\frac{a}{b}, x^{2}, x_{i}, \\sqrt{x}, \\sum, \\int, \\Rightarrow, \\therefore, etc. ' +
   'Wrap math in $...$ for inline expressions or $$...$$ for display equations.\n' +
   '4. Never invent missing steps or change the result. If something is unclear, use the closest faithful reading.\n' +
-  '5. Output ONLY the JSON object — no backticks, no commentary.';
+  '5. Output ONLY the JSON object — no backticks, no commentary. Absolutely DO NOT use <think> tags.';
 
-function buildExtractUserContent({ text, imageBase64, mimeType, mode }) {
+const EXTRACT_RUBRIC_SYSTEM_PROMPT =
+  'You are a strict, ultra-concise examiner who creates a precise marking rubric from a teacher-provided question and reference answer.\n\n' +
+  'Rules:\n' +
+  '1. Return ONLY this JSON object: { "questionText": "<question>", "answerText": "<reference answer>", "totalMarks": 5, "criteria": [{ "criterion": "<short title>", "evidenceExpected": "<1-line concise evidence>", "marks": 1 }] }.\n' +
+  '2. Transcribe the teacher question and reference answer faithfully. Do not invent missing details.\n' +
+  '3. Create EXACTLY 5 to 10 independently checkable criteria. The rubric MUST have between 5 and 10 items in the "criteria" array.\n' +
+  '4. SUPER IMPORTANT CONSTRAINT: The ENTIRE rubric (all criteria and evidence combined) MUST BE UNDER 100 WORDS TOTAL. You must be extremely brief. Use bullet-point style language (e.g., "Checks momentum equation", "Finds V=0.067", "Calculates initial KE=0.012J").\n' +
+  '5. Every criterion must state an exact required behavior, algorithm step, calculation, or condition in as few words as possible.\n' +
+  '6. Do not duplicate marks. Marks across criteria MUST sum EXACTLY to TOTAL MARKS.\n' +
+  '7. Use integer marks if possible. No single criterion should receive more than 40% of TOTAL MARKS.\n' +
+  '8. Preserve math, code, units, and symbols in proper LaTeX wrapped in $...$ or $$...$$.\n' +
+  '9. Do not include thinking, chain-of-thought, markdown fences, or commentary. Output ONLY valid JSON. Absolutely DO NOT use <think> tags.';
+
+function buildExtractUserContent({ text, imageBase64, mimeType, mode, totalMarks, questionText, answerText, questionImageBase64, questionMimeType, answerImageBase64, answerMimeType }) {
   const parts = [];
+  if (mode === 'rubric') {
+    if (questionImageBase64) {
+      parts.push({ type: 'text', text: 'TEACHER QUESTION IMAGE:' });
+      parts.push({
+        type: 'image_url',
+        image_url: { url: `data:${questionMimeType};base64,${questionImageBase64}` }
+      });
+    }
+    if (answerImageBase64) {
+      parts.push({ type: 'text', text: 'TEACHER REFERENCE ANSWER IMAGE:' });
+      parts.push({
+        type: 'image_url',
+        image_url: { url: `data:${answerMimeType};base64,${answerImageBase64}` }
+      });
+    }
+    parts.push({
+      type: 'text',
+      text: [
+        `TOTAL MARKS: ${totalMarks}.`,
+        'The first attached image, if present, is the teacher question. The second attached image, if present, is the teacher reference answer.',
+        `TEACHER QUESTION TEXT:\n${questionText || '(provided in image)'}`,
+        `TEACHER ANSWER TEXT:\n${answerText || '(provided in image)'}`,
+        'Read all provided sources and return the question, answer, total marks, and structured criteria in the required JSON shape.'
+      ].join('\n\n')
+    });
+    return parts;
+  }
+
   if (imageBase64) {
     const safeMime = typeof mimeType === 'string' && mimeType.startsWith('image/')
       ? mimeType
@@ -580,11 +670,14 @@ function buildExtractUserContent({ text, imageBase64, mimeType, mode }) {
       }
     });
   }
-  const textPart = typeof text === 'string' && text.trim().length > 0
-    ? text.trim()
-    : mode === 'solution'
-      ? 'Please extract the worked solution from the attached image and return it as JSON.'
-      : 'Please extract the question from the attached image and return it as JSON.';
+  let textPart;
+  if (typeof text === 'string' && text.trim().length > 0) {
+    textPart = text.trim();
+  } else if (mode === 'solution') {
+    textPart = 'Please extract the worked solution from the attached image and return it as JSON.';
+  } else {
+    textPart = 'Please extract the question from the attached image and return it as JSON.';
+  }
   parts.push({ type: 'text', text: textPart });
   return parts;
 }
@@ -592,6 +685,8 @@ function buildExtractUserContent({ text, imageBase64, mimeType, mode }) {
 function safeParseJson(raw) {
   if (!raw) return null;
   let str = String(raw).trim();
+  // Strip <think>...</think> reasoning blocks (e.g. from Qwen models)
+  str = str.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
   // Strip ```json ... ``` or ``` ... ``` fences if the model adds them despite
   // the instruction.
   str = str.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -603,7 +698,15 @@ function safeParseJson(raw) {
     str = str.slice(first, last + 1);
   }
   try {
-    return JSON.parse(str);
+    const parsed = JSON.parse(str);
+    if (parsed && typeof parsed === 'object') {
+      for (const k in parsed) {
+        if (typeof parsed[k] === 'string') {
+          parsed[k] = parsed[k].replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
+        }
+      }
+    }
+    return parsed;
   } catch (_) {
     return null;
   }
@@ -648,7 +751,9 @@ function decodeJsonLikeString(value) {
 
 function extractLooseSolutionText(raw) {
   if (!raw || typeof raw !== 'string') return '';
-  const match = raw.match(/"solution"\s*:\s*"([\s\S]*)/);
+  // Strip <think>...</think> reasoning blocks
+  let cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  const match = cleaned.match(/"solution"\s*:\s*"([\s\S]*)/);
   if (!match) return raw.trim();
 
   const tail = match[1]
@@ -656,6 +761,20 @@ function extractLooseSolutionText(raw) {
     .replace(/"?\s*}\s*}?\s*$/g, '')
     .trim();
   return decodeJsonLikeString(tail);
+}
+
+// Hard cap for AI-generated rubrics: never more than 10 lines, one criterion
+// per line. Any overflow criteria are merged into the final line.
+function squashRubricLines(solution) {
+  if (typeof solution !== 'string' || !solution.trim()) return solution;
+  const lines = solution
+    .split(/\r?\n/)
+    .map((ln) => ln.replace(/^\s*(?:-|\*|\d+[.)])\s*/, '').trim())
+    .filter(Boolean);
+  if (lines.length <= 10) return lines.join('\n');
+  const kept = lines.slice(0, 9);
+  kept.push(lines.slice(9).join(' + '));
+  return kept.join('\n');
 }
 
 function normaliseExtractedSolution(obj, fallbackText = '') {
@@ -680,6 +799,101 @@ function normaliseExtractedSolution(obj, fallbackText = '') {
 
   if (!questionText && !solution) return null;
   return { questionText, options: [], correctOption: null, solution };
+}
+
+function normaliseExtractedRubric(obj, fallback = {}) {
+  if (!obj || typeof obj !== 'object') return null;
+  const questionText = cleanRubricSourceText(obj.questionText || fallback.questionText);
+  const answerText = cleanRubricSourceText(obj.answerText || obj.referenceAnswer || obj.answer || obj.solutionText || fallback.answerText);
+  const sourceCriteria = Array.isArray(obj.criteria) ? obj.criteria : (obj.rubric || obj.solution || '');
+  const totalMarks = Number(obj.totalMarks || fallback.totalMarks);
+  const rubric = formatRubricSolution(sourceCriteria, totalMarks);
+  if (!questionText || !answerText || !rubric || !Number.isInteger(totalMarks) || totalMarks < 1 || totalMarks > MAX_RUBRIC_MARKS) {
+    return null;
+  }
+  return {
+    questionText,
+    answerText,
+    totalMarks,
+    criteria: normaliseRubricCriteria(sourceCriteria),
+    rubric,
+    solution: rubric,
+    options: [],
+    correctOption: null
+  };
+}
+
+function normaliseRubricCriteria(source) {
+  if (Array.isArray(source)) {
+    return source
+      .map((item) => ({
+        criterion: cleanRubricSourceText(item?.criterion || item?.text).slice(0, 500),
+        evidenceExpected: cleanRubricSourceText(item?.evidenceExpected || item?.evidence).slice(0, 700),
+        marks: Number.isFinite(Number(item?.marks || item?.mark)) ? Number(item.marks || item.mark) : null
+      }))
+      .filter((item) => item.criterion);
+  }
+
+  if (typeof source !== 'string') return [];
+  return source
+    .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+    .split(/\r?\n/)
+    .map((line) => {
+      const markMatch = line.match(/[\[\(]\s*(\d+(?:\.\d+)?)\s*(?:marks?|pts?|points?)?\s*[\]\)]/i);
+      return {
+        criterion: cleanRubricSourceText(line
+          .replace(/^(?:[\s*\-#]+)?\d+[.)]?\s*/, '')
+          .replace(/[\[\(]\s*\d+(?:\.\d+)?\s*(?:marks?|pts?|points?)?\s*[\]\)]/i, '')),
+        evidenceExpected: '',
+        marks: markMatch ? Number(markMatch[1]) : null
+      };
+    })
+    .filter((item) => item.criterion && !/^(evaluation rubric|marking scheme|solution|rubric):?$/i.test(item.criterion));
+}
+
+function allocateRubricMarks(criteria, totalMarks) {
+  const count = criteria.length;
+  if (!count || totalMarks < count) return [];
+  const maxPerCriterion = count >= 3 ? Math.max(1, Math.floor(totalMarks * 0.4)) : totalMarks;
+  const marks = criteria.map((criterion) => Math.max(1, Math.min(maxPerCriterion, Math.round(criterion.marks || 1))));
+  let assigned = marks.reduce((sum, mark) => sum + mark, 0);
+
+  while (assigned > totalMarks) {
+    const index = marks
+      .map((mark, idx) => ({ mark, idx }))
+      .filter((item) => item.mark > 1)
+      .sort((a, b) => b.mark - a.mark || b.idx - a.idx)[0]?.idx;
+    if (index === undefined) break;
+    marks[index] -= 1;
+    assigned -= 1;
+  }
+
+  while (assigned < totalMarks) {
+    const index = marks
+      .map((mark, idx) => ({ mark, idx }))
+      .filter((item) => item.mark < maxPerCriterion)
+      .sort((a, b) => a.mark - b.mark || a.idx - b.idx)[0]?.idx;
+    if (index === undefined) break;
+    marks[index] += 1;
+    assigned += 1;
+  }
+
+  return marks;
+}
+
+function formatRubricSolution(source, totalMarks) {
+  const targetMarks = typeof totalMarks === 'number' && totalMarks > 0 ? totalMarks : 10;
+  let criteria = normaliseRubricCriteria(source).slice(0, Math.min(10, targetMarks));
+  if (!criteria.length) return '';
+
+  const marks = allocateRubricMarks(criteria, targetMarks);
+  if (marks.length !== criteria.length) return '';
+
+  return criteria.map((criterion, index) => {
+    const evidence = criterion.evidenceExpected ? ` Evidence: ${criterion.evidenceExpected}` : '';
+    const mark = marks[index];
+    return `${index + 1}. ${criterion.criterion}${evidence} [${mark} ${mark === 1 ? 'mark' : 'marks'}]`;
+  }).join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -986,12 +1200,12 @@ exports.modifyStudyRoutine = async (req, res, next) => {
       ...day,
       segments: Array.isArray(day.segments)
         ? day.segments.map((seg) => ({
-            ...seg,
-            subject: sanitizeSegmentText(seg.subject),
-            chapter: sanitizeSegmentText(seg.chapter),
-            task: sanitizeSegmentText(seg.task),
-            paper: sanitizeSegmentText(seg.paper)
-          }))
+          ...seg,
+          subject: sanitizeSegmentText(seg.subject),
+          chapter: sanitizeSegmentText(seg.chapter),
+          task: sanitizeSegmentText(seg.task),
+          paper: sanitizeSegmentText(seg.paper)
+        }))
         : []
     }));
     let routineJson = JSON.stringify(sanitizedRoutine, null, 2);
@@ -1047,11 +1261,42 @@ exports.modifyStudyRoutine = async (req, res, next) => {
  */
 exports.extractQuestion = async (req, res, next) => {
   try {
-    const { text, imageBase64, mimeType, mode } = req.body || {};
+    const {
+      text,
+      imageBase64,
+      mimeType,
+      mode,
+      totalMarks,
+      questionText: rawQuestionText,
+      answerText: rawAnswerText,
+      questionImageBase64: rawQuestionImageBase64,
+      questionMimeType,
+      answerImageBase64: rawAnswerImageBase64,
+      answerMimeType
+    } = req.body || {};
     const isSolutionMode = mode === 'solution';
+    const isRubricMode = mode === 'rubric';
     const hasText = typeof text === 'string' && text.trim().length > 0;
     const hasImage = typeof imageBase64 === 'string' && imageBase64.length > 0;
-    if (!hasText && !hasImage) {
+    const questionText = cleanRubricSourceText(rawQuestionText);
+    const answerText = cleanRubricSourceText(rawAnswerText);
+    const questionImageBase64 = validateRubricImage(rawQuestionImageBase64, questionMimeType, 'Question');
+    const answerImageBase64 = validateRubricImage(rawAnswerImageBase64, answerMimeType, 'Answer');
+    const rubricMarks = Number(totalMarks);
+
+    if (isRubricMode && ((!questionText && !questionImageBase64) || (!answerText && !answerImageBase64))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide the teacher question and answer as text or image.'
+      });
+    }
+    if (isRubricMode && (!Number.isInteger(rubricMarks) || rubricMarks < 1 || rubricMarks > MAX_RUBRIC_MARKS)) {
+      return res.status(400).json({
+        success: false,
+        message: `totalMarks must be an integer between 1 and ${MAX_RUBRIC_MARKS}.`
+      });
+    }
+    if (!isRubricMode && !hasText && !hasImage) {
       return res.status(400).json({
         success: false,
         message: 'Provide either `text` or `imageBase64`.'
@@ -1070,18 +1315,37 @@ exports.extractQuestion = async (req, res, next) => {
       }
     }
 
-    const userContent = buildExtractUserContent({ text, imageBase64, mimeType, mode });
+    const userContent = buildExtractUserContent({
+      text,
+      imageBase64,
+      mimeType,
+      mode,
+      totalMarks: rubricMarks,
+      questionText,
+      answerText,
+      questionImageBase64,
+      questionMimeType,
+      answerImageBase64,
+      answerMimeType
+    });
 
     const groq = getGroqClient();
+
+    let modelToUse = DEFAULT_MODEL;
+    if (isRubricMode) {
+      modelToUse = questionImageBase64 || answerImageBase64 ? 'qwen/qwen3.6-27b' : 'openai/gpt-oss-120b';
+    }
+
     const extractRequest = {
-      model: DEFAULT_MODEL,
+      model: modelToUse,
       temperature: 0.2,
+      max_tokens: 4096,
       messages: [
-        { role: 'system', content: isSolutionMode ? EXTRACT_SOLUTION_SYSTEM_PROMPT : EXTRACT_SYSTEM_PROMPT },
+        { role: 'system', content: isRubricMode ? EXTRACT_RUBRIC_SYSTEM_PROMPT : (isSolutionMode ? EXTRACT_SOLUTION_SYSTEM_PROMPT : EXTRACT_SYSTEM_PROMPT) },
         { role: 'user', content: userContent }
       ]
     };
-    if (!isSolutionMode) {
+    if (!isSolutionMode && !isRubricMode) {
       extractRequest.response_format = { type: 'json_object' };
     }
 
@@ -1089,16 +1353,24 @@ exports.extractQuestion = async (req, res, next) => {
 
     const raw = completion?.choices?.[0]?.message?.content;
     const parsed = safeParseJson(raw);
-    const extracted = isSolutionMode
-      ? normaliseExtractedSolution(parsed, extractLooseSolutionText(raw) || (hasText ? text : ''))
+    const extracted = isRubricMode
+      ? normaliseExtractedRubric(parsed, { questionText, answerText, totalMarks: rubricMarks })
+      : isSolutionMode
+        ? normaliseExtractedSolution(parsed, extractLooseSolutionText(raw) || (hasText ? text : ''))
       : normaliseExtracted(parsed);
+    if (isRubricMode && extracted && extracted.solution) {
+      extracted.rubric = formatRubricSolution(extracted.rubric, rubricMarks);
+      extracted.solution = extracted.rubric;
+    }
 
     if (!extracted) {
       console.error('[aiController] extractQuestion: failed to parse LLM output', raw);
       return res.status(502).json({
         success: false,
-        message: isSolutionMode
-          ? 'AI could not interpret the solution. Please try a clearer image or text.'
+        message: isRubricMode
+          ? 'AI could not build a rubric from the question and answer. Please try clearer sources.'
+          : isSolutionMode
+          ? 'AI could not interpret the solution/rubric. Please try a clearer image or text.'
           : 'AI could not interpret the question. Please try a clearer image or text.'
       });
     }

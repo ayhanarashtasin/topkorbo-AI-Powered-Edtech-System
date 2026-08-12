@@ -25,7 +25,7 @@ import { notifyPaywall } from "../utils/paywall";
 import "./QuestionBank.css";
 
 const MCQ_ONLY_UNIVERSITIES = ["GST", "AGRI", "CU", "JU", "RU"];
-const MCQ_WRITTEN_UNIVERSITIES = ["DU"];
+const MCQ_WRITTEN_UNIVERSITIES = ["DU", "BUET", "KUET", "RUET", "CUET", "MIST"];
 
 const ENGLISH_FIRST_PAPER_SECTIONS = [
   {

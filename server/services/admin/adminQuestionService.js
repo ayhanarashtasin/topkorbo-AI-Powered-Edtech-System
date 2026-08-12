@@ -165,7 +165,9 @@ async function getQuestionDetails(questionId) {
     topic: question.topic || '',
     difficulty: question.difficulty || 'medium',
     solution: question.solution || '',
-    solutionImageUrl: question.solutionImageUrl || '',
+     solutionImageUrl: question.solutionImageUrl || '',
+     rubricText: question.rubricText || '',
+     totalMarks: question.totalMarks || null,
     tags: Array.isArray(question.tags) ? question.tags : [],
     status: question.approvalStatus || 'approved',
     reviewReason: question.reviewReason || '',
@@ -291,7 +293,7 @@ async function editQuestion({ adminUser, questionId, updates = {}, reason = '' }
     options: question.options
   };
 
-  const allowedFields = ['questionText', 'imageUrl', 'type', 'subject', 'paper', 'chapter', 'topic', 'difficulty', 'solution', 'solutionImageUrl', 'tags', 'options', 'cq'];
+  const allowedFields = ['questionText', 'imageUrl', 'type', 'subject', 'paper', 'chapter', 'topic', 'difficulty', 'solution', 'solutionImageUrl', 'rubricText', 'totalMarks', 'tags', 'options', 'cq'];
   allowedFields.forEach((field) => {
     if (Object.prototype.hasOwnProperty.call(updates, field)) {
       question[field] = updates[field];

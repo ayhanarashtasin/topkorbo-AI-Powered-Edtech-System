@@ -903,9 +903,9 @@ export default function BoardQuestionsView() {
                         className="exam-explanation-body-text"
                         dangerouslySetInnerHTML={renderMath(
                           solutionStr ||
-                            (language === "en"
-                              ? "No explanation added yet."
-                              : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
+                          (language === "en"
+                            ? "No explanation added yet."
+                            : "এখনও ব্যাখ্যা যোগ করা হয়নি।"),
                         )}
                       />
                       {explanationModalQuestion.solutionImageUrl && (
@@ -937,8 +937,8 @@ export default function BoardQuestionsView() {
                   {!aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', padding: '32px 16px' }}>
                       <p style={{ margin: '0 0 8px', color: '#64748B', fontSize: '15px', textAlign: 'center', lineHeight: '1.6' }}>
-                        {language === "en" 
-                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat." 
+                        {language === "en"
+                          ? "Get a detailed step-by-step solution from the AI Tutor. You can ask follow-up questions and upload images in the chat."
                           : "এআই টিউটরের কাছ থেকে এই প্রশ্নটির একটি বিস্তারিত সমাধান তৈরি করো। তুমি চ্যাটের মাধ্যমে পরবর্তী প্রশ্ন জিজ্ঞাসা করতে এবং ছবি আপলোড করতে পারবে।"}
                       </p>
                       <button
@@ -961,7 +961,7 @@ export default function BoardQuestionsView() {
                             if (res.ok) {
                               const data = await res.json();
                               setAiExplanations(prev => ({ ...prev, [explanationModalQuestion._id]: data.explanation }));
-                              
+
                               const initialThread = [
                                 {
                                   role: "user",
@@ -972,7 +972,7 @@ export default function BoardQuestionsView() {
                                   content: data.explanation
                                 }
                               ];
-                              
+
                               setAiChatThreads(prev => ({
                                 ...prev,
                                 [explanationModalQuestion._id]: initialThread
@@ -1033,11 +1033,11 @@ export default function BoardQuestionsView() {
                   {aiExplanations[explanationModalQuestion?._id] && !aiExplainLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       {/* Messages Thread */}
-                      <div 
+                      <div
                         className="ai-chat-thread-container"
-                        style={{ 
-                          maxHeight: '400px', 
-                          overflowY: 'auto', 
+                        style={{
+                          maxHeight: '400px',
+                          overflowY: 'auto',
                           padding: '12px',
                           border: '1px solid #F1F5F9',
                           borderRadius: '12px',
@@ -1052,7 +1052,7 @@ export default function BoardQuestionsView() {
                         ]).map((msg, index) => {
                           const isUser = msg.role === 'user';
                           return (
-                            <div 
+                            <div
                               key={index}
                               style={{
                                 display: 'flex',
@@ -1065,16 +1065,16 @@ export default function BoardQuestionsView() {
                             >
                               {/* Avatar / Name label */}
                               <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px' }}>
-                                {isUser 
-                                  ? (language === "en" ? "You" : "তুমি") 
+                                {isUser
+                                  ? (language === "en" ? "You" : "তুমি")
                                   : (language === "en" ? "AI Tutor" : "এআই টিউটর")}
                               </span>
 
                               {/* Message bubble */}
                               <div
                                 style={{
-                                  background: isUser 
-                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)' 
+                                  background: isUser
+                                    ? 'linear-gradient(135deg, #6366F1, #4F46E5)'
                                     : '#FFFFFF',
                                   color: isUser ? '#FFFFFF' : '#1E293B',
                                   border: isUser ? 'none' : '1px solid #E2E8F0',
@@ -1088,24 +1088,24 @@ export default function BoardQuestionsView() {
                                 {/* Thumbnail attachment if present */}
                                 {msg.image && (
                                   <div style={{ marginBottom: '8px' }}>
-                                    <img 
-                                      src={msg.image} 
-                                      alt="Attachment" 
-                                      style={{ 
-                                        maxWidth: '180px', 
-                                        maxHeight: '130px', 
-                                        objectFit: 'contain', 
-                                        borderRadius: '8px', 
-                                        border: '1px solid rgba(255, 255, 255, 0.2)' 
-                                      }} 
+                                    <img
+                                      src={msg.image}
+                                      alt="Attachment"
+                                      style={{
+                                        maxWidth: '180px',
+                                        maxHeight: '130px',
+                                        objectFit: 'contain',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                                      }}
                                     />
                                   </div>
                                 )}
-                                <div 
+                                <div
                                   className="chat-bubble-text"
                                   dangerouslySetInnerHTML={
-                                    isUser 
-                                      ? { __html: msg.content.replace(/\n/g, '<br/>') } 
+                                    isUser
+                                      ? { __html: msg.content.replace(/\n/g, '<br/>') }
                                       : renderMarkdownWithMath(msg.content)
                                   }
                                 />
@@ -1116,7 +1116,7 @@ export default function BoardQuestionsView() {
 
                         {/* Typing / Sending indicator */}
                         {isSendingFollowUp && (
-                          <div 
+                          <div
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1181,10 +1181,10 @@ export default function BoardQuestionsView() {
                         {followUpImage && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start', position: 'relative' }}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
-                              <img 
-                                src={followUpImage} 
-                                alt="Attachment preview" 
-                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }} 
+                              <img
+                                src={followUpImage}
+                                alt="Attachment preview"
+                                style={{ maxWidth: '100px', maxHeight: '80px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #CBD5E1' }}
                               />
                               <button
                                 type="button"
@@ -1213,15 +1213,15 @@ export default function BoardQuestionsView() {
                         )}
 
                         {/* Input bar */}
-                        <div 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            border: '1.5px solid #CBD5E1', 
-                            borderRadius: '10px', 
-                            padding: '4px 8px', 
-                            backgroundColor: '#FFF' 
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            border: '1.5px solid #CBD5E1',
+                            borderRadius: '10px',
+                            padding: '4px 8px',
+                            backgroundColor: '#FFF'
                           }}
                         >
                           {/* Image Attach Button */}

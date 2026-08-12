@@ -406,6 +406,82 @@
   overflow-x: auto;
 }
 
+/* ---- AI rubric source pair ---- */
+.uq-rubric-source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.uq-rubric-source {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(192, 133, 82, 0.16);
+  border-radius: var(--radius-md);
+}
+
+.uq-rubric-source__label {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.uq-rubric-source .aih-textarea {
+  min-height: 104px;
+}
+
+.uq-rubric-source .aih-dropzone {
+  min-height: 132px;
+}
+
+.uq-rubric-ai-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.uq-rubric-ai-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(192, 133, 82, 0.07);
+}
+
+.uq-rubric-ai-summary span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.uq-rubric-ai-summary strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .uq-rubric-source-grid,
+  .uq-rubric-ai-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .uq-rubric-ai-summary strong {
+    white-space: normal;
+  }
+}
+
 .uq-preview-box--empty {
   color: var(--text-muted);
   font-style: italic;

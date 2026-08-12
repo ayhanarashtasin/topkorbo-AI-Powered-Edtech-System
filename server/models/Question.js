@@ -67,6 +67,17 @@ const questionSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  rubricText: {
+    type: String,
+    maxlength: 12000,
+    default: ''
+  },
+  totalMarks: {
+    type: Number,
+    min: 1,
+    max: 100,
+    default: 10
+  },
   // Flexible tag system for Board, Admission and College categorization
   tags: [
     {

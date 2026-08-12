@@ -544,7 +544,7 @@ export default function MockTestExam() {
 
     const handleKeyUp = (e) => {
       const isPrtScn = e.key === "PrintScreen" || e.key === "PrtScn" || e.key === "Snapshot" || e.keyCode === 44;
-      
+
       if (isPrtScn) {
         handleViolation(
           language === "en"
@@ -674,7 +674,9 @@ export default function MockTestExam() {
         }
       } else if (question.type === "written" || question.type === "cq") {
         const isUploaded = !!writtenAnswers[key];
-        const scoreVal = aiEvaluations[key] ? parseFloat(aiEvaluations[key].score) || 0 : 0;
+        const evalData = aiEvaluations[key];
+        // Use actual marks (e.g. 8 out of 10) not ratio score (e.g. 0.8)
+        const scoreVal = evalData ? (parseFloat(evalData.marks) || 0) : 0;
 
         if (isUploaded) {
           score += scoreVal;
@@ -736,8 +738,9 @@ export default function MockTestExam() {
         }
       } else {
         const isUploaded = !!writtenAnswers[key];
+        // Use actual marks (e.g. 8) not ratio score (e.g. 0.8)
         const scoreVal = evaluationMap[key]
-          ? parseFloat(evaluationMap[key].score) || 0
+          ? parseFloat(evaluationMap[key].marks) || 0
           : 0;
 
         if (!isUploaded) {
@@ -1529,578 +1532,579 @@ export default function MockTestExam() {
       <div className="exam-layout-wrapper">
         <div className="exam-main-content">
           <header
-        className={`exam-header-card ${isReviewMode ? "exam-header-card--review" : ""}`}
-      >
-        {isReviewMode && (
-          <button
-            type="button"
-            className="exam-back-btn"
-            onClick={() => navigate(config?.contestId ? "/contests" : fromQbank ? "/qbank" : "/mock-test")}
+            className={`exam-header-card ${isReviewMode ? "exam-header-card--review" : ""}`}
           >
-            <HiArrowLeft size={22} />
-          </button>
-        )}
-        <h1 className="exam-title">
-          {config?.contestId
-            ? config.standard
-            : fromQbank
-              ? language === "en"
-                ? "Question Bank Exam"
-                : "প্রশ্নব্যাংক পরীক্ষা"
-              : language === "en"
-                ? "Mock Test"
-                : "মক পরীক্ষা"}
-        </h1>
-        {fromQbank && config?.sourceLabel && (
-          <p className="exam-source-label">{config.sourceLabel}</p>
-        )}
-
-        {isReviewMode ? (
-          <>
-            <div className="exam-report-cards">
-              <div className="exam-report-card exam-report-card--score">
-                <span>
-                  {language === "en" ? "Points earned" : "পয়েন্ট পেয়েছো"}
-                </span>
-                <strong>★ {formatDisplayNumber(resultStats.score)}</strong>
-              </div>
-              <div className="exam-report-card exam-report-card--marks">
-                {questions.some((q) => q.type === "written") ? (
-                  <>
-                    <span>
-                      {language === "en"
-                        ? "Written Uploaded"
-                        : "আপলোড করা উত্তর"}
-                    </span>
-                    <strong>
-                      📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}
-                    </strong>
-                  </>
-                ) : (
-                  <>
-                    <span>{language === "en" ? "Marks" : "মার্কস"}</span>
-                    <strong>
-                      ● {formatDisplayNumber(resultStats.correct)} /{" "}
-                      {formatDisplayNumber(resultStats.total)}
-                    </strong>
-                  </>
-                )}
-              </div>
-              <div className="exam-report-card exam-report-card--time">
-                <span>{language === "en" ? "Time taken" : "সময় নিয়েছো"}</span>
-                <strong>◉ {timeLabel}</strong>
-              </div>
-            </div>
-            <div className="exam-result-chips">
+            {isReviewMode && (
               <button
                 type="button"
-                className={`exam-result-chip exam-result-chip--correct ${filterType === "correct" ? "exam-result-chip--active" : ""}`}
-                onClick={() =>
-                  setFilterType((prev) =>
-                    prev === "correct" ? "all" : "correct",
-                  )
-                }
+                className="exam-back-btn"
+                onClick={() => navigate(config?.contestId ? "/contests" : fromQbank ? "/qbank" : "/mock-test")}
               >
-                <i /> {formatDisplayNumber(resultStats.correct)}{" "}
-                {language === "en" ? "Correct" : "সঠিক"}
+                <HiArrowLeft size={22} />
               </button>
-              <button
-                type="button"
-                className={`exam-result-chip exam-result-chip--skipped ${filterType === "skipped" ? "exam-result-chip--active" : ""}`}
-                onClick={() =>
-                  setFilterType((prev) =>
-                    prev === "skipped" ? "all" : "skipped",
-                  )
-                }
-              >
-                <i /> {formatDisplayNumber(resultStats.skipped)}{" "}
-                {language === "en" ? "Skipped" : "স্কিপ"}
-              </button>
-              <button
-                type="button"
-                className={`exam-result-chip exam-result-chip--wrong ${filterType === "wrong" ? "exam-result-chip--active" : ""}`}
-                onClick={() =>
-                  setFilterType((prev) =>
-                    prev === "wrong" ? "all" : "wrong",
-                  )
-                }
-              >
-                <i /> {formatDisplayNumber(resultStats.wrong)}{" "}
-                {language === "en" ? "Wrong" : "ভুল"}
-              </button>
-            </div>
-            <button
-              type="button"
-              className="exam-start-again-btn"
-              onClick={handleStartAgain}
-            >
+            )}
+            <h1 className="exam-title">
               {config?.contestId
-                ? language === "en"
-                  ? "Back to Contests"
-                  : "কনটেস্টে ফিরে যাও"
+                ? config.standard
                 : fromQbank
                   ? language === "en"
-                    ? "Back to Question Bank"
-                    : "প্রশ্নব্যাংকে ফিরে যাও"
+                    ? "Question Bank Exam"
+                    : "প্রশ্নব্যাংক পরীক্ষা"
                   : language === "en"
-                    ? "Back to Mock Test"
-                    : "মক টেস্টে ফিরে যাও"}
-            </button>
-          </>
-        ) : (
-          <div className="exam-header-info">
-            <div className="exam-header-badges">
-              <span className="exam-header-badge exam-header-badge--time">
-                <HiClock size={14} />
-                {language === "en"
-                  ? `${config.duration} Minutes`
-                  : `${toBnNum(config.duration)} মিনিট`}
-              </span>
-              <span className="exam-header-badge exam-header-badge--questions">
-                {language === "en"
-                  ? `${totalCount} Questions`
-                  : `${toBnNum(totalCount)} প্রশ্ন`}
-              </span>
-              <span className="exam-header-badge exam-header-badge--marks">
-                {language === "en"
-                  ? "1 mark / question"
-                  : "প্রতি প্রশ্নে ১ নম্বর"}
-              </span>
-              {config.negativeMarking && (
-                <span className="exam-header-badge exam-header-badge--warning">
-                  {language === "en" ? "−0.25 for wrong answer" : "ভুলে −০.২৫"}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </header>
+                    ? "Mock Test"
+                    : "মক পরীক্ষা"}
+            </h1>
+            {fromQbank && config?.sourceLabel && (
+              <p className="exam-source-label">{config.sourceLabel}</p>
+            )}
 
-      {config?.contestId && !isReviewMode && (
-        <div className="exam-contest-navigation-box">
-          <div className="exam-mini-boxes-title">
-            {language === "en" ? "Contest Questions Navigator" : "কনটেস্ট প্রশ্ন নেভিগেটর"}
-          </div>
-          <div className="exam-mini-boxes-grid">
-            {questions.map((q, idx) => {
-              const questionKey = getQuestionKey(q, idx);
-              const isSubmitted = !!submittedQuestionKeys[questionKey];
-              if (isSubmitted) return null;
-
-              const isCurrent = idx === activeQuestionIndex;
-              const isUnsubmitted = !isSubmitted && visitedQuestionIndexes.has(idx);
-
-              let boxClass = "mini-box--unvisited";
-              if (isCurrent) {
-                boxClass = "mini-box--active";
-              } else if (isUnsubmitted) {
-                boxClass = "mini-box--unsubmitted";
-              }
-
-              return (
+            {isReviewMode ? (
+              <>
+                <div className="exam-report-cards">
+                  <div className="exam-report-card exam-report-card--score">
+                    <span>
+                      {language === "en" ? "Points earned" : "পয়েন্ট পেয়েছো"}
+                    </span>
+                    <strong>★ {formatDisplayNumber(resultStats.score)}</strong>
+                  </div>
+                  <div className="exam-report-card exam-report-card--marks">
+                    {questions.some((q) => q.type === "written") ? (
+                      <>
+                        <span>
+                          {language === "en"
+                            ? "Written Uploaded"
+                            : "আপলোড করা উত্তর"}
+                        </span>
+                        <strong>
+                          📁 {formatDisplayNumber(resultStats.writtenUploadedCount)}
+                        </strong>
+                      </>
+                    ) : (
+                      <>
+                        <span>{language === "en" ? "Marks" : "মার্কস"}</span>
+                        <strong>
+                          ● {formatDisplayNumber(resultStats.correct)} /{" "}
+                          {formatDisplayNumber(resultStats.total)}
+                        </strong>
+                      </>
+                    )}
+                  </div>
+                  <div className="exam-report-card exam-report-card--time">
+                    <span>{language === "en" ? "Time taken" : "সময় নিয়েছো"}</span>
+                    <strong>◉ {timeLabel}</strong>
+                  </div>
+                </div>
+                <div className="exam-result-chips">
+                  <button
+                    type="button"
+                    className={`exam-result-chip exam-result-chip--correct ${filterType === "correct" ? "exam-result-chip--active" : ""}`}
+                    onClick={() =>
+                      setFilterType((prev) =>
+                        prev === "correct" ? "all" : "correct",
+                      )
+                    }
+                  >
+                    <i /> {formatDisplayNumber(resultStats.correct)}{" "}
+                    {language === "en" ? "Correct" : "সঠিক"}
+                  </button>
+                  <button
+                    type="button"
+                    className={`exam-result-chip exam-result-chip--skipped ${filterType === "skipped" ? "exam-result-chip--active" : ""}`}
+                    onClick={() =>
+                      setFilterType((prev) =>
+                        prev === "skipped" ? "all" : "skipped",
+                      )
+                    }
+                  >
+                    <i /> {formatDisplayNumber(resultStats.skipped)}{" "}
+                    {language === "en" ? "Skipped" : "স্কিপ"}
+                  </button>
+                  <button
+                    type="button"
+                    className={`exam-result-chip exam-result-chip--wrong ${filterType === "wrong" ? "exam-result-chip--active" : ""}`}
+                    onClick={() =>
+                      setFilterType((prev) =>
+                        prev === "wrong" ? "all" : "wrong",
+                      )
+                    }
+                  >
+                    <i /> {formatDisplayNumber(resultStats.wrong)}{" "}
+                    {language === "en" ? "Wrong" : "ভুল"}
+                  </button>
+                </div>
                 <button
-                  key={idx}
                   type="button"
-                  className={`exam-mini-box ${boxClass}`}
-                  onClick={() => {
-                    setActiveQuestionIndex(idx);
-                    setVisitedQuestionIndexes((prev) => {
-                      const next = new Set(prev);
-                      next.add(idx);
-                      return next;
-                    });
-                  }}
+                  className="exam-start-again-btn"
+                  onClick={handleStartAgain}
                 >
-                  {language === "en" ? idx + 1 : toBnNum(idx + 1)}
+                  {config?.contestId
+                    ? language === "en"
+                      ? "Back to Contests"
+                      : "কনটেস্টে ফিরে যাও"
+                    : fromQbank
+                      ? language === "en"
+                        ? "Back to Question Bank"
+                        : "প্রশ্নব্যাংকে ফিরে যাও"
+                      : language === "en"
+                        ? "Back to Mock Test"
+                        : "মক টেস্টে ফিরে যাও"}
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              </>
+            ) : (
+              <div className="exam-header-info">
+                <div className="exam-header-badges">
+                  <span className="exam-header-badge exam-header-badge--time">
+                    <HiClock size={14} />
+                    {language === "en"
+                      ? `${config.duration} Minutes`
+                      : `${toBnNum(config.duration)} মিনিট`}
+                  </span>
+                  <span className="exam-header-badge exam-header-badge--questions">
+                    {language === "en"
+                      ? `${totalCount} Questions`
+                      : `${toBnNum(totalCount)} প্রশ্ন`}
+                  </span>
+                  <span className="exam-header-badge exam-header-badge--marks">
+                    {language === "en"
+                      ? "1 mark / question"
+                      : "প্রতি প্রশ্নে ১ নম্বর"}
+                  </span>
+                  {config.negativeMarking && (
+                    <span className="exam-header-badge exam-header-badge--warning">
+                      {language === "en" ? "−0.25 for wrong answer" : "ভুলে −০.২৫"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </header>
 
-      <div className="exam-questions-list">
-        {questions
-          .filter((q, qIndex) => {
-            if (config?.contestId && !isReviewMode) {
-              return qIndex === activeQuestionIndex;
-            }
-            if (!isReviewMode || filterType === "all") return true;
-            const questionKey = getQuestionKey(q, qIndex);
+          {config?.contestId && !isReviewMode && (
+            <div className="exam-contest-navigation-box">
+              <div className="exam-mini-boxes-title">
+                {language === "en" ? "Contest Questions Navigator" : "কনটেস্ট প্রশ্ন নেভিগেটর"}
+              </div>
+              <div className="exam-mini-boxes-grid">
+                {questions.map((q, idx) => {
+                  const questionKey = getQuestionKey(q, idx);
+                  const isSubmitted = !!submittedQuestionKeys[questionKey];
+                  if (isSubmitted) return null;
 
-            if (q.type === "mcq") {
-              const selectedIndex = answers[questionKey];
-              const correctIndex = getCorrectOptionIndex(q);
+                  const isCurrent = idx === activeQuestionIndex;
+                  const isUnsubmitted = !isSubmitted && visitedQuestionIndexes.has(idx);
 
-              if (filterType === "correct") {
-                return (
-                  selectedIndex === correctIndex && selectedIndex !== undefined
+                  let boxClass = "mini-box--unvisited";
+                  if (isCurrent) {
+                    boxClass = "mini-box--active";
+                  } else if (isUnsubmitted) {
+                    boxClass = "mini-box--unsubmitted";
+                  }
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`exam-mini-box ${boxClass}`}
+                      onClick={() => {
+                        setActiveQuestionIndex(idx);
+                        setVisitedQuestionIndexes((prev) => {
+                          const next = new Set(prev);
+                          next.add(idx);
+                          return next;
+                        });
+                      }}
+                    >
+                      {language === "en" ? idx + 1 : toBnNum(idx + 1)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="exam-questions-list">
+            {questions
+              .filter((q, qIndex) => {
+                if (config?.contestId && !isReviewMode) {
+                  return qIndex === activeQuestionIndex;
+                }
+                if (!isReviewMode || filterType === "all") return true;
+                const questionKey = getQuestionKey(q, qIndex);
+
+                if (q.type === "mcq") {
+                  const selectedIndex = answers[questionKey];
+                  const correctIndex = getCorrectOptionIndex(q);
+
+                  if (filterType === "correct") {
+                    return (
+                      selectedIndex === correctIndex && selectedIndex !== undefined
+                    );
+                  }
+                  if (filterType === "wrong") {
+                    return (
+                      selectedIndex !== undefined && selectedIndex !== correctIndex
+                    );
+                  }
+                  if (filterType === "skipped") {
+                    return selectedIndex === undefined;
+                  }
+                } else if (q.type === "written" || q.type === "cq") {
+                  const isUploaded = !!writtenAnswers[questionKey];
+                  const scoreVal = aiEvaluations[questionKey] ? parseFloat(aiEvaluations[questionKey].marks) || 0 : 0;
+
+                  if (filterType === "correct") {
+                    return isUploaded && scoreVal > 0;
+                  }
+                  if (filterType === "wrong") {
+                    return isUploaded && scoreVal === 0;
+                  }
+                  if (filterType === "skipped") {
+                    return !isUploaded;
+                  }
+                }
+                return true;
+              })
+              .map((q, qIndex) => {
+                const actualIndex = questions.findIndex(
+                  (origQ) => origQ._id === q._id || origQ === q,
                 );
-              }
-              if (filterType === "wrong") {
+                const questionKey = getQuestionKey(q, actualIndex);
+
                 return (
-                  selectedIndex !== undefined && selectedIndex !== correctIndex
-                );
-              }
-              if (filterType === "skipped") {
-                return selectedIndex === undefined;
-              }
-            } else if (q.type === "written" || q.type === "cq") {
-              const isUploaded = !!writtenAnswers[questionKey];
-              const scoreVal = aiEvaluations[questionKey] ? parseFloat(aiEvaluations[questionKey].score) || 0 : 0;
+                  <div key={questionKey} className="exam-question-card">
+                    {isReviewMode && (
+                      <div className="exam-question-actions-top">
+                        {q.tags && q.tags.length > 0 && (
+                          <div className="exam-question-tags-wrapper">
+                            {q.tags.map((tag, tIdx) => {
+                              const abbr = getTagAbbreviation(tag);
+                              if (!abbr) return null;
+                              return (
+                                <span
+                                  key={tIdx}
+                                  className={`exam-question-tag exam-question-tag--${tag.category}`}
+                                  title={getTagTitle(tag)}
+                                >
+                                  {abbr}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className="exam-explanation-btn"
+                          onClick={() => {
+                            setExplanationModalQuestion(q);
+                            setExplanationTab("manual");
+                          }}
+                          title={
+                            language === "en"
+                              ? "Show Explanation"
+                              : "ব্যাখ্যা দেখুন"
+                          }
+                        >
+                          <HiEye size={20} />
+                        </button>
+                      </div>
+                    )}
 
-              if (filterType === "correct") {
-                return isUploaded && scoreVal > 0;
-              }
-              if (filterType === "wrong") {
-                return isUploaded && scoreVal === 0;
-              }
-              if (filterType === "skipped") {
-                return !isUploaded;
-              }
-            }
-            return true;
-          })
-          .map((q, qIndex) => {
-            const actualIndex = questions.findIndex(
-              (origQ) => origQ._id === q._id || origQ === q,
-            );
-            const questionKey = getQuestionKey(q, actualIndex);
+                    <div className="exam-question-top">
+                      <div className="exam-question-text-wrapper">
+                        <span className="exam-question-number">
+                          {language === "en"
+                            ? `${actualIndex + 1}. `
+                            : `${toBnNum(actualIndex + 1)}. `}
+                        </span>
+                        <span
+                          className="exam-question-text"
+                          dangerouslySetInnerHTML={renderMath(q.questionText)}
+                        />
+                      </div>
+                    </div>
 
-            return (
-              <div key={questionKey} className="exam-question-card">
-                {isReviewMode && (
-                  <div className="exam-question-actions-top">
-                    {q.tags && q.tags.length > 0 && (
-                      <div className="exam-question-tags-wrapper">
-                        {q.tags.map((tag, tIdx) => {
-                          const abbr = getTagAbbreviation(tag);
-                          if (!abbr) return null;
+                    {q.imageUrl && (
+                      <div className="exam-question-image">
+                        <img src={q.imageUrl} alt="Question figure" />
+                      </div>
+                    )}
+
+                    {q.type === "mcq" && q.options && (
+                      <div className="exam-options-grid">
+                        {q.options.map((opt, optIdx) => {
+                          const isSelected = answers[questionKey] === optIdx;
+                          const optionState = getOptionState(
+                            q,
+                            actualIndex,
+                            optIdx,
+                          );
                           return (
-                            <span
-                              key={tIdx}
-                              className={`exam-question-tag exam-question-tag--${tag.category}`}
-                              title={getTagTitle(tag)}
+                            <button
+                              key={optIdx}
+                              className={`exam-option-btn ${isSelected ? "exam-option-btn--selected" : ""} ${optionState ? `exam-option-btn--${optionState}` : ""}`}
+                              onClick={() =>
+                                handleOptionSelect(questionKey, optIdx)
+                              }
+                              type="button"
                             >
-                              {abbr}
-                            </span>
+                              <div
+                                className={`exam-option-prefix ${isSelected ? "exam-option-prefix--selected" : ""} ${optionState ? `exam-option-prefix--${optionState}` : ""}`}
+                              >
+                                {getOptionPrefix(optIdx)}
+                              </div>
+                              <div
+                                className="exam-option-text"
+                                dangerouslySetInnerHTML={renderMath(opt.text)}
+                              />
+                            </button>
                           );
                         })}
                       </div>
                     )}
-                    <button
-                      type="button"
-                      className="exam-explanation-btn"
-                      onClick={() => {
-                        setExplanationModalQuestion(q);
-                        setExplanationTab("manual");
-                      }}
-                      title={
-                        language === "en"
-                          ? "Show Explanation"
-                          : "ব্যাখ্যা দেখুন"
-                      }
-                    >
-                      <HiEye size={20} />
-                    </button>
-                  </div>
-                )}
 
-                <div className="exam-question-top">
-                  <div className="exam-question-text-wrapper">
-                    <span className="exam-question-number">
-                      {language === "en"
-                        ? `${actualIndex + 1}. `
-                        : `${toBnNum(actualIndex + 1)}. `}
-                    </span>
-                    <span
-                      className="exam-question-text"
-                      dangerouslySetInnerHTML={renderMath(q.questionText)}
-                    />
-                  </div>
-                </div>
-
-                {q.imageUrl && (
-                  <div className="exam-question-image">
-                    <img src={q.imageUrl} alt="Question figure" />
-                  </div>
-                )}
-
-                {q.type === "mcq" && q.options && (
-                  <div className="exam-options-grid">
-                    {q.options.map((opt, optIdx) => {
-                      const isSelected = answers[questionKey] === optIdx;
-                      const optionState = getOptionState(
-                        q,
-                        actualIndex,
-                        optIdx,
-                      );
-                      return (
-                        <button
-                          key={optIdx}
-                          className={`exam-option-btn ${isSelected ? "exam-option-btn--selected" : ""} ${optionState ? `exam-option-btn--${optionState}` : ""}`}
-                          onClick={() =>
-                            handleOptionSelect(questionKey, optIdx)
-                          }
-                          type="button"
-                        >
-                          <div
-                            className={`exam-option-prefix ${isSelected ? "exam-option-prefix--selected" : ""} ${optionState ? `exam-option-prefix--${optionState}` : ""}`}
-                          >
-                            {getOptionPrefix(optIdx)}
-                          </div>
-                          <div
-                            className="exam-option-text"
-                            dangerouslySetInnerHTML={renderMath(opt.text)}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {q.type === "written" && q.options && q.options.length > 0 && (
-                  <div className="exam-options-grid">
-                    {q.options.map((opt, optIdx) => {
-                      const isSelected = answers[questionKey] === optIdx;
-                      const optionState = getOptionState(
-                        q,
-                        actualIndex,
-                        optIdx,
-                      );
-                      return (
-                        <button
-                          key={optIdx}
-                          className={`exam-option-btn ${isSelected ? "exam-option-btn--selected" : ""} ${optionState ? `exam-option-btn--${optionState}` : ""}`}
-                          onClick={() =>
-                            handleOptionSelect(questionKey, optIdx)
-                          }
-                          type="button"
-                          disabled={isSubmitted}
-                        >
-                          <div
-                            className={`exam-option-prefix ${isSelected ? "exam-option-prefix--selected" : ""} ${optionState ? `exam-option-prefix--${optionState}` : ""}`}
-                          >
-                            {getOptionPrefix(optIdx)}
-                          </div>
-                          <div
-                            className="exam-option-text"
-                            dangerouslySetInnerHTML={renderMath(opt.text)}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {q.type === "written" && (
-                  <div className="exam-written-upload-section">
-                    <p className="exam-written-upload-title">
-                      {language === "en"
-                        ? "Upload Written Response:"
-                        : "লিখিত উত্তর আপলোড করুন:"}
-                    </p>
-
-                    {!isSubmitted && (
-                      <div className="exam-written-upload-controls">
-                        <label className="exam-written-upload-label">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                              handleWrittenFileChange(e, questionKey)
-                            }
-                            style={{ display: "none" }}
-                          />
-                          <div className="exam-written-upload-btn">
-                            <svg
-                              className="exam-upload-icon"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                              style={{
-                                width: "20px",
-                                height: "20px",
-                                marginRight: "8px",
-                              }}
+                    {q.type === "written" && q.options && q.options.length > 0 && (
+                      <div className="exam-options-grid">
+                        {q.options.map((opt, optIdx) => {
+                          const isSelected = answers[questionKey] === optIdx;
+                          const optionState = getOptionState(
+                            q,
+                            actualIndex,
+                            optIdx,
+                          );
+                          return (
+                            <button
+                              key={optIdx}
+                              className={`exam-option-btn ${isSelected ? "exam-option-btn--selected" : ""} ${optionState ? `exam-option-btn--${optionState}` : ""}`}
+                              onClick={() =>
+                                handleOptionSelect(questionKey, optIdx)
+                              }
+                              type="button"
+                              disabled={isSubmitted}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                              ></path>
-                            </svg>
-                            <span>
-                              {writtenAnswers[questionKey]
-                                ? language === "en"
-                                  ? "Change Image"
-                                  : "ছবি পরিবর্তন করুন"
-                                : language === "en"
-                                  ? "Choose Image"
-                                  : "ছবি নির্বাচন করুন"}
-                            </span>
-                          </div>
-                        </label>
-
-                        <button
-                          type="button"
-                          className="exam-written-camera-btn"
-                          onClick={() => startCamera(questionKey)}
-                        >
-                          <svg
-                            className="exam-camera-icon"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              marginRight: "8px",
-                            }}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                            ></path>
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                            ></path>
-                          </svg>
-                          <span>
-                            {language === "en"
-                              ? "Use Camera"
-                              : "ক্যামেরা ব্যবহার করুন"}
-                          </span>
-                        </button>
+                              <div
+                                className={`exam-option-prefix ${isSelected ? "exam-option-prefix--selected" : ""} ${optionState ? `exam-option-prefix--${optionState}` : ""}`}
+                              >
+                                {getOptionPrefix(optIdx)}
+                              </div>
+                              <div
+                                className="exam-option-text"
+                                dangerouslySetInnerHTML={renderMath(opt.text)}
+                              />
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
 
-                    {writtenAnswers[questionKey] && (
-                      <div className="exam-written-preview-container">
-                        <img
-                          src={writtenAnswers[questionKey]}
-                          alt="Written Answer Preview"
-                          className="exam-written-preview-img"
-                        />
+                    {q.type === "written" && (
+                      <div className="exam-written-upload-section">
+                        <p className="exam-written-upload-title">
+                          {language === "en"
+                            ? "Upload Written Response:"
+                            : "লিখিত উত্তর আপলোড করুন:"}
+                        </p>
+
                         {!isSubmitted && (
-                          <button
-                            type="button"
-                            className="exam-written-remove-btn"
-                            onClick={() => handleRemoveWrittenFile(questionKey)}
-                            title={
-                              language === "en"
-                                ? "Remove Image"
-                                : "ছবি মুছে ফেলুন"
-                            }
-                          >
-                            <HiX size={16} />
-                          </button>
+                          <div className="exam-written-upload-controls">
+                            <label className="exam-written-upload-label">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) =>
+                                  handleWrittenFileChange(e, questionKey)
+                                }
+                                style={{ display: "none" }}
+                              />
+                              <div className="exam-written-upload-btn">
+                                <svg
+                                  className="exam-upload-icon"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  style={{
+                                    width: "20px",
+                                    height: "20px",
+                                    marginRight: "8px",
+                                  }}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                                  ></path>
+                                </svg>
+                                <span>
+                                  {writtenAnswers[questionKey]
+                                    ? language === "en"
+                                      ? "Change Image"
+                                      : "ছবি পরিবর্তন করুন"
+                                    : language === "en"
+                                      ? "Choose Image"
+                                      : "ছবি নির্বাচন করুন"}
+                                </span>
+                              </div>
+                            </label>
+
+                            <button
+                              type="button"
+                              className="exam-written-camera-btn"
+                              onClick={() => startCamera(questionKey)}
+                            >
+                              <svg
+                                className="exam-camera-icon"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                                style={{
+                                  width: "20px",
+                                  height: "20px",
+                                  marginRight: "8px",
+                                }}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                ></path>
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                ></path>
+                              </svg>
+                              <span>
+                                {language === "en"
+                                  ? "Use Camera"
+                                  : "ক্যামেরা ব্যবহার করুন"}
+                              </span>
+                            </button>
+                          </div>
+                        )}
+
+                        {writtenAnswers[questionKey] && (
+                          <div className="exam-written-preview-container">
+                            <img
+                              src={writtenAnswers[questionKey]}
+                              alt="Written Answer Preview"
+                              className="exam-written-preview-img"
+                            />
+                            {!isSubmitted && (
+                              <button
+                                type="button"
+                                className="exam-written-remove-btn"
+                                onClick={() => handleRemoveWrittenFile(questionKey)}
+                                title={
+                                  language === "en"
+                                    ? "Remove Image"
+                                    : "ছবি মুছে ফেলুন"
+                                }
+                              >
+                                <HiX size={16} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {isReviewMode && aiEvaluations[questionKey] && (
+                          <div className="exam-ai-eval-box" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0FDF4', borderLeft: '4px solid #22C55E', borderRadius: '4px' }}>
+                            <h4 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <HiSparkles size={18} style={{ color: '#15803D' }} />
+                              {language === "en" ? "AI Evaluation" : "এআই মূল্যায়ন"}
+                            </h4>
+                            <div style={{ marginBottom: '4px', fontWeight: 'bold', color: '#15803D' }}>
+                              {language === "en" ? "Marks: " : "প্রাপ্ত নম্বর: "}
+                              {aiEvaluations[questionKey].marks ?? aiEvaluations[questionKey].score}
+                              {aiEvaluations[questionKey].totalMarks ? ` / ${aiEvaluations[questionKey].totalMarks}` : ''}
+                            </div>
+                            <div style={{ color: '#166534', fontSize: '14px' }}>
+                              <strong>{language === "en" ? "Feedback: " : "মতামত: "}</strong>
+                              <div
+                                style={{ display: 'inline', marginLeft: '4px', lineHeight: '1.6' }}
+                                dangerouslySetInnerHTML={renderMarkdownWithMath(aiEvaluations[questionKey].feedback)}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {activeCameraQuestionKey === questionKey && (
+                          <div className="exam-camera-overlay">
+                            <div className="exam-camera-modal">
+                              <h3 className="exam-camera-modal-title">
+                                {language === "en"
+                                  ? "Take Answer Photo"
+                                  : "উত্তর ছবি তুলুন"}
+                              </h3>
+                              <div className="exam-camera-video-container">
+                                <video
+                                  ref={videoRef}
+                                  autoPlay
+                                  playsInline
+                                  muted
+                                  className="exam-camera-video"
+                                />
+                              </div>
+                              <div className="exam-camera-actions">
+                                <button
+                                  type="button"
+                                  className="exam-camera-btn exam-camera-btn--capture"
+                                  onClick={() => capturePhoto(questionKey)}
+                                >
+                                  {language === "en"
+                                    ? "Capture Photo"
+                                    : "ছবি তুলুন"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="exam-camera-btn exam-camera-btn--cancel"
+                                  onClick={stopCamera}
+                                >
+                                  {language === "en" ? "Cancel" : "বাতিল"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     )}
 
-                    {isReviewMode && aiEvaluations[questionKey] && (
-                      <div className="exam-ai-eval-box" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0FDF4', borderLeft: '4px solid #22C55E', borderRadius: '4px' }}>
-                        <h4 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <HiSparkles size={18} style={{ color: '#15803D' }} />
-                          {language === "en" ? "AI Evaluation" : "এআই মূল্যায়ন"}
-                        </h4>
-                        <div style={{ marginBottom: '4px', fontWeight: 'bold', color: '#15803D' }}>
-                          {language === "en" ? "Partial Mark: " : "প্রাপ্ত নম্বর: "}
-                          {aiEvaluations[questionKey].score}
-                        </div>
-                        <div style={{ color: '#166534', fontSize: '14px' }}>
-                          <strong>{language === "en" ? "Feedback: " : "মতামত: "}</strong>
-                          <div
-                            style={{ display: 'inline', marginLeft: '4px', lineHeight: '1.6' }}
-                            dangerouslySetInnerHTML={renderMarkdownWithMath(aiEvaluations[questionKey].feedback)}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {activeCameraQuestionKey === questionKey && (
-                      <div className="exam-camera-overlay">
-                        <div className="exam-camera-modal">
-                          <h3 className="exam-camera-modal-title">
-                            {language === "en"
-                              ? "Take Answer Photo"
-                              : "উত্তর ছবি তুলুন"}
-                          </h3>
-                          <div className="exam-camera-video-container">
-                            <video
-                              ref={videoRef}
-                              autoPlay
-                              playsInline
-                              muted
-                              className="exam-camera-video"
-                            />
-                          </div>
-                          <div className="exam-camera-actions">
-                            <button
-                              type="button"
-                              className="exam-camera-btn exam-camera-btn--capture"
-                              onClick={() => capturePhoto(questionKey)}
-                            >
-                              {language === "en"
-                                ? "Capture Photo"
-                                : "ছবি তুলুন"}
-                            </button>
-                            <button
-                              type="button"
-                              className="exam-camera-btn exam-camera-btn--cancel"
-                              onClick={stopCamera}
-                            >
-                              {language === "en" ? "Cancel" : "বাতিল"}
-                            </button>
-                          </div>
-                        </div>
+                    {config?.contestId && !isReviewMode && (
+                      <div className="exam-contest-actions">
+                        <button
+                          type="button"
+                          className="btn-contest-submit"
+                          onClick={() => handleContestQuestionSubmit(actualIndex)}
+                          disabled={answers[questionKey] === undefined}
+                        >
+                          {language === "en" ? "Submit" : "সাবমিট"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-contest-next"
+                          onClick={() => handleContestQuestionNext(actualIndex)}
+                        >
+                          {language === "en" ? "Next" : "পরবর্তী"}
+                        </button>
+                        {findPrevUnsubmittedIndex(activeQuestionIndex, submittedQuestionKeys) !== -1 && (
+                          <button
+                            type="button"
+                            className="btn-contest-back"
+                            onClick={() => handleContestQuestionBack()}
+                          >
+                            {language === "en" ? "Back" : "পূর্ববর্তী অসাবমিটকৃত"}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-
-                {config?.contestId && !isReviewMode && (
-                  <div className="exam-contest-actions">
-                    <button
-                      type="button"
-                      className="btn-contest-submit"
-                      onClick={() => handleContestQuestionSubmit(actualIndex)}
-                      disabled={answers[questionKey] === undefined}
-                    >
-                      {language === "en" ? "Submit" : "সাবমিট"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-contest-next"
-                      onClick={() => handleContestQuestionNext(actualIndex)}
-                    >
-                      {language === "en" ? "Next" : "পরবর্তী"}
-                    </button>
-                    {findPrevUnsubmittedIndex(activeQuestionIndex, submittedQuestionKeys) !== -1 && (
-                      <button
-                        type="button"
-                        className="btn-contest-back"
-                        onClick={() => handleContestQuestionBack()}
-                      >
-                        {language === "en" ? "Back" : "পূর্ববর্তী অসাবমিটকৃত"}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+          </div>
         </div>
-      </div>
 
         {config?.contestId && !config?.isPractice && !isReviewMode && (
           <aside className="exam-sidebar-leaderboard">
@@ -2127,15 +2131,15 @@ export default function MockTestExam() {
                   "linear-gradient(135deg, #E2E8F0, #94A3B8)", // Silver
                   "linear-gradient(135deg, #EDC9AF, #A0522D)", // Bronze
                 ];
-                
+
                 if (entry) {
                   const currentStudentId = localStorage.getItem('topkorbo_id');
                   const currentStudentName = localStorage.getItem('topkorbo_name');
                   const entryStudentId = entry.student?._id || entry.student;
                   const entryStudentName = entry.student?.name;
                   const isOwn = (currentStudentId && String(entryStudentId) === String(currentStudentId)) ||
-                                (currentStudentName && entryStudentName && entryStudentName.trim().toLowerCase() === currentStudentName.trim().toLowerCase());
-                  
+                    (currentStudentName && entryStudentName && entryStudentName.trim().toLowerCase() === currentStudentName.trim().toLowerCase());
+
                   const rawName = entryStudentName || (language === "en" ? "Anonymous" : "অজ্ঞাতনামা");
                   const studentName = isOwn
                     ? (language === "en" ? `${rawName} (You)` : `${rawName} (তুমি)`)
@@ -2143,8 +2147,8 @@ export default function MockTestExam() {
                   const points = entry.livePoints || 0;
                   return (
                     <div key={rankIndex} className={`leaderboard-item leaderboard-item--rank-${rank} ${isOwn ? "leaderboard-item--own" : ""}`}>
-                      <div 
-                        className="leaderboard-rank-badge" 
+                      <div
+                        className="leaderboard-rank-badge"
                         style={{ background: medalGradients[rankIndex] }}
                       >
                         {rank}
@@ -2172,7 +2176,7 @@ export default function MockTestExam() {
                           {language === "en" ? "Waiting for solver..." : "সমাধানকারীর জন্য অপেক্ষা..."}
                         </div>
                         <div className="leaderboard-solved-count leaderboard-solved-count--empty">
-                          {language === "en" 
+                          {language === "en"
                             ? "Number of questions Solved: 0"
                             : "সমাধানকৃত প্রশ্ন সংখ্যা: ০"}
                         </div>

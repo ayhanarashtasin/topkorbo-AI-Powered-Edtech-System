@@ -42,7 +42,9 @@ exports.createQuestion = async (req, res, next) => {
       difficulty,
       tags,
       solution,
-      solutionImageUrl
+      solutionImageUrl,
+      rubricText,
+      totalMarks
     } = req.body;
 
     if (!questionText || !questionText.trim()) {
@@ -83,8 +85,12 @@ exports.createQuestion = async (req, res, next) => {
       difficulty: ['easy', 'medium', 'hard'].includes(difficulty) ? difficulty : 'medium',
       solution: solution || '',
       solutionImageUrl: solutionImageUrl || '',
+      rubricText: typeof rubricText === 'string' ? rubricText.trim() : '',
+      totalMarks: Number.isInteger(Number(totalMarks)) && Number(totalMarks) >= 1 && Number(totalMarks) <= 100
+        ? Number(totalMarks)
+        : null,
       tags: tags || [],
-      approvalStatus: 'pending',
+      approvalStatus: 'approved', // Bypass admin approval loop for hackathon/teachers
       reviewReason: '',
       reviewedBy: null,
       reviewedAt: null,
@@ -549,6 +555,8 @@ exports.updateQuestion = async (req, res, next) => {
       tags,
       solution,
       solutionImageUrl,
+      rubricText,
+      totalMarks,
       cq
     } = req.body;
 
@@ -564,6 +572,11 @@ exports.updateQuestion = async (req, res, next) => {
     if (imageUrl !== undefined) question.imageUrl = imageUrl || '';
     if (solutionImageUrl !== undefined) question.solutionImageUrl = solutionImageUrl || '';
     if (solution !== undefined) question.solution = solution || '';
+    if (rubricText !== undefined) question.rubricText = typeof rubricText === 'string' ? rubricText.trim() : '';
+    if (totalMarks !== undefined) {
+      const parsedMarks = Number(totalMarks);
+      question.totalMarks = Number.isInteger(parsedMarks) && parsedMarks >= 1 && parsedMarks <= 100 ? parsedMarks : null;
+    }
     if (difficulty !== undefined && ['easy', 'medium', 'hard'].includes(difficulty)) {
       question.difficulty = difficulty;
     }
@@ -589,7 +602,7 @@ exports.updateQuestion = async (req, res, next) => {
       if (cq !== undefined) question.cq = cq;
     }
 
-    question.approvalStatus = 'pending';
+    question.approvalStatus = 'approved';
     question.reviewReason = '';
     question.reviewedBy = null;
     question.reviewedAt = null;

@@ -15,6 +15,7 @@ function getGroqClient() {
 function safeParseJson(raw) {
   if (!raw) return null;
   let text = String(raw).trim();
+  text = text.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
   const first = text.indexOf('{');
   const last = text.lastIndexOf('}');
@@ -33,7 +34,6 @@ async function generateJson({ prompt, systemInstruction, model = DEFAULT_MODEL, 
   const completion = await groq.chat.completions.create({
     model,
     temperature,
-    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: systemInstruction },
       { role: 'user', content: prompt }

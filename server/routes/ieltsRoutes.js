@@ -861,8 +861,7 @@ Do not return any other text, markdown formatting (outside the JSON structure), 
             { role: 'system', content: 'You are an IELTS exam evaluator. Evaluate written responses and output JSON.' },
             { role: 'user', content: promptText }
           ],
-          temperature: 0.3,
-          response_format: { type: 'json_object' }
+          temperature: 0.3
         });
 
         const contentText = completion.choices[0].message.content;

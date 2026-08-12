@@ -112,14 +112,16 @@ export function clearBookHistory({ bookId, chapterId, topicId, nodeId, pageNumbe
  * LaTeX representation. Used by the standalone AI Question Helper page —
  * the result is throwaway formatting work and is not persisted server-side.
  *
- * @param {{ text?: string, imageBase64?: string, mimeType?: string, mode?: 'solution' }} payload
- * @returns {Promise<{ extracted: { questionText: string, options: {label:string,text:string}[], correctOption: string|null, solution: string } }>}
+ * @param {{ text?: string, imageBase64?: string, mimeType?: string, mode?: 'solution'|'rubric', totalMarks?: number, questionText?: string, answerText?: string, questionImageBase64?: string, questionMimeType?: string, answerImageBase64?: string, answerMimeType?: string }} payload
+ * @returns {Promise<{ extracted: { questionText: string, answerText?: string, totalMarks?: number, rubric?: string, options: {label:string,text:string}[], correctOption: string|null, solution: string } }>}
  */
 export function extractQuestion(payload) {
   return request('/ai/extract-question', {
     method: 'POST',
     headers: buildHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    showSlowMessage: false,
+    timeoutMs: 120000
   });
 }
 

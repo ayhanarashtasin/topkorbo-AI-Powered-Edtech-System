@@ -155,6 +155,16 @@ const contestSchema = new mongoose.Schema({
         type: String,
         default: ''
       },
+      rubricText: {
+        type: String,
+        default: ''
+      },
+      totalMarks: {
+        type: Number,
+        min: 1,
+        max: 100,
+        default: null
+      },
       tags: [
         {
           category: {
