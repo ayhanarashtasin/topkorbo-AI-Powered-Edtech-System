@@ -124,12 +124,16 @@ export default function AdminSupportTicketDrawer({
               {(ticket.replies || []).length ? (
                 <div className="admin-history-list" style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '8px' }}>
                   {ticket.replies.map((reply) => (
-                    <div key={reply.id} className="admin-history-item">
-                      <div>
-                        <strong>{reply.author?.name || (reply.authorRole === 'admin' ? 'Admin' : 'User')}</strong>
-                        <span>{reply.message}</span>
+                    <div key={reply.id} className="admin-history-item" style={{ alignItems: 'flex-start', padding: '12px', border: '1px solid rgba(192, 133, 82, 0.12)', borderRadius: '12px', background: '#fffcf9', marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <strong style={{ fontSize: '0.88rem', color: 'var(--admin-accent, #c08552)' }}>
+                          {reply.author?.name || (reply.authorRole === 'admin' ? 'Admin' : 'User')}
+                        </strong>
+                        <span style={{ fontSize: '0.94rem', color: '#4a3f35', lineHeight: 1.4 }}>
+                          {reply.message}
+                        </span>
                       </div>
-                      <time>{formatDate(reply.createdAt)}</time>
+                      <time style={{ fontSize: '0.78rem', color: 'var(--admin-text-muted)', whiteSpace: 'nowrap', marginLeft: '12px', marginTop: '2px' }}>{formatDate(reply.createdAt)}</time>
                     </div>
                   ))}
                 </div>
@@ -186,12 +190,16 @@ export default function AdminSupportTicketDrawer({
               {(ticket.adminNotes || []).length ? (
                 <div className="admin-history-list" style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '8px' }}>
                   {ticket.adminNotes.map((note, index) => (
-                    <div key={`${note.addedAt || 'note'}-${index}`} className="admin-history-item">
-                      <div>
-                        <strong>{note.addedBy?.name || 'Admin note'}</strong>
-                        <span>{note.note}</span>
+                    <div key={`${note.addedAt || 'note'}-${index}`} className="admin-history-item" style={{ alignItems: 'flex-start', padding: '12px', border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', background: '#f8fafc', marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <strong style={{ fontSize: '0.88rem', color: '#475569' }}>
+                          {note.addedBy?.name || 'Admin Note'}
+                        </strong>
+                        <span style={{ fontSize: '0.94rem', color: '#334155', lineHeight: 1.4 }}>
+                          {note.note}
+                        </span>
                       </div>
-                      <time>{formatDate(note.addedAt)}</time>
+                      <time style={{ fontSize: '0.78rem', color: '#64748b', whiteSpace: 'nowrap', marginLeft: '12px', marginTop: '2px' }}>{formatDate(note.addedAt)}</time>
                     </div>
                   ))}
                 </div>
