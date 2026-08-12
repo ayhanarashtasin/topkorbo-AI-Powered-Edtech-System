@@ -166,7 +166,7 @@ const authController = {
             forumRole: config.forumRole || 'user',
             accountStatus: 'active',
             isBanned: false,
-            plan: 'pro_plus',
+            plan: config.role === 'tutor' ? 'mentor_pro' : 'pro_plus',
             planExpiresAt: guestAccessExpiresAt,
             planIsTrial: false,
             ...config.profile

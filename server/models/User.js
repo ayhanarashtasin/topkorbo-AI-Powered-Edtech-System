@@ -144,7 +144,12 @@ const userSchema = new mongoose.Schema({
   // (a paid plan whose planExpiresAt has passed is treated as 'free').
   plan: {
     type: String,
-    enum: ['free', 'pro', 'pro_plus', 'mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'],
+    enum: [
+      'free', 'pro', 'pro_plus',
+      'pro_3months', 'pro_6months', 'pro_yearly',
+      'pro_plus_3months', 'pro_plus_6months', 'pro_plus_yearly',
+      'mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'
+    ],
     default: 'free'
   },
   planExpiresAt: { type: Date, default: null }, // null = never expires (free)

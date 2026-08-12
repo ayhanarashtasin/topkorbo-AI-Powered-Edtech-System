@@ -2,7 +2,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 const PlatformSetting = require('../models/PlatformSetting');
-const { TRIAL_PLAN, trialExpiresAt } = require('./plans');
+const { TRIAL_PLAN, TUTOR_TRIAL_PLAN, trialExpiresAt } = require('./plans');
 
 async function hasCompletedProfile(user) {
   if (!user) return false;
@@ -105,15 +105,16 @@ passport.use(new GoogleStrategy({
           return done(null, false, { message: 'registration_disabled' });
         }
 
-        // Create new user record. Every new signup starts on a free Pro+
-        // trial that lazily downgrades to free once planExpiresAt passes.
+        const signupPlan = role === 'tutor' ? TUTOR_TRIAL_PLAN : TRIAL_PLAN;
+        // Create new user record. Every new signup starts on a free trial
+        // that lazily downgrades to free once planExpiresAt passes.
         user = await User.create({
           googleId: profile.id,
           name: profile.displayName,
           email: email,
           avatar: profile.photos[0]?.value,
           role: role,
-          plan: TRIAL_PLAN,
+          plan: signupPlan,
           planExpiresAt: trialExpiresAt(),
           planIsTrial: true
         });

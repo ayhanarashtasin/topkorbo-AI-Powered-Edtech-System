@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { HiCheck, HiSparkles, HiVideoCamera, HiChartBar, HiBookOpen, HiAcademicCap, HiLightningBolt, HiShieldCheck, HiArrowLeft } from 'react-icons/hi';
+import { HiCheck, HiSparkles, HiVideoCamera, HiChartBar, HiBookOpen, HiAcademicCap, HiLightningBolt, HiShieldCheck, HiArrowLeft, HiLockClosed } from 'react-icons/hi';
 import { initPayment } from '../services/paymentApi';
 import { usePlan } from '../hooks/usePlan';
 import './MentorPricing.css';
@@ -17,24 +17,6 @@ const MENTOR_DURATION_OPTIONS = [
     saveText: null
   },
   {
-    id: 'mentor_3months',
-    durationLabel: '3 Months',
-    badge: 'Popular',
-    effectiveMonthly: 1299,
-    totalPrice: 3897,
-    periodText: '90 Days access (৳1,299 / mo)',
-    saveText: 'Save ৳600'
-  },
-  {
-    id: 'mentor_6months',
-    durationLabel: '6 Months',
-    badge: 'Great Value',
-    effectiveMonthly: 999,
-    totalPrice: 5994,
-    periodText: '180 Days access (৳999 / mo)',
-    saveText: 'Save ৳3,000'
-  },
-  {
     id: 'mentor_yearly',
     durationLabel: '1 Year',
     badge: 'Best Value 🌟',
@@ -48,10 +30,14 @@ const MENTOR_DURATION_OPTIONS = [
 
 export default function MentorPricing() {
   const navigate = useNavigate();
-  const { plan: currentPlan, planExpiresAt, loading } = usePlan();
+  const { plan: currentPlan, planExpiresAt, planIsTrial, loading } = usePlan();
   const [selectedPlanId, setSelectedPlanId] = useState('mentor_yearly');
   const [busy, setBusy] = useState(false);
   const [searchParams] = useSearchParams();
+
+  const trialDaysLeft = planExpiresAt
+    ? Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 0;
 
   const isSubscribed = ['mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'].includes(currentPlan);
   const activePlanConfig = MENTOR_DURATION_OPTIONS.find((opt) => opt.id === selectedPlanId) || MENTOR_DURATION_OPTIONS[3];
@@ -64,6 +50,11 @@ export default function MentorPricing() {
       mentor_yearly: 'Mentor Pro (1 Year)'
     };
     const planTitle = labelMap[currentPlan] || 'Mentor Pro';
+    if (planIsTrial) {
+      const daysLeft = Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      const expiryStr = new Date(planExpiresAt).toLocaleDateString([], { dateStyle: 'medium' });
+      return `Active Plan: Free Trial (${planTitle}) — ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining (Expires ${expiryStr})`;
+    }
     if (!planExpiresAt) return `Active Plan: ${planTitle}`;
     const daysLeft = Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
     const expiryStr = new Date(planExpiresAt).toLocaleDateString([], { dateStyle: 'medium' });
@@ -127,6 +118,27 @@ export default function MentorPricing() {
           Accept student connection requests for free on your dashboard. Upgrade to unlock live video classrooms,
           full question bank, practice tools, and AI capabilities.
         </p>
+
+        {planIsTrial && isSubscribed && (
+          <div className="mentor-pricing__trial-banner">
+            <HiSparkles className="mentor-pricing__trial-banner-icon" />
+            <span>
+              You are currently enjoying your <strong>5-Day Free Trial</strong> of Mentor Pro.
+              {planExpiresAt && (
+                <> Trial ends in <strong>{trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'}</strong> (Expires {new Date(planExpiresAt).toLocaleDateString([], { dateStyle: 'medium' })}).</>
+              )} Upgrade to a paid plan below to keep all tutor features unlocked!
+            </span>
+          </div>
+        )}
+
+        {!isSubscribed && !loading && (
+          <div className="mentor-pricing__locked-banner">
+            <HiLockClosed className="mentor-pricing__locked-banner-icon" />
+            <span>
+              Your free trial has expired or you do not have an active subscription. Live video classrooms, library tools, student analytics, and AI features are currently locked. Upgrade below to restore access!
+            </span>
+          </div>
+        )}
 
         {/* Plan Duration Selector Grid */}
         <div className="mentor-pricing__duration-grid">

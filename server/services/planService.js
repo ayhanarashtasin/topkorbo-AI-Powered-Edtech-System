@@ -111,7 +111,12 @@ async function assertBookOpenable(user, bookId) {
  * Route/controller guard: require the effective plan to be at least `required`.
  * Ordering: free < pro < pro_plus (and mentor_pro / mentor_yearly).
  */
-const PLAN_RANK = { free: 0, pro: 1, pro_plus: 2, mentor_pro: 2, mentor_3months: 2, mentor_6months: 2, mentor_yearly: 2 };
+const PLAN_RANK = {
+  free: 0,
+  pro: 1, pro_3months: 1, pro_6months: 1, pro_yearly: 1,
+  pro_plus: 2, pro_plus_3months: 2, pro_plus_6months: 2, pro_plus_yearly: 2,
+  mentor_pro: 2, mentor_3months: 2, mentor_6months: 2, mentor_yearly: 2
+};
 
 function canUseMentorFeatures(user) {
   if (user?.role === 'teacher') return true; // Teachers are exempt

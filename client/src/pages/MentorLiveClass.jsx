@@ -90,7 +90,7 @@ export default function MentorLiveClass() {
       return;
     }
     const currentPlan = localStorage.getItem('topkorbo_plan') || 'free';
-    if (user.role === 'tutor' && !['mentor_pro', 'mentor_yearly'].includes(currentPlan)) {
+    if (user.role === 'tutor' && !['mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'].includes(currentPlan)) {
       window.location.href = '/mentor-pricing';
       return;
     }
