@@ -490,7 +490,7 @@
 
 .admin-stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
@@ -602,6 +602,7 @@
   font-weight: 700;
   border: 1px solid transparent;
   text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .admin-badge--sm {
@@ -655,6 +656,12 @@
   text-align: left;
   border-bottom: 1px solid var(--admin-border);
   vertical-align: top;
+  white-space: nowrap;
+}
+
+.admin-table td:first-child,
+.admin-table td:nth-child(2) {
+  white-space: normal;
 }
 
 .admin-table tbody tr:last-child td {
@@ -776,8 +783,8 @@
 }
 
 .admin-toolbar {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -790,6 +797,11 @@
 .admin-field {
   display: grid;
   gap: 8px;
+  flex: 1 1 180px;
+}
+
+.admin-field--search {
+  flex: 2 1 280px;
 }
 
 .admin-field span {
@@ -818,9 +830,6 @@
   box-shadow: 0 0 0 4px rgba(192, 133, 82, 0.14);
 }
 
-.admin-field--search {
-  grid-column: span 2;
-}
 
 .admin-action-button {
   display: inline-flex;
