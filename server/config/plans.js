@@ -25,8 +25,56 @@ const PLANS = {
     readingTools: false,
     readingAI: false
   },
+  pro_3months: {
+    price: 390,
+    durationDays: 90,
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: false,
+    readingAI: false
+  },
+  pro_6months: {
+    price: 600,
+    durationDays: 180,
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: false,
+    readingAI: false
+  },
+  pro_yearly: {
+    price: 840,
+    durationDays: 365,
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: false,
+    readingAI: false
+  },
   pro_plus: {
     price: 250,
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true
+  },
+  pro_plus_3months: {
+    price: 630,
+    durationDays: 90,
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true
+  },
+  pro_plus_6months: {
+    price: 960,
+    durationDays: 180,
+    limits: {},
+    readingBooks: Infinity,
+    readingTools: true,
+    readingAI: true
+  },
+  pro_plus_yearly: {
+    price: 1320,
+    durationDays: 365,
     limits: {},
     readingBooks: Infinity,
     readingTools: true,
@@ -83,6 +131,7 @@ const PLAN_DURATION_DAYS = 30;
 // expires the user is lazily downgraded to free, exactly like a paid plan.
 const TRIAL_DURATION_DAYS = 5;
 const TRIAL_PLAN = 'pro_plus';
+const TUTOR_TRIAL_PLAN = 'mentor_pro';
 
 function getPlanConfig(planId) {
   return PLANS[planId] || PLANS.free;
@@ -99,6 +148,7 @@ module.exports = {
   PLAN_DURATION_DAYS,
   TRIAL_DURATION_DAYS,
   TRIAL_PLAN,
+  TUTOR_TRIAL_PLAN,
   getPlanConfig,
   trialExpiresAt
 };

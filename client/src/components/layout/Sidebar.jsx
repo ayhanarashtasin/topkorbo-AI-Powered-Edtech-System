@@ -8,7 +8,7 @@ import './Sidebar.css';
 export default function Sidebar({ activeTab, user }) {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const { isMentorPro, plan: currentPlan, planExpiresAt } = usePlan();
+  const { isMentorPro, plan: currentPlan, planExpiresAt, planIsTrial } = usePlan();
 
   const getPlanInfoText = () => {
     if (safeUser.role === 'tutor' || safeUser.role === 'teacher') {
@@ -21,7 +21,9 @@ export default function Sidebar({ activeTab, user }) {
         mentor_6months: 'Mentor Pro (6 Months)',
         mentor_yearly: 'Mentor Pro (1 Year)'
       };
-      const planName = labelMap[currentPlan] || 'Mentor Pro';
+      const planName = planIsTrial
+        ? 'Mentor Pro Trial'
+        : (labelMap[currentPlan] || 'Mentor Pro');
       
       if (!planExpiresAt) return planName;
       const daysLeft = Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
@@ -139,11 +141,11 @@ export default function Sidebar({ activeTab, user }) {
     });
   }
 
-  // Dedicated Mentor Plan section for tutors to extend or upgrade plan duration anytime
-  if (safeUser.role === 'tutor') {
+  // Show pricing plans for students and tutors
+  if (safeUser.role === 'student' || safeUser.role === 'tutor') {
     menuItems.push({
-      id: 'mentor-pricing',
-      label: language === 'en' ? 'Mentor Plans' : 'মেন্টর প্ল্যান',
+      id: 'pricing',
+      label: language === 'en' ? 'Premium Plans' : 'প্রিমিয়াম প্ল্যান',
       icon: <HiSparkles size={20} />
     });
   }
@@ -270,16 +272,16 @@ export default function Sidebar({ activeTab, user }) {
       <nav className="dashboard-sidebar__nav">
         <ul className="dashboard-sidebar__menu">
           {menuItems.map((item) => {
-            const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'mentor-pricing' && item.id !== 'support';
+            const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'pricing' && item.id !== 'support';
             return (
               <li key={item.id}>
                 <button
                   onClick={() => {
                     if (isLockedForTutor) {
-                      navigate('/mentor-pricing');
+                      navigate('/pricing');
                       return;
                     }
-                    if (item.id === 'mentor-pricing') navigate('/mentor-pricing');
+                    if (item.id === 'pricing') navigate('/pricing');
                     else if (item.id === 'teacher') navigate('/teacher');
                     else if (item.id === 'qbank') {
                       sessionStorage.removeItem('qbank_selected_subject_id');

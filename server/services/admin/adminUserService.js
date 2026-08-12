@@ -344,6 +344,8 @@ async function updateUserRole({ adminUser, targetUserId, nextRole, reason = '', 
   await user.save();
 
   await createAdminAuditLog({
+
+
     adminId: adminUser.id,
     targetUserId: user._id,
     actionType: 'ROLE_CHANGED',
@@ -418,6 +420,173 @@ async function updateUserStatus({ adminUser, targetUserId, nextStatus, reason = 
   return sanitizeUserListItem(user);
 }
 
+async function deleteUser({ adminUser, targetUserId, reason }) {
+  if (!mongoose.Types.ObjectId.isValid(targetUserId)) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const User = require('../../models/User');
+  const user = await User.findById(targetUserId);
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Prevent deleting the last active admin
+  if (user.forumRole === 'admin') {
+    await assertAnotherActiveAdminExists(user._id);
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const targetIdObj = user._id;
+
+    // Load all models dynamically inside transaction context
+    const TeacherApplication = require('../../models/TeacherApplication');
+    const Question = require('../../models/Question');
+    const Book = require('../../models/Book');
+    const Contest = require('../../models/Contest');
+    const Post = require('../../models/Post');
+    const Comment = require('../../models/Comment');
+    const Follow = require('../../models/Follow');
+    const PracticeAttempt = require('../../models/PracticeAttempt');
+    const LiveSession = require('../../models/LiveSession');
+    const MockTestAttempt = require('../../models/MockTestAttempt');
+    const RatingHistory = require('../../models/RatingHistory');
+    const StudyRoutine = require('../../models/StudyRoutine');
+    const StudySession = require('../../models/StudySession');
+    const Bookmark = require('../../models/Bookmark');
+    const Highlight = require('../../models/Highlight');
+    const ReadingState = require('../../models/ReadingState');
+    const Annotation = require('../../models/Annotation');
+    const MentorConnection = require('../../models/MentorConnection');
+    const MentorReview = require('../../models/MentorReview');
+    const Appointment = require('../../models/Appointment');
+    const ClassAttendance = require('../../models/ClassAttendance');
+    const IeltsTeacher = require('../../models/IeltsTeacher');
+    const ContestResult = require('../../models/ContestResult');
+    const Reaction = require('../../models/Reaction');
+    const SupportTicket = require('../../models/SupportTicket');
+    const FeedbackEntry = require('../../models/FeedbackEntry');
+    const Notification = require('../../models/Notification');
+    const ChatMessage = require('../../models/ChatMessage');
+    const LoginHistory = require('../../models/LoginHistory');
+    const Payment = require('../../models/Payment');
+    const Report = require('../../models/Report');
+    const ModerationAppeal = require('../../models/ModerationAppeal');
+
+    // User / Profile related
+    await User.findByIdAndDelete(targetIdObj).session(session);
+    await TeacherApplication.deleteMany({ userId: targetIdObj }).session(session);
+    
+    // Learning / Practice related
+    await PracticeAttempt.deleteMany({ userId: targetIdObj }).session(session);
+    await MockTestAttempt.deleteMany({ userId: targetIdObj }).session(session);
+    await RatingHistory.deleteMany({ userId: targetIdObj }).session(session);
+    await StudyRoutine.deleteMany({ userId: targetIdObj }).session(session);
+    await StudySession.deleteMany({ userId: targetIdObj }).session(session);
+
+    // Book/Reader related
+    await Book.deleteMany({ uploadedBy: targetIdObj }).session(session);
+    await Bookmark.deleteMany({ user: targetIdObj }).session(session);
+    await Highlight.deleteMany({ user: targetIdObj }).session(session);
+    await ReadingState.deleteMany({ user: targetIdObj }).session(session);
+    await Annotation.deleteMany({ user: targetIdObj }).session(session);
+
+    // Mentoring / Live Class related
+    await LiveSession.deleteMany({ 
+      $or: [
+        { mentorId: targetIdObj }, 
+        { studentId: targetIdObj },
+        { 'participants.userId': targetIdObj }
+      ] 
+    }).session(session);
+    await MentorConnection.deleteMany({ 
+      $or: [
+        { mentorId: targetIdObj }, 
+        { studentId: targetIdObj }
+      ] 
+    }).session(session);
+    await MentorReview.deleteMany({ 
+      $or: [
+        { mentorId: targetIdObj }, 
+        { studentId: targetIdObj }
+      ] 
+    }).session(session);
+    await Appointment.deleteMany({
+      $or: [
+        { mentorId: targetIdObj },
+        { studentId: targetIdObj }
+      ]
+    }).session(session);
+    await ClassAttendance.deleteMany({ studentId: targetIdObj }).session(session);
+    await IeltsTeacher.deleteMany({ userId: targetIdObj }).session(session);
+
+    // Questions / Contests related
+    await Question.deleteMany({ teacher: targetIdObj }).session(session);
+    await Contest.deleteMany({ creator: targetIdObj }).session(session);
+    await ContestResult.deleteMany({ userId: targetIdObj }).session(session);
+
+    // Forum / Community related
+    await Post.deleteMany({ author: targetIdObj }).session(session);
+    await Comment.deleteMany({ author: targetIdObj }).session(session);
+    await Follow.deleteMany({ 
+      $or: [
+        { follower: targetIdObj }, 
+        { following: targetIdObj }
+      ] 
+    }).session(session);
+    await Reaction.deleteMany({ userId: targetIdObj }).session(session);
+
+    // Support / Platform related
+    await SupportTicket.deleteMany({ user: targetIdObj }).session(session);
+    await FeedbackEntry.deleteMany({ user: targetIdObj }).session(session);
+    await Notification.deleteMany({ user: targetIdObj }).session(session);
+    await ChatMessage.deleteMany({ 
+      $or: [
+        { sender: targetIdObj }, 
+        { receiver: targetIdObj }
+      ] 
+    }).session(session);
+    await LoginHistory.deleteMany({ userId: targetIdObj }).session(session);
+    await Payment.deleteMany({ user: targetIdObj }).session(session);
+    await Report.deleteMany({ reportedBy: targetIdObj }).session(session);
+    await ModerationAppeal.deleteMany({ userId: targetIdObj }).session(session);
+
+    // Audit Log for deletion
+    await createAdminAuditLog({
+      adminId: adminUser._id,
+      targetEntityId: String(targetIdObj),
+      targetEntityType: 'user',
+      targetEntityName: user.email,
+      actionType: 'USER_DELETED',
+      previousValue: {
+        id: String(user._id),
+        name: user.name,
+        email: user.email,
+        role: user.role
+      },
+      newValue: null,
+      reason,
+      session
+    });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return { success: true };
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
+}
+
 module.exports = {
   MANAGEABLE_ROLES,
   MANAGEABLE_STATUSES,
@@ -426,5 +595,6 @@ module.exports = {
   listUsers,
   getUserDetails,
   updateUserRole,
-  updateUserStatus
+  updateUserStatus,
+  deleteUser
 };

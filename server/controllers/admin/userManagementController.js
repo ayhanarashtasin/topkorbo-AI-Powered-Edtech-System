@@ -47,9 +47,23 @@ async function updateUserStatus(req, res, next) {
   }
 }
 
+async function deleteUser(req, res, next) {
+  try {
+    const data = await adminUserService.deleteUser({
+      adminUser: req.user,
+      targetUserId: req.params.userId,
+      reason: req.body.reason || 'Account deleted by administrator'
+    });
+    return res.json({ success: true, data, message: 'User account and all associated data deleted successfully.' });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   listUsers,
   getUserDetails,
   updateUserRole,
-  updateUserStatus
+  updateUserStatus,
+  deleteUser
 };

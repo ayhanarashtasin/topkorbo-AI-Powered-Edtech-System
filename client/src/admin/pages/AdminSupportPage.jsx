@@ -273,6 +273,30 @@ export default function AdminSupportPage() {
     }
   }
 
+  async function handleInlineReply(ticketId, message) {
+    try {
+      await replyAdminSupportTicket(ticketId, { message });
+      toast.success('Reply sent successfully');
+      const refreshed = await fetchAdminSupportTicketDetails(ticketId);
+      setSelectedTicket(refreshed);
+      await reloadActiveView();
+    } catch (err) {
+      toast.error(err.message || 'Failed to send reply');
+    }
+  }
+
+  async function handleInlineAddNote(ticketId, note) {
+    try {
+      await addAdminSupportTicketNote(ticketId, { note });
+      toast.success('Internal note added');
+      const refreshed = await fetchAdminSupportTicketDetails(ticketId);
+      setSelectedTicket(refreshed);
+      await reloadActiveView();
+    } catch (err) {
+      toast.error(err.message || 'Failed to add note');
+    }
+  }
+
   function renderSummaryCards() {
     if (activeView === 'feedback') {
       return (
@@ -605,6 +629,8 @@ export default function AdminSupportPage() {
           description: 'This action cannot be undone. All replies and notes will be permanently removed.',
           requireReason: false
         })}
+        onInlineReply={handleInlineReply}
+        onInlineAddNote={handleInlineAddNote}
       />
 
       <AdminFeedbackDrawer

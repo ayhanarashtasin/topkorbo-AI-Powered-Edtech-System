@@ -4,7 +4,11 @@ const Payment = require('../models/Payment');
 const ApiResponse = require('../utils/apiResponse');
 const { getPlanConfig, PLAN_DURATION_DAYS } = require('../config/plans');
 
-const PURCHASABLE_PLANS = ['pro', 'pro_plus', 'mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'];
+const PURCHASABLE_PLANS = [
+  'pro', 'pro_3months', 'pro_6months', 'pro_yearly',
+  'pro_plus', 'pro_plus_3months', 'pro_plus_6months', 'pro_plus_yearly',
+  'mentor_pro', 'mentor_3months', 'mentor_6months', 'mentor_yearly'
+];
 
 // Lazy-loaded so a missing `sslcommerz-lts` dependency doesn't crash server
 // boot — payment endpoints simply return 503 until it is installed.
@@ -39,7 +43,17 @@ function gatewayInitFailureMessage(apiResponse) {
 
 // Absolute base the gateway/browser will hit for our callbacks.
 function apiBase(req) {
-  return process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
+  if (process.env.SERVER_URL) return process.env.SERVER_URL;
+  
+  let protocol = req.protocol;
+  const host = req.get('host') || '';
+  
+  // Force HTTPS in production or hosted environments (like Render) to avoid mixed-content form warning
+  if (host.includes('render.com') || process.env.NODE_ENV === 'production') {
+    protocol = 'https';
+  }
+  
+  return `${protocol}://${host}`;
 }
 
 function frontendBase() {
@@ -51,7 +65,17 @@ function resolveProductName(plan) {
   if (plan === 'mentor_3months') return 'TopKorbo Mentor Pro (3 Months)';
   if (plan === 'mentor_6months') return 'TopKorbo Mentor Pro (6 Months)';
   if (plan === 'mentor_yearly') return 'TopKorbo Mentor Pro (1 Year)';
-  if (plan === 'pro_plus') return 'TopKorbo Pro+ (30 days)';
+  
+  if (plan === 'pro') return 'TopKorbo Pro (1 Month)';
+  if (plan === 'pro_3months') return 'TopKorbo Pro (3 Months)';
+  if (plan === 'pro_6months') return 'TopKorbo Pro (6 Months)';
+  if (plan === 'pro_yearly') return 'TopKorbo Pro (1 Year)';
+  
+  if (plan === 'pro_plus') return 'TopKorbo Pro+ (1 Month)';
+  if (plan === 'pro_plus_3months') return 'TopKorbo Pro+ (3 Months)';
+  if (plan === 'pro_plus_6months') return 'TopKorbo Pro+ (6 Months)';
+  if (plan === 'pro_plus_yearly') return 'TopKorbo Pro+ (1 Year)';
+  
   return 'TopKorbo Pro (30 days)';
 }
 

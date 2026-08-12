@@ -42,6 +42,7 @@ router.get('/users', userManagementController.listUsers);
 router.get('/users/:userId', userManagementController.getUserDetails);
 router.patch('/users/:userId/role', userManagementController.updateUserRole);
 router.patch('/users/:userId/status', userManagementController.updateUserStatus);
+router.delete('/users/:userId', userManagementController.deleteUser);
 router.get('/teachers', teacherManagementController.listTeachers);
 router.get('/teachers/:userId', teacherManagementController.getTeacherDetails);
 router.patch('/teachers/:userId/application', teacherManagementController.updateTeacherApplicationStatus);

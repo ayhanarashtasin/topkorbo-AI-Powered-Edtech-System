@@ -84,12 +84,14 @@
   margin: 0 0 32px;
 }
 
-/* 4 Duration Cards Grid */
+/* 2 Duration Cards Grid */
 .mentor-pricing__duration-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin-top: 10px;
+  margin: 10px auto 0;
+  max-width: 480px;
+  width: 100%;
 }
 
 .mentor-pricing__duration-card {
@@ -374,4 +376,57 @@
   .mentor-pricing__features-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.mentor-pricing__trial-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(192, 133, 82, 0.15) 0%, rgba(212, 163, 115, 0.15) 100%);
+  border: 1px solid rgba(192, 133, 82, 0.35);
+  color: #8C5A3C;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: left;
+  margin: 0 auto 24px;
+  max-width: 700px;
+  box-sizing: border-box;
+}
+
+.mentor-pricing__trial-banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  color: #C08552;
+  animation: tutorPulse 2s infinite ease-in-out;
+}
+
+.mentor-pricing__locked-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(248, 113, 113, 0.08) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #991B1B;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: left;
+  margin: 0 auto 24px;
+  max-width: 700px;
+  box-sizing: border-box;
+}
+
+.mentor-pricing__locked-banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  color: #EF4444;
+}
+
+@keyframes tutorPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
 }
