@@ -43,7 +43,17 @@ function gatewayInitFailureMessage(apiResponse) {
 
 // Absolute base the gateway/browser will hit for our callbacks.
 function apiBase(req) {
-  return process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
+  if (process.env.SERVER_URL) return process.env.SERVER_URL;
+  
+  let protocol = req.protocol;
+  const host = req.get('host') || '';
+  
+  // Force HTTPS in production or hosted environments (like Render) to avoid mixed-content form warning
+  if (host.includes('render.com') || process.env.NODE_ENV === 'production') {
+    protocol = 'https';
+  }
+  
+  return `${protocol}://${host}`;
 }
 
 function frontendBase() {
