@@ -150,6 +150,14 @@ export async function updateAdminUserStatus(userId, payload) {
   });
 }
 
+export async function deleteAdminUser(userId, payload = {}) {
+  return httpClient.request(`/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function fetchAdminTeachers(params = {}) {
   const searchParams = new URLSearchParams();
 

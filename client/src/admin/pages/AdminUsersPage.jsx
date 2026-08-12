@@ -13,7 +13,8 @@ import {
   fetchAdminUsers,
   resetAdminMentorLiveSessions,
   updateAdminUserRole,
-  updateAdminUserStatus
+  updateAdminUserStatus,
+  deleteAdminUser
 } from '../services/adminApi';
 
 const ROLE_OPTIONS = ['student', 'tutor', 'teacher', 'moderator', 'admin'];
@@ -152,6 +153,22 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleDeleteUserConfirm(reason) {
+    try {
+      await deleteAdminUser(actionState.userId, { reason });
+      toast.success('User and all associated data permanently deleted');
+      const deletedId = actionState.userId;
+      setActionState(null);
+      await loadUsers();
+      if (selectedUserId === deletedId) {
+        setSelectedUserId('');
+        setSelectedUser(null);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete user');
+    }
+  }
+
   return (
     <section className="admin-page">
       <AdminPageHeader
@@ -250,6 +267,21 @@ export default function AdminUsersPage() {
                           Reset mentor sessions
                         </AdminActionButton>
                       ) : null}
+
+                      <AdminActionButton
+                        tone="danger"
+                        variant="ghost"
+                        onClick={() => {
+                          setActionState({
+                            type: 'delete',
+                            userId: user.id,
+                            title: `Permanently delete ${user.name || 'this user'}?`,
+                            description: 'WARNING: This will permanently delete the user account and EVERY record associated with them in the system (live sessions, posts, comments, payments, bookmarks, and highlight history). This action is irreversible.'
+                          });
+                        }}
+                      >
+                        Delete
+                      </AdminActionButton>
 
                       <select
                         value=""
@@ -353,6 +385,17 @@ export default function AdminUsersPage() {
         confirmLabel="Reset to 0"
         onClose={() => setActionState(null)}
         onConfirm={handleLiveSessionResetConfirm}
+      />
+
+      <AdminConfirmModal
+        open={actionState?.type === 'delete'}
+        title={actionState?.title}
+        description={actionState?.description}
+        requireReason={true}
+        reasonLabel="Reason for deletion"
+        confirmLabel="Permanently Delete User"
+        onClose={() => setActionState(null)}
+        onConfirm={handleDeleteUserConfirm}
       />
     </section>
   );
