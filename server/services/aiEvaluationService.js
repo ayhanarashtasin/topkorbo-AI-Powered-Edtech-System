@@ -1,8 +1,8 @@
 const Groq = require('groq-sdk');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const VISION_MODEL = "qwen/qwen3.6-27b";
-const TEXT_MODEL = "openai/gpt-oss-120b";
+const VISION_MODEL = "llama-3.2-90b-vision-preview";
+const TEXT_MODEL = "llama-3.3-70b-versatile";
 
 /**
  * Extracts JSON from AI output that may contain <think> blocks, markdown, etc.

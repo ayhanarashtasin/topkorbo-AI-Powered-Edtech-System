@@ -60,6 +60,7 @@ export default function Sidebar({ activeTab, user }) {
     localStorage.setItem('topkorbo_sidebar_collapsed', String(nextVal));
   };
 
+  // ── Build menu items exactly as before ──
   const menuItems = [
     { id: 'dashboard', label: t('db.menu.dashboard'), icon: <HiHome size={20} /> }
   ];
@@ -96,11 +97,7 @@ export default function Sidebar({ activeTab, user }) {
         label: 'Find Mentor',
         icon: <HiSearch size={20} />
       });
-      menuItems.push({
-        id: 'study-routine',
-        label: language === 'en' ? 'Study Routine' : 'Study Routine',
-        icon: <HiCalendar size={20} />
-      });
+
     }
     menuItems.push({
       id: 'practice-history',
@@ -145,7 +142,7 @@ export default function Sidebar({ activeTab, user }) {
   if (safeUser.role === 'student' || safeUser.role === 'tutor') {
     menuItems.push({
       id: 'pricing',
-      label: language === 'en' ? 'Premium Plans' : 'প্রিমিয়াম প্ল্যান',
+      label: language === 'en' ? 'Premium Plans' : 'প্রিমিয়াম প্ল্যান',
       icon: <HiSparkles size={20} />
     });
   }
@@ -176,6 +173,109 @@ export default function Sidebar({ activeTab, user }) {
     label: language === 'en' ? 'Support' : 'সাপোর্ট',
     icon: <HiSupport size={20} />
   });
+
+  // ── Click handler (unchanged) ──
+  const handleMenuClick = (item) => {
+    const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'pricing' && item.id !== 'support';
+    if (isLockedForTutor) {
+      navigate('/pricing');
+      return;
+    }
+    if (item.id === 'pricing') navigate('/pricing');
+    else if (item.id === 'teacher') navigate('/teacher');
+    else if (item.id === 'qbank') {
+      sessionStorage.removeItem('qbank_selected_subject_id');
+      sessionStorage.removeItem('qbank_selected_prep_stream');
+      sessionStorage.removeItem('qbank_selected_source_context');
+      window.dispatchEvent(new Event('reset-qbank'));
+      navigate('/qbank');
+    }
+    else if (item.id === 'upload-question') navigate('/upload-question');
+    else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
+    else if (item.id === 'make-contest-question') navigate('/make-contest-question');
+    else if (item.id === 'mock-test') navigate('/mock-test');
+    else if (item.id === 'find-mentor') navigate('/student/find-mentor');
+    else if (item.id === 'practice-history') navigate('/practice-history');
+    else if (item.id === 'battle') navigate('/battle');
+    else if (item.id === 'live-class') {
+      if (safeUser.role === 'student') navigate('/student/live-class');
+      else navigate('/mentor/live-class');
+    }
+    else if (item.id === 'contests') navigate('/contests');
+    else if (item.id === 'ielts-prep') navigate('/ielts-prep');
+    else if (item.id === 'reading-books') navigate('/reading-books');
+    else if (item.id === 'forum') navigate('/forum');
+    else if (item.id === 'support') navigate('/support');
+    else navigate('/dashboard');
+  };
+
+  // ── Group menu items into logical sections ──
+  // Section definitions: each section has a label and an ordered list of item IDs.
+  // Items not matching any section are placed at the end under "MORE".
+  const sectionDefs = [
+    {
+      label: language === 'en' ? 'Main' : 'প্রধান',
+      ids: ['dashboard', 'forum', 'reading-books', 'qbank']
+    },
+    {
+      label: language === 'en' ? 'Learning' : 'শিক্ষা',
+      ids: ['mock-test', 'find-mentor', 'practice-history', 'live-class', 'ielts-prep']
+    },
+    {
+      label: language === 'en' ? 'Compete' : 'প্রতিযোগিতা',
+      ids: ['battle', 'contests']
+    },
+    {
+      label: language === 'en' ? 'More' : 'আরও',
+      ids: ['teacher', 'pricing', 'upload-question', 'make-contest-question', 'ielts-teacher', 'support']
+    }
+  ];
+
+  // Build grouped sections from menu items
+  const groupedSections = [];
+  const placed = new Set();
+
+  for (const section of sectionDefs) {
+    const items = section.ids
+      .map(id => menuItems.find(m => m.id === id))
+      .filter(Boolean);
+    if (items.length > 0) {
+      groupedSections.push({ label: section.label, items });
+      items.forEach(i => placed.add(i.id));
+    }
+  }
+
+  // Catch any items not placed (safety)
+  const remaining = menuItems.filter(m => !placed.has(m.id));
+  if (remaining.length > 0) {
+    const existingMore = groupedSections.find(s => s.label === (language === 'en' ? 'More' : 'আরও'));
+    if (existingMore) {
+      existingMore.items.push(...remaining);
+    } else {
+      groupedSections.push({ label: language === 'en' ? 'More' : 'আরও', items: remaining });
+    }
+  }
+
+  // ── Render a single menu button ──
+  const renderMenuItem = (item) => {
+    const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'pricing' && item.id !== 'support';
+    return (
+      <li key={item.id}>
+        <button
+          onClick={() => handleMenuClick(item)}
+          className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''} ${isLockedForTutor ? 'dashboard-sidebar__menu-btn--locked' : ''}`}
+        >
+          <span className="dashboard-sidebar__menu-icon">{item.icon}</span>
+          <span className="dashboard-sidebar__menu-label">{item.label}</span>
+          {isLockedForTutor && (
+            <HiLockClosed className="dashboard-sidebar__menu-lock" title="Requires Mentor Pro Plan" />
+          )}
+          {/* Tooltip for collapsed state */}
+          <span className="dashboard-sidebar__menu-tooltip">{item.label}</span>
+        </button>
+      </li>
+    );
+  };
 
   return (
     <>
@@ -211,7 +311,7 @@ export default function Sidebar({ activeTab, user }) {
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
         >
-          {isMobileMenuOpen ? <HiX size={24} /> : <HiMenu size={24} />}
+          {isMobileMenuOpen ? <HiX size={22} /> : <HiMenu size={22} />}
         </button>
       </div>
 
@@ -253,7 +353,7 @@ export default function Sidebar({ activeTab, user }) {
           onClick={toggleSidebar}
           aria-label={isSidebarCollapsed ? t('db.menu.open_sidebar') : t('db.menu.close_sidebar')}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="dashboard-sidebar__toggle-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="dashboard-sidebar__toggle-icon">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
             <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
@@ -268,59 +368,21 @@ export default function Sidebar({ activeTab, user }) {
         </button>
       </div>
 
-      {/* Sidebar Menu Items */}
+      {/* Sidebar Menu Items — Grouped by Section */}
       <nav className="dashboard-sidebar__nav">
-        <ul className="dashboard-sidebar__menu">
-          {menuItems.map((item) => {
-            const isLockedForTutor = safeUser.role === 'tutor' && !isMentorPro && item.id !== 'dashboard' && item.id !== 'pricing' && item.id !== 'support';
-            return (
-              <li key={item.id}>
-                <button
-                  onClick={() => {
-                    if (isLockedForTutor) {
-                      navigate('/pricing');
-                      return;
-                    }
-                    if (item.id === 'pricing') navigate('/pricing');
-                    else if (item.id === 'teacher') navigate('/teacher');
-                    else if (item.id === 'qbank') {
-                      sessionStorage.removeItem('qbank_selected_subject_id');
-                      sessionStorage.removeItem('qbank_selected_prep_stream');
-                      sessionStorage.removeItem('qbank_selected_source_context');
-                      window.dispatchEvent(new Event('reset-qbank'));
-                      navigate('/qbank');
-                    }
-                    else if (item.id === 'upload-question') navigate('/upload-question');
-                    else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
-                    else if (item.id === 'make-contest-question') navigate('/make-contest-question');
-                    else if (item.id === 'mock-test') navigate('/mock-test');
-                    else if (item.id === 'find-mentor') navigate('/student/find-mentor');
-                    else if (item.id === 'study-routine') navigate('/study-routine');
-                    else if (item.id === 'practice-history') navigate('/practice-history');
-                    else if (item.id === 'battle') navigate('/battle');
-                    else if (item.id === 'live-class') {
-                      if (safeUser.role === 'student') navigate('/student/live-class');
-                      else navigate('/mentor/live-class');
-                    }
-                    else if (item.id === 'contests') navigate('/contests');
-                    else if (item.id === 'ielts-prep') navigate('/ielts-prep');
-                    else if (item.id === 'reading-books') navigate('/reading-books');
-                    else if (item.id === 'forum') navigate('/forum');
-                    else if (item.id === 'support') navigate('/support');
-                    else navigate('/dashboard');
-                  }}
-                  className={`dashboard-sidebar__menu-btn ${activeTab === item.id ? 'dashboard-sidebar__menu-btn--active' : ''} ${isLockedForTutor ? 'dashboard-sidebar__menu-btn--locked' : ''}`}
-                >
-                  <span className="dashboard-sidebar__menu-icon">{item.icon}</span>
-                  <span className="dashboard-sidebar__menu-label">{item.label}</span>
-                  {isLockedForTutor && (
-                    <HiLockClosed className="dashboard-sidebar__menu-lock" title="Requires Mentor Pro Plan" />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        {groupedSections.map((section, idx) => (
+          <div className="dashboard-sidebar__section-group" key={section.label}>
+            <div
+              className="dashboard-sidebar__section-label"
+              style={idx === 0 ? { marginTop: 0 } : undefined}
+            >
+              {section.label}
+            </div>
+            <ul className="dashboard-sidebar__menu">
+              {section.items.map(renderMenuItem)}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       {/* Sidebar Footer: Profile */}

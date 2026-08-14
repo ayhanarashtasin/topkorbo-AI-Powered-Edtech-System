@@ -14,7 +14,6 @@ router.use(aiLimiter);
 router.post('/chat', aiQuota, aiController.chat);
 // Book tutor chat is a Pro+ reading feature (not metered against aiActions).
 router.post('/book-chat', requirePlan('pro_plus'), aiController.bookChat);
-router.post('/study-routine', aiQuota, aiController.studyRoutine);
 router.post('/extract-question', aiQuota, aiController.extractQuestion);
 router.get('/history', aiController.getHistory);
 router.delete('/history', aiController.clearHistory);

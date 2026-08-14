@@ -22,7 +22,6 @@ export default function FeaturesGrid() {
     { key: 'ielts', icon: <HiOutlineGlobeAlt />, color: '#06B6D4', size: 'small' },
 
     { key: 'mentor', icon: <HiOutlineUserGroup />, color: '#EAB308', size: 'large' },
-    { key: 'study_routine', icon: <HiOutlineCalendar />, color: '#14B8A6', size: 'large' },
   ];
 
   return (

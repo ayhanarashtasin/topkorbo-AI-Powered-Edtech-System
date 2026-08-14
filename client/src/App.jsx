@@ -33,7 +33,6 @@ const BoardQuestionsView = lazy(() => import('./pages/BoardQuestionsView'));
 const VarsityWrittenView = lazy(() => import('./pages/VarsityWrittenView'));
 const MockTest = lazy(() => import('./pages/MockTest'));
 const MockTestExam = lazy(() => import('./pages/MockTestExam'));
-const StudyRoutine = lazy(() => import('./pages/StudyRoutine'));
 const Battle = lazy(() => import('./pages/Battle'));
 const MakeContestQuestion = lazy(() => import('./pages/MakeContestQuestion'));
 const MakeContestQuestionNext = lazy(() => import('./pages/MakeContestQuestionNext'));
@@ -132,7 +131,6 @@ function AppContent() {
           <Route path="/upload-question" element={<UploadQuestion />} />
           <Route path="/mock-test" element={<MockTest />} />
           <Route path="/mock-test/exam" element={<MockTestExam />} />
-          <Route path="/study-routine" element={<StudyRoutine />} />
           <Route path="/practice-history" element={<PracticeHistory />} />
           <Route path="/student/find-mentor" element={<FindMentor />} />
           <Route path="/battle" element={<Battle />} />

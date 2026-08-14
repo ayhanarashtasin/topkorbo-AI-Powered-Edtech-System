@@ -8,6 +8,7 @@
   padding: 24px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  pointer-events: auto;
 }
 
 .signup-modal__overlay {
@@ -16,6 +17,7 @@
   background: rgba(37, 24, 23, 0.45);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  pointer-events: auto;
 }
 
 .signup-modal__dialog {
@@ -36,6 +38,7 @@
   margin: auto;
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
+  pointer-events: auto;
 }
 
 .signup-modal__dialog--large {

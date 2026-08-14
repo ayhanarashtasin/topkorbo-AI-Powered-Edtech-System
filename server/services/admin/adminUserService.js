@@ -458,7 +458,7 @@ async function deleteUser({ adminUser, targetUserId, reason }) {
     const LiveSession = require('../../models/LiveSession');
     const MockTestAttempt = require('../../models/MockTestAttempt');
     const RatingHistory = require('../../models/RatingHistory');
-    const StudyRoutine = require('../../models/StudyRoutine');
+
     const StudySession = require('../../models/StudySession');
     const Bookmark = require('../../models/Bookmark');
     const Highlight = require('../../models/Highlight');
@@ -488,8 +488,7 @@ async function deleteUser({ adminUser, targetUserId, reason }) {
     await PracticeAttempt.deleteMany({ userId: targetIdObj }).session(session);
     await MockTestAttempt.deleteMany({ userId: targetIdObj }).session(session);
     await RatingHistory.deleteMany({ userId: targetIdObj }).session(session);
-    await StudyRoutine.deleteMany({ userId: targetIdObj }).session(session);
-    await StudySession.deleteMany({ userId: targetIdObj }).session(session);
+
 
     // Book/Reader related
     await Book.deleteMany({ uploadedBy: targetIdObj }).session(session);
