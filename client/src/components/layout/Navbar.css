@@ -26,6 +26,7 @@
 .navbar {
   pointer-events: auto;
   position: relative;
+  z-index: 10;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -339,7 +340,50 @@
    Responsive Behavior (Tablet & Mobile)
    ========================================================================== */
 
+/* Tablet Optimization (769px - 1080px): Scale down desktop navbar so it fits */
 @media (max-width: 1080px) {
+  .navbar-wrapper {
+    top: 12px;
+  }
+  .navbar-wrapper--scrolled {
+    top: 8px;
+  }
+  .navbar {
+    gap: clamp(4px, 1vw, 12px);
+    padding: 6px 8px 6px 14px;
+    max-width: 100%;
+  }
+  .navbar__link {
+    padding: 5px 6px;
+    font-size: 0.78rem;
+  }
+  .navbar__logo-text {
+    font-size: 1.15rem;
+  }
+  .navbar__logo-svg-wrapper {
+    width: 28px;
+    height: 28px;
+  }
+  .navbar__btn {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+  .navbar__lang-toggle {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+  }
+  .navbar__user-profile {
+    padding: 3px 10px 3px 3px;
+    font-size: 0.78rem;
+  }
+  .navbar__avatar {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Mobile Devices (Phones & Tablet Portrait) */
+@media (max-width: 768px) {
   .navbar-wrapper {
     top: 12px;
     padding: 0 14px;
@@ -494,7 +538,7 @@
     background: rgba(37, 24, 23, 0.25);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
-    z-index: calc(var(--z-navbar, 1000) - 1);
+    z-index: 5;
     pointer-events: auto;
   }
 }

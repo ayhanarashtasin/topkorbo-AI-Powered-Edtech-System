@@ -1,0 +1,216 @@
+.pricing-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border: 2px solid #EAE3D9;
+  border-radius: 18px;
+  padding: 40px 32px;
+  box-shadow: 0 8px 30px rgba(75, 46, 43, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  box-sizing: border-box;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(75, 46, 43, 0.08);
+  border-color: #D6CBBF;
+}
+
+.pricing-card--highlight {
+  border-color: #C08552;
+  box-shadow: 0 16px 42px rgba(192, 133, 82, 0.15);
+}
+
+.pricing-card--highlight:hover {
+  border-color: #A86D3A;
+  box-shadow: 0 20px 48px rgba(192, 133, 82, 0.22);
+}
+
+.pricing-card--current {
+  border-color: #22C55E;
+}
+
+.pricing-card-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 30px;
+  box-shadow: 0 4px 10px rgba(192, 133, 82, 0.3);
+  white-space: nowrap;
+}
+
+.pricing-card--current .pricing-card-badge {
+  background: #22C55E;
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+}
+
+.pricing-plan-name {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: #1F1614;
+}
+
+.pricing-tagline {
+  color: #8C7C75;
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.pricing-price {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.pricing-currency-symbol {
+  font-size: 20px;
+  font-weight: 700;
+  color: #C08552;
+  margin-right: 2px;
+}
+
+.pricing-amount {
+  font-size: 42px;
+  font-weight: 850;
+  color: #1F1614;
+  line-height: 1;
+}
+
+.pricing-currency-unit {
+  font-size: 14px;
+  color: #8C7C75;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.pricing-billing-text-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pricing-billing-text-info {
+  color: #8C7C75;
+}
+
+.pricing-billing-text-save {
+  color: #15803D;
+  background: #DCFCE7;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.pricing-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pricing-features li svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.pricing-features li.is-in {
+  color: #3e322f;
+}
+
+.pricing-features li.is-in svg {
+  color: #22C55E;
+}
+
+.pricing-features li.is-out {
+  color: #B2A299;
+}
+
+.pricing-features li.is-out svg {
+  color: #EF4444;
+}
+
+.pricing-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  border: none;
+  background: linear-gradient(135deg, #C08552 0%, #8C5A3C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 6px 18px rgba(192, 133, 82, 0.25);
+  box-sizing: border-box;
+}
+
+.pricing-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(192, 133, 82, 0.35);
+}
+
+.pricing-btn--current {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 2px solid #BBF7D0;
+  box-shadow: none;
+  cursor: default;
+}
+
+.pricing-btn--current:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.pricing-btn--disabled {
+  background: #F3EFE9;
+  color: #A39389;
+  border: 1px solid #E6DDD0;
+  box-shadow: none;
+  cursor: default;
+}
+
+.pricing-btn--disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.pricing-btn--downgrade {
+  background: transparent;
+  color: #8C7C75;
+  border: 1px solid #D6CBBF;
+  box-shadow: none;
+}
+
+.pricing-btn--downgrade:hover {
+  border-color: #8C7C75;
+  color: #1F1614;
+  box-shadow: none;
+  transform: none;
+}

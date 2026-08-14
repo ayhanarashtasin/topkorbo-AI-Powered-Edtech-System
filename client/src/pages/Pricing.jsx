@@ -1,56 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { HiCheck, HiX, HiArrowLeft, HiSparkles, HiLockClosed } from 'react-icons/hi';
+import { HiArrowLeft } from 'react-icons/hi';
 import { initPayment } from '../services/paymentApi';
 import { usePlan } from '../hooks/usePlan';
 import MentorPricing from './MentorPricing';
+
+// Components
+import SubscriptionBanner from '../components/Pricing/SubscriptionBanner';
+import PricingToggle from '../components/Pricing/PricingToggle';
+import PricingCard from '../components/Pricing/PricingCard';
+import ComparisonTable from '../components/Pricing/ComparisonTable';
+import { DURATION_OPTIONS, BASE_FEATURES_FREE, BASE_FEATURES_PRO, BASE_FEATURES_PRO_PLUS } from '../components/Pricing/PricingData';
+
 import './Pricing.css';
-
-const STUDENT_DURATION_OPTIONS = [
-  {
-    id: '1month',
-    label: '1 Month',
-    badge: null,
-    saveText: null,
-    pro: { planId: 'pro', effectiveMonthly: 150, totalPrice: 150 },
-    proPlus: { planId: 'pro_plus', effectiveMonthly: 250, totalPrice: 250 }
-  },
-  {
-    id: 'yearly',
-    label: '1 Year',
-    badge: 'Best Value 🌟',
-    highlight: true,
-    saveText: 'Save up to 53%',
-    pro: { planId: 'pro_yearly', effectiveMonthly: 70, totalPrice: 840, saveAmount: 960 },
-    proPlus: { planId: 'pro_plus_yearly', effectiveMonthly: 110, totalPrice: 1320, saveAmount: 1680 }
-  }
-];
-
-const BASE_FEATURES_PRO = [
-  { text: 'Unlimited question-bank exams', included: true },
-  { text: 'Unlimited mock tests', included: true },
-  { text: 'Unlimited battle rooms', included: true },
-  { text: 'Unlimited AI features', included: true },
-  { text: 'Read unlimited books', included: true },
-  { text: 'Reading tools (pen / highlighter / notes)', included: false },
-  { text: 'Reading AI (summarize / chat / mind-map)', included: false }
-];
-
-const BASE_FEATURES_PRO_PLUS = [
-  { text: 'Unlimited question-bank exams', included: true },
-  { text: 'Unlimited mock tests', included: true },
-  { text: 'Unlimited battle rooms', included: true },
-  { text: 'Unlimited AI features', included: true },
-  { text: 'Read unlimited books', included: true },
-  { text: 'Reading tools (pen / highlighter / notes)', included: true },
-  { text: 'Reading AI (summarize / chat / mind-map)', included: true }
-];
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const userRole = (localStorage.getItem('topkorbo_role') || '').toLowerCase();
-  
+  const token = localStorage.getItem('topkorbo_token');
+
   if (userRole === 'tutor') {
     return <MentorPricing />;
   }
@@ -58,28 +29,55 @@ export default function Pricing() {
   const { plan: currentPlan, planExpiresAt, planIsTrial, loading } = usePlan();
   const [selectedDuration, setSelectedDuration] = useState('yearly');
   const [busy, setBusy] = useState(null);
-  const [searchParams] = useSearchParams();
 
-  const isFree = currentPlan === 'free';
+  const authState = token ? 'authenticated' : 'guest';
+  
+  let subscription = 'free';
+  if (!loading && currentPlan) {
+    if (currentPlan.includes('pro_plus')) subscription = 'pro_plus';
+    else if (currentPlan.includes('pro')) subscription = 'pro';
+  }
+
   const trialDaysLeft = planExpiresAt
     ? Math.max(0, Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : 0;
 
-  const activeDurationOpt = STUDENT_DURATION_OPTIONS.find(opt => opt.id === selectedDuration) || STUDENT_DURATION_OPTIONS[3];
+  const activeDurationOpt = DURATION_OPTIONS.find(opt => opt.id === selectedDuration) || DURATION_OPTIONS[1];
 
   useEffect(() => {
     const status = searchParams.get('payment');
     if (status === 'failed') toast.error('Payment failed. Please try again.');
     else if (status === 'cancelled') toast('Payment cancelled.');
     else if (status === 'error') toast.error('Something went wrong with the payment.');
-  }, [searchParams]);
+    
+    // Auto checkout for guest return flow
+    const intendedPlan = searchParams.get('plan');
+    if (authState === 'authenticated' && intendedPlan && !loading) {
+      if (subscription === 'free' && intendedPlan !== 'free') {
+        const planId = intendedPlan === 'pro' ? activeDurationOpt.pro.planId : activeDurationOpt.proPlus.planId;
+        handleCheckout(planId);
+      }
+    }
+  }, [searchParams, authState, loading, subscription, activeDurationOpt]);
 
-  const handleUpgrade = async (planId) => {
-    const token = localStorage.getItem('topkorbo_token');
-    if (!token) {
-      toast.error('Please log in first.');
+  const handleAction = async (tierId) => {
+    if (authState === 'guest') {
+      const targetPlanId = tierId === 'free' ? '' : `?plan=${tierId}`;
+      navigate(`/login${targetPlanId}`, { state: { from: location.pathname } });
       return;
     }
+
+    if (tierId === 'free') {
+      // Logic for downgrade API call or info
+      toast('To downgrade, please manage your subscription in billing settings.');
+      return;
+    }
+
+    const planId = tierId === 'pro' ? activeDurationOpt.pro.planId : activeDurationOpt.proPlus.planId;
+    handleCheckout(planId);
+  };
+
+  const handleCheckout = async (planId) => {
     setBusy(planId);
     try {
       const { url } = await initPayment(planId);
@@ -92,20 +90,77 @@ export default function Pricing() {
     }
   };
 
-  // Determine current active plan matching helper
+  const getCtaProps = (tierId, targetPlanId) => {
+    const props = {
+      text: '',
+      onClick: () => handleAction(tierId),
+      disabled: false,
+      isInactive: false,
+      isDowngrade: false,
+      loading: busy === targetPlanId
+    };
+
+    if (authState === 'guest') {
+      props.text = tierId === 'free' ? 'Create Free Account' : `Get ${tierId === 'pro' ? 'Pro' : 'Pro+'}`;
+      return props;
+    }
+
+    if (subscription === 'free') {
+      if (tierId === 'free') {
+        props.text = 'Current Plan';
+        props.disabled = true;
+        props.isInactive = true;
+      } else {
+        props.text = `Upgrade to ${tierId === 'pro' ? 'Pro' : 'Pro+'}`;
+      }
+      return props;
+    }
+
+    if (subscription === 'pro') {
+      if (tierId === 'free') {
+        props.text = 'Downgrade';
+        props.isDowngrade = true;
+      } else if (tierId === 'pro') {
+        props.text = 'Current Plan';
+        props.disabled = true;
+        props.isInactive = true;
+      } else {
+        props.text = 'Upgrade to Pro+';
+      }
+      return props;
+    }
+
+    if (subscription === 'pro_plus') {
+      if (tierId === 'free') {
+        props.text = 'Downgrade';
+        props.isDowngrade = true;
+      } else if (tierId === 'pro') {
+        props.text = 'Downgrade to Pro';
+        props.isDowngrade = true;
+      } else {
+        props.text = 'Current Plan';
+        props.disabled = true;
+        props.isInactive = true;
+      }
+      return props;
+    }
+    return props;
+  };
+
   const isCurrentPlan = (tierId) => {
-    if (loading) return false;
-    if (tierId === 'free') return currentPlan === 'free';
-    if (tierId === 'pro') {
-      return ['pro', 'pro_3months', 'pro_6months', 'pro_yearly'].includes(currentPlan);
-    }
-    if (tierId === 'pro_plus') {
-      return ['pro_plus', 'pro_plus_3months', 'pro_plus_6months', 'pro_plus_yearly'].includes(currentPlan);
-    }
+    if (loading || authState === 'guest') return false;
+    if (tierId === 'free') return subscription === 'free';
+    if (tierId === 'pro') return subscription === 'pro';
+    if (tierId === 'pro_plus') return subscription === 'pro_plus';
     return false;
   };
 
-  // Map tiers dynamically using state and configs
+  const getBadgeText = (tierId) => {
+    if (isCurrentPlan(tierId)) return 'Current Plan';
+    if (tierId === 'pro_plus' && !isCurrentPlan(tierId)) return 'Most popular';
+    return null;
+  };
+
   const tiers = [
     {
       id: 'free',
@@ -114,15 +169,7 @@ export default function Pricing() {
       periodText: 'Life-time limits',
       tagline: 'Get started, no cost',
       targetPlanId: 'free',
-      features: [
-        { text: '5 question-bank exams', included: true },
-        { text: '5 mock tests', included: true },
-        { text: '3 battle rooms', included: true },
-        { text: 'AI features (limited)', included: true },
-        { text: 'Read up to 2 books', included: true },
-        { text: 'Reading tools (pen / highlighter / notes)', included: false },
-        { text: 'Reading AI (summarize / chat / mind-map)', included: false }
-      ]
+      features: BASE_FEATURES_FREE
     },
     {
       id: 'pro',
@@ -147,128 +194,74 @@ export default function Pricing() {
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="pricing">
+        <div className="pricing-skeleton">
+          <div className="skeleton-title" />
+          <div className="skeleton-subtitle" />
+          <div className="pricing-grid">
+            <div className="skeleton-card" />
+            <div className="skeleton-card" />
+            <div className="skeleton-card" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pricing">
       <div className="pricing__header-bar">
-        <button
-          type="button"
-          className="pricing__back-btn"
-          onClick={() => navigate('/dashboard')}
-        >
-          <HiArrowLeft /> Back to Dashboard
-        </button>
+        {authState === 'authenticated' ? (
+          <button type="button" className="pricing__back-btn" onClick={() => navigate('/dashboard')}>
+            <HiArrowLeft /> Back to Dashboard
+          </button>
+        ) : (
+          <button type="button" className="pricing__back-btn" onClick={() => navigate('/')}>
+            <HiArrowLeft /> Explore Platform
+          </button>
+        )}
       </div>
 
-      <div className="pricing__hero">
-        <span className="pricing__badge">
-          <HiSparkles className="pricing__badge-icon" /> Premium Student Access
-        </span>
-        <h1 className="pricing__title">Choose Your Prep Plan</h1>
-        <p className="pricing__subtitle">
-          Upgrade anytime to unlock unlimited question-bank practice, intensive mock tests, quiz battles, and AI-powered learning tools.
-        </p>
-
-        {planIsTrial && !isFree && (
-          <div className="pricing__trial-banner">
-            <HiSparkles className="pricing__trial-banner-icon" />
-            <span>
-              You are currently enjoying your <strong>5-Day Free Trial</strong> of Pro+.
-              {planExpiresAt && (
-                <> Trial ends in <strong>{trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'}</strong> (Expires {new Date(planExpiresAt).toLocaleDateString([], { dateStyle: 'medium' })}).</>
-              )} Upgrade to a paid plan below to keep all premium features!
-            </span>
-          </div>
-        )}
-
-        {isFree && !loading && (
-          <div className="pricing__locked-banner">
-            <HiLockClosed className="pricing__locked-banner-icon" />
-            <span>
-              You are on the Free tier. Access to reading tools, reading AI, and daily usage limits for exams and AI tools are restricted. Upgrade to a paid plan below to unlock unlimited learning!
-            </span>
-          </div>
-        )}
-
-        {/* Plan Duration Selector Grid */}
-        <div className="pricing__duration-grid">
-          {STUDENT_DURATION_OPTIONS.map((opt) => {
-            const isSelected = selectedDuration === opt.id;
-            return (
-              <div
-                key={opt.id}
-                className={`pricing__duration-card ${isSelected ? 'is-selected' : ''} ${opt.highlight ? 'is-highlight' : ''}`}
-                onClick={() => setSelectedDuration(opt.id)}
-              >
-                {opt.badge && <span className="pricing__duration-badge">{opt.badge}</span>}
-                <div className="pricing__duration-header">
-                  <span className="pricing__duration-title">{opt.label}</span>
-                  {opt.saveText && <span className="pricing__duration-save">{opt.saveText}</span>}
-                </div>
-                <div className="pricing__duration-price-summary">
-                  Pro: ৳{opt.pro.effectiveMonthly}/mo · Pro+: ৳{opt.proPlus.effectiveMonthly}/mo
-                </div>
-              </div>
-            );
-          })}
+      {authState === 'authenticated' && subscription !== 'free' && (
+        <div className="pricing-manage-subscription-top">
+           <div className="sub-status">
+             <span>Current plan: <strong>{subscription === 'pro' ? 'Pro' : 'Pro+'}</strong></span>
+             <span className="dot">•</span>
+             <span>Billing: <strong>{selectedDuration === 'yearly' ? 'Yearly' : 'Monthly'}</strong></span>
+           </div>
+           <button className="manage-sub-btn">Manage Subscription</button>
         </div>
-      </div>
+      )}
+
+      <SubscriptionBanner 
+        authState={authState}
+        subscription={subscription}
+        trialDaysLeft={trialDaysLeft}
+        planExpiresAt={planExpiresAt}
+        planIsTrial={planIsTrial}
+      />
+
+      <PricingToggle 
+        selectedDuration={selectedDuration}
+        onSelectDuration={setSelectedDuration}
+      />
 
       <div className="pricing__grid">
-        {tiers.map((tier) => {
-          const isCurrent = isCurrentPlan(tier.id);
-          const isFreeTier = tier.id === 'free';
-          return (
-            <div
-              key={tier.id}
-              className={`pricing__card ${tier.highlight ? 'pricing__card--highlight' : ''} ${isCurrent ? 'pricing__card--current' : ''}`}
-            >
-              {tier.highlight && <div className="pricing__card-badge">Most popular</div>}
-              <h2 className="pricing__plan-name">{tier.name}</h2>
-              <p className="pricing__tagline">{tier.tagline}</p>
-              
-              <div className="pricing__price">
-                <span className="pricing__currency-symbol">৳</span>
-                <span className="pricing__amount">{tier.price}</span>
-                <span className="pricing__currency-unit">{!isFreeTier ? ' / mo' : ''}</span>
-              </div>
-              
-              {!isFreeTier && (
-                <div className="pricing__billing-text-row">
-                  <span className="pricing__billing-text-info">{tier.periodText}</span>
-                  {tier.saveText && <span className="pricing__billing-text-save">{tier.saveText}</span>}
-                </div>
-              )}
-
-              <ul className="pricing__features">
-                {tier.features.map((f, i) => (
-                  <li key={i} className={f.included ? 'is-in' : 'is-out'}>
-                    {f.included ? <HiCheck /> : <HiX />}
-                    <span>{f.text}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {isCurrent ? (
-                <button className="pricing__btn pricing__btn--current" disabled>
-                  Current Plan
-                </button>
-              ) : isFreeTier ? (
-                <button className="pricing__btn pricing__btn--disabled" disabled>
-                  Free Forever
-                </button>
-              ) : (
-                <button
-                  className="pricing__btn"
-                  onClick={() => handleUpgrade(tier.targetPlanId)}
-                  disabled={busy === tier.targetPlanId}
-                >
-                  {busy === tier.targetPlanId ? 'Redirecting…' : `Upgrade to ${tier.name}`}
-                </button>
-              )}
-            </div>
-          );
-        })}
+        {tiers.map((tier) => (
+          <PricingCard
+            key={tier.id}
+            tier={tier}
+            isCurrent={isCurrentPlan(tier.id)}
+            isFreeTier={tier.id === 'free'}
+            ctaProps={getCtaProps(tier.id, tier.targetPlanId)}
+            badgeText={getBadgeText(tier.id)}
+          />
+        ))}
       </div>
+
+      <ComparisonTable />
     </div>
   );
 }

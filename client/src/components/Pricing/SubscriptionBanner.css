@@ -1,0 +1,106 @@
+.pricing-hero {
+  text-align: center;
+  max-width: 900px;
+  margin-bottom: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pricing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: rgba(192, 133, 82, 0.12);
+  color: #C08552;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(192, 133, 82, 0.25);
+}
+
+.pricing-badge-icon {
+  font-size: 15px;
+}
+
+.pricing-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1F1614;
+  margin: 0 0 12px;
+  letter-spacing: -0.5px;
+}
+
+.pricing-subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #6B5B54;
+  max-width: 600px;
+  margin: 0 auto 24px;
+}
+
+.pricing-trial-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(192, 133, 82, 0.15) 0%, rgba(212, 163, 115, 0.15) 100%);
+  border: 1px solid rgba(192, 133, 82, 0.35);
+  color: #8C5A3C;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: left;
+  margin: 0 auto 24px;
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pricing-trial-banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  color: #C08552;
+  animation: bannerPulse 2s infinite ease-in-out;
+}
+
+.pricing-locked-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(248, 113, 113, 0.08) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #991B1B;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: left;
+  margin: 0 auto 24px;
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pricing-locked-banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  color: #EF4444;
+}
+
+@keyframes bannerPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+@media (max-width: 768px) {
+  .pricing-title {
+    font-size: 28px;
+  }
+}
