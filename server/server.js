@@ -79,6 +79,7 @@ const searchRoutes = require("./routes/searchRoutes");
 const moderationRoutes = require("./routes/moderationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const practiceRoutes = require("./routes/practiceRoutes");
+const studyRoutineRoutes = require("./routes/studyRoutineRoutes");
 const { initSocket } = require("./socket");
 const bootstrapAdmin = require("./scripts/bootstrapAdmin");
 
@@ -321,6 +322,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api", moderationRoutes);
 app.use("/api/practice", practiceRoutes);
+app.use("/api/study-routine", studyRoutineRoutes);
 
 function sendHealthResponse(_req, res) {
   const dbReady = connectDB.isDbReady();

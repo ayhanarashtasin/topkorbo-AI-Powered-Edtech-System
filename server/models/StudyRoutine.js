@@ -7,6 +7,7 @@ const segmentSchema = new mongoose.Schema({
   chapter: String,
   task: String,
   completed: { type: Boolean, default: false },
+  completedAt: Date,
   startAt: Date,
   endAt: Date,
   priority: String,

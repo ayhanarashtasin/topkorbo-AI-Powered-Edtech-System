@@ -87,6 +87,11 @@ export default function Sidebar({ activeTab, user }) {
       icon: <HiBookOpen size={20} />
     });
     menuItems.push({
+      id: 'study-routine',
+      label: language === 'en' ? 'Study Routine' : 'স্টাডি রুটিন',
+      icon: <HiCalendar size={20} />
+    });
+    menuItems.push({
       id: 'mock-test',
       label: t('db.menu.mock_test'),
       icon: <HiClipboardList size={20} />
@@ -193,6 +198,7 @@ export default function Sidebar({ activeTab, user }) {
     else if (item.id === 'upload-question') navigate('/upload-question');
     else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
     else if (item.id === 'make-contest-question') navigate('/make-contest-question');
+    else if (item.id === 'study-routine') navigate('/study-routine');
     else if (item.id === 'mock-test') navigate('/mock-test');
     else if (item.id === 'find-mentor') navigate('/student/find-mentor');
     else if (item.id === 'practice-history') navigate('/practice-history');
@@ -219,7 +225,7 @@ export default function Sidebar({ activeTab, user }) {
     },
     {
       label: language === 'en' ? 'Learning' : 'শিক্ষা',
-      ids: ['mock-test', 'find-mentor', 'practice-history', 'live-class', 'ielts-prep']
+      ids: ['study-routine', 'mock-test', 'find-mentor', 'practice-history', 'live-class', 'ielts-prep']
     },
     {
       label: language === 'en' ? 'Compete' : 'প্রতিযোগিতা',
