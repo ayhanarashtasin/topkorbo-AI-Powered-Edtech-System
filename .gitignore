@@ -26,6 +26,7 @@ Thumbs.db
 .vscode/
 .idea/
 .agents/
+AGENTS.md
 .puku/
 *.log
 .puku-cli
