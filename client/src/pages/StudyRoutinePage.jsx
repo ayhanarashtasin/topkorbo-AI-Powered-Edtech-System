@@ -706,9 +706,11 @@ export default function StudyRoutinePage() {
       <div className="dashboard-container study-routine-page">
         <Sidebar user={user} activeTab="study-routine" />
         <main className="study-routine-main">
-          <div className="sr-loading-state">
-            <div className="sr-spinner" />
-            <div className="sr-loading-text">Loading your study routine...</div>
+          <div className="sr-content-wrapper">
+            <div className="sr-loading-state">
+              <div className="sr-spinner" />
+              <div className="sr-loading-text">Loading your study routine...</div>
+            </div>
           </div>
         </main>
       </div>
@@ -723,23 +725,24 @@ export default function StudyRoutinePage() {
       <div className="dashboard-container study-routine-page">
         <Sidebar user={user} activeTab="study-routine" />
         <main className="study-routine-main">
-          <div className="sr-wizard-container">
-            <div className="sr-wizard-header">
-              <h2>{isEditingProfile ? 'Edit Study Profile' : 'Build Your Custom AI Study Routine'}</h2>
-              <p>
-                Complete the 6 sliding steps below. Our AI will craft an optimized, realistic daily routine for your syllabus.
-              </p>
-              {isEditingProfile && (
-                <button
-                  type="button"
-                  className="sr-btn sr-btn--secondary"
-                  style={{ marginTop: '12px' }}
-                  onClick={() => setIsEditingProfile(false)}
-                >
-                  ← Back to Dashboard
-                </button>
-              )}
-            </div>
+          <div className="sr-content-wrapper">
+            <div className="sr-wizard-container">
+              <div className="sr-wizard-header">
+                <h2>{isEditingProfile ? 'Edit Study Profile' : 'Build Your Custom AI Study Routine'}</h2>
+                <p>
+                  Complete the 6 sliding steps below. Our AI will craft an optimized, realistic daily routine for your syllabus.
+                </p>
+                {isEditingProfile && (
+                  <button
+                    type="button"
+                    className="sr-btn sr-btn--secondary"
+                    style={{ marginTop: '12px' }}
+                    onClick={() => setIsEditingProfile(false)}
+                  >
+                    ← Back to Dashboard
+                  </button>
+                )}
+              </div>
 
             {/* Step Navigation Rail */}
             <div className="sr-step-rail">
@@ -758,7 +761,7 @@ export default function StudyRoutinePage() {
                     <span className="sr-step-number">
                       {isCompleted ? '✓' : step.id}
                     </span>
-                    <span>{step.label}</span>
+                    <span className="sr-step-label">{step.label}</span>
                   </button>
                 );
               })}
@@ -1221,47 +1224,54 @@ export default function StudyRoutinePage() {
                           </div>
 
                           {formData.unavailableBlocks.map((block, idx) => (
-                            <div key={idx} className="sr-repeater-row" style={{ marginTop: '8px' }}>
-                              <input
-                                type="time"
-                                className="sr-input"
-                                value={block.startTime}
-                                onChange={(e) => {
-                                  const updated = [...formData.unavailableBlocks];
-                                  updated[idx].startTime = e.target.value;
-                                  setFormData({ ...formData, unavailableBlocks: updated });
-                                }}
-                              />
-                              <span>to</span>
-                              <input
-                                type="time"
-                                className="sr-input"
-                                value={block.endTime}
-                                onChange={(e) => {
-                                  const updated = [...formData.unavailableBlocks];
-                                  updated[idx].endTime = e.target.value;
-                                  setFormData({ ...formData, unavailableBlocks: updated });
-                                }}
-                              />
-                              <input
-                                type="text"
-                                className="sr-input"
-                                placeholder="Label (e.g. College)"
-                                value={block.label}
-                                onChange={(e) => {
-                                  const updated = [...formData.unavailableBlocks];
-                                  updated[idx].label = e.target.value;
-                                  setFormData({ ...formData, unavailableBlocks: updated });
-                                }}
-                              />
-                              <button
-                                type="button"
-                                className="sr-btn sr-btn--danger"
-                                style={{ padding: '8px 12px' }}
-                                onClick={() => handleRemoveUnavailableBlock(idx)}
-                              >
-                                <HiTrash />
-                              </button>
+                            <div key={idx} className="sr-repeater-row">
+                              <div className="sr-repeater-times">
+                                <input
+                                  type="time"
+                                  className="sr-input"
+                                  aria-label="Start Time"
+                                  value={block.startTime}
+                                  onChange={(e) => {
+                                    const updated = [...formData.unavailableBlocks];
+                                    updated[idx].startTime = e.target.value;
+                                    setFormData({ ...formData, unavailableBlocks: updated });
+                                  }}
+                                />
+                                <span className="sr-repeater-sep">to</span>
+                                <input
+                                  type="time"
+                                  className="sr-input"
+                                  aria-label="End Time"
+                                  value={block.endTime}
+                                  onChange={(e) => {
+                                    const updated = [...formData.unavailableBlocks];
+                                    updated[idx].endTime = e.target.value;
+                                    setFormData({ ...formData, unavailableBlocks: updated });
+                                  }}
+                                />
+                              </div>
+                              <div className="sr-repeater-info">
+                                <input
+                                  type="text"
+                                  className="sr-input"
+                                  placeholder="Label (e.g. College)"
+                                  aria-label="Time block label"
+                                  value={block.label}
+                                  onChange={(e) => {
+                                    const updated = [...formData.unavailableBlocks];
+                                    updated[idx].label = e.target.value;
+                                    setFormData({ ...formData, unavailableBlocks: updated });
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className="sr-btn sr-btn--danger sr-repeater-del-btn"
+                                  aria-label="Remove time block"
+                                  onClick={() => handleRemoveUnavailableBlock(idx)}
+                                >
+                                  <HiTrash />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1467,10 +1477,11 @@ export default function StudyRoutinePage() {
               </div>
             )}
           </div>
-        </main>
-      </div>
-    );
-  }
+        </div>
+      </main>
+    </div>
+  );
+}
 
   // --------------------------------------------------------------------------
   // RENDER: Routine Dashboard View
@@ -1480,386 +1491,376 @@ export default function StudyRoutinePage() {
       <Sidebar user={user} activeTab="study-routine" />
 
       <main className="study-routine-main">
-        {/* Header Hero Card */}
-        <section className="sr-hero">
-          <div className="sr-hero__header">
-            <div className="sr-hero__title-area">
-              <div className="sr-hero__kicker">
-                <HiAcademicCap size={18} />
-                <span>Smart Academic Planner</span>
+        <div className="sr-content-wrapper">
+          {/* Header Hero Card */}
+          <section className="sr-hero">
+            <div className="sr-hero__header">
+              <div className="sr-hero__title-area">
+                <div className="sr-hero__kicker">
+                  <HiAcademicCap size={18} />
+                  <span>Smart Academic Planner</span>
+                </div>
+                <h1 className="sr-hero__title">
+                  {routineDoc?.studentProfile?.examTarget || 'Study Routine & Dashboard'}
+                </h1>
+                <p className="sr-hero__subtitle">
+                  Level: {routineDoc?.studentProfile?.academicLevel || 'HSC'} · Stream: {routineDoc?.studentProfile?.stream || 'Science'}
+                </p>
               </div>
-              <h1 className="sr-hero__title">
-                {routineDoc?.studentProfile?.examTarget || 'Study Routine & Dashboard'}
-              </h1>
-              <p className="sr-hero__subtitle">
-                Level: {routineDoc?.studentProfile?.academicLevel || 'HSC'} · Stream: {routineDoc?.studentProfile?.stream || 'Science'}
-              </p>
-            </div>
 
-            <div className="sr-hero__meta-badges">
-              {daysToExam !== null && (
-                <span className="sr-badge sr-badge--accent">
-                  {daysToExam} days until exam
-                </span>
-              )}
-              {routineDoc?.studentProfile?.targetGpa && (
-                <span className="sr-badge">
-                  Target: {routineDoc.studentProfile.targetGpa}
-                </span>
-              )}
-              {statsData?.currentStreak > 0 && (
-                <span className="sr-badge sr-badge--urgent">
-                  {statsData.currentStreak} day streak
-                </span>
-              )}
-            </div>
-
-            <div className="sr-hero__actions">
-              <button
-                type="button"
-                className="sr-btn sr-btn--secondary"
-                onClick={() => {
-                  setCurrentStep(1);
-                  setIsEditingProfile(true);
-                }}
-                title="Edit profile and regenerate"
-              >
-                <HiPencil />
-                <span>Edit Profile</span>
-              </button>
-              <button
-                type="button"
-                className="sr-btn sr-btn--secondary"
-                onClick={handleGenerateRoutineSubmit}
-                title="Regenerate routine with fresh AI schedule"
-              >
-                <HiRefresh />
-                <span>Regenerate</span>
-              </button>
-              <button
-                type="button"
-                className="sr-btn sr-btn--danger"
-                onClick={handleDeleteRoutine}
-                title="Delete routine"
-              >
-                <HiTrash />
-              </button>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="sr-hero__progress-box">
-            <div className="sr-progress-info">
-              <span className="sr-progress-label">Total Curriculum Progress</span>
-              <span className="sr-progress-metric">
-                {overallProgress.completed} of {overallProgress.total} tasks completed ({overallProgress.percentage}%)
-              </span>
-            </div>
-            <div className="sr-progress-bar-container">
-              <div
-                className="sr-progress-bar-fill"
-                style={{ width: `${overallProgress.percentage}%` }}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* View Switcher Tabs */}
-        <div className="sr-view-tabs">
-          <button
-            type="button"
-            className={`sr-tab-btn ${activeView === 'day' ? 'sr-tab-btn--active' : ''}`}
-            onClick={() => setActiveView('day')}
-          >
-            <HiClock />
-            <span>Day View</span>
-          </button>
-          <button
-            type="button"
-            className={`sr-tab-btn ${activeView === 'week' ? 'sr-tab-btn--active' : ''}`}
-            onClick={() => setActiveView('week')}
-          >
-            <HiCalendar />
-            <span>Week View</span>
-          </button>
-          <button
-            type="button"
-            className={`sr-tab-btn ${activeView === 'month' ? 'sr-tab-btn--active' : ''}`}
-            onClick={() => setActiveView('month')}
-          >
-            <HiBookOpen />
-            <span>Month View</span>
-          </button>
-          <button
-            type="button"
-            className={`sr-tab-btn ${activeView === 'stats' ? 'sr-tab-btn--active' : ''}`}
-            onClick={() => setActiveView('stats')}
-          >
-            <HiChartBar />
-            <span>Analytics & Stats</span>
-          </button>
-        </div>
-
-        {/* Active Focus Session Banner (if running) */}
-        {activeSession && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="sr-section-card"
-            style={{
-              background: '#F6FFED',
-              borderColor: '#B7EB8F',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '14px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div
-                style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  background: '#52c41a',
-                  boxShadow: '0 0 10px #52c41a'
-                }}
-              />
-              <div>
-                <strong style={{ color: '#251817', fontSize: '1.05rem' }}>
-                  Live Focus Session: {activeSession.subject}
-                </strong>
-                {activeSession.chapter && (
-                  <span style={{ marginLeft: '8px', color: '#5c4d4c', fontSize: '0.9rem' }}>
-                    ({activeSession.chapter})
+              <div className="sr-hero__meta-badges">
+                {daysToExam !== null && (
+                  <span className="sr-badge sr-badge--accent">
+                    {daysToExam} days until exam
+                  </span>
+                )}
+                {routineDoc?.studentProfile?.targetGpa && (
+                  <span className="sr-badge">
+                    Target: {routineDoc.studentProfile.targetGpa}
+                  </span>
+                )}
+                {statsData?.currentStreak > 0 && (
+                  <span className="sr-badge sr-badge--urgent">
+                    {statsData.currentStreak} day streak
                   </span>
                 )}
               </div>
-            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div className="sr-timer-badge">
-                {formatTimerDisplay(timerSeconds)}
-              </div>
-              <button
-                type="button"
-                className="sr-btn sr-btn--primary"
-                style={{ background: '#52c41a' }}
-                onClick={() => handleStopFocusTimer(true)}
-              >
-                <HiStop />
-                <span>Complete Session</span>
-              </button>
-              <button
-                type="button"
-                className="sr-btn sr-btn--secondary"
-                onClick={() => handleStopFocusTimer(false)}
-              >
-                <span>Pause & Save</span>
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ------------------------------------------------------------------
-            VIEW 1: Day View
-           ------------------------------------------------------------------ */}
-        {activeView === 'day' && (
-          <div className="sr-day-view">
-            {/* Day Nav Bar */}
-            <div className="sr-day-nav">
-              <button
-                type="button"
-                className="sr-day-nav__btn"
-                disabled={selectedDayIndex <= 0}
-                onClick={() => setSelectedDayIndex((prev) => Math.max(0, prev - 1))}
-              >
-                <HiChevronLeft />
-                <span>Previous Day</span>
-              </button>
-
-              <div className="sr-day-nav__current">
-                <span className="sr-day-nav__title">
-                  Day {selectedDay?.day || selectedDayIndex + 1}
-                  {selectedDay?.isRest ? ' (Rest Day)' : ''}
-                </span>
-                <span className="sr-day-nav__date">
-                  {selectedDay?.dayDate
-                    ? format(new Date(selectedDay.dayDate), 'EEEE, MMMM d, yyyy')
-                    : 'Scheduled Date'}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="sr-hero__actions">
                 <button
                   type="button"
-                  className="sr-day-nav__btn"
+                  className="sr-btn sr-btn--secondary"
                   onClick={() => {
-                    const todayIdx = currentDaysList.findIndex((d) =>
-                      isSameDay(new Date(d.dayDate), new Date())
-                    );
-                    setSelectedDayIndex(todayIdx >= 0 ? todayIdx : 0);
+                    setCurrentStep(1);
+                    setIsEditingProfile(true);
                   }}
+                  title="Edit profile and regenerate"
                 >
-                  <span>Today</span>
+                  <HiPencil />
+                  <span>Edit Profile</span>
                 </button>
                 <button
                   type="button"
-                  className="sr-day-nav__btn"
-                  disabled={selectedDayIndex >= currentDaysList.length - 1}
-                  onClick={() =>
-                    setSelectedDayIndex((prev) =>
-                      Math.min(currentDaysList.length - 1, prev + 1)
-                    )
-                  }
+                  className="sr-btn sr-btn--secondary"
+                  onClick={handleGenerateRoutineSubmit}
+                  title="Regenerate routine with fresh AI schedule"
                 >
-                  <span>Next Day</span>
-                  <HiChevronRight />
+                  <HiRefresh />
+                  <span>Regenerate</span>
+                </button>
+                <button
+                  type="button"
+                  className="sr-btn sr-btn--danger"
+                  onClick={handleDeleteRoutine}
+                  title="Delete routine"
+                  aria-label="Delete routine"
+                >
+                  <HiTrash />
                 </button>
               </div>
             </div>
 
-            {/* Rest Day Message */}
-            {selectedDay?.isRest ? (
-            <div className="sr-rest-day-card">
-              <div className="sr-rest-icon"><HiCalendar size={48} /></div>
-              <h3 className="sr-rest-title">Rest & Rejuvenation Day</h3>
-                <p className="sr-rest-desc">
-                  You’ve earned this break! Rest is a vital part of effective memory consolidation.
-                  Spend time on light reading, physical exercise, or your favorite hobby.
-                </p>
+            {/* Progress Bar */}
+            <div className="sr-hero__progress-box">
+              <div className="sr-progress-info">
+                <span className="sr-progress-label">Total Curriculum Progress</span>
+                <span className="sr-progress-metric">
+                  {overallProgress.completed} of {overallProgress.total} tasks completed ({overallProgress.percentage}%)
+                </span>
               </div>
-            ) : (
-              /* Timeline Schedule */
-              <div className="sr-timeline">
-                {(!selectedDay?.segments || selectedDay.segments.length === 0) && (
-                  <div className="sr-section-card" style={{ textAlign: 'center', padding: '40px' }}>
-                    <p style={{ color: '#8c7b79' }}>No segments scheduled for this day.</p>
-                  </div>
-                )}
+              <div className="sr-progress-bar-container">
+                <div
+                  className="sr-progress-bar-fill"
+                  style={{ width: `${overallProgress.percentage}%` }}
+                />
+              </div>
+            </div>
+          </section>
 
-                {selectedDay?.segments?.map((seg) => {
-                  const colors = getSubjectColor(seg.subject);
-                  const isThisSessionActive =
-                    activeSession &&
-                    (activeSession.segmentId === seg._id || activeSession.segmentId === seg.id);
+          {/* View Switcher Tabs */}
+          <div className="sr-view-tabs">
+            <button
+              type="button"
+              className={`sr-tab-btn ${activeView === 'day' ? 'sr-tab-btn--active' : ''}`}
+              onClick={() => setActiveView('day')}
+            >
+              <HiClock />
+              <span>Day View</span>
+            </button>
+            <button
+              type="button"
+              className={`sr-tab-btn ${activeView === 'week' ? 'sr-tab-btn--active' : ''}`}
+              onClick={() => setActiveView('week')}
+            >
+              <HiCalendar />
+              <span>Week View</span>
+            </button>
+            <button
+              type="button"
+              className={`sr-tab-btn ${activeView === 'month' ? 'sr-tab-btn--active' : ''}`}
+              onClick={() => setActiveView('month')}
+            >
+              <HiBookOpen />
+              <span>Month View</span>
+            </button>
+            <button
+              type="button"
+              className={`sr-tab-btn ${activeView === 'stats' ? 'sr-tab-btn--active' : ''}`}
+              onClick={() => setActiveView('stats')}
+            >
+              <HiChartBar />
+              <span>Analytics & Stats</span>
+            </button>
+          </div>
 
-                  return (
-                    <motion.div
-                      key={seg._id || seg.id}
-                      layout
-                      className={`sr-segment-card ${
-                        seg.completed ? 'sr-segment-card--completed' : ''
-                      } ${isThisSessionActive ? 'sr-segment-card--active-timer' : ''}`}
-                    >
-                      <div className="sr-segment-left">
-                        {/* Custom Completion Checkbox */}
-                        <div
-                          className={`sr-checkbox-custom ${
-                            seg.completed ? 'sr-checkbox-custom--checked' : ''
-                          }`}
-                          onClick={() =>
-                            handleToggleSegment(selectedDay.day, seg._id || seg.id)
-                          }
-                          title={seg.completed ? 'Mark incomplete' : 'Mark complete'}
-                        >
-                          {seg.completed && <HiCheck size={16} />}
-                        </div>
+          {/* Active Focus Session Banner (if running) */}
+          {activeSession && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="sr-active-session-banner"
+            >
+              <div className="sr-active-session-info">
+                <div className="sr-pulse-dot" />
+                <div className="sr-active-session-text">
+                  <strong className="sr-active-session-subject">
+                    Live Focus Session: {activeSession.subject}
+                  </strong>
+                  {activeSession.chapter && (
+                    <span className="sr-active-session-chapter">
+                      ({activeSession.chapter})
+                    </span>
+                  )}
+                </div>
+              </div>
 
-                        <div className="sr-segment-content">
-                          <div className="sr-segment-meta">
-                            <span className="sr-time-badge">
-                              <HiClock />
-                              {seg.time} ({seg.estimatedMinutes || 60}m)
-                            </span>
+              <div className="sr-active-session-controls">
+                <div className="sr-timer-badge">
+                  {formatTimerDisplay(timerSeconds)}
+                </div>
+                <button
+                  type="button"
+                  className="sr-btn sr-btn--primary sr-btn--session-complete"
+                  onClick={() => handleStopFocusTimer(true)}
+                >
+                  <HiStop />
+                  <span>Complete Session</span>
+                </button>
+                <button
+                  type="button"
+                  className="sr-btn sr-btn--secondary"
+                  onClick={() => handleStopFocusTimer(false)}
+                >
+                  <span>Pause & Save</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
 
-                            <span
-                              className="sr-subject-badge"
-                              style={{
-                                background: colors.bg,
-                                color: colors.text,
-                                border: `1px solid ${colors.border}`
-                              }}
-                            >
-                              {seg.subject}
-                            </span>
+          {/* ------------------------------------------------------------------
+              VIEW 1: Day View
+             ------------------------------------------------------------------ */}
+          {activeView === 'day' && (
+            <div className="sr-day-view">
+              {/* Day Nav Bar */}
+              <div className="sr-day-nav">
+                <button
+                  type="button"
+                  className="sr-day-nav__btn sr-day-nav__btn--prev"
+                  disabled={selectedDayIndex <= 0}
+                  onClick={() => setSelectedDayIndex((prev) => Math.max(0, prev - 1))}
+                  aria-label="Previous day"
+                >
+                  <HiChevronLeft />
+                  <span className="sr-day-nav__btn-text">Previous Day</span>
+                </button>
 
-                            {seg.paper && (
-                              <span className="sr-badge" style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
-                                {seg.paper}
-                              </span>
-                            )}
+                <div className="sr-day-nav__current">
+                  <span className="sr-day-nav__title">
+                    Day {selectedDay?.day || selectedDayIndex + 1}
+                    {selectedDay?.isRest ? ' (Rest Day)' : ''}
+                  </span>
+                  <span className="sr-day-nav__date">
+                    {selectedDay?.dayDate
+                      ? format(new Date(selectedDay.dayDate), 'EEEE, MMMM d, yyyy')
+                      : 'Scheduled Date'}
+                  </span>
+                </div>
 
-                            {seg.priority && (
-                              <span className={`sr-priority-badge sr-priority-badge--${seg.priority}`}>
-                                {seg.priority}
-                              </span>
-                            )}
-                          </div>
+                <div className="sr-day-nav__actions">
+                  <button
+                    type="button"
+                    className="sr-day-nav__btn sr-day-nav__btn--today"
+                    onClick={() => {
+                      const todayIdx = currentDaysList.findIndex((d) =>
+                        isSameDay(new Date(d.dayDate), new Date())
+                      );
+                      setSelectedDayIndex(todayIdx >= 0 ? todayIdx : 0);
+                    }}
+                  >
+                    <span>Today</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="sr-day-nav__btn sr-day-nav__btn--next"
+                    disabled={selectedDayIndex >= currentDaysList.length - 1}
+                    onClick={() =>
+                      setSelectedDayIndex((prev) =>
+                        Math.min(currentDaysList.length - 1, prev + 1)
+                      )
+                    }
+                    aria-label="Next day"
+                  >
+                    <span className="sr-day-nav__btn-text">Next Day</span>
+                    <HiChevronRight />
+                  </button>
+                </div>
+              </div>
 
-                          <div className="sr-segment-title">
-                            {seg.chapter ? `${seg.chapter}` : seg.subject}
-                          </div>
+              {/* Rest Day Message */}
+              {selectedDay?.isRest ? (
+                <div className="sr-rest-day-card">
+                  <div className="sr-rest-icon"><HiCalendar size={48} /></div>
+                  <h3 className="sr-rest-title">Rest & Rejuvenation Day</h3>
+                  <p className="sr-rest-desc">
+                    You’ve earned this break! Rest is a vital part of effective memory consolidation.
+                    Spend time on light reading, physical exercise, or your favorite hobby.
+                  </p>
+                </div>
+              ) : (
+                /* Timeline Schedule */
+                <div className="sr-timeline">
+                  {(!selectedDay?.segments || selectedDay.segments.length === 0) && (
+                    <div className="sr-section-card" style={{ textAlign: 'center', padding: '40px' }}>
+                      <p style={{ color: '#8c7b79' }}>No segments scheduled for this day.</p>
+                    </div>
+                  )}
 
-                          <div className="sr-segment-task">{seg.task}</div>
-                        </div>
-                      </div>
+                  {selectedDay?.segments?.map((seg) => {
+                    const colors = getSubjectColor(seg.subject);
+                    const isThisSessionActive =
+                      activeSession &&
+                      (activeSession.segmentId === seg._id || activeSession.segmentId === seg.id);
 
-                      <div className="sr-segment-right">
-                        {isThisSessionActive ? (
+                    return (
+                      <motion.div
+                        key={seg._id || seg.id}
+                        layout
+                        className={`sr-segment-card ${
+                          seg.completed ? 'sr-segment-card--completed' : ''
+                        } ${isThisSessionActive ? 'sr-segment-card--active-timer' : ''}`}
+                      >
+                        <div className="sr-segment-left">
+                          {/* Custom Completion Checkbox Button */}
                           <button
                             type="button"
-                            className="sr-btn sr-btn--primary"
-                            style={{ background: '#52c41a' }}
-                            onClick={() => handleStopFocusTimer(true)}
+                            className={`sr-checkbox-custom ${
+                              seg.completed ? 'sr-checkbox-custom--checked' : ''
+                            }`}
+                            onClick={() =>
+                              handleToggleSegment(selectedDay.day, seg._id || seg.id)
+                            }
+                            title={seg.completed ? 'Mark incomplete' : 'Mark complete'}
+                            aria-label={seg.completed ? 'Mark incomplete' : 'Mark complete'}
                           >
-                            <HiStop />
-                            <span>Stop ({formatTimerDisplay(timerSeconds)})</span>
+                            {seg.completed && <HiCheck size={16} />}
                           </button>
-                        ) : (
-                          !seg.completed && (
+
+                          <div className="sr-segment-content">
+                            <div className="sr-segment-meta">
+                              <span className="sr-time-badge">
+                                <HiClock />
+                                <span>{seg.time} ({seg.estimatedMinutes || 60}m)</span>
+                              </span>
+
+                              <span
+                                className="sr-subject-badge"
+                                style={{
+                                  background: colors.bg,
+                                  color: colors.text,
+                                  border: `1px solid ${colors.border}`
+                                }}
+                              >
+                                {seg.subject}
+                              </span>
+
+                              {seg.paper && (
+                                <span className="sr-badge sr-badge--paper">
+                                  {seg.paper}
+                                </span>
+                              )}
+
+                              {seg.priority && (
+                                <span className={`sr-priority-badge sr-priority-badge--${seg.priority}`}>
+                                  {seg.priority}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="sr-segment-title">
+                              {seg.chapter ? `${seg.chapter}` : seg.subject}
+                            </div>
+
+                            <div className="sr-segment-task">{seg.task}</div>
+                          </div>
+                        </div>
+
+                        <div className="sr-segment-right">
+                          {isThisSessionActive ? (
                             <button
                               type="button"
-                              className="sr-btn sr-btn--secondary"
-                              onClick={() => handleStartFocusTimer(selectedDay.day, seg)}
-                              title="Start stopwatch focus timer for this segment"
+                              className="sr-btn sr-btn--primary sr-btn--active-stop"
+                              onClick={() => handleStopFocusTimer(true)}
                             >
-                              <HiPlay />
-                              <span>Start Focus</span>
+                              <HiStop />
+                              <span>Stop ({formatTimerDisplay(timerSeconds)})</span>
                             </button>
-                          )
-                        )}
+                          ) : (
+                            !seg.completed && (
+                              <button
+                                type="button"
+                                className="sr-btn sr-btn--secondary sr-btn--start-focus"
+                                onClick={() => handleStartFocusTimer(selectedDay.day, seg)}
+                                title="Start stopwatch focus timer for this segment"
+                              >
+                                <HiPlay />
+                                <span>Start Focus</span>
+                              </button>
+                            )
+                          )}
 
-                        <button
-                          type="button"
-                          className="sr-btn sr-btn--secondary"
-                          style={{ padding: '8px' }}
-                          onClick={() =>
-                            setEditSegmentModal({
-                              dayIndex: selectedDay.day,
-                              segment: { ...seg }
-                            })
-                          }
-                          title="Edit segment"
-                        >
-                          <HiPencil size={16} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                          <button
+                            type="button"
+                            className="sr-btn sr-btn--secondary sr-btn--icon-only"
+                            onClick={() =>
+                              setEditSegmentModal({
+                                dayIndex: selectedDay.day,
+                                segment: { ...seg }
+                              })
+                            }
+                            title="Edit segment"
+                            aria-label="Edit segment"
+                          >
+                            <HiPencil size={16} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------------
+              VIEW 2: Week View
+             ------------------------------------------------------------------ */}
+          {activeView === 'week' && (
+            <div className="sr-week-wrapper">
+              <div className="sr-week-mobile-hint">
+                <span>← Swipe horizontally to explore 7-day schedule · Tap day to inspect →</span>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------------
-            VIEW 2: Week View
-           ------------------------------------------------------------------ */}
-        {activeView === 'week' && (
-          <div className="sr-week-grid">
+              <div className="sr-week-grid">
             {currentDaysList.map((day, idx) => {
               const dayDate = day.dayDate ? new Date(day.dayDate) : null;
               const isToday = dayDate ? isSameDay(dayDate, new Date()) : false;
@@ -1936,7 +1937,8 @@ export default function StudyRoutinePage() {
               );
             })}
           </div>
-        )}
+        </div>
+      )}
 
         {/* ------------------------------------------------------------------
             VIEW 3: Month View
@@ -2341,6 +2343,7 @@ export default function StudyRoutinePage() {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );

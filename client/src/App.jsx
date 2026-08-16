@@ -17,66 +17,67 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import BackendStatusBanner from './components/system/BackendStatusBanner';
 // The landing page is the LCP element for first-time visitors, so it stays in
-// the entry bundle. Every other route is code-split with React.lazy so a given
+// the entry bundle. Every other route is code-split with lazyWithRetry so a given
 // page only downloads its own JS/CSS (and heavy deps like react-pdf, katex,
-// framer-motion, socket.io) when it is actually visited.
+// framer-motion, socket.io) when it is actually visited, with automatic retry.
 import LandingPage from './pages/LandingPage';
+import lazyWithRetry from './utils/lazyWithRetry';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Contests = lazy(() => import('./pages/Contests'));
-const Leaderboard = lazy(() => import('./pages/Leaderboard'));
-const BecomeTeacher = lazy(() => import('./pages/BecomeTeacher'));
-const Setting = lazy(() => import('./pages/Setting'));
-const UploadQuestion = lazy(() => import('./pages/UploadQuestion'));
-const QuestionBank = lazy(() => import('./pages/QuestionBank'));
-const BoardQuestionsView = lazy(() => import('./pages/BoardQuestionsView'));
-const VarsityWrittenView = lazy(() => import('./pages/VarsityWrittenView'));
-const MockTest = lazy(() => import('./pages/MockTest'));
-const MockTestExam = lazy(() => import('./pages/MockTestExam'));
-const Battle = lazy(() => import('./pages/Battle'));
-const MakeContestQuestion = lazy(() => import('./pages/MakeContestQuestion'));
-const MakeContestQuestionNext = lazy(() => import('./pages/MakeContestQuestionNext'));
-const MakeContestQuestionNextTwo = lazy(() => import('./pages/MakeContestQuestionNextTwo'));
-const MakeContestQuestionChooseQBank = lazy(() => import('./pages/MakeContestQuestionChooseQBank'));
-const MakeContestQuestionConfirm = lazy(() => import('./pages/MakeContestQuestionConfirm'));
-const Pricing = lazy(() => import('./pages/Pricing'));
-const MentorPricing = lazy(() => import('./pages/MentorPricing'));
-const PaymentStatus = lazy(() => import('./pages/PaymentStatus'));
-const ReadingBooks = lazy(() => import('./pages/ReadingBooks'));
-const UploadBook = lazy(() => import('./pages/UploadBook'));
-const ReadingBookView = lazy(() => import('./pages/ReadingBookView'));
-const PracticeHistory = lazy(() => import('./pages/PracticeHistory'));
-const StudyRoutinePage = lazy(() => import('./pages/StudyRoutinePage'));
-const FindMentor = lazy(() => import('./pages/FindMentor'));
-const MentorLiveClass = lazy(() => import('./pages/MentorLiveClass'));
-const StudentLiveClass = lazy(() => import('./pages/StudentLiveClass'));
-const IeltsPrep = lazy(() => import('./pages/IeltsPrep'));
-const IeltsTeacher = lazy(() => import('./pages/IeltsTeacher'));
-const IeltsListeningUpload = lazy(() => import('./pages/IeltsListeningUpload'));
-const IeltsReadingUpload = lazy(() => import('./pages/IeltsReadingUpload'));
-const IeltsWritingUpload = lazy(() => import('./pages/IeltsWritingUpload'));
-const IeltsSpeakingUpload = lazy(() => import('./pages/IeltsSpeakingUpload'));
-const IeltsListening = lazy(() => import('./pages/IeltsListening'));
-const IeltsReading = lazy(() => import('./pages/IeltsReading'));
-const Support = lazy(() => import('./pages/Support'));
-const SupportTicketDetails = lazy(() => import('./pages/SupportTicketDetails'));
-const IeltsWriting = lazy(() => import('./pages/IeltsWriting'));
-const IeltsSpeaking = lazy(() => import('./pages/IeltsSpeaking'));
-const IeltsListeningPractice = lazy(() => import('./pages/IeltsListeningPractice'));
-const IeltsReadingPractice = lazy(() => import('./pages/IeltsReadingPractice'));
-const IeltsWritingPractice = lazy(() => import('./pages/IeltsWritingPractice'));
-const IeltsWritingDemo = lazy(() => import('./pages/IeltsWritingDemo'));
-const IeltsSpeakingPractice = lazy(() => import('./pages/IeltsSpeakingPractice'));
-const IeltsSpeakingDemo = lazy(() => import('./pages/IeltsSpeakingDemo'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const Contests = lazyWithRetry(() => import('./pages/Contests'));
+const Leaderboard = lazyWithRetry(() => import('./pages/Leaderboard'));
+const BecomeTeacher = lazyWithRetry(() => import('./pages/BecomeTeacher'));
+const Setting = lazyWithRetry(() => import('./pages/Setting'));
+const UploadQuestion = lazyWithRetry(() => import('./pages/UploadQuestion'));
+const QuestionBank = lazyWithRetry(() => import('./pages/QuestionBank'));
+const BoardQuestionsView = lazyWithRetry(() => import('./pages/BoardQuestionsView'));
+const VarsityWrittenView = lazyWithRetry(() => import('./pages/VarsityWrittenView'));
+const MockTest = lazyWithRetry(() => import('./pages/MockTest'));
+const MockTestExam = lazyWithRetry(() => import('./pages/MockTestExam'));
+const Battle = lazyWithRetry(() => import('./pages/Battle'));
+const MakeContestQuestion = lazyWithRetry(() => import('./pages/MakeContestQuestion'));
+const MakeContestQuestionNext = lazyWithRetry(() => import('./pages/MakeContestQuestionNext'));
+const MakeContestQuestionNextTwo = lazyWithRetry(() => import('./pages/MakeContestQuestionNextTwo'));
+const MakeContestQuestionChooseQBank = lazyWithRetry(() => import('./pages/MakeContestQuestionChooseQBank'));
+const MakeContestQuestionConfirm = lazyWithRetry(() => import('./pages/MakeContestQuestionConfirm'));
+const Pricing = lazyWithRetry(() => import('./pages/Pricing'));
+const MentorPricing = lazyWithRetry(() => import('./pages/MentorPricing'));
+const PaymentStatus = lazyWithRetry(() => import('./pages/PaymentStatus'));
+const ReadingBooks = lazyWithRetry(() => import('./pages/ReadingBooks'));
+const UploadBook = lazyWithRetry(() => import('./pages/UploadBook'));
+const ReadingBookView = lazyWithRetry(() => import('./pages/ReadingBookView'));
+const PracticeHistory = lazyWithRetry(() => import('./pages/PracticeHistory'));
+const StudyRoutinePage = lazyWithRetry(() => import('./pages/StudyRoutinePage'));
+const FindMentor = lazyWithRetry(() => import('./pages/FindMentor'));
+const MentorLiveClass = lazyWithRetry(() => import('./pages/MentorLiveClass'));
+const StudentLiveClass = lazyWithRetry(() => import('./pages/StudentLiveClass'));
+const IeltsPrep = lazyWithRetry(() => import('./pages/IeltsPrep'));
+const IeltsTeacher = lazyWithRetry(() => import('./pages/IeltsTeacher'));
+const IeltsListeningUpload = lazyWithRetry(() => import('./pages/IeltsListeningUpload'));
+const IeltsReadingUpload = lazyWithRetry(() => import('./pages/IeltsReadingUpload'));
+const IeltsWritingUpload = lazyWithRetry(() => import('./pages/IeltsWritingUpload'));
+const IeltsSpeakingUpload = lazyWithRetry(() => import('./pages/IeltsSpeakingUpload'));
+const IeltsListening = lazyWithRetry(() => import('./pages/IeltsListening'));
+const IeltsReading = lazyWithRetry(() => import('./pages/IeltsReading'));
+const Support = lazyWithRetry(() => import('./pages/Support'));
+const SupportTicketDetails = lazyWithRetry(() => import('./pages/SupportTicketDetails'));
+const IeltsWriting = lazyWithRetry(() => import('./pages/IeltsWriting'));
+const IeltsSpeaking = lazyWithRetry(() => import('./pages/IeltsSpeaking'));
+const IeltsListeningPractice = lazyWithRetry(() => import('./pages/IeltsListeningPractice'));
+const IeltsReadingPractice = lazyWithRetry(() => import('./pages/IeltsReadingPractice'));
+const IeltsWritingPractice = lazyWithRetry(() => import('./pages/IeltsWritingPractice'));
+const IeltsWritingDemo = lazyWithRetry(() => import('./pages/IeltsWritingDemo'));
+const IeltsSpeakingPractice = lazyWithRetry(() => import('./pages/IeltsSpeakingPractice'));
+const IeltsSpeakingDemo = lazyWithRetry(() => import('./pages/IeltsSpeakingDemo'));
 
 // === Forum / Community ===
-const ForumShell = lazy(() => import('./components/forum/ForumShell'));
-const Forum = lazy(() => import('./pages/Forum'));
-const ForumPostDetail = lazy(() => import('./pages/ForumPostDetail'));
-const ForumCompose = lazy(() => import('./pages/ForumCompose'));
-const ForumSearch = lazy(() => import('./pages/ForumSearch'));
-const ForumUserProfile = lazy(() => import('./pages/ForumUserProfile'));
-const ForumBookmarks = lazy(() => import('./pages/ForumBookmarks'));
+const ForumShell = lazyWithRetry(() => import('./components/forum/ForumShell'));
+const Forum = lazyWithRetry(() => import('./pages/Forum'));
+const ForumPostDetail = lazyWithRetry(() => import('./pages/ForumPostDetail'));
+const ForumCompose = lazyWithRetry(() => import('./pages/ForumCompose'));
+const ForumSearch = lazyWithRetry(() => import('./pages/ForumSearch'));
+const ForumUserProfile = lazyWithRetry(() => import('./pages/ForumUserProfile'));
+const ForumBookmarks = lazyWithRetry(() => import('./pages/ForumBookmarks'));
 import { renderAdminRoutes } from './admin/routes/AdminRoutes';
 
 import './styles/index.css';
@@ -255,37 +256,89 @@ class ForumErrorBoundary extends Component {
       window.__lastForumError = { message: String(error?.message || error), stack: error?.stack, info };
     }
   }
+  handleReload = () => {
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
+  };
+  handleHome = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
   render() {
     if (this.state.error) {
       return (
         <div
           style={{
-            maxWidth: 720,
-            margin: '40px auto',
-            padding: 24,
-            borderRadius: 12,
-            background: '#fff4f4',
-            border: '1px solid #f5b5b5',
-            color: '#7a1f1f',
-            fontFamily: 'system-ui, -apple-system, sans-serif'
+            maxWidth: 600,
+            margin: '60px auto',
+            padding: '32px 24px',
+            borderRadius: 16,
+            background: '#fffdfb',
+            border: '1px solid #e6ccb2',
+            boxShadow: '0 10px 30px rgba(140, 90, 60, 0.1)',
+            textAlign: 'center',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
           }}
         >
-          <h2 style={{ margin: 0, marginBottom: 8 }}>Something went wrong rendering this page</h2>
-          <p style={{ marginTop: 0 }}>Open DevTools → Console for the full stack. Details below:</p>
-          <pre
-            data-testid="forum-error"
+          <div
             style={{
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              background: '#fff',
-              padding: 12,
-              borderRadius: 8,
-              border: '1px solid #f5b5b5',
-              fontSize: 13
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: '#fff1f0',
+              color: '#cf1322',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 24,
+              margin: '0 auto 16px'
             }}
           >
-            Please refresh the page. If the problem continues, contact support.
-          </pre>
+            ⚠️
+          </div>
+          <h2 style={{ margin: '0 0 8px', color: '#251817', fontFamily: 'Outfit, sans-serif', fontSize: '1.4rem' }}>
+            Something went wrong rendering this page
+          </h2>
+          <p style={{ margin: '0 0 20px', color: '#5c4d4c', fontSize: '0.95rem', lineHeight: 1.5 }}>
+            A temporary component or network issue occurred while loading this view.
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={this.handleReload}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #C08552, #8C5A3C)',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                boxShadow: '0 4px 12px rgba(140, 90, 60, 0.25)'
+              }}
+            >
+              Reload Page
+            </button>
+            <button
+              type="button"
+              onClick={this.handleHome}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 10,
+                background: '#f7ebe1',
+                color: '#4b2e2b',
+                border: '1px solid #e6ccb2',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              Back to Home
+            </button>
+          </div>
         </div>
       );
     }

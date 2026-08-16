@@ -5,7 +5,17 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['react-pdf'],
+    include: [
+      'react-pdf',
+      'socket.io-client',
+      'date-fns',
+      'dompurify',
+      'react-intersection-observer',
+      'react-markdown',
+      'rehype-katex',
+      'remark-gfm',
+      'katex'
+    ],
     // pdfjs-dist is a peer dependency; let Vite pre-bundle it consistently
     // so the worker URL resolution works in dev.
     exclude: ['pdfjs-dist']

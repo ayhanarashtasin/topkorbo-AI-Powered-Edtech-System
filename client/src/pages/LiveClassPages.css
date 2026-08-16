@@ -1,87 +1,541 @@
+/* ==========================================================================
+   TopKorbo — Live Class Pages (Mentor & Student Glassmorphic Design System)
+   Theme: Warm Cream (#FFF8F0), Peach (#F7EBE1), Ice-blue/Sand (#E6CCB2),
+   Copper/Sky (#C08552), Deep Bronze (#8C5A3C), Dark Espresso (#251817)
+   ========================================================================== */
+
 .live-page {
-  padding: 32px;
+  flex: 1;
+  width: 100%;
+  padding: 32px 36px 56px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  flex: 1;
+  gap: 24px;
   overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
+  color: var(--text-primary, #251817);
   background:
     /* Vertical margin line (notebook left margin) */
-    linear-gradient(90deg, transparent 79px, rgba(192, 133, 82, 0.25) 79px, rgba(192, 133, 82, 0.25) 80px, transparent 80px),
+    linear-gradient(90deg, transparent 79px, rgba(192, 133, 82, 0.22) 79px, rgba(192, 133, 82, 0.22) 80px, transparent 80px),
     /* Horizontal ruled lines */
-    linear-gradient(rgba(192, 133, 82, 0.12) 1px, transparent 1px),
+    linear-gradient(rgba(192, 133, 82, 0.09) 1px, transparent 1px),
     #FAF4EE;
   background-size: 100% 100%, 100% 32px, 100% 100%;
 }
 
+.live-page > * {
+  width: min(1200px, 100%);
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Hero & Intro Banner (Frosted Glass with Amber Glow)
+   -------------------------------------------------------------------------- */
 .live-page__intro {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(192, 133, 82, 0.14);
-  border-radius: 28px;
-  padding: 24px 26px;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(192, 133, 82, 0.18);
+  border-radius: 24px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 30px rgba(37, 24, 23, 0.05);
+  position: relative;
+  overflow: clip;
 }
 
-.live-page__intro h1 {
+.live-page__intro::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192, 133, 82, 0.15), transparent 70%);
+  pointer-events: none;
+}
+
+.live-page__intro-content {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.live-page__intro-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #c08552, #8c5a3c);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px rgba(140, 90, 60, 0.25);
+  flex-shrink: 0;
+}
+
+.live-page__intro-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.live-page__intro-text h1 {
   margin: 0;
-  font-family: var(--font-heading);
-}
-
-.live-page__intro p {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.live-page__usage {
-  border-radius: 999px;
-  background: rgba(192, 133, 82, 0.1);
-  padding: 10px 14px;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: clamp(1.5rem, 2.5vw, 1.85rem);
   font-weight: 700;
-  color: #8c5a3c;
+  color: var(--text-primary, #251817);
 }
 
-.live-page__launcher,
-.live-page__directory,
-.live-page__schedule {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(192, 133, 82, 0.14);
-  border-radius: 28px;
-  padding: 24px;
+.live-page__intro-text p {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary, #5c4d4c);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.live-page__usage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 248, 240, 0.9);
+  border: 1px solid rgba(192, 133, 82, 0.2);
+  border-radius: 18px;
+  padding: 12px 18px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(140, 90, 60, 0.08);
+}
+
+.live-page__usage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--live-copper-dark, #8c5a3c);
+}
+
+.live-page__usage-count {
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #251817;
+}
+
+.live-page__usage-bar {
+  width: 140px;
+  height: 6px;
+  background: rgba(192, 133, 82, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.live-page__usage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c08552, #8c5a3c);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Broadcast / "Live Now" Spotlight Card
+   -------------------------------------------------------------------------- */
+.live-page__active-banner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 250, 245, 0.9));
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  border-radius: 24px;
+  padding: 22px 26px;
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.live-page__active-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  background: #10b981;
+}
+
+.live-page__active-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.live-page__active-pulse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #047857;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.live-page__active-details h3 {
+  margin: 0;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary, #251817);
+}
+
+.live-page__active-details p {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #5c4d4c);
+}
+
+.live-page__active-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Filter Tabs & Search Bar (Student & Mentor Hubs)
+   -------------------------------------------------------------------------- */
+.live-page__filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(192, 133, 82, 0.18);
+  border-radius: 24px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 20px rgba(37, 24, 23, 0.04);
+}
+
+.live-page__tab-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(192, 133, 82, 0.08);
+  border-radius: 999px;
+  padding: 4px;
+  flex-wrap: wrap;
+}
+
+.live-page__tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-secondary, #5c4d4c);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.live-page__tab-pill:hover {
+  color: var(--text-primary, #251817);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.live-page__tab-pill--active {
+  background: linear-gradient(135deg, #c08552, #8c5a3c) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(140, 90, 60, 0.25);
+}
+
+.live-page__tab-counter {
+  background: rgba(37, 24, 23, 0.08);
+  color: inherit;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.live-page__tab-pill--active .live-page__tab-counter {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.live-page__search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(192, 133, 82, 0.22);
+  border-radius: 999px;
+  padding: 8px 16px;
+  min-width: 260px;
+  max-width: 320px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.live-page__search-box:focus-within {
+  border-color: var(--live-copper, #c08552);
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.15);
+}
+
+.live-page__search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.88rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Sections & Glass Cards
+   -------------------------------------------------------------------------- */
+.live-page__section {
+  background: rgba(255, 253, 251, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  padding: 24px 28px;
+  box-shadow: 0 4px 20px rgba(140, 90, 60, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background-image:
+    linear-gradient(rgba(192, 133, 82, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(192, 133, 82, 0.03) 1px, transparent 1px);
+  background-size: 100% 32px, 32px 100%;
 }
 
 .live-page__section-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .live-page__section-head h2 {
   margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary, #251817);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .live-page__section-head p {
-  margin: 6px 0 0;
-  color: var(--text-secondary);
-  line-height: 1.55;
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary, #5c4d4c);
 }
 
-.live-page__section-head span {
-  flex-shrink: 0;
+.live-page__section-badge {
   border-radius: 999px;
   background: rgba(192, 133, 82, 0.1);
+  color: var(--live-copper-dark, #8c5a3c);
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Class Cards Grid & Directory
+   -------------------------------------------------------------------------- */
+.live-page__cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.live-page__card {
+  background: rgba(255, 253, 251, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 20px rgba(140, 90, 60, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  position: relative;
+  background-image:
+    linear-gradient(rgba(192, 133, 82, 0.04) 1px, transparent 1px);
+  background-size: 100% 28px;
+}
+
+.live-page__card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(192, 133, 82, 0.32);
+  box-shadow: 0 10px 30px rgba(140, 90, 60, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: rgba(255, 253, 251, 0.78);
+}
+
+.live-page__card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.live-page__card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.live-page__card-tag--live {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.live-page__card-tag--upcoming {
+  background: rgba(192, 133, 82, 0.12);
   color: #8c5a3c;
-  padding: 8px 12px;
+  border: 1px solid rgba(192, 133, 82, 0.25);
+}
+
+.live-page__card-tag--completed {
+  background: rgba(148, 163, 184, 0.15);
+  color: #475569;
+}
+
+.live-page__card-tag--cancelled {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+
+.live-page__card-title {
+  margin: 8px 0 0;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary, #251817);
+  line-height: 1.35;
+}
+
+.live-page__card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #5c4d4c);
+}
+
+.live-page__card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-page__card-desc {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted, #8c7b79);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.live-page__card-mentor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(192, 133, 82, 0.15);
+}
+
+.live-page__card-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #c08552, #8c5a3c);
+  color: #fff;
   font-weight: 800;
-  font-size: 0.86rem;
+  font-size: 0.85rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.live-page__card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.live-page__card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Scheduler Studio (Mentor Live Class Planner)
+   -------------------------------------------------------------------------- */
+.live-page__template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.live-page__template-chip {
+  border: 1px solid rgba(192, 133, 82, 0.2);
+  background: rgba(255, 248, 240, 0.8);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--live-copper-dark, #8c5a3c);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.live-page__template-chip:hover {
+  background: #fff;
+  border-color: var(--live-copper, #c08552);
+  transform: translateY(-1px);
 }
 
 .live-page__schedule-grid {
@@ -93,189 +547,165 @@
 .live-page__field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 16px;
 }
 
-.live-page__field span {
+.live-page__field label {
+  font-size: 0.86rem;
   font-weight: 700;
+  color: var(--text-primary, #251817);
 }
 
 .live-page__field input,
 .live-page__field select,
 .live-page__field textarea {
-  border: 1px solid rgba(192, 133, 82, 0.18);
-  border-radius: 16px;
-  padding: 14px 16px;
+  border: 1px solid rgba(192, 133, 82, 0.22);
+  border-radius: 14px;
+  padding: 12px 14px;
   font: inherit;
+  font-size: 0.92rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.live-page__field textarea {
-  resize: vertical;
+.live-page__field input:focus,
+.live-page__field select:focus,
+.live-page__field textarea:focus {
+  border-color: var(--live-copper, #c08552);
+  box-shadow: 0 0 0 3px rgba(192, 133, 82, 0.15);
 }
 
-.live-page__invite-list {
+/* Duration selector pills */
+.live-page__duration-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 0 0 16px;
+  gap: 8px;
 }
 
-.live-page__invite-item {
+.live-page__duration-pill {
+  border: 1px solid rgba(192, 133, 82, 0.22);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #5c4d4c);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.live-page__duration-pill:hover {
+  border-color: var(--live-copper, #c08552);
+}
+
+.live-page__duration-pill--active {
+  background: var(--live-copper, #c08552);
+  color: #fff;
+  border-color: var(--live-copper, #c08552);
+}
+
+/* Student selection chips */
+.live-page__student-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(192, 133, 82, 0.18);
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+
+.live-page__student-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(192, 133, 82, 0.16);
+  padding: 6px 12px;
   border-radius: 999px;
-  background: #fffaf5;
-  padding: 9px 12px;
-  font-weight: 700;
+  border: 1px solid rgba(192, 133, 82, 0.2);
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
 }
 
-.live-page__hint {
-  margin: 14px 0 0;
-  color: var(--text-secondary);
+.live-page__student-chip--selected {
+  background: rgba(192, 133, 82, 0.15);
+  border-color: var(--live-copper, #c08552);
+  color: var(--live-copper-dark, #8c5a3c);
 }
 
-.live-page__hint strong {
-  overflow-wrap: anywhere;
-}
-
-.live-page__error,
-.live-page__empty {
-  border-radius: 24px;
-  padding: 20px 22px;
-}
-
-.live-page__error {
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  background: rgba(254, 242, 242, 0.9);
-  color: #b91c1c;
-}
-
-.live-page__empty {
-  border: 1px dashed rgba(192, 133, 82, 0.22);
-  background: rgba(255, 251, 247, 0.9);
-  color: var(--text-secondary);
-}
-
-.live-page__directory {
+/* --------------------------------------------------------------------------
+   Accepted Students Roster (Mentor Page)
+   -------------------------------------------------------------------------- */
+.live-page__student-roster-grid {
   display: grid;
-  gap: 16px;
-}
-
-.live-page__card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  border: 1px solid rgba(192, 133, 82, 0.14);
-  background: #fffaf5;
-  border-radius: 20px;
-  padding: 18px;
-}
-
-.live-page__card h3 {
-  margin: 0;
-}
-
-.live-page__card p,
-.live-page__card small {
-  display: block;
-  margin-top: 6px;
-  color: var(--text-secondary);
-}
-
-.live-page__card-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.live-page__students {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(192, 133, 82, 0.14);
-  border-radius: 28px;
-  padding: 24px;
-}
-
-.live-page__students-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.live-page__students-head h2 {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
-}
-
-.live-page__students-head p {
-  margin: 6px 0 0;
-  color: var(--text-secondary);
-  line-height: 1.55;
-}
-
-.live-page__students-head span {
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: rgba(192, 133, 82, 0.1);
-  color: #8c5a3c;
-  padding: 8px 12px;
-  font-weight: 800;
-  font-size: 0.86rem;
-}
-
-.live-page__student-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px;
 }
 
-.live-page__student-card {
+.live-page__student-roster-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(192, 133, 82, 0.14);
-  border-radius: 18px;
-  background: #fffaf5;
+  padding: 12px 14px;
+  background: rgba(255, 250, 245, 0.85);
+  border: 1px solid rgba(192, 133, 82, 0.16);
+  border-radius: 16px;
+  transition: all 0.2s ease;
 }
 
-.live-page__student-avatar {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
+.live-page__student-roster-card:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  border-color: rgba(192, 133, 82, 0.35);
+}
+
+.live-page__student-roster-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #c08552, #8c5a3c);
+  color: #fff;
+  font-weight: 800;
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #c08552, #8c5a3c);
-  color: #fff;
-  font-weight: 900;
+  flex-shrink: 0;
 }
 
-.live-page__student-avatar img {
+.live-page__student-roster-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.live-page__student-card h3 {
+.live-page__student-roster-info h4 {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.live-page__student-card p {
-  margin: 4px 0 0;
+.live-page__student-roster-info p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  font-size: 0.86rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* --------------------------------------------------------------------------
+   Modals & Popups
+   -------------------------------------------------------------------------- */
 .live-page__modal-backdrop {
   position: fixed;
   inset: 0;
@@ -283,94 +713,165 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(31, 23, 19, 0.54);
+  background: rgba(26, 18, 16, 0.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .live-page__modal {
   width: min(460px, 100%);
-  border: 1px solid rgba(192, 133, 82, 0.18);
+  background: rgba(255, 252, 248, 0.98);
+  border: 1px solid rgba(192, 133, 82, 0.22);
   border-radius: 24px;
-  background: #fffaf5;
-  box-shadow: 0 24px 80px rgba(31, 23, 19, 0.28);
-  padding: 24px;
+  padding: 24px 28px;
+  box-shadow: 0 24px 80px rgba(26, 18, 16, 0.25);
+  animation: modalScaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.live-page__modal h2 {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.6rem;
-}
-
-.live-page__modal p {
-  margin: 12px 0 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.live-page__modal-meta {
-  margin-top: 16px;
-  border-radius: 16px;
-  background: rgba(192, 133, 82, 0.1);
-  color: #8c5a3c;
-  padding: 12px 14px;
-  font-weight: 700;
+@keyframes modalScaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .live-page__modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 22px;
 }
 
 .live-page__danger-btn {
-  background: #b91c1c;
-  border-color: #b91c1c;
+  background: #dc2626 !important;
+  color: #fff !important;
+  border-color: #dc2626 !important;
 }
 
 .live-page__danger-btn:hover:not(:disabled) {
-  background: #991b1b;
-  border-color: #991b1b;
+  background: #b91c1c !important;
 }
 
+/* --------------------------------------------------------------------------
+   Empty & Error States
+   -------------------------------------------------------------------------- */
+.live-page__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 36px 20px;
+  background: rgba(255, 251, 247, 0.7);
+  border: 1.5px dashed rgba(192, 133, 82, 0.24);
+  border-radius: 20px;
+  color: var(--text-secondary, #5c4d4c);
+}
+
+.live-page__empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(192, 133, 82, 0.1);
+  color: var(--live-copper, #c08552);
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+}
+
+.live-page__error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(254, 242, 242, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 14px 18px;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Breakpoints for All Devices
+   -------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
   .live-page {
-    padding: 20px;
+    padding: 20px 20px 40px;
   }
 
-  .live-page__intro,
-  .live-page__card,
-  .live-page__students-head,
-  .live-page__section-head {
+  .live-page__intro {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .live-page__usage-card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .live-page__usage-bar {
+    width: 100%;
+  }
+
+  .live-page__active-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .live-page__active-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .live-page__schedule-grid {
     grid-template-columns: 1fr;
   }
+}
 
-  .live-page__card-actions {
+@media (max-width: 768px) {
+  .live-page__cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .live-page__filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .live-page__tab-pills {
     width: 100%;
-    flex-wrap: wrap;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 
   .live-page__modal-actions {
     flex-direction: column-reverse;
   }
+
+  .live-page__modal-actions button {
+    width: 100%;
+  }
 }
 
-@media (max-width: 430px) {
+@media (max-width: 480px) {
   .live-page {
-    padding: 16px;
+    padding: 14px 14px 32px;
   }
 
-  .live-page__launcher,
-  .live-page__directory,
-  .live-page__schedule,
-  .live-page__students,
-  .live-page__intro {
-    padding: 18px;
-    border-radius: 20px;
+  .live-page__intro,
+  .live-page__section {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+
+  .live-page__intro-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
