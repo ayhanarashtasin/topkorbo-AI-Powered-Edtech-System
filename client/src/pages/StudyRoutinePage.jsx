@@ -10,8 +10,8 @@ import {
   HiClock,
   HiCheckCircle,
   HiPlay,
+  HiPause,
   HiStop,
-  HiSparkles,
   HiPencil,
   HiTrash,
   HiChevronLeft,
@@ -45,6 +45,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useLanguage } from '../hooks/useLanguage';
 import studyRoutineApi from '../services/studyRoutineApi';
+import { calculateDaysUntilExam, formatRemainingTimeline, todayKey } from '../utils/dateHelpers';
 import './StudyRoutinePage.css';
 
 // --------------------------------------------------------------------------
@@ -156,26 +157,27 @@ const WIZARD_STEPS = [
 ];
 
 /**
- * Slide animation variants for the card deck
+ * Fast, hardware-accelerated slide animation variants for smooth 60fps transitions
  */
 const slideVariants = {
   enter: (direction) => ({
-    x: direction > 0 ? 50 : -50,
+    x: direction > 0 ? 24 : -24,
     opacity: 0
   }),
   center: {
     x: 0,
     opacity: 1,
     transition: {
-      x: { type: 'spring', stiffness: 300, damping: 30 },
-      opacity: { duration: 0.25 }
+      x: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+      opacity: { duration: 0.16, ease: 'easeOut' }
     }
   },
   exit: (direction) => ({
-    x: direction < 0 ? 50 : -50,
+    x: direction < 0 ? 24 : -24,
     opacity: 0,
     transition: {
-      duration: 0.2
+      x: { duration: 0.12, ease: [0.4, 0, 1, 1] },
+      opacity: { duration: 0.1, ease: 'easeIn' }
     }
   })
 };
@@ -229,6 +231,7 @@ export default function StudyRoutinePage() {
   // Focus Timer & Active Session
   const [activeSession, setActiveSession] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
   const timerIntervalRef = useRef(null);
 
   // Sliding Card Wizard States
@@ -352,24 +355,52 @@ export default function StudyRoutinePage() {
     loadStats();
   }, [loadRoutineData, loadStats, navigate]);
 
-  // Focus Timer Tick Effect
+  // Focus Timer Tick Effect (Local ticking, pauses without saving)
   useEffect(() => {
-    if (activeSession) {
+    if (activeSession && !isTimerPaused) {
       timerIntervalRef.current = setInterval(() => {
         setTimerSeconds((prev) => prev + 1);
       }, 1000);
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      setTimerSeconds(0);
     }
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [activeSession]);
+  }, [activeSession, isTimerPaused]);
 
   // --------------------------------------------------------------------------
-  // Sliding Wizard Handlers
+  // Sliding Wizard Handlers & Exam Date Countdown (from Today)
   // --------------------------------------------------------------------------
+  const calculatedExamDays = useMemo(() => {
+    return calculateDaysUntilExam(formData.examDate);
+  }, [formData.examDate]);
+
+  const handleExamDateChange = (dateVal) => {
+    const days = calculateDaysUntilExam(dateVal);
+    let updatedDuration = formData.planDuration;
+    if (days !== null && days > 0) {
+      updatedDuration = `${days} days`;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      examDate: dateVal,
+      planDuration: updatedDuration
+    }));
+
+    if (formErrors.examDate) {
+      setFormErrors((prev) => ({ ...prev, examDate: null }));
+    }
+  };
+
+  const handleStartDateChange = (startDateVal) => {
+    setFormData((prev) => ({
+      ...prev,
+      preferredStartDate: startDateVal
+    }));
+  };
+
   const validateStep = (step) => {
     const errors = {};
     if (step === 1) {
@@ -377,7 +408,14 @@ export default function StudyRoutinePage() {
       if (!formData.stream) errors.stream = 'Stream is required';
     } else if (step === 2) {
       if (!formData.examTarget) errors.examTarget = 'Exam target is required';
-      if (!formData.examDate) errors.examDate = 'Approximate exam date is required';
+      if (!formData.examDate) {
+        errors.examDate = 'Approximate exam date is required';
+      } else {
+        const days = calculateDaysUntilExam(formData.examDate);
+        if (days !== null && days <= 0) {
+          errors.examDate = 'Exam date must be in the future';
+        }
+      }
       if (!formData.targetGpa) errors.targetGpa = 'Target GPA or score is required';
     } else if (step === 3) {
       if (!formData.subjects || formData.subjects.length === 0) {
@@ -551,6 +589,7 @@ export default function StudyRoutinePage() {
         chapter: segment.chapter
       });
       setActiveSession(session);
+      setIsTimerPaused(false);
       setTimerSeconds(0);
       toast.success(`Focus session started for ${segment.subject}!`);
     } catch (err) {
@@ -565,6 +604,8 @@ export default function StudyRoutinePage() {
         markCompleted
       });
       setActiveSession(null);
+      setIsTimerPaused(false);
+      setTimerSeconds(0);
       if (res && res.routine) {
         setRoutineDoc(res.routine);
       }
@@ -900,9 +941,18 @@ export default function StudyRoutinePage() {
                               type="date"
                               className="sr-input"
                               value={formData.examDate}
-                              onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
+                              min={todayKey()}
+                              onChange={(e) => handleExamDateChange(e.target.value)}
                               required
                             />
+                            {calculatedExamDays !== null && calculatedExamDays > 0 && (
+                              <div className="sr-date-countdown-badge">
+                                <HiClock className="sr-countdown-icon" size={15} />
+                                <span>
+                                  <strong>{calculatedExamDays} {calculatedExamDays === 1 ? 'day' : 'days'}</strong> remaining (~{formatRemainingTimeline(calculatedExamDays)})
+                                </span>
+                              </div>
+                            )}
                             {formErrors.examDate && (
                               <span style={{ color: '#CF1322', fontSize: '0.8rem' }}>{formErrors.examDate}</span>
                             )}
@@ -923,18 +973,71 @@ export default function StudyRoutinePage() {
                           </div>
 
                           <div className="sr-form-group">
-                            <label className="sr-label">Plan Duration</label>
-                            <select
-                              className="sr-select"
+                            <div className="sr-label-with-action">
+                              <label className="sr-label">Plan Duration</label>
+                              {calculatedExamDays !== null && calculatedExamDays > 0 && (
+                                <button
+                                  type="button"
+                                  className="sr-link-btn"
+                                  onClick={() => setFormData((prev) => ({ ...prev, planDuration: `${calculatedExamDays} days` }))}
+                                  title="Sync plan duration with exact counted days until exam"
+                                >
+                                  <span>Sync ({calculatedExamDays}d)</span>
+                                </button>
+                              )}
+                            </div>
+                            
+                            <input
+                              type="text"
+                              className="sr-input"
+                              placeholder="e.g. 30 days, 45 days"
                               value={formData.planDuration}
                               onChange={(e) => setFormData({ ...formData, planDuration: e.target.value })}
-                            >
-                              <option value="15 days">15 days</option>
-                              <option value="30 days">30 days</option>
-                              <option value="45 days">45 days</option>
-                              <option value="60 days">60 days</option>
-                              <option value="90 days">90 days</option>
-                            </select>
+                              required
+                            />
+
+                            {/* Quick Preset Duration Chips */}
+                            <div className="sr-chips-grid" style={{ marginTop: '6px' }}>
+                              {calculatedExamDays !== null && calculatedExamDays > 0 && (
+                                <button
+                                  type="button"
+                                  className={`sr-chip ${formData.planDuration === `${calculatedExamDays} days` ? 'sr-chip--selected' : ''}`}
+                                  onClick={() => setFormData((prev) => ({ ...prev, planDuration: `${calculatedExamDays} days` }))}
+                                >
+                                  ⚡ {calculatedExamDays} days (Auto)
+                                </button>
+                              )}
+                              {['15 days', '30 days', '45 days', '60 days', '90 days'].map((dur) => (
+                                <button
+                                  type="button"
+                                  key={dur}
+                                  className={`sr-chip ${formData.planDuration === dur ? 'sr-chip--selected' : ''}`}
+                                  onClick={() => setFormData((prev) => ({ ...prev, planDuration: dur }))}
+                                >
+                                  {dur}
+                                </button>
+                              ))}
+                            </div>
+
+                            {calculatedExamDays !== null && calculatedExamDays > 0 ? (
+                              <div className="sr-plan-duration-hint">
+                                {formData.planDuration === `${calculatedExamDays} days` ? (
+                                  <span className="sr-text-success">
+                                    ✓ Automatically filled from exam date ({calculatedExamDays} days remaining)
+                                  </span>
+                                ) : (
+                                  <span className="sr-text-muted">
+                                    Exam in {calculatedExamDays} days ({formatRemainingTimeline(calculatedExamDays)}) · Custom duration
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="sr-plan-duration-hint">
+                                <span className="sr-text-muted">
+                                  Select an approximate exam date above to automatically compute and fill duration
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1013,18 +1116,11 @@ export default function StudyRoutinePage() {
                                   </span>
                                 ))}
                                 {(() => {
+                                  const currentSet = new Set(formData.subjectChapters[sub] || []);
                                   const selectedPapers = formData.subjectPapers[sub] || [];
-                                  const availableChapters = [];
-                                  selectedPapers.forEach((paper) => {
-                                    const chapters = MOCK_CHAPTERS[sub]?.[paper] || [];
-                                    chapters.forEach((ch) => {
-                                      const currentChapters = formData.subjectChapters[sub] || [];
-                                      if (!currentChapters.includes(ch)) {
-                                        availableChapters.push(ch);
-                                      }
-                                    });
-                                  });
-                                  const uniqueChapters = [...new Set(availableChapters)];
+                                  const uniqueChapters = selectedPapers
+                                    .flatMap((p) => MOCK_CHAPTERS[sub]?.[p] || [])
+                                    .filter((ch) => !currentSet.has(ch));
                                   if (uniqueChapters.length === 0) return null;
                                   return (
                                     <select
@@ -1211,7 +1307,7 @@ export default function StudyRoutinePage() {
 
                         {/* Unavailable Blocks */}
                         <div className="sr-form-group" style={{ marginTop: '16px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="sr-time-blocks-header">
                             <label className="sr-label">Unavailable Time Blocks (College, Coaching, Tuition)</label>
                             <button
                               type="button"
@@ -1418,7 +1514,7 @@ export default function StudyRoutinePage() {
                             type="date"
                             className="sr-input"
                             value={formData.preferredStartDate}
-                            onChange={(e) => setFormData({ ...formData, preferredStartDate: e.target.value })}
+                            onChange={(e) => handleStartDateChange(e.target.value)}
                           />
                         </div>
 
@@ -1469,7 +1565,6 @@ export default function StudyRoutinePage() {
                       disabled={formSubmitting}
                       onClick={handleGenerateRoutineSubmit}
                     >
-                      <HiSparkles size={20} />
                       <span>Generate My Routine</span>
                     </button>
                   )}
@@ -1635,23 +1730,32 @@ export default function StudyRoutinePage() {
               </div>
 
               <div className="sr-active-session-controls">
-                <div className="sr-timer-badge">
+                <div className={`sr-timer-badge ${isTimerPaused ? 'sr-timer-badge--paused' : ''}`}>
                   {formatTimerDisplay(timerSeconds)}
+                  {isTimerPaused && <span className="sr-timer-paused-label">Paused</span>}
                 </div>
+                <button
+                  type="button"
+                  className={`sr-btn ${isTimerPaused ? 'sr-btn--primary' : 'sr-btn--secondary'}`}
+                  onClick={() => {
+                    setIsTimerPaused((prev) => !prev);
+                    toast(isTimerPaused ? 'Focus timer resumed' : 'Focus timer paused', {
+                      icon: isTimerPaused ? '▶' : '⏸'
+                    });
+                  }}
+                  title={isTimerPaused ? 'Resume focus timer' : 'Pause focus timer (does not save to database)'}
+                >
+                  {isTimerPaused ? <HiPlay size={16} /> : <HiPause size={16} />}
+                  <span>{isTimerPaused ? 'Resume' : 'Pause'}</span>
+                </button>
                 <button
                   type="button"
                   className="sr-btn sr-btn--primary sr-btn--session-complete"
                   onClick={() => handleStopFocusTimer(true)}
+                  title="Stop timer, complete task, and save progress to database"
                 >
-                  <HiStop />
-                  <span>Complete Session</span>
-                </button>
-                <button
-                  type="button"
-                  className="sr-btn sr-btn--secondary"
-                  onClick={() => handleStopFocusTimer(false)}
-                >
-                  <span>Pause & Save</span>
+                  <HiStop size={16} />
+                  <span>Complete & Save</span>
                 </button>
               </div>
             </motion.div>
@@ -1807,14 +1911,33 @@ export default function StudyRoutinePage() {
 
                         <div className="sr-segment-right">
                           {isThisSessionActive ? (
-                            <button
-                              type="button"
-                              className="sr-btn sr-btn--primary sr-btn--active-stop"
-                              onClick={() => handleStopFocusTimer(true)}
-                            >
-                              <HiStop />
-                              <span>Stop ({formatTimerDisplay(timerSeconds)})</span>
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                className={`sr-btn ${isTimerPaused ? 'sr-btn--primary' : 'sr-btn--secondary'}`}
+                                style={{ minHeight: '34px', padding: '6px 10px', fontSize: '0.8rem' }}
+                                onClick={() => {
+                                  setIsTimerPaused((prev) => !prev);
+                                  toast(isTimerPaused ? 'Focus timer resumed' : 'Focus timer paused', {
+                                    icon: isTimerPaused ? '▶' : '⏸'
+                                  });
+                                }}
+                                title={isTimerPaused ? 'Resume timer' : 'Pause timer (does not save to database)'}
+                              >
+                                {isTimerPaused ? <HiPlay size={14} /> : <HiPause size={14} />}
+                                <span>{isTimerPaused ? 'Resume' : 'Pause'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="sr-btn sr-btn--primary sr-btn--active-stop"
+                                style={{ minHeight: '34px', padding: '6px 12px', fontSize: '0.8rem' }}
+                                onClick={() => handleStopFocusTimer(true)}
+                                title="Stop and save session to database"
+                              >
+                                <HiStop size={14} />
+                                <span>Stop ({formatTimerDisplay(timerSeconds)})</span>
+                              </button>
+                            </div>
                           ) : (
                             !seg.completed && (
                               <button
@@ -2063,7 +2186,6 @@ export default function StudyRoutinePage() {
                   className="sr-btn sr-btn--primary"
                   onClick={handleGenerateNextWeek}
                 >
-                  <HiSparkles />
                   <span>Generate Next Week</span>
                 </button>
               </div>
@@ -2105,7 +2227,6 @@ export default function StudyRoutinePage() {
           onClick={() => setIsAiDrawerOpen(true)}
           title="Open AI Study Assistant"
         >
-          <HiSparkles size={20} />
           <span>AI Study Coach</span>
         </button>
 
@@ -2127,7 +2248,7 @@ export default function StudyRoutinePage() {
                 className="sr-drawer"
               >
                 <div className="sr-drawer__header">
-                  <h3 className="sr-drawer__title">
+                  <h3 className="sr-drawer__title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>AI Routine Coach</span>
                   </h3>
                   <button

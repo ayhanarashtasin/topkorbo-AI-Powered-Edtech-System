@@ -4,7 +4,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import {
   HiArrowLeft, HiPlusCircle, HiBookOpen, HiPencilAlt, HiPhotograph, HiX, HiSearch, HiCheckCircle,
   HiUpload, HiPlus, HiTrash, HiDocumentText, HiClipboardList, HiLightBulb, HiTag,
-  HiOutlineSparkles, HiOutlineDocumentText, HiOutlinePhotograph, HiOutlineClipboardCopy,
+  HiOutlineDocumentText, HiOutlinePhotograph, HiOutlineClipboardCopy,
   HiOutlineRefresh, HiOutlineCheck, HiOutlineExclamationCircle, HiOutlineUpload,
   HiOutlineEye, HiOutlinePencilAlt, HiOutlineTrash, HiOutlineLightBulb
 } from 'react-icons/hi';
@@ -1491,9 +1491,7 @@ export default function MakeContestQuestionNextTwo() {
                   style={{ cursor: 'pointer', userSelect: 'none' }}
                   onClick={() => setShowAiHelper(prev => !prev)}
                 >
-                  <span className="uq-section__title-icon" style={{ background: 'linear-gradient(135deg, rgba(192,133,82,0.15), rgba(140,90,60,0.15))' }}>
-                    <HiOutlineSparkles size={18} />
-                  </span>
+                  
                   {language === 'en' ? 'AI Question Helper' : 'এআই প্রশ্ন সহকারী'}
                   <span style={{ marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                     {showAiHelper ? (language === 'en' ? '▲ Collapse' : '▲ সংকুচিত করুন') : (language === 'en' ? '▼ Expand' : '▼ বিস্তারিত')}
@@ -1585,7 +1583,7 @@ export default function MakeContestQuestionNextTwo() {
                             {language === 'en' ? 'Clear' : 'মুছুন'}
                           </button>
                           <button type="button" className="aih-btn aih-btn--primary" onClick={handleAiExtract} disabled={!aiCanSubmit}>
-                            {aiIsLoading ? (<><span className="aih-spinner" />{language === 'en' ? 'Extracting…' : 'এক্সট্র্যাক্ট হচ্ছে…'}</>) : (<><HiOutlineSparkles />{language === 'en' ? 'Extract Question' : 'প্রশ্ন এক্সট্র্যাক্ট করুন'}</>)}
+                            {aiIsLoading ? (<><span className="aih-spinner" />{language === 'en' ? 'Extracting…' : 'এক্সট্র্যাক্ট হচ্ছে…'}</>) : (<>{language === 'en' ? 'Extract Question' : 'প্রশ্ন এক্সট্র্যাক্ট করুন'}</>)}
                           </button>
                         </div>
                       </div>
@@ -1595,7 +1593,6 @@ export default function MakeContestQuestionNextTwo() {
                     <section className="aih-card aih-card--output">
                       <div className="aih-card__header">
                         <div className="aih-card__title">
-                          <HiOutlineSparkles />
                           <h3>{language === 'en' ? 'Extracted LaTeX' : 'এক্সট্র্যাক্ট করা LaTeX'}</h3>
                         </div>
                         <p className="aih-card__desc">
@@ -1607,7 +1604,6 @@ export default function MakeContestQuestionNextTwo() {
                       <div className="aih-card__body">
                         {!aiExtracted && !aiIsLoading && (
                           <div className="aih-empty">
-                            <HiOutlineSparkles size={32} />
                             <p>{language === 'en' ? 'Submit a question to see its LaTeX version here. Each part (stem, options, solution) can be copied individually, or copy the whole thing at once.' : 'এখানে LaTeX সংস্করণ দেখতে একটি প্রশ্ন জমা দিন।'}</p>
                           </div>
                         )}
@@ -1654,7 +1650,6 @@ export default function MakeContestQuestionNextTwo() {
                                 {aiCopiedField === 'all' ? (<><HiOutlineCheck /> {language === 'en' ? 'Copied' : 'কপি হয়েছে'}</>) : (<><HiOutlineClipboardCopy /> {language === 'en' ? 'Copy full LaTeX' : 'সম্পূর্ণ LaTeX কপি করুন'}</>)}
                               </button>
                               <button type="button" className="aih-btn aih-btn--primary" onClick={handleApplyToForm} style={{ marginLeft: 8 }}>
-                                <HiOutlineSparkles />
                                 {language === 'en' ? 'Apply to Form' : 'ফর্মে প্রয়োগ করুন'}
                               </button>
                             </div>
@@ -1939,7 +1934,6 @@ export default function MakeContestQuestionNextTwo() {
                       style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}
                       onClick={() => setShowAiSolHelper(prev => !prev)}
                     >
-                      <HiOutlineSparkles size={16} style={{ color: 'var(--sky-blue)' }} />
                       <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
                         {language === 'en' ? 'AI Solution Extractor' : 'এআই সমাধান এক্সট্র্যাক্টর'}
                       </span>
@@ -2000,7 +1994,7 @@ export default function MakeContestQuestionNextTwo() {
                             <HiOutlineRefresh /> {language === 'en' ? 'Clear' : 'মুছুন'}
                           </button>
                           <button type="button" className="aih-btn aih-btn--primary" onClick={handleAiSolExtract} disabled={!aiSolCanSubmit}>
-                            {aiSolIsLoading ? (<><span className="aih-spinner" /> {language === 'en' ? 'Extracting…' : 'এক্সট্র্যাক্ট হচ্ছে…'}</>) : (<><HiOutlineSparkles /> {language === 'en' ? 'Extract Solution' : 'সমাধান এক্সট্র্যাক্ট করুন'}</>)}
+                            {aiSolIsLoading ? (<><span className="aih-spinner" /> {language === 'en' ? 'Extracting…' : 'এক্সট্র্যাক্ট হচ্ছে…'}</>) : (<>{language === 'en' ? 'Extract Solution' : 'সমাধান এক্সট্র্যাক্ট করুন'}</>)}
                           </button>
                         </div>
                         {aiSolIsLoading && (
@@ -2019,7 +2013,7 @@ export default function MakeContestQuestionNextTwo() {
                             />
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                               <button type="button" className="aih-btn aih-btn--primary" onClick={handleApplySolToForm}>
-                                <HiOutlineSparkles /> {language === 'en' ? 'Apply to Solution' : 'সমাধানে প্রয়োগ করুন'}
+                                {language === 'en' ? 'Apply to Solution' : 'সমাধানে প্রয়োগ করুন'}
                               </button>
                             </div>
                           </div>

@@ -132,3 +132,52 @@ export function hasMoreWeeksToGenerate(routine) {
 
   return cutoff < planEndKey;
 }
+
+/**
+ * Calculate the number of calendar days between a start/base date and a target exam date.
+ * Returns null if examDate is invalid, or an integer (positive if exam is in the future).
+ * Uses UTC calendar date boundaries to avoid timezone/daylight saving artifacts.
+ */
+export function calculateDaysUntilExam(examDate, startDate) {
+  if (!examDate) return null;
+  const examIso = typeof examDate === 'string' ? examDate.substring(0, 10) : toISODate(examDate);
+  if (!examIso || !/^\d{4}-\d{2}-\d{2}$/.test(examIso)) return null;
+
+  const [ey, em, ed] = examIso.split('-').map(Number);
+  const examUtc = Date.UTC(ey, em - 1, ed);
+
+  let baseUtc;
+  if (startDate) {
+    const startIso = typeof startDate === 'string' ? startDate.substring(0, 10) : toISODate(startDate);
+    if (startIso && /^\d{4}-\d{2}-\d{2}$/.test(startIso)) {
+      const [sy, sm, sd] = startIso.split('-').map(Number);
+      baseUtc = Date.UTC(sy, sm - 1, sd);
+    }
+  }
+
+  if (baseUtc === undefined) {
+    const now = new Date();
+    baseUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  const diffMs = examUtc - baseUtc;
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Human-readable breakdown of days left (e.g. "Tomorrow (1 day)", "14 days", "2 months, 5 days").
+ */
+export function formatRemainingTimeline(days) {
+  if (days === null || days === undefined || isNaN(days)) return '';
+  if (days < 0) return 'Past date';
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow (1 day)';
+  if (days < 30) return `${days} days`;
+
+  const months = Math.floor(days / 30);
+  const remDays = days % 30;
+  if (remDays === 0) {
+    return `${months} ${months === 1 ? 'month' : 'months'}`;
+  }
+  return `${months} ${months === 1 ? 'month' : 'months'}, ${remDays} ${remDays === 1 ? 'day' : 'days'}`;
+}

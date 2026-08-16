@@ -7,7 +7,6 @@ import {
   HiX,
   HiOutlineTrash,
   HiOutlinePaperAirplane,
-  HiOutlineSparkles,
   HiOutlineBookOpen,
   HiOutlineClipboardList,
   HiOutlineQuestionMarkCircle,
@@ -29,7 +28,7 @@ const QUICK_ACTIONS = [
   { id: 'key-points', label: 'Key Points', scope: 'book', requestedAction: 'notes', question: 'Give key points from this book', icon: HiOutlineLightBulb },
   { id: 'quiz', label: 'Generate Quiz', scope: 'book', requestedAction: 'quiz', question: 'Generate a quiz from this book', icon: HiOutlineQuestionMarkCircle },
   { id: 'ask-page', label: 'Ask from Current Page', scope: 'page', requestedAction: 'answer', question: 'Ask about this page', icon: HiOutlineCursorClick },
-  { id: 'ask-book', label: 'Ask from Full Book', scope: 'book', requestedAction: 'answer', question: 'Ask about the whole book', icon: HiOutlineSparkles }
+  { id: 'ask-book', label: 'Ask from Full Book', scope: 'book', requestedAction: 'answer', question: 'Ask about the whole book', icon: HiOutlineBookOpen }
 ];
 
 export default function ChatSidebar({
@@ -175,7 +174,6 @@ export default function ChatSidebar({
       <div className="rb-chat-shell">
         <div className="rb-chat-header">
           <div className="rb-chat-header__title">
-            <HiOutlineSparkles className="rb-chat-icon" size={18} />
             <div>
               <h3>AI Tutor</h3>
               <p>Ask from current page or full book</p>
@@ -309,7 +307,7 @@ export default function ChatSidebar({
                 aria-label="Quick actions"
                 title="Quick actions"
               >
-                <HiOutlineSparkles size={14} />
+                <HiOutlineLightBulb size={15} />
               </button>
               {showQuickActions && (
                 <div className="rb-chat-quick-popover">

@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useLanguage } from '../../hooks/useLanguage';
-import { HiOutlineLightningBolt, HiOutlineSparkles, HiOutlineCollection, HiOutlineChatAlt2, HiOutlineFire, HiOutlineBookOpen, HiOutlineClipboardCheck, HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineCalendar } from 'react-icons/hi';
+import { HiOutlineLightningBolt, HiOutlineCollection, HiOutlineChatAlt2, HiOutlineFire, HiOutlineBookOpen, HiOutlineClipboardCheck, HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineCalendar } from 'react-icons/hi';
+import AiIcon from '../common/AiIcon';
 
 import './FeaturesGrid.css';
 
@@ -11,7 +12,7 @@ export default function FeaturesGrid() {
 
   const features = [
     { key: 'arena', icon: <HiOutlineLightningBolt />, color: '#F59E0B', size: 'large' },
-    { key: 'ai', icon: <HiOutlineSparkles />, color: '#8B5CF6', size: 'large' },
+    { key: 'ai', icon: <AiIcon size={28} />, color: '#8B5CF6', size: 'large' },
     
     { key: 'questionbank', icon: <HiOutlineCollection />, color: '#10B981', size: 'small' },
     { key: 'forum', icon: <HiOutlineChatAlt2 />, color: '#3B82F6', size: 'small' },

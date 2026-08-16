@@ -744,13 +744,7 @@ async function startSession(req, res, next) {
   try {
     const { routineId, segmentId, subject, chapter } = req.body;
 
-    // Abandon existing active sessions
-    await StudySession.updateMany(
-      { userId: req.user.id, status: 'active' },
-      { status: 'abandoned', endedAt: new Date() }
-    );
-
-    const session = new StudySession({
+    const sessionData = {
       userId: req.user.id,
       routineId: routineId || undefined,
       segmentId: segmentId || undefined,
@@ -758,9 +752,38 @@ async function startSession(req, res, next) {
       chapter: sanitizeText(chapter, 120),
       startedAt: new Date(),
       status: 'active'
-    });
+    };
 
-    await session.save();
+    // Abandon any existing active sessions
+    await StudySession.updateMany(
+      { userId: req.user.id, status: 'active' },
+      { status: 'abandoned', endedAt: new Date() }
+    );
+
+    let session;
+    try {
+      session = new StudySession(sessionData);
+      await session.save();
+    } catch (saveErr) {
+      if (saveErr.code === 11000) {
+        // Recycle/upsert active session if duplicate key index exists
+        session = await StudySession.findOneAndUpdate(
+          { userId: req.user.id, status: 'active' },
+          { $set: sessionData },
+          { new: true, upsert: true }
+        );
+        if (!session) {
+          session = await StudySession.findOneAndUpdate(
+            { userId: req.user.id },
+            { $set: sessionData },
+            { new: true }
+          );
+        }
+      } else {
+        throw saveErr;
+      }
+    }
+
     return ApiResponse.success(res, session, 'Study session started', 201);
   } catch (err) {
     next(err);

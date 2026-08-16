@@ -5,8 +5,7 @@ import {
   HiBookOpen,
   HiChevronLeft,
   HiChevronRight,
-  HiDocumentText,
-  HiOutlineSparkles
+  HiDocumentText
 } from 'react-icons/hi';
 import './ChapterNav.css';
 
@@ -100,7 +99,6 @@ export default function ChapterNav({
                 className="rb-chapnav__book-ai-btn"
                 onClick={onAskBookAI}
               >
-                <HiOutlineSparkles size={14} aria-hidden="true" />
                 <span>Ask Book</span>
               </button>
               <button
@@ -109,7 +107,6 @@ export default function ChapterNav({
                 onClick={onOpenMindMap}
                 title={canReadingAI ? `Mind map: ${knowledgeStatus}` : 'Mind map is a Pro+ feature'}
               >
-                <HiOutlineSparkles size={14} aria-hidden="true" />
                 <span>Mind Map</span>
               </button>
             </div>

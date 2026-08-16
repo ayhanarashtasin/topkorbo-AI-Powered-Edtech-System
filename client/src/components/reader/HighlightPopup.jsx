@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiOutlineSparkles, HiOutlinePencilAlt, HiX } from 'react-icons/hi';
+import { HiOutlinePencilAlt, HiX } from 'react-icons/hi';
 import './HighlightPopup.css';
 
 const COLORS = [
@@ -51,8 +51,7 @@ export default function HighlightPopup({ position, onHighlight, onSummarize }) {
               onSummarize(note);
             }}
           >
-            <HiOutlineSparkles />
-          </button>
+            </button>
         )}
 
         <button

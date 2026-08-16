@@ -3,8 +3,7 @@ import {
   HiX,
   HiOutlineArrowsExpand,
   HiOutlineArrowRight,
-  HiOutlineShare,
-  HiOutlineSparkles
+  HiOutlineShare
 } from 'react-icons/hi';
 import KnowledgeTreeGraph from './KnowledgeTreeGraph';
 import { formatKnowledgeNodeType, getKnowledgeNodeId } from './knowledgeTreeLayout';
@@ -107,7 +106,6 @@ export default function MindMapModal({
     if (!isReady) {
       return (
         <div className="rb-mindmap__state" role="status" aria-live="polite">
-          <HiOutlineSparkles size={30} aria-hidden="true" />
           <p>
             {status === 'failed'
               ? 'The AI could not build a mind map for this book yet.'

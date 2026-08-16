@@ -4,7 +4,6 @@ import {
   HiOutlineChevronDown,
   HiOutlineChevronRight,
   HiOutlineRefresh,
-  HiOutlineSparkles,
   HiOutlineZoomIn,
   HiOutlineZoomOut
 } from 'react-icons/hi';
@@ -291,9 +290,7 @@ export default function KnowledgeTreeGraph({
     <section className="rb-ktree" aria-label="Interactive book concept map">
       <header className="rb-ktree__header">
         <div className="rb-ktree__heading">
-          <span className="rb-ktree__heading-icon" aria-hidden="true">
-            <HiOutlineSparkles size={15} />
-          </span>
+          
           <span>
             <strong>{isPhone ? 'Reading outline' : 'Concept map'}</strong>
             <small>{isPhone ? 'Open one branch at a time' : `${mapSummary} · drag the canvas to move`}</small>

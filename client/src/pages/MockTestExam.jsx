@@ -10,7 +10,6 @@ import {
   HiX,
   HiClock,
   HiEye,
-  HiSparkles,
   HiCamera,
   HiPaperAirplane,
   HiPaperClip,
@@ -2013,7 +2012,6 @@ export default function MockTestExam() {
                         {isReviewMode && aiEvaluations[questionKey] && (
                           <div className="exam-ai-eval-box" style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0FDF4', borderLeft: '4px solid #22C55E', borderRadius: '4px' }}>
                             <h4 style={{ margin: '0 0 8px 0', color: '#166534', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <HiSparkles size={18} style={{ color: '#15803D' }} />
                               {language === "en" ? "AI Evaluation" : "এআই মূল্যায়ন"}
                             </h4>
                             <div style={{ marginBottom: '4px', fontWeight: 'bold', color: '#15803D' }}>
@@ -2564,7 +2562,6 @@ export default function MockTestExam() {
                         onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.45)'; }}
                         onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.35)'; }}
                       >
-                        <HiSparkles size={18} />
                         {language === "en" ? "Generate Detailed Solution" : "বিস্তারিত সমাধান তৈরি করো"}
                       </button>
                     </div>
@@ -2622,7 +2619,7 @@ export default function MockTestExam() {
                               }}
                             >
                               {/* Avatar / Name label */}
-                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px' }}>
+                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 {isUser
                                   ? (language === "en" ? "You" : "তুমি")
                                   : (language === "en" ? "AI Tutor" : "এআই টিউটর")}

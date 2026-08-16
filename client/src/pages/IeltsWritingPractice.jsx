@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiArrowLeft, HiCheckCircle, HiSparkles } from 'react-icons/hi';
+import { HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import './IeltsWritingPractice.css';
@@ -327,7 +327,6 @@ export default function IeltsWritingPractice() {
                       background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)',
                     }}
                   >
-                    <HiSparkles size={18} />
                     <span>
                       {isEvaluating
                         ? (language === 'en' ? 'Evaluating Answers...' : 'মূল্যায়ন করা হচ্ছে...')
@@ -361,7 +360,6 @@ export default function IeltsWritingPractice() {
                       }}
                     >
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <HiSparkles style={{ color: '#4f46e5' }} />
                         {language === 'en' ? 'AI Evaluation Report' : 'এআই মূল্যায়ন রিপোর্ট'}
                       </span>
                       <span

@@ -8,7 +8,6 @@ import {
   HiChevronDown,
   HiExclamationCircle,
   HiEye,
-  HiSparkles,
   HiX,
   HiPaperAirplane,
   HiPaperClip
@@ -1006,7 +1005,6 @@ export default function BoardQuestionsView() {
                         onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.45)'; }}
                         onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.35)'; }}
                       >
-                        <HiSparkles size={18} />
                         {language === "en" ? "Generate Detailed Solution" : "বিস্তারিত সমাধান তৈরি করো"}
                       </button>
                     </div>
@@ -1064,7 +1062,7 @@ export default function BoardQuestionsView() {
                               }}
                             >
                               {/* Avatar / Name label */}
-                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px' }}>
+                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '600', margin: isUser ? '0 8px 0 0' : '0 0 0 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 {isUser
                                   ? (language === "en" ? "You" : "তুমি")
                                   : (language === "en" ? "AI Tutor" : "এআই টিউটর")}

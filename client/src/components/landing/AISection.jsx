@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useLanguage } from '../../hooks/useLanguage';
-import { HiOutlineSparkles, HiOutlineDocumentText, HiOutlineAdjustments, HiOutlineLightningBolt } from 'react-icons/hi';
+import { HiOutlineDocumentText, HiOutlineAdjustments, HiOutlineLightningBolt } from 'react-icons/hi';
+import AiIcon from '../common/AiIcon';
 import './AISection.css';
 
 const CHAT_MESSAGES = [
@@ -32,7 +33,7 @@ export default function AISection() {
   }, [inView]);
 
   const features = [
-    { icon: <HiOutlineSparkles />, title: t('ai.tutor'), color: '#8B5CF6' },
+    { icon: <AiIcon size={20} />, title: t('ai.tutor'), color: '#8B5CF6' },
     { icon: <HiOutlineDocumentText />, title: t('ai.evaluator'), color: '#3B82F6' },
     { icon: <HiOutlineAdjustments />, title: t('ai.adaptive'), color: '#10B981' },
     { icon: <HiOutlineLightningBolt />, title: t('ai.question_maker'), color: '#F59E0B' },
@@ -59,59 +60,7 @@ export default function AISection() {
           >
             <div className="ai-section__chat-header">
               <div className="ai-section__chat-avatar">
-                <svg viewBox="0 0 100 100" className="ai-section__chat-avatar-svg" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%' }}>
-                  {/* Outer head silhouette traces - Deeper Dark Blue Theme Accent */}
-                  <path d="M30 18 L22 28 L22 42" stroke="var(--dark-blue)" strokeWidth="2.5" />
-                  <circle cx="30" cy="18" r="3" fill="var(--dark-blue)" />
-                  
-                  <path d="M18 48 L15 54 L25 68 L32 78" stroke="var(--dark-blue)" strokeWidth="2.5" />
-                  <circle cx="18" cy="48" r="3" fill="var(--dark-blue)" />
-                  
-                  <path d="M70 18 L78 28 L78 42" stroke="var(--dark-blue)" strokeWidth="2.5" />
-                  <circle cx="70" cy="18" r="3" fill="var(--dark-blue)" />
-                  
-                  <path d="M82 48 L85 54 L75 68 L68 78" stroke="var(--dark-blue)" strokeWidth="2.5" />
-                  <circle cx="82" cy="48" r="3" fill="var(--dark-blue)" />
-                  
-                  <path d="M42 15 A12 12 0 0 1 58 15" stroke="var(--dark-blue)" strokeWidth="2" />
-                  <circle cx="42" cy="15" r="2.5" fill="var(--dark-blue)" />
-                  <circle cx="58" cy="15" r="2.5" fill="var(--dark-blue)" />
-                  
-                  {/* Inner circuits - Deepest Text Primary Color */}
-                  <path d="M32 30 L42 30 L42 22" stroke="var(--text-primary)" strokeWidth="2" />
-                  <path d="M50 22 L50 32" stroke="var(--text-primary)" strokeWidth="2" />
-                  <circle cx="50" cy="22" r="2" fill="var(--text-primary)" />
-                  <path d="M58 22 L58 32 L68 32" stroke="var(--text-primary)" strokeWidth="2" />
-                  
-                  {/* Eyes - Deepest Text Primary Color */}
-                  <circle cx="35" cy="45" r="4" stroke="var(--text-primary)" strokeWidth="2.5" />
-                  <path d="M25 45 L31 45" stroke="var(--text-primary)" strokeWidth="2" />
-                  <circle cx="25" cy="45" r="2" fill="var(--text-primary)" />
-                  
-                  <circle cx="65" cy="45" r="4" stroke="var(--text-primary)" strokeWidth="2.5" />
-                  <path d="M75 45 L69 45" stroke="var(--text-primary)" strokeWidth="2" />
-                  <circle cx="75" cy="45" r="2" fill="var(--text-primary)" />
-                  
-                  {/* Nose - Deeper Dark Blue */}
-                  <path d="M50 38 L50 56 L55 56" stroke="var(--dark-blue)" strokeWidth="2.5" />
-                  <circle cx="55" cy="56" r="2" fill="var(--dark-blue)" />
-                  
-                  {/* Cheek lines - Deeper Dark Blue */}
-                  <path d="M32 56 L24 56" stroke="var(--dark-blue)" strokeWidth="2" />
-                  <circle cx="24" cy="56" r="2" fill="var(--dark-blue)" />
-                  
-                  <path d="M68 56 L76 56" stroke="var(--dark-blue)" strokeWidth="2" />
-                  <circle cx="76" cy="56" r="2" fill="var(--dark-blue)" />
-                  
-                  {/* Mouth & chin - Deepest Text Primary Color */}
-                  <path d="M42 66 L58 66" stroke="var(--text-primary)" strokeWidth="2.5" />
-                  <path d="M46 72 L54 72" stroke="var(--text-primary)" strokeWidth="2" />
-                  <circle cx="46" cy="72" r="1.5" fill="var(--text-primary)" />
-                  <circle cx="54" cy="72" r="1.5" fill="var(--text-primary)" />
-                  
-                  <path d="M38 82 L50 82 L62 82" stroke="var(--text-primary)" strokeWidth="2.5" />
-                  <circle cx="50" cy="82" r="2.5" fill="var(--text-primary)" />
-                </svg>
+                <AiIcon themeColors style={{ width: '100%', height: '100%' }} className="ai-section__chat-avatar-svg" />
               </div>
               <div>
                 <span className="ai-section__chat-name">TopKorbo AI Tutor</span>

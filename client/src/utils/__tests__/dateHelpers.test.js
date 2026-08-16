@@ -11,7 +11,9 @@ import {
   eventsFromRoutine,
   findToday,
   findDayByKey,
-  hasMoreWeeksToGenerate
+  hasMoreWeeksToGenerate,
+  calculateDaysUntilExam,
+  formatRemainingTimeline
 } from '../dateHelpers';
 
 describe('toISODate', () => {
@@ -591,3 +593,59 @@ describe('hasMoreWeeksToGenerate', () => {
     expect(hasMoreWeeksToGenerate(routine)).toBe(true);
   });
 });
+
+describe('calculateDaysUntilExam', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-17T12:00:00.000Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns null for empty or invalid examDate', () => {
+    expect(calculateDaysUntilExam(null)).toBeNull();
+    expect(calculateDaysUntilExam('')).toBeNull();
+    expect(calculateDaysUntilExam('invalid')).toBeNull();
+  });
+
+  it('calculates difference relative to today when startDate is omitted', () => {
+    // Today is 2026-08-17
+    expect(calculateDaysUntilExam('2026-08-18')).toBe(1);
+    expect(calculateDaysUntilExam('2026-08-17')).toBe(0);
+    expect(calculateDaysUntilExam('2026-08-16')).toBe(-1);
+    expect(calculateDaysUntilExam('2026-09-16')).toBe(30);
+    expect(calculateDaysUntilExam('2026-09-30')).toBe(44);
+  });
+
+  it('calculates difference relative to custom startDate', () => {
+    expect(calculateDaysUntilExam('2026-09-30', '2026-09-01')).toBe(29);
+    expect(calculateDaysUntilExam('2026-10-15', '2026-08-20')).toBe(56);
+  });
+});
+
+describe('formatRemainingTimeline', () => {
+  it('returns empty string for null / undefined', () => {
+    expect(formatRemainingTimeline(null)).toBe('');
+    expect(formatRemainingTimeline(undefined)).toBe('');
+  });
+
+  it('formats past or zero days', () => {
+    expect(formatRemainingTimeline(-5)).toBe('Past date');
+    expect(formatRemainingTimeline(0)).toBe('Today');
+  });
+
+  it('formats single and short day durations', () => {
+    expect(formatRemainingTimeline(1)).toBe('Tomorrow (1 day)');
+    expect(formatRemainingTimeline(15)).toBe('15 days');
+    expect(formatRemainingTimeline(29)).toBe('29 days');
+  });
+
+  it('formats months and remaining days', () => {
+    expect(formatRemainingTimeline(30)).toBe('1 month');
+    expect(formatRemainingTimeline(60)).toBe('2 months');
+    expect(formatRemainingTimeline(45)).toBe('1 month, 15 days');
+    expect(formatRemainingTimeline(61)).toBe('2 months, 1 day');
+  });
+});
+

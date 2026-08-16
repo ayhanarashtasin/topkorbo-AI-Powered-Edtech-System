@@ -13,7 +13,6 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import katex from 'katex';
 import {
-  HiOutlineSparkles,
   HiOutlineDocumentText,
   HiOutlinePhotograph,
   HiOutlineClipboardCopy,
@@ -364,7 +363,6 @@ export default function AiQuestionHelper() {
                       </>
                     ) : (
                       <>
-                        <HiOutlineSparkles />
                         Extract Question
                       </>
                     )}
@@ -376,7 +374,6 @@ export default function AiQuestionHelper() {
             <section className="aih-card aih-card--output">
               <div className="aih-card__header">
                 <div className="aih-card__title">
-                  <HiOutlineSparkles />
                   <h3>Extracted LaTeX</h3>
                 </div>
                 <p className="aih-card__desc">
@@ -388,7 +385,6 @@ export default function AiQuestionHelper() {
               <div className="aih-card__body">
                 {!extracted && !isLoading && (
                   <div className="aih-empty">
-                    <HiOutlineSparkles size={32} />
                     <p>
                       Submit a question to see its LaTeX version here. Each
                       part (stem, options, solution) can be copied
