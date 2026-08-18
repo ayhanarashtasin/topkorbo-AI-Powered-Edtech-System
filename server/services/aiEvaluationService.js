@@ -1,8 +1,8 @@
 const Groq = require('groq-sdk');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const VISION_MODEL = "llama-3.2-90b-vision-preview";
-const TEXT_MODEL = "llama-3.3-70b-versatile";
+const VISION_MODEL = "qwen/qwen3.6-27b";
+const TEXT_MODEL = "openai/gpt-oss-120b";
 
 /**
  * Extracts JSON from AI output that may contain <think> blocks, markdown, etc.
@@ -11,12 +11,14 @@ const TEXT_MODEL = "llama-3.3-70b-versatile";
 function extractJson(text) {
   if (!text) return null;
 
-  // 1. Remove completed <think>...</think> blocks
-  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+  // 1. Remove completed <think>...</think> or <thought>...</thought> blocks
+  let cleaned = text.replace(/<(think|thought)>[\s\S]*?<\/(think|thought)>/gi, '').trim();
 
-  // 2. If there's an unclosed <think> tag (model ran out of tokens mid-thinking),
-  //    strip everything from <think> to end of string
-  cleaned = cleaned.replace(/<think>[\s\S]*/gi, '').trim();
+  // 2. If there's an unclosed thinking tag, strip everything to the end
+  cleaned = cleaned.replace(/<(think|thought)>[\s\S]*/gi, '').trim();
+
+  // 3. Remove markdown code fences
+  cleaned = cleaned.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 
   // 3. Try to find and parse a JSON object
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
@@ -153,8 +155,10 @@ OUTPUT (raw JSON only):
           }
         ],
         model: TEXT_MODEL,
-        temperature: 0.2,
-        max_tokens: 1024,
+        temperature: 1,
+        max_completion_tokens: 2048,
+        top_p: 1,
+        reasoning_effort: "medium"
       });
 
       aiOutput = gradeResponse.choices[0]?.message?.content;

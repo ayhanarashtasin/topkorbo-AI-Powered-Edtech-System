@@ -918,7 +918,7 @@ exports.extractQuestion = async (req, res, next) => {
 
     let modelToUse = DEFAULT_MODEL;
     if (isRubricMode) {
-      modelToUse = questionImageBase64 || answerImageBase64 ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+      modelToUse = questionImageBase64 || answerImageBase64 ? 'qwen/qwen3.6-27b' : 'llama-3.3-70b-versatile';
     }
 
     const extractRequest = {

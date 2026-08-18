@@ -9,8 +9,8 @@
  *   POST /chat     → multi-turn tutoring chat about a question
  *
  * AI models used:
- *   - llama-3.2-90b-vision-preview  → vision model (analyzes handwritten images)
- *   - llama-3.3-70b-versatile → text model (generates explanations)
+ *   - qwen/qwen3.6-27b  → vision model (analyzes handwritten images & OCR)
+ *   - openai/gpt-oss-120b → text model (reasoning, evaluation & explanations)
  *
  * All endpoints enforce AI quota via enforceAiQuota middleware.
  */
@@ -27,8 +27,8 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-const VISION_MODEL = "llama-3.2-90b-vision-preview";
-const TEXT_MODEL = "llama-3.3-70b-versatile";
+const VISION_MODEL = "qwen/qwen3.6-27b";
+const TEXT_MODEL = "openai/gpt-oss-120b";
 
 function logToFile(msg) {
   try {
@@ -41,12 +41,12 @@ function logToFile(msg) {
 // Handles unclosed <think> tags when the model runs out of tokens mid-thinking.
 function extractJson(text) {
   if (!text) return null;
-  // 1. Remove completed <think>...</think> blocks
-  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-  // 2. Remove unclosed <think> tag (model ran out of tokens mid-thinking)
-  cleaned = cleaned.replace(/<think>[\s\S]*/gi, '').trim();
+  // 1. Remove completed <think>...</think> or <thought>...</thought> blocks
+  let cleaned = text.replace(/<(think|thought)>[\s\S]*?<\/(think|thought)>/gi, '').trim();
+  // 2. Remove unclosed thinking tag (model ran out of tokens mid-thinking)
+  cleaned = cleaned.replace(/<(think|thought)>[\s\S]*/gi, '').trim();
   // 3. Remove markdown code fences
-  cleaned = cleaned.replace(/```json/gi, '').replace(/```/g, '').trim();
+  cleaned = cleaned.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
   
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
@@ -166,9 +166,10 @@ OUTPUT (raw JSON only):
               content: `${gradingPrompt}\n\nSTUDENT'S ANSWER (transcribed from handwriting):\n${extractedText}`
             }
           ],
-          temperature: 0.2,
-          max_tokens: 1024,
+          temperature: 1,
+          max_completion_tokens: 2048,
           top_p: 1,
+          reasoning_effort: "medium",
           stream: false
         });
 
