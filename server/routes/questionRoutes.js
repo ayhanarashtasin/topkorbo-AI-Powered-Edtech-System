@@ -4,15 +4,7 @@ const auth = require('../middleware/auth');
 const questionController = require('../controllers/questionController');
 
 // DEBUG ROUTE TO CHECK LATEST QUESTIONS
-router.get('/debug-latest-all', async (req, res) => {
-  try {
-    const Question = require('../models/Question');
-    const q = await Question.find().sort({_id: -1}).limit(3);
-    res.json(q);
-  } catch (err) {
-    res.status(500).json({error: err.message});
-  }
-});
+router.get('/debug-latest-all', questionController.getLatestQuestionsDebug);
 
 // @desc    Create a new question
 // @route   POST /api/questions

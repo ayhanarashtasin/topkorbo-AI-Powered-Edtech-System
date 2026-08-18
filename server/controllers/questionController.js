@@ -1092,3 +1092,17 @@ exports.fetchQBankQuestions = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * @desc    Debug endpoint to check latest questions
+ * @route   GET /api/questions/debug-latest-all
+ * @access  Public (Debug)
+ */
+exports.getLatestQuestionsDebug = async (req, res, next) => {
+  try {
+    const q = await Question.find().sort({ _id: -1 }).limit(3).lean();
+    return res.json(q);
+  } catch (err) {
+    next(err);
+  }
+};
