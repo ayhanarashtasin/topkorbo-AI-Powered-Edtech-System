@@ -1,6 +1,10 @@
 const Groq = require('groq-sdk');
 
-const DEFAULT_MODEL = process.env.GROQ_RAG_MODEL || 'llama-3.3-70b-versatile';
+const DEFAULT_MODEL =
+  process.env.GROQ_RAG_MODEL
+  || process.env.GROQ_MODEL
+  || process.env.LLM_MODEL
+  || 'openai/gpt-oss-120b';
 
 function getGroqClient() {
   const apiKey = process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
