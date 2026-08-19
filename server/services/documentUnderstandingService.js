@@ -379,110 +379,63 @@ function buildLegacyChapterEntry(rootNode, chapter, idx) {
 }
 
 async function buildKnowledgeTree({ book, chapter, pages, chunks, documentType, mode = 'chapter' }) {
-  const contextLimit = mode === 'semantic' ? 28_000 : 32_000;
-  const sampleText = clamp(buildPageContext(samplePagesForAnalysis(pages, 18), contextLimit), contextLimit);
+  const contextLimit = mode === 'semantic' ? 15_000 : 16_000;
+  const sampleText = clamp(buildPageContext(samplePagesForAnalysis(pages, 14), contextLimit), contextLimit);
   const rootId = mode === 'semantic' ? `document-${chapter._id}` : `chapter-${chapter._id}`;
   const rootTitle = mode === 'semantic' ? cleanText(book.title || chapter.title || 'Document') : cleanText(chapter.title || book.title || 'Chapter');
   const systemInstruction = mode === 'semantic'
-    ? 'You are a document-understanding engine for an EdTech reading app. Generate a rich NotebookLM-style mind map from the supplied PDF text. Use only the text provided. Prefer specific claims, people, places, examples, causes, effects, and evidence over generic labels.'
-    : 'You are a curriculum designer for an EdTech reading app. Generate a rich NotebookLM-style chapter mind map from the supplied PDF text. Use only the text provided. Prefer specific concepts, examples, evidence, causes, effects, and relationships over generic labels.';
+    ? 'You are an educational document understanding engine. Extract a structured, rich knowledge mind map hierarchy from the supplied PDF text in JSON format.'
+    : 'You are an educational curriculum designer. Extract a structured, rich chapter knowledge mind map hierarchy from the supplied PDF text in JSON format.';
 
-  const prompt = mode === 'semantic'
-    ? [
-        `Document type: ${documentType}`,
-        `Document title: ${book.title}`,
-        'Return valid JSON in this exact shape:',
-        '{',
-        '  "summary": "string",',
-        '  "keyPoints": ["string"],',
-        '  "definitions": ["string"],',
-        '  "examples": ["string"],',
-        '  "nodes": [',
-        '    {',
-        '      "title": "string",',
-        '      "summary": "string",',
-        '      "detailedNotes": "string",',
-        '      "pageRange": { "start": 1, "end": 1 },',
-        '      "keyPoints": ["string"],',
-        '      "definitions": ["string"],',
-        '      "examples": ["string"],',
-        '      "quizQuestions": [',
-        '        { "question": "string", "options": ["string"], "answer": "string", "explanation": "string" }',
-        '      ],',
-        '      "subtopics": [',
-        '        {',
-        '          "title": "string",',
-        '          "summary": "string",',
-        '          "detailedNotes": "string",',
-        '          "pageRange": { "start": 1, "end": 1 },',
-        '          "keyPoints": ["string"],',
-        '          "definitions": ["string"],',
-        '          "examples": ["string"],',
-        '          "quizQuestions": []',
-        '        }',
-        '      ]',
-        '    }',
-        '  ]',
-        '}',
-        'Use 6 to 10 top-level semantic nodes when supported by the text.',
-        'Each top-level node should have 2 to 5 specific subtopics when supported by the text.',
-        'Every node summary should be 1 to 2 clear sentences, not a vague phrase.',
-        'Every node should include 3 to 5 keyPoints as short bullet-ready facts.',
-        'Prefer concrete entities, decisions, timeline moments, comparisons, risks, outcomes, and examples.',
-        'Avoid repeating the same title at multiple levels.',
-        'Document text:',
-        sampleText
-      ].join('\n\n')
-    : [
-        `Document type: ${documentType}`,
-        `Chapter title: ${chapter.title}`,
-        'Return valid JSON in this exact shape:',
-        '{',
-        '  "summary": "string",',
-        '  "keyPoints": ["string"],',
-        '  "definitions": ["string"],',
-        '  "examples": ["string"],',
-        '  "nodes": [',
-        '    {',
-        '      "title": "string",',
-        '      "summary": "string",',
-        '      "detailedNotes": "string",',
-        '      "pageRange": { "start": 1, "end": 1 },',
-        '      "keyPoints": ["string"],',
-        '      "definitions": ["string"],',
-        '      "examples": ["string"],',
-        '      "quizQuestions": [',
-        '        { "question": "string", "options": ["string"], "answer": "string", "explanation": "string" }',
-        '      ],',
-        '      "subtopics": [',
-        '        {',
-        '          "title": "string",',
-        '          "summary": "string",',
-        '          "detailedNotes": "string",',
-        '          "pageRange": { "start": 1, "end": 1 },',
-        '          "keyPoints": ["string"],',
-        '          "definitions": ["string"],',
-        '          "examples": ["string"],',
-        '          "quizQuestions": []',
-        '        }',
-        '      ]',
-        '    }',
-        '  ]',
-        '}',
-        'Use 6 to 10 topic nodes when supported by the text.',
-        'Each topic should have 2 to 5 specific subtopics when supported by the text.',
-        'Every node summary should be 1 to 2 clear sentences, not a vague phrase.',
-        'Every node should include 3 to 5 keyPoints as short bullet-ready facts.',
-        'Prefer concrete entities, decisions, timeline moments, comparisons, risks, outcomes, and examples.',
-        'Avoid repeating the same title at multiple levels.',
-        'Chapter text:',
-        sampleText
-      ].join('\n\n');
+  const prompt = [
+    `Document title: ${book.title || chapter.title}`,
+    `Document type: ${documentType}`,
+    'Extract a comprehensive knowledge mind map in valid JSON matching this exact structure:',
+    JSON.stringify({
+      summary: '1-2 sentence overall summary of the document',
+      keyPoints: ['3 to 5 core takeaways or facts'],
+      definitions: ['Key terms defined in text if any'],
+      examples: ['Notable examples mentioned in text if any'],
+      nodes: [
+        {
+          title: 'Topic Title',
+          summary: '1-2 sentence concise summary of this topic',
+          detailedNotes: 'Key conceptual explanation and evidence',
+          pageRange: { start: 1, end: 2 },
+          keyPoints: ['Specific fact or key takeaway 1', 'Specific fact or key takeaway 2', 'Specific fact or key takeaway 3'],
+          definitions: [],
+          examples: [],
+          quizQuestions: [],
+          subtopics: [
+            {
+              title: 'Subtopic Title',
+              summary: '1 sentence concise summary of subtopic',
+              detailedNotes: 'Subtopic explanation',
+              pageRange: { start: 1, end: 1 },
+              keyPoints: ['Key takeaway 1', 'Key takeaway 2'],
+              definitions: [],
+              examples: [],
+              quizQuestions: []
+            }
+          ]
+        }
+      ]
+    }, null, 2),
+    'Guidelines:',
+    '- Extract 4 to 8 main topics that represent the core conceptual structure of the content.',
+    '- Each topic should contain 2 to 4 specific subtopics.',
+    '- Keep node titles descriptive and concise (avoid repeating the document title).',
+    '- Include 3 to 5 clear bullet-ready keyPoints per topic.',
+    '- Set accurate page ranges based on [Page X] tags.',
+    'Document text:',
+    sampleText
+  ].join('\n\n');
 
   const { json } = await generateJson({
     prompt,
     systemInstruction,
-    temperature: 0.2
+    temperature: 0.1,
+    maxTokens: 3500
   });
 
   const nodes = addBulletPointNodes(normalizeNodeList(json.nodes || [], { rootId, parentId: rootId, prefix: mode === 'semantic' ? 'topic' : 'topic', nodeType: mode === 'semantic' ? 'topic' : 'topic' }));

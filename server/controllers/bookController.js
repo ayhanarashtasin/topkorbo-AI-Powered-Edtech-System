@@ -450,7 +450,7 @@ exports.getKnowledge = async (req, res, next) => {
       return ApiResponse.error(res, 'Book not found', 404);
     }
     const knowledge = await getBookKnowledgeSnapshot(book._id);
-    if (!knowledge || ['pending', 'not_started', 'failed'].includes(knowledge.status)) {
+    if (!knowledge || knowledge.status !== 'completed') {
       queueBookKnowledge(book._id).catch((err) => {
         console.error('[bookController] Failed to queue knowledge load:', err.message);
       });

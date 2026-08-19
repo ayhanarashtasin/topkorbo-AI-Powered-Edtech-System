@@ -298,39 +298,6 @@ function normalizeTopic(topic, fallbackOrder = 0) {
   };
 }
 
-function pickChunksForTopic(chunks, topic) {
-  const start = Number(topic.pageRange?.start || 1);
-  const end = Number(topic.pageRange?.end || start);
-  return chunks.filter((chunk) => chunk.pageEnd >= start && chunk.pageStart <= end);
-}
-
-async function persistChunkDocs({ book, chapter, chunks = [] }) {
-  const insertedChunks = [];
-  for (const chunk of chunks) {
-    const text = cleanText(chunk.text || '');
-    if (!text) continue;
-    const embedding = await embedText(text, {
-      title: `${book.title} - ${chapter.title} - Pages ${chunk.pageStart}-${chunk.pageEnd}`
-    });
-    insertedChunks.push({
-      bookId: book._id,
-      chapterId: chapter?._id || null,
-      pageNumbers: Array.isArray(chunk.pageNumbers) ? chunk.pageNumbers : [chunk.pageStart, chunk.pageEnd].filter(Boolean),
-      pageStart: Number(chunk.pageStart) || 1,
-      pageEnd: Number(chunk.pageEnd) || Number(chunk.pageStart) || 1,
-      chunkIndex: Number(chunk.chunkIndex) || insertedChunks.length + 1,
-      text,
-      embedding,
-      tokenCount: chunkWordCount(text)
-    });
-  }
-
-  if (insertedChunks.length) {
-    await BookChunk.insertMany(insertedChunks);
-  }
-  return insertedChunks;
-}
-
 async function processChapterDocument({ book, chapter, knowledgeDoc }) {
   const buffer = await loadFileBuffer(chapter.fileUrl);
   const pages = await extractPdfPages(buffer);
@@ -361,45 +328,49 @@ async function processChapterDocument({ book, chapter, knowledgeDoc }) {
   const storedChunks = [];
   knowledgeDoc.status = 'embedding';
   knowledgeDoc.message = `Embedding ${chapter.title}`;
+  knowledgeDoc.updatedAt = new Date();
   await knowledgeDoc.save();
 
-  for (const chunk of chunks) {
-    const text = cleanText(chunk.text || '');
-    if (!text) continue;
-    try {
-      const embedding = await embedText(text, {
-        title: `${book.title} - ${chapter.title} - Pages ${chunk.pageStart}-${chunk.pageEnd}`
-      });
-      const doc = {
-        bookId: book._id,
-        chapterId: chapter._id,
-        pageNumbers: Array.isArray(chunk.pageNumbers) ? chunk.pageNumbers : [chunk.pageStart, chunk.pageEnd].filter(Boolean),
-        pageStart: Number(chunk.pageStart) || 1,
-        pageEnd: Number(chunk.pageEnd) || Number(chunk.pageStart) || 1,
-        chunkIndex: Number(chunk.chunkIndex) || storedChunks.length + 1,
-        text,
-        embedding,
-        tokenCount: chunkWordCount(text)
-      };
-      storedChunks.push(doc);
-      knowledgeDoc.totalChunks += 1;
-      knowledgeDoc.embeddedChunks += 1;
-      knowledgeDoc.vectorIndexStatus = 'indexing';
-      knowledgeDoc.updatedAt = new Date();
-      await knowledgeDoc.save();
-    } catch (chunkErr) {
-      knowledgeDoc.lastProcessingError = cleanText(chunkErr?.message || 'Failed to embed chunk');
-      knowledgeDoc.vectorIndexStatus = 'embedding';
-      knowledgeDoc.updatedAt = new Date();
-      await knowledgeDoc.save();
-    }
+  const CHUNK_BATCH = 4;
+  for (let i = 0; i < chunks.length; i += CHUNK_BATCH) {
+    const batch = chunks.slice(i, i + CHUNK_BATCH);
+    const batchResults = await Promise.all(
+      batch.map(async (chunk, batchOffset) => {
+        const text = cleanText(chunk.text || '');
+        if (!text) return null;
+        try {
+          const embedding = await embedText(text, {
+            title: `${book.title} - ${chapter.title} - Pages ${chunk.pageStart}-${chunk.pageEnd}`
+          });
+          return {
+            bookId: book._id,
+            chapterId: chapter._id,
+            pageNumbers: Array.isArray(chunk.pageNumbers) ? chunk.pageNumbers : [chunk.pageStart, chunk.pageEnd].filter(Boolean),
+            pageStart: Number(chunk.pageStart) || 1,
+            pageEnd: Number(chunk.pageEnd) || Number(chunk.pageStart) || 1,
+            chunkIndex: Number(chunk.chunkIndex) || (i + batchOffset + 1),
+            text,
+            embedding,
+            tokenCount: chunkWordCount(text)
+          };
+        } catch (chunkErr) {
+          return null;
+        }
+      })
+    );
+
+    const validDocs = batchResults.filter(Boolean);
+    storedChunks.push(...validDocs);
+    knowledgeDoc.totalChunks += validDocs.length;
+    knowledgeDoc.embeddedChunks += validDocs.length;
   }
 
   if (storedChunks.length) {
     await BookChunk.insertMany(storedChunks);
   }
 
-  if (ENABLE_KNOWLEDGE_TREE) {
+  const isKnowledgeTreeEnabled = String(process.env.ENABLE_KNOWLEDGE_TREE || '').toLowerCase() === 'true';
+  if (isKnowledgeTreeEnabled) {
     try {
       const chapterProfile = detectDocumentProfile({ pages: normalizedPages, chapters: book.chapters || [], title: chapter.title });
       const refinedProfile = await refineDocumentProfile({
@@ -431,10 +402,9 @@ async function processChapterDocument({ book, chapter, knowledgeDoc }) {
       knowledgeDoc.bookSummary = cleanDocText([knowledgeDoc.bookSummary, treeResult.treeNode.summary || ''].filter(Boolean).join(' '));
       knowledgeDoc.bookKeyPoints = Array.from(new Set([...(knowledgeDoc.bookKeyPoints || []), ...(treeResult.treeNode.keyPoints || [])])).slice(0, 12);
       knowledgeDoc.documentType = refinedProfile.type || chapterProfile.type || knowledgeDoc.documentType || 'unknown';
-      // `tree` is a Mixed field; Mongoose does not track the nested
-      // children.push() above, so flag it dirty or the mind map never persists.
       knowledgeDoc.markModified('tree');
     } catch (treeErr) {
+      console.error('[bookRagService] Tree generation error:', treeErr.message);
       knowledgeDoc.lastProcessingError = cleanText(treeErr?.message || 'Tree generation failed');
     }
   }
@@ -445,156 +415,6 @@ async function processChapterDocument({ book, chapter, knowledgeDoc }) {
   knowledgeDoc.updatedAt = new Date();
   await knowledgeDoc.save();
   return { pages: normalizedPages, chunks: storedChunks };
-}
-
-async function buildChapterKnowledge({ book, chapter, pages, chunks }) {
-  const chapterContext = clamp(joinPages(pages), MAX_CHAPTER_CONTEXT_CHARS);
-  const { json } = await generateJson({
-    prompt: [
-      `Book title: ${book.title}`,
-      `Chapter title: ${chapter.title}`,
-      'Use only the chapter text below. Do not invent content that is not present.',
-      'Return 3 to 6 useful topics in the order they appear in the chapter.',
-      'For each topic, give a beginner-friendly summary, detailed notes, key points, definitions, examples, and 2 to 4 quiz questions.',
-      'Page ranges must match the pages used by the topic as closely as possible.',
-      'Return valid JSON in this exact shape:',
-      '{',
-      '  "chapterSummary": "string",',
-      '  "chapterKeyPoints": ["string"],',
-      '  "chapterDefinitions": ["string"],',
-      '  "chapterExamples": ["string"],',
-      '  "topics": [',
-      '    {',
-      '      "title": "string",',
-      '      "summary": "string",',
-      '      "detailedNotes": "string",',
-      '      "pageRange": { "start": 1, "end": 1 },',
-      '      "keyPoints": ["string"],',
-      '      "definitions": ["string"],',
-      '      "examples": ["string"],',
-      '      "quizQuestions": [',
-      '        { "question": "string", "options": ["string"], "answer": "string", "explanation": "string" }',
-      '      ]',
-      '    }',
-      '  ]',
-      '}',
-      'Chapter text:',
-      chapterContext
-    ].join('\n\n'),
-    systemInstruction: 'You are a careful curriculum designer for an EdTech reading app. Only use the supplied chapter text. If something is missing, leave it out instead of guessing.',
-    temperature: 0.2
-  });
-
-  const topics = Array.isArray(json.topics) ? json.topics : [];
-  const normalizedTopics = topics
-    .slice(0, 6)
-    .map((topic, idx) => normalizeTopic(topic, idx))
-    .map((topic) => {
-      const topicChunks = pickChunksForTopic(chunks, topic);
-      return {
-        ...topic,
-        chunkIds: topicChunks.map((chunk) => chunk._id)
-      };
-    });
-
-  return {
-    chapterId: String(chapter._id),
-    title: chapter.title,
-    order: chapter.order || 0,
-    pageRange: {
-      start: pages.find((p) => cleanText(p.text))?.pageNumber || 1,
-      end: [...pages].reverse().find((p) => cleanText(p.text))?.pageNumber || pages.length || 1
-    },
-    summary: cleanText(json.chapterSummary || ''),
-    detailedNotes: cleanText(json.chapterSummary || ''),
-    keyPoints: Array.isArray(json.chapterKeyPoints) ? json.chapterKeyPoints.map((item) => cleanText(item)).filter(Boolean) : [],
-    definitions: Array.isArray(json.chapterDefinitions) ? json.chapterDefinitions.map((item) => cleanText(item)).filter(Boolean) : [],
-    examples: Array.isArray(json.chapterExamples) ? json.chapterExamples.map((item) => cleanText(item)).filter(Boolean) : [],
-    quizQuestions: [],
-    topics: normalizedTopics
-  };
-}
-
-async function processChapterKnowledge({ book, chapter, knowledgeDoc, structureMode = 'chapter', documentProfile = null, treeRoot = null }) {
-  const buffer = await loadFileBuffer(chapter.fileUrl);
-  const pages = await extractPdfPages(buffer);
-  const nonEmptyPages = pages.filter((page) => cleanText(page.text));
-  const chunks = chunkTextByPages(nonEmptyPages.length ? nonEmptyPages : pages);
-
-  const chunkDocs = [];
-  for (const chunk of chunks) {
-    const embedding = await embedText(chunk.text, {
-      title: `${book.title} - ${chapter.title} - Page ${chunk.pageStart}-${chunk.pageEnd}`
-    });
-    chunkDocs.push({
-      bookId: book._id,
-      chapterId: chapter._id,
-      pageStart: chunk.pageStart,
-      pageEnd: chunk.pageEnd,
-      chunkIndex: chunk.chunkIndex,
-      text: chunk.text,
-      embedding,
-      tokenCount: chunk.text.split(/\s+/).length
-    });
-  }
-
-  let insertedChunks = [];
-  if (chunkDocs.length > 0) {
-    insertedChunks = await BookChunk.insertMany(chunkDocs);
-  }
-
-  const chapterProfile = documentProfile || detectDocumentProfile({ pages, chapters: book.chapters || [], title: chapter.title });
-  const refinedProfile = await refineDocumentProfile({
-    pages,
-    chapters: book.chapters || [],
-    title: chapter.title,
-    heuristic: chapterProfile
-  });
-
-  const treeMode = structureMode === 'semantic' ? 'semantic' : 'chapter';
-  const treeResult = await buildKnowledgeTree({
-    book,
-    chapter,
-    pages: pages.length ? pages : [{ pageNumber: 1, text: chapter.title }],
-    chunks: insertedChunks,
-    documentType: refinedProfile.type || chapterProfile.type || 'unknown',
-    mode: treeMode
-  });
-
-  const chapterEntry = treeResult.legacyChapter;
-
-  knowledgeDoc.chapters = knowledgeDoc.chapters || [];
-  knowledgeDoc.chapters.push(chapterEntry);
-  knowledgeDoc.tree = knowledgeDoc.tree || treeRoot || {
-    nodeId: `book-${book._id}`,
-    nodeType: 'book',
-    title: book.title,
-    documentType: refinedProfile.type || chapterProfile.type || 'unknown',
-    children: []
-  };
-  knowledgeDoc.tree.documentType = refinedProfile.type || chapterProfile.type || knowledgeDoc.tree.documentType || 'unknown';
-  knowledgeDoc.tree.children = knowledgeDoc.tree.children || [];
-  knowledgeDoc.tree.children.push(treeResult.treeNode);
-  // `tree` is a Mixed field; the nested children.push() is invisible to
-  // Mongoose's change tracking unless we explicitly mark it modified.
-  knowledgeDoc.markModified('tree');
-  knowledgeDoc.nodes = knowledgeDoc.nodes || [];
-  knowledgeDoc.nodes.push(...treeResult.flatNodes);
-  knowledgeDoc.documentType = knowledgeDoc.documentType === 'unknown'
-    ? (refinedProfile.type || chapterProfile.type || 'unknown')
-    : knowledgeDoc.documentType;
-  knowledgeDoc.sourcePages += pages.length;
-  knowledgeDoc.bookSummary = cleanDocText([
-    knowledgeDoc.bookSummary,
-    treeResult.treeNode.summary || ''
-  ].filter(Boolean).join(' '));
-  knowledgeDoc.bookKeyPoints = Array.from(new Set([
-    ...(knowledgeDoc.bookKeyPoints || []),
-    ...(treeResult.treeNode.keyPoints || [])
-  ])).slice(0, 12);
-  knowledgeDoc.message = `Processed document understanding for "${chapter.title}"`;
-  knowledgeDoc.updatedAt = new Date();
-  await knowledgeDoc.save();
 }
 
 async function processBookKnowledge(bookId) {
@@ -728,8 +548,11 @@ async function queueBookKnowledge(bookId, { force = false } = {}) {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
   const existing = await BookKnowledge.findOne({ bookId: id }).lean().catch(() => null);
   const activeStatuses = new Set(['extracting_text', 'chunking', 'embedding', 'indexing']);
-  if (activeStatuses.has(normalizeStatus(existing?.status)) && !force) return existing;
-  if (inFlight.has(id) && !force) return existing || null;
+  const isCurrentlyInFlight = inFlight.has(id) || queue.some((item) => item.id === id);
+
+  if (!force && isCurrentlyInFlight && activeStatuses.has(normalizeStatus(existing?.status))) {
+    return existing;
+  }
 
   if (!queue.find((item) => item.id === id)) {
     queue.push({ id, force });
