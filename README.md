@@ -450,7 +450,7 @@ GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 LLM_API_KEY=
 GROQ_API_KEY=
 LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+LLM_MODEL=openai/gpt-oss-120b
 ENABLE_KNOWLEDGE_TREE=true
 
 # Firebase Storage for reading-library PDF uploads

@@ -5,10 +5,10 @@ export const TREE_ZOOM = {
 };
 
 export const TREE_NODE_SIZE = {
-  width: 232,
-  height: 112,
-  depthGap: 316,
-  siblingGap: 138
+  width: 252,
+  height: 124,
+  depthGap: 348,
+  siblingGap: 152
 };
 
 export function getKnowledgeNodeChildren(node) {

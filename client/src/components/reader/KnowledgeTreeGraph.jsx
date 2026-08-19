@@ -25,9 +25,10 @@ import './KnowledgeTreeGraph.css';
 
 const MAP_LEGEND = [
   { type: 'book', label: 'Book' },
-  { type: 'chapter', label: 'Chapter' },
+  { type: 'document', label: 'Document' },
   { type: 'topic', label: 'Topic' },
-  { type: 'point', label: 'Key point' }
+  { type: 'subtopic', label: 'Subtopic' },
+  { type: 'point', label: 'Key Point' }
 ];
 
 function useMediaQuery(query) {
@@ -96,7 +97,18 @@ function KnowledgeNodeCard({ nodeDatum, active, onSelect, onToggle }) {
   const type = normalizeKnowledgeNodeType(nodeDatum.nodeType || nodeDatum.attributes?.type);
   const typeLabel = formatKnowledgeNodeType(type);
   const pageLabel = nodeDatum.attributes?.pages || '';
-  const childLabel = nodeDatum.childCount === 1 ? '1 branch' : `${nodeDatum.childCount} branches`;
+  
+  let metaText = '';
+  if (type === 'book' || type === 'document') {
+    metaText = nodeDatum.childCount === 1 ? `1 ${type === 'book' ? 'document' : 'chapter'}` : `${nodeDatum.childCount} ${type === 'book' ? 'documents' : 'chapters'}`;
+  } else if (type === 'topic') {
+    const branches = nodeDatum.childCount === 1 ? '1 branch' : `${nodeDatum.childCount} branches`;
+    metaText = pageLabel ? `p. ${pageLabel} · ${branches}` : branches;
+  } else if (type === 'subtopic') {
+    metaText = nodeDatum.childCount === 1 ? '1 key point' : `${nodeDatum.childCount} key points`;
+  } else {
+    metaText = pageLabel ? `p. ${pageLabel} · View details` : 'View details';
+  }
 
   return (
     <div
@@ -112,15 +124,14 @@ function KnowledgeNodeCard({ nodeDatum, active, onSelect, onToggle }) {
           onSelect(nodeDatum);
         }}
         aria-pressed={active}
+        aria-label={nodeDatum.name}
       >
         <span className="rb-ktree__node-top">
+          <span className="rb-ktree__node-icon" aria-hidden="true" />
           <span className="rb-ktree__pill">{typeLabel}</span>
-          {pageLabel ? <span className="rb-ktree__pages">p. {pageLabel}</span> : null}
         </span>
         <strong className="rb-ktree__title">{nodeDatum.name}</strong>
-        <span className="rb-ktree__meta">
-          {nodeDatum.hasChildren ? childLabel : 'Open details'}
-        </span>
+        <span className="rb-ktree__meta">{metaText}</span>
       </button>
       {nodeDatum.hasChildren ? (
         <button
@@ -132,10 +143,10 @@ function KnowledgeNodeCard({ nodeDatum, active, onSelect, onToggle }) {
             onToggle(nodeDatum.nodeId);
           }}
           aria-expanded={nodeDatum.isExpanded}
-          aria-label={`${nodeDatum.isExpanded ? 'Hide' : 'Show'} branches under ${nodeDatum.name}`}
+          aria-label={`${nodeDatum.isExpanded ? 'Collapse' : 'Expand'} branches under ${nodeDatum.name}`}
         >
           {nodeDatum.isExpanded ? <HiOutlineChevronDown size={16} /> : <HiOutlineChevronRight size={16} />}
-          <span>{nodeDatum.isExpanded ? 'Hide' : 'Explore'}</span>
+          <span>{nodeDatum.isExpanded ? 'Collapse' : 'Expand'}</span>
         </button>
       ) : null}
     </div>
@@ -152,6 +163,18 @@ function KnowledgeOutlineNode({ node, path, depth, expandedNodeIds, selectedNode
     : '';
   const isExpanded = expandedNodeIds.has(nodeId);
   const active = String(selectedNodeId || '') === nodeId;
+
+  let metaText = '';
+  if (type === 'book' || type === 'document') {
+    metaText = children.length === 1 ? `1 ${type === 'book' ? 'document' : 'chapter'}` : `${children.length} ${type === 'book' ? 'documents' : 'chapters'}`;
+  } else if (type === 'topic') {
+    const branches = children.length === 1 ? '1 branch' : `${children.length} branches`;
+    metaText = pages ? `p. ${pages} · ${branches}` : branches;
+  } else if (type === 'subtopic') {
+    metaText = children.length === 1 ? '1 key point' : `${children.length} key points`;
+  } else {
+    metaText = pages ? `p. ${pages} · View details` : 'View details';
+  }
 
   return (
     <li
@@ -171,9 +194,7 @@ function KnowledgeOutlineNode({ node, path, depth, expandedNodeIds, selectedNode
           <span className="rb-ktree__outline-copy">
             <span className="rb-ktree__outline-type">{formatKnowledgeNodeType(type)}</span>
             <strong>{node?.title || 'Untitled concept'}</strong>
-            <small>
-              {pages ? `Pages ${pages}` : children.length ? `${children.length} connected ideas` : 'Read details'}
-            </small>
+            <small>{metaText}</small>
           </span>
         </button>
         {children.length ? (
@@ -290,46 +311,21 @@ export default function KnowledgeTreeGraph({
     <section className="rb-ktree" aria-label="Interactive book concept map">
       <header className="rb-ktree__header">
         <div className="rb-ktree__heading">
-          
           <span>
-            <strong>{isPhone ? 'Reading outline' : 'Concept map'}</strong>
-            <small>{isPhone ? 'Open one branch at a time' : `${mapSummary} · drag the canvas to move`}</small>
+            <strong>Knowledge Map</strong>
+            <small>{isPhone ? 'Open one branch at a time' : `${mapSummary} · drag to explore`}</small>
           </span>
         </div>
+        {!isPhone ? <NodeTypeLegend /> : null}
         {isPhone ? (
           <button type="button" className="rb-ktree__overview" onClick={resetToOverview}>
             <HiOutlineRefresh size={14} />
             Overview
           </button>
-        ) : (
-          <div className="rb-ktree__zoom" aria-label="Concept map zoom controls">
-            <button type="button" onClick={resetToOverview} aria-label="Fit concept map to screen">
-              <HiOutlineRefresh size={15} />
-              <span>Fit</span>
-            </button>
-            <i aria-hidden="true" />
-            <button
-              type="button"
-              onClick={() => setBoundedZoom(zoom - TREE_ZOOM.step)}
-              disabled={zoom <= TREE_ZOOM.min}
-              aria-label="Zoom out"
-            >
-              <HiOutlineZoomOut size={15} />
-            </button>
-            <output aria-live="polite">{Math.round(zoom * 100)}%</output>
-            <button
-              type="button"
-              onClick={() => setBoundedZoom(zoom + TREE_ZOOM.step)}
-              disabled={zoom >= TREE_ZOOM.max}
-              aria-label="Zoom in"
-            >
-              <HiOutlineZoomIn size={15} />
-            </button>
-          </div>
-        )}
+        ) : null}
       </header>
 
-      <NodeTypeLegend />
+      {isPhone ? <NodeTypeLegend /> : null}
 
       {isPhone ? (
         <div className="rb-ktree__outline" role="tree" aria-label="Book concepts">
@@ -369,6 +365,32 @@ export default function KnowledgeTreeGraph({
               renderCustomNodeElement={renderCustomNodeElement}
             />
           ) : null}
+          <div className="rb-ktree__zoom" aria-label="Concept map zoom controls">
+            <button type="button" onClick={resetToOverview} aria-label="Fit concept map to screen" title="Fit">
+              <HiOutlineRefresh size={15} />
+              <span>Fit</span>
+            </button>
+            <i aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => setBoundedZoom(zoom - TREE_ZOOM.step)}
+              disabled={zoom <= TREE_ZOOM.min}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              <HiOutlineZoomOut size={15} />
+            </button>
+            <output aria-live="polite" title="Zoom percentage">{Math.round(zoom * 100)}%</output>
+            <button
+              type="button"
+              onClick={() => setBoundedZoom(zoom + TREE_ZOOM.step)}
+              disabled={zoom >= TREE_ZOOM.max}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              <HiOutlineZoomIn size={15} />
+            </button>
+          </div>
         </div>
       )}
     </section>
