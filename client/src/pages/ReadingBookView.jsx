@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
 import { useDebouncedAutoSave } from '../hooks/useDebouncedAutoSave';
@@ -71,6 +71,7 @@ export default function ReadingBookView() {
   ));
   const [activeTool, setActiveTool] = useState('select');
   const [penColor, setPenColor] = useState('#EF4444');
+  const [highlighterColor, setHighlighterColor] = useState('#FFF176');
   const [penWidth, setPenWidth] = useState(3);
   const [pressureSimEnabled, setPressureSimEnabled] = useState(true);
   const [allAnnotations, setAllAnnotations] = useState([]);
@@ -84,9 +85,6 @@ export default function ReadingBookView() {
   const [knowledgeTree, setKnowledgeTree] = useState(null);
   const [isMindMapOpen, setIsMindMapOpen] = useState(false);
   const [tutorScope, setTutorScope] = useState('page');
-  // Page text is held in a ref so it doesn't re-render this view; ChatSidebar
-// reads it at send time. The boolean flag below drives the chat composer's
-// disabled state.
   const pageTextRef = useRef('');
   const [pageTextReady, setPageTextReady] = useState(false);
   const [eraserType, setEraserType] = useState('stroke');
@@ -834,6 +832,14 @@ export default function ReadingBookView() {
           onSelectChapter={handleSelectChapter}
           onAskBookAI={handleAskBookAI}
           isOpen={isNavOpen}
+          key={`${bookId}-${chapterId}`}
+          book={book}
+          chapters={chapters}
+          activeChapterId={chapterId}
+          pageNumber={pageNumber}
+          onSelectChapter={handleSelectChapter}
+          onAskBookAI={handleAskBookAI}
+          isOpen={isNavOpen}
           onClose={() => setIsNavOpen(false)}
           bookmarks={readingState?.bookmarks || []}
           onSelectBookmark={handleSelectBookmark}
@@ -843,6 +849,7 @@ export default function ReadingBookView() {
           onPrevChapter={goPrevChapter}
           onNextChapter={goNextChapter}
           onOpenMindMap={handleOpenMindMap}
+          onOpenHighlights={() => setIsHighlightSidebarOpen(true)}
           canReadingAI={canReadingAI}
           knowledgeStatus={knowledgeStatus}
         />
@@ -890,6 +897,8 @@ export default function ReadingBookView() {
             onToolChange={setActiveTool}
             penColor={penColor}
             onPenColorChange={setPenColor}
+            highlighterColor={highlighterColor}
+            onHighlighterColorChange={setHighlighterColor}
             penWidth={penWidth}
             onPenWidthChange={setPenWidth}
             pressureSimEnabled={pressureSimEnabled}
@@ -913,6 +922,9 @@ export default function ReadingBookView() {
             onPrevPage={handlePrevPage}
             onNextPage={handleNextPage}
             onPageChange={handlePageChange}
+            isHighlightSidebarOpen={isHighlightSidebarOpen}
+            onToggleHighlights={() => setIsHighlightSidebarOpen((v) => !v)}
+            highlightCount={highlights.length}
           />
 
           <section
@@ -939,7 +951,7 @@ export default function ReadingBookView() {
                   annotations={visiblePageAnnotations}
                   highlights={highlights.filter(h => h.pageNumber === pageNumber)}
                   activeTool={activeTool}
-                  penColor={penColor}
+                  penColor={activeTool === 'highlighter' ? highlighterColor : penColor}
                   penWidth={penWidth}
                   pressureSimEnabled={pressureSimEnabled}
                   eraserType={eraserType}

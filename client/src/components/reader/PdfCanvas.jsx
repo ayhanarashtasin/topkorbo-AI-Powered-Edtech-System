@@ -507,11 +507,15 @@ export default function PdfCanvas({
               <HighlightPopup
                 position={selectionPopup.position}
                 onHighlight={handleCreateHighlight}
-                onSummarize={() => onSummarizeSelection?.({
-                  text: selectionPopup.text,
-                  pageNumber,
-                  note: ''
-                })}
+                onSummarize={(typedNote) => {
+                  onSummarizeSelection?.({
+                    text: selectionPopup.text,
+                    pageNumber,
+                    note: typedNote || ''
+                  });
+                  setSelectionPopup(null);
+                  window.getSelection()?.removeAllRanges();
+                }}
               />
             )}
           </div>

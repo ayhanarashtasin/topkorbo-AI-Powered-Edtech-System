@@ -9,7 +9,8 @@ import {
   HiOutlineChevronRight,
   HiOutlineZoomIn,
   HiOutlineZoomOut,
-  HiOutlineAdjustments
+  HiOutlineAdjustments,
+  HiOutlineAnnotation
 } from 'react-icons/hi';
 import { LuUndo2, LuRedo2, LuEraser, LuHighlighter } from 'react-icons/lu';
 import './ReaderToolbar.css';
@@ -20,6 +21,14 @@ const PEN_COLORS = [
   { id: 'blue',   value: '#3B82F6' },
   { id: 'black',  value: '#111827' },
   { id: 'orange', value: '#F59E0B' }
+];
+
+// Highlighter colors shown in the toolbar swatches.
+const HIGHLIGHT_COLORS = [
+  { id: 'yellow', value: '#FFF176', label: 'Yellow' },
+  { id: 'green',  value: '#A5D6A7', label: 'Green' },
+  { id: 'blue',   value: '#90CAF9', label: 'Blue' },
+  { id: 'pink',   value: '#F48FB1', label: 'Pink' }
 ];
 
 // Pen stroke widths in CSS px — small / medium / large.
@@ -40,6 +49,8 @@ export default function ReaderToolbar({
   onToolChange,
   penColor,
   onPenColorChange,
+  highlighterColor = '#FFF176',
+  onHighlighterColorChange,
   penWidth,
   onPenWidthChange,
   pressureSimEnabled,
@@ -64,7 +75,10 @@ export default function ReaderToolbar({
   onEraserWidthChange,
   onClearPage,
   onPageChange,
-  canAnnotate = true
+  canAnnotate = true,
+  isHighlightSidebarOpen = false,
+  onToggleHighlights,
+  highlightCount = 0
 }) {
   const { t } = useLanguage();
   const [openPopover, setOpenPopover] = useState(null);
@@ -178,8 +192,8 @@ export default function ReaderToolbar({
         )}
       </div>
 
-      {(activeTool === 'pen' || activeTool === 'highlighter') && (
-        <div className="rb-toolbar__group rb-toolbar__colors" role="group" aria-label="Tool colors">
+      {activeTool === 'pen' && (
+        <div className="rb-toolbar__group rb-toolbar__colors" role="group" aria-label="Pen colors">
           {PEN_COLORS.map((c) => (
             <button
               key={c.id}
@@ -191,6 +205,24 @@ export default function ReaderToolbar({
               onClick={() => onPenColorChange(c.value)}
               aria-label={c.id + ' Ink Color'}
               aria-pressed={penColor === c.value}
+            />
+          ))}
+        </div>
+      )}
+
+      {activeTool === 'highlighter' && (
+        <div className="rb-toolbar__group rb-toolbar__colors" role="group" aria-label="Highlight colors">
+          {HIGHLIGHT_COLORS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`rb-toolbar__pen-swatch ${
+                highlighterColor === c.value ? 'rb-toolbar__pen-swatch--active' : ''
+              }`}
+              style={{ background: c.value }}
+              onClick={() => (onHighlighterColorChange ? onHighlighterColorChange(c.value) : onPenColorChange(c.value))}
+              aria-label={c.label + ' Highlight Color'}
+              aria-pressed={highlighterColor === c.value}
             />
           ))}
         </div>
@@ -477,6 +509,36 @@ export default function ReaderToolbar({
           {isBookmarked ? t('rb.reader.bookmarked') : t('rb.reader.bookmark')}
         </span>
       </button>
+
+      {onToggleHighlights && (
+        <button
+          type="button"
+          className={`rb-toolbar__btn ${isHighlightSidebarOpen ? 'rb-toolbar__btn--active' : ''}`}
+          onClick={onToggleHighlights}
+          title={isHighlightSidebarOpen ? 'Hide Highlights & Notes' : 'Show Highlights & Notes'}
+          aria-label="Highlights & Notes"
+          aria-pressed={isHighlightSidebarOpen}
+        >
+          <HiOutlineAnnotation size={16} aria-hidden="true" />
+          <span className="rb-toolbar__btn-label">Notes</span>
+          {highlightCount > 0 && (
+            <span
+              className="rb-toolbar__badge"
+              style={{
+                marginLeft: '4px',
+                fontSize: '11px',
+                fontWeight: 700,
+                background: 'rgba(192, 133, 82, 0.18)',
+                color: '#8C5A3C',
+                padding: '1px 6px',
+                borderRadius: '999px'
+              }}
+            >
+              {highlightCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {hint && (
         <div className="rb-toolbar__hint">

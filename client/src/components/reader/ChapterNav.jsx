@@ -25,6 +25,7 @@ export default function ChapterNav({
   hasNext,
   onAskBookAI,
   onOpenMindMap,
+  onOpenHighlights,
   canReadingAI = false,
   knowledgeStatus = 'pending'
 }) {
@@ -109,6 +110,19 @@ export default function ChapterNav({
               >
                 <span>Mind Map</span>
               </button>
+              {onOpenHighlights && (
+                <button
+                  type="button"
+                  className="rb-chapnav__book-ai-btn"
+                  onClick={() => {
+                    onClose();
+                    onOpenHighlights();
+                  }}
+                  title="Highlights & Notes"
+                >
+                  <span>Highlights</span>
+                </button>
+              )}
             </div>
           </div>
 

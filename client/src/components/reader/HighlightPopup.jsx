@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiOutlinePencilAlt, HiX } from 'react-icons/hi';
+import { HiOutlinePencilAlt, HiX, HiSparkles } from 'react-icons/hi';
 import './HighlightPopup.css';
 
 const COLORS = [
@@ -44,14 +44,15 @@ export default function HighlightPopup({ position, onHighlight, onSummarize }) {
           <button
             type="button"
             className="rb-icon-btn"
-            title="Summarize"
-            aria-label="Summarize selection"
+            title="Summarize with AI"
+            aria-label="Summarize selection with AI"
             onClick={(e) => {
               e.stopPropagation();
               onSummarize(note);
             }}
           >
-            </button>
+            <HiSparkles size={16} />
+          </button>
         )}
 
         <button
