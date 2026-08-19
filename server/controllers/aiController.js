@@ -21,7 +21,7 @@ function getGroqClient() {
 }
 
 const DEFAULT_MODEL =
-  process.env.LLM_MODEL || 'llama-3.3-70b-versatile';
+  process.env.LLM_MODEL || 'openai/gpt-oss-120b';
 
 // Cap how much context we forward so a single very dense page doesn't blow
 // the LLM's context window or our request latency budget.
@@ -918,7 +918,7 @@ exports.extractQuestion = async (req, res, next) => {
 
     let modelToUse = DEFAULT_MODEL;
     if (isRubricMode) {
-      modelToUse = questionImageBase64 || answerImageBase64 ? 'qwen/qwen3.6-27b' : 'llama-3.3-70b-versatile';
+      modelToUse = questionImageBase64 || answerImageBase64 ? (process.env.VISION_MODEL || 'qwen/qwen3.6-27b') : DEFAULT_MODEL;
     }
 
     const extractRequest = {

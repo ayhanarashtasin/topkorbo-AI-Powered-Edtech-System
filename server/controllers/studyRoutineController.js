@@ -3,7 +3,7 @@ const StudySession = require('../models/StudySession');
 const ApiResponse = require('../utils/apiResponse');
 const Groq = require('groq-sdk');
 
-const GROQ_MODEL = 'openai/gpt-oss-120b';
+const GROQ_MODEL = process.env.LLM_MODEL || process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 /**
  * Instantiate Groq client using available environment variables.

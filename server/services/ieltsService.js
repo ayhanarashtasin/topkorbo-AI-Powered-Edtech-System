@@ -14,8 +14,8 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
-const VISION_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
-const TEXT_MODEL = process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+const VISION_MODEL = process.env.VISION_MODEL || 'qwen/qwen3.6-27b';
+const TEXT_MODEL = process.env.LLM_MODEL || 'openai/gpt-oss-120b';
 
 /**
  * Normalizes question set approval status.

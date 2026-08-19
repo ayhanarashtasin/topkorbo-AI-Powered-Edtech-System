@@ -81,7 +81,7 @@ const generateBattleCoachReport = async (battleSummary) => {
     };
   }
 
-  const model = process.env.GROQ_MODEL || process.env.LLM_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+  const model = process.env.GROQ_MODEL || process.env.LLM_MODEL || 'openai/gpt-oss-120b';
 
   try {
     const completion = await groq.chat.completions.create({

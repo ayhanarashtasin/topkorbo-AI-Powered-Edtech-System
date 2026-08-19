@@ -4,7 +4,7 @@ const DEFAULT_MODEL =
   process.env.GROQ_RAG_MODEL
   || process.env.GROQ_MODEL
   || process.env.LLM_MODEL
-  || 'meta-llama/llama-4-scout-17b-16e-instruct';
+  || 'openai/gpt-oss-120b';
 
 function getGroqClient() {
   const apiKey = process.env.GROQ_API_KEY || process.env.LLM_API_KEY;

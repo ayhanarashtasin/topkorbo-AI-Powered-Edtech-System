@@ -27,8 +27,8 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-const VISION_MODEL = "qwen/qwen3.6-27b";
-const TEXT_MODEL = "openai/gpt-oss-120b";
+const VISION_MODEL = process.env.VISION_MODEL || "qwen/qwen3.6-27b";
+const TEXT_MODEL = process.env.LLM_MODEL || "openai/gpt-oss-120b";
 
 function logToFile(msg) {
   try {
