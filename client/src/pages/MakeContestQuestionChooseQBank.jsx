@@ -543,9 +543,9 @@ export default function MakeContestQuestionChooseQBank() {
   };
 
   const STEP_LABELS = [
-    { num: 1, labelEn: 'Subjects', labelBn: 'বিষয়' },
-    { num: 2, labelEn: 'Chapters', labelBn: 'অধ্যায়' },
-    { num: 3, labelEn: 'Settings', labelBn: 'সেটিংস' },
+    { num: 1, labelEn: 'SUBJECTS', labelBn: 'বিষয়' },
+    { num: 2, labelEn: 'CHAPTERS', labelBn: 'অধ্যায়' },
+    { num: 3, labelEn: 'SETTINGS', labelBn: 'সেটিংস' },
   ];
 
   return (
@@ -556,32 +556,45 @@ export default function MakeContestQuestionChooseQBank() {
         {/* Header Section */}
 
         <div className="mock-workspace animate-fade-in">
-          <div className="mock-step-indicator">
+          <div className="mock-stepper">
             {STEP_LABELS.map((s, idx) => (
-              <div key={s.num} className="mock-step-indicator-item">
+              <div key={s.num} className="mock-stepper__item">
                 <button
                   type="button"
-                  className={`mock-step-dot ${step >= s.num ? 'mock-step-dot--active' : ''} ${step === s.num ? 'mock-step-dot--current' : ''}`}
+                  className={`mock-stepper__dot ${step > s.num ? 'mock-stepper__dot--done' : ''} ${step === s.num ? 'mock-stepper__dot--current' : ''}`}
                   onClick={() => { if (s.num < step) setStep(s.num); }}
                   disabled={s.num > step}
                 >
-                  {step > s.num ? <HiCheck size={14} /> : s.num}
+                  {step > s.num ? <HiCheck size={16} /> : s.num}
                 </button>
-                <span className={`mock-step-label ${step >= s.num ? 'mock-step-label--active' : ''}`}>
+                <span className={`mock-stepper__label ${step >= s.num ? 'mock-stepper__label--active' : ''}`}>
                   {language === 'en' ? s.labelEn : s.labelBn}
                 </span>
                 {idx < STEP_LABELS.length - 1 && (
-                  <div className={`mock-step-connector ${step > s.num ? 'mock-step-connector--done' : ''}`} />
+                  <div className={`mock-stepper__line ${step > s.num ? 'mock-stepper__line--done' : ''}`} />
                 )}
               </div>
             ))}
           </div>
 
+          <div className="mock-content">
+          <button
+            type="button"
+            onClick={() => navigate('/make-contest-question/next-two', { state: { contestData, showOptions: true } })}
+            className="mock-back-to-modes"
+          >
+            <HiArrowLeft size={16} />
+            <span>{language === 'en' ? 'Back to modes' : 'মোডে ফিরে যান'}</span>
+          </button>
+
           {step === 1 ? (
             /* STEP 1: SUBJECT LIST SELECTION VIEW */
             <div className="mock-subject-selection">
               <div className="mock-selection-info">
-                <h3>{language === 'en' ? 'Select Subject(s)' : 'বিষয় নির্বাচন করুন'}</h3>
+                <h3>{language === 'en' ? 'Select Subjects' : 'বিষয় নির্বাচন করুন'}</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
+                  {language === 'en' ? 'Choose one, multiple, or all subjects for the live room.' : 'লাইভ রুমের জন্য এক বা একাধিক বিষয় নির্বাচন করুন।'}
+                </p>
               </div>
 
               <div className="mock-subjects-grid">
@@ -618,15 +631,16 @@ export default function MakeContestQuestionChooseQBank() {
                 })}
               </div>
 
-              <div className="mock-selection-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="mock-selection-actions" style={{ justifyContent: 'center', gap: '12px', marginTop: '24px' }}>
                 <button
                   type="button"
-                  onClick={() => navigate('/make-contest-question/next-two', { state: { contestData, showOptions: true } })}
-                  className="mock-back-btn"
-                  style={{ marginBottom: 0 }}
+                  className="mock-select-all-btn"
+                  onClick={() => {
+                    const allIds = filteredSubjects.map(s => s.id);
+                    setSelectedSubjectIds(allIds);
+                  }}
                 >
-                  <HiArrowLeft size={16} />
-                  <span>{language === 'en' ? 'Back' : 'ফিরে যান'}</span>
+                  {language === 'en' ? 'Select All' : 'সব নির্বাচন করুন'}
                 </button>
 
                 <button
@@ -635,7 +649,7 @@ export default function MakeContestQuestionChooseQBank() {
                   disabled={selectedSubjectIds.length === 0}
                   onClick={() => setStep(2)}
                 >
-                  <span>{language === 'en' ? 'Next Step' : 'পরবর্তী ধাপ'}</span>
+                  <span>{language === 'en' ? 'Next' : 'পরবর্তী'}</span>
                   <HiArrowRight size={18} />
                 </button>
               </div>
@@ -1042,6 +1056,7 @@ export default function MakeContestQuestionChooseQBank() {
               </div>
             </div>
           ) : null}
+          </div>
         </div>
       </main>
     </div>

@@ -1091,12 +1091,94 @@ export default function MakeContestQuestionNextTwo() {
         {/* ── Content ── */}
         <div className="cc-form">
 
+          {/* ═══════ Combined Add Question & Options Section (Always visible when not editing) ═══════ */}
+          {!activeOption && (
+            <section className="cc-section cc-section--bare cq-add-section" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: showOptions ? '1.5rem' : '0',
+              transition: 'all 0.3s ease'
+            }}>
+              {/* Trigger Header */}
+              <div 
+                className="cq-add-trigger" 
+                onClick={handleAddQuestion} 
+                style={{ cursor: 'pointer', padding: 0 }}
+              >
+                <div className="cq-add-trigger__icon">
+                  <HiPlusCircle size={32} />
+                </div>
+                <div className="cq-add-trigger__text">
+                  <h3>{language === 'en' ? 'Add Question' : 'প্রশ্ন যোগ করুন'}</h3>
+                  <p>{language === 'en'
+                    ? 'Click here to add a question to your contest'
+                    : 'আপনার কনটেস্টে প্রশ্ন যোগ করতে এখানে ক্লিক করুন'}</p>
+                </div>
+              </div>
+
+              {/* Collapsible Options Body */}
+              {showOptions && (
+                <div className="cq-options-combined-body" style={{
+                  borderTop: '1.5px solid rgba(192, 133, 82, 0.15)',
+                  paddingTop: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem',
+                  animation: 'cqExpandIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+                }}>
+                  <div className="cq-options-header" style={{ marginBottom: 0 }}>
+                    <h3 className="cc-section__title" style={{ margin: 0, fontSize: '1.1rem' }}>
+                      {language === 'en' ? 'How would you like to add a question?' : 'আপনি কিভাবে প্রশ্ন যোগ করতে চান?'}
+                    </h3>
+                    <p className="cc-section__desc" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
+                      {language === 'en'
+                        ? 'Choose from existing questions or create a new one.'
+                        : 'বিদ্যমান প্রশ্ন থেকে বেছে নিন অথবা একটি নতুন তৈরি করুন।'}
+                    </p>
+                  </div>
+
+                  <div className="cq-options-grid">
+                    {/* Option 1: Choose from Question Bank */}
+                    <button type="button" className="cq-option-card" onClick={handleChooseQBank}>
+                      <div className="cq-option-card__icon">
+                        <HiBookOpen size={28} />
+                      </div>
+                      <h4 className="cq-option-card__title">
+                        {language === 'en' ? 'Choose from Question Bank' : 'প্রশ্ন ব্যাংক থেকে বেছে নিন'}
+                      </h4>
+                      <p className="cq-option-card__desc">
+                        {language === 'en'
+                          ? 'Browse and select from your existing question library'
+                          : 'আপনার বিদ্যমান প্রশ্ন লাইব্রেরি ব্রাউজ করুন এবং নির্বাচন করুন'}
+                      </p>
+                    </button>
+
+                    {/* Option 2: Upload New Question */}
+                    <button type="button" className="cq-option-card" onClick={handleAddNew}>
+                      <div className="cq-option-card__icon cq-option-card__icon--new">
+                        <HiPencilAlt size={28} />
+                      </div>
+                      <h4 className="cq-option-card__title">
+                        {language === 'en' ? 'Upload New Question' : 'নতুন প্রশ্ন আপলোড করুন'}
+                      </h4>
+                      <p className="cq-option-card__desc">
+                        {language === 'en'
+                          ? 'Write a new question with options, solutions, and tags'
+                          : 'অপশন, সমাধান এবং ট্যাগ সহ একটি নতুন প্রশ্ন তৈরি করুন'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* ═══════ Confirmed Questions List ═══════ */}
           {confirmedQuestions.length > 0 && !activeOption && (
-            <section className="cc-section cq-confirmed-list-section cq-section--animated">
+            <section className="cc-section cc-section--bare cq-confirmed-list-section cq-section--animated">
               <div className="cq-options-header" style={{ marginBottom: '1.25rem' }}>
                 <h3 className="cc-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                  📝 {language === 'en' ? 'Uploaded Questions' : 'আপলোডকৃত প্রশ্নসমূহ'}
+                  {language === 'en' ? 'Uploaded Questions' : 'আপলোডকৃত প্রশ্নসমূহ'}
                 </h3>
                 <p className="cc-section__desc" style={{ marginTop: '0.25rem' }}>
                   {language === 'en'
@@ -1108,12 +1190,13 @@ export default function MakeContestQuestionNextTwo() {
               <div className="cq-confirmed-questions-container" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {confirmedQuestions.map((q, idx) => (
                   <div key={q.id || idx} className="cq-confirmed-question-card" style={{
-                    background: '#FFFBF7',
-                    border: '1.5px solid rgba(192, 133, 82, 0.2)',
-                    borderRadius: '16px',
-                    padding: '1.5rem',
-                    position: 'relative',
-                    boxShadow: '0 4px 15px rgba(192, 133, 82, 0.04)'
+                    background: 'rgba(255, 255, 255, 0.4)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    border: '1.2px solid rgba(192, 133, 82, 0.15)',
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    position: 'relative'
                   }}>
                     {/* Header: Question Number & Delete Button */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -1260,18 +1343,18 @@ export default function MakeContestQuestionNextTwo() {
 
           {/* ═══════ Selected Question Bank Chapters ═══════ */}
           {((qbankQuestions && qbankQuestions.length > 0) || (qbankSelections && qbankSelections.length > 0)) && (
-            <section className="cc-section cq-selection-summary-card">
+            <section className="cc-section cc-section--bare cq-selection-summary-card">
               <div className="cq-section-top-bar" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 className="cc-section__title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                  📚 {language === 'en' ? `Selected Questions (${qbankQuestions.length})` : 'নির্বাচিত অধ্যায়সমূহ'}
+                  {language === 'en' ? `Selected Questions (${qbankQuestions.length})` : 'নির্বাচিত অধ্যায়সমূহ'}
                 </h3>
                 <button
                   type="button"
                   className="cq-back-btn"
                   onClick={handleEditQBank}
-                  style={{ fontSize: '0.82rem', padding: '0.4rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1.5px solid rgba(192, 133, 82, 0.25)', borderRadius: '8px', background: '#FFFBF7', color: '#8C5A3C' }}
+                  style={{ fontSize: '0.82rem', padding: '0.4rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1.5px solid rgba(192, 133, 82, 0.25)', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.5)', color: '#8C5A3C' }}
                 >
-                  ✏️ {language === 'en' ? 'Edit Selection' : 'পরিবর্তন করুন'}
+                  {language === 'en' ? 'Edit Selection' : 'পরিবর্তন করুন'}
                 </button>
               </div>
 
@@ -1384,89 +1467,6 @@ export default function MakeContestQuestionNextTwo() {
                   </div>
                 ))}
               </div>
-              )}
-            </section>
-          )}
-
-          {/* ═══════ Combined Add Question & Options Section (Always visible when not editing) ═══════ */}
-          {!activeOption && (
-            <section className="cc-section cq-add-section" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: showOptions ? '1.5rem' : '0',
-              padding: showOptions ? '1.5rem' : '1rem 0.5rem',
-              transition: 'all 0.3s ease'
-            }}>
-              {/* Trigger Header */}
-              <div 
-                className="cq-add-trigger" 
-                onClick={handleAddQuestion} 
-                style={{ cursor: 'pointer', padding: 0 }}
-              >
-                <div className="cq-add-trigger__icon">
-                  <HiPlusCircle size={32} />
-                </div>
-                <div className="cq-add-trigger__text">
-                  <h3>{language === 'en' ? 'Add Question' : 'প্রশ্ন যোগ করুন'}</h3>
-                  <p>{language === 'en'
-                    ? 'Click here to add a question to your contest'
-                    : 'আপনার কনটেস্টে প্রশ্ন যোগ করতে এখানে ক্লিক করুন'}</p>
-                </div>
-              </div>
-
-              {/* Collapsible Options Body */}
-              {showOptions && (
-                <div className="cq-options-combined-body" style={{
-                  borderTop: '1.5px solid rgba(192, 133, 82, 0.15)',
-                  paddingTop: '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.25rem',
-                  animation: 'cqExpandIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)'
-                }}>
-                  <div className="cq-options-header" style={{ marginBottom: 0 }}>
-                    <h3 className="cc-section__title" style={{ margin: 0, fontSize: '1.1rem' }}>
-                      {language === 'en' ? 'How would you like to add a question?' : 'আপনি কিভাবে প্রশ্ন যোগ করতে চান?'}
-                    </h3>
-                    <p className="cc-section__desc" style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>
-                      {language === 'en'
-                        ? 'Choose from existing questions or create a new one.'
-                        : 'বিদ্যমান প্রশ্ন থেকে বেছে নিন অথবা একটি নতুন তৈরি করুন।'}
-                    </p>
-                  </div>
-
-                  <div className="cq-options-grid">
-                    {/* Option 1: Choose from Question Bank */}
-                    <button type="button" className="cq-option-card" onClick={handleChooseQBank}>
-                      <div className="cq-option-card__icon">
-                        <HiBookOpen size={28} />
-                      </div>
-                      <h4 className="cq-option-card__title">
-                        {language === 'en' ? 'Choose from Question Bank' : 'প্রশ্ন ব্যাংক থেকে বেছে নিন'}
-                      </h4>
-                      <p className="cq-option-card__desc">
-                        {language === 'en'
-                          ? 'Browse and select from your existing question library'
-                          : 'আপনার বিদ্যমান প্রশ্ন লাইব্রেরি ব্রাউজ করুন এবং নির্বাচন করুন'}
-                      </p>
-                    </button>
-
-                    {/* Option 2: Upload New Question */}
-                    <button type="button" className="cq-option-card" onClick={handleAddNew}>
-                      <div className="cq-option-card__icon cq-option-card__icon--new">
-                        <HiPencilAlt size={28} />
-                      </div>
-                      <h4 className="cq-option-card__title">
-                        {language === 'en' ? 'Upload New Question' : 'নতুন প্রশ্ন আপলোড করুন'}
-                      </h4>
-                      <p className="cq-option-card__desc">
-                        {language === 'en'
-                          ? 'Write a new question with options, solutions, and tags'
-                          : 'অপশন, সমাধান এবং ট্যাগ সহ একটি নতুন প্রশ্ন তৈরি করুন'}
-                      </p>
-                    </button>
-                  </div>
-                </div>
               )}
             </section>
           )}

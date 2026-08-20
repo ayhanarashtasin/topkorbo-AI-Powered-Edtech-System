@@ -155,15 +155,15 @@ export default function Sidebar({ activeTab, user }) {
   // Show Upload Question and Create Contest tabs only for teachers
   if (safeUser.role === 'teacher') {
     menuItems.push({
-      id: 'upload-question',
-      label: t('db.menu.upload_question'),
-      icon: <HiUpload size={20} />
-    });
-
-    menuItems.push({
       id: 'make-contest-question',
       label: language === 'en' ? 'Contests' : 'কনটেস্টসমূহ',
       icon: <HiCalendar size={20} />
+    });
+
+    menuItems.push({
+      id: 'upload-question',
+      label: t('db.menu.upload_question'),
+      icon: <HiUpload size={20} />
     });
 
     menuItems.push({
@@ -236,11 +236,11 @@ export default function Sidebar({ activeTab, user }) {
     },
     {
       label: language === 'en' ? 'Compete' : 'প্রতিযোগিতা',
-      ids: ['battle', 'contests']
+      ids: ['battle', 'contests', 'make-contest-question']
     },
     {
       label: language === 'en' ? 'More' : 'আরও',
-      ids: ['teacher', 'pricing', 'upload-question', 'make-contest-question', 'ielts-teacher', 'cheating-verify', 'support']
+      ids: ['teacher', 'pricing', 'upload-question', 'ielts-teacher', 'cheating-verify', 'support']
     }
   ];
 

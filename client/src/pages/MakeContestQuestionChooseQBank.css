@@ -393,11 +393,12 @@
 
 .qsel-review-card {
   position: relative;
-  background: var(--bg-card);
-  border: 1.5px solid rgba(140, 90, 60, 0.14);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1.2px solid rgba(192, 133, 82, 0.15);
+  border-radius: 12px;
   padding: 1.15rem 1.25rem;
-  box-shadow: 0 2px 10px rgba(37, 24, 23, 0.03);
 }
 
 /* leave room for the absolute remove button */
@@ -413,13 +414,15 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.35rem 0.75rem;
-  border: none;
+  border: 1px solid rgba(220, 50, 50, 0.2);
   border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 600;
   font-family: inherit;
   color: #DC3232;
-  background: rgba(220, 50, 50, 0.08);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   cursor: pointer;
   transition: background 0.18s ease, transform 0.18s ease;
 }

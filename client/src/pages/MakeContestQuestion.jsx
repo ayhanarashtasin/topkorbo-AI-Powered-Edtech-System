@@ -13,7 +13,6 @@ import {
   HiCog,
   HiCollection,
   HiDocumentText,
-  HiGlobeAlt,
   HiLibrary,
   HiPencilAlt,
   HiSelector,
@@ -67,26 +66,20 @@ const ADMISSION_OPTIONS = [
 const VARSITY_OPTIONS = [
   {
     id: 'science',
-    badgeEn: 'Science',
-    badgeBn: 'বিজ্ঞান',
-    labelEn: 'DU A / RU C/ JU A & D/ JnU A/ KU A/ SUST A/ CU A/ GST A',
-    labelBn: 'DU A / RU C/ JU A & D/ JnU A/ KU A/ SUST A/ CU A/ GST A',
+    labelEn: 'Science',
+    labelBn: 'বিজ্ঞান',
     icon: HiBeaker
   },
   {
     id: 'commerce',
-    badgeEn: 'Commerce',
-    badgeBn: 'ব্যবসায় শিক্ষা',
-    labelEn: 'DU C / RU B/ JU E/ JnU C/ KU C/ CU C/ GST C',
-    labelBn: 'DU C / RU B/ JU E/ JnU C/ KU C/ CU C/ GST C',
+    labelEn: 'Commerce',
+    labelBn: 'ব্যবসায় শিক্ষা',
     icon: HiChartBar
   },
   {
     id: 'arts',
-    badgeEn: 'Humanities',
-    badgeBn: 'মানবিক',
-    labelEn: 'DU B/ RU A/ JU B & C/ JnU B/ KU B/ CU B & D/ GST B',
-    labelBn: 'DU B/ RU A/ JU B & C/ JnU B/ KU B/ CU B & D/ GST B',
+    labelEn: 'Humanities',
+    labelBn: 'মানবিক',
     icon: HiPencilAlt
   },
   {
@@ -554,23 +547,23 @@ export default function MakeContestQuestion() {
   let questionTypeOptions;
   if (level === 'hsc') {
     questionTypeOptions = [
-      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector },
-      { id: 'cq', labelEn: 'CQ (Creative Question)', labelBn: 'CQ (সৃজনশীল)', icon: HiDocumentText },
-      { id: 'both', labelEn: 'Both MCQ and CQ', labelBn: 'MCQ এবং CQ উভয়ই', icon: HiCollection }
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', shortLabel: 'MCQ', shortLabelBn: 'MCQ', icon: HiSelector },
+      { id: 'cq', labelEn: 'CQ (Creative Question)', labelBn: 'CQ (সৃজনশীল)', shortLabel: 'CQ', shortLabelBn: 'CQ', icon: HiDocumentText },
+      { id: 'both', labelEn: 'Both MCQ and CQ', labelBn: 'MCQ এবং CQ উভয়ই', shortLabel: 'MCQ & CQ', shortLabelBn: 'MCQ & CQ', icon: HiCollection }
     ];
   } else if (level === 'admission' && selectedAdmission === 'medical') {
     questionTypeOptions = [
-      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector }
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', shortLabel: 'MCQ', shortLabelBn: 'MCQ', icon: HiSelector }
     ];
   } else if (level === 'admission' && (selectedAdmission === 'varsity' || selectedAdmission === 'engineering')) {
     questionTypeOptions = [
-      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector },
-      { id: 'written', labelEn: 'Written', labelBn: 'লিখিত', icon: HiPencilAlt },
-      { id: 'both', labelEn: 'MCQ & Written', labelBn: 'MCQ এবং লিখিত', icon: HiCollection }
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', shortLabel: 'MCQ', shortLabelBn: 'MCQ', icon: HiSelector },
+      { id: 'written', labelEn: 'Written', labelBn: 'লিখিত', shortLabel: 'Written', shortLabelBn: 'Written', icon: HiPencilAlt },
+      { id: 'both', labelEn: 'MCQ & Written', labelBn: 'MCQ এবং লিখিত', shortLabel: 'MCQ & Written', shortLabelBn: 'MCQ & Written', icon: HiCollection }
     ];
   } else {
     questionTypeOptions = [
-      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', icon: HiSelector }
+      { id: 'mcq', labelEn: 'MCQ (Multiple Choice)', labelBn: 'MCQ (বহুনির্বাচনী)', shortLabel: 'MCQ', shortLabelBn: 'MCQ', icon: HiSelector }
     ];
   }
 
@@ -818,236 +811,218 @@ export default function MakeContestQuestion() {
             </div>
 
             <div className="cc-form">
-              <div className="cc-form-grid">
+              {/* ──────── 1. CONTEST BASICS ──────── */}
+              <section className="cc-section cc-workflow-section" aria-labelledby="contest-basics-title">
+                <div className="cc-section__header">
+                  <div className="cc-section__icon"><HiTag size={18} aria-hidden="true" /></div>
+                  <h2 id="contest-basics-title" className="cc-section__title">
+                    {language === 'en' ? '1. Contest Basics' : '১. কনটেস্টের মৌলিক তথ্য'}
+                  </h2>
+                </div>
 
-                {/* ──────── 1. CONTEST NAME ──────── */}
-                <section className="cc-section cc-section--name">
-                  <div className="cc-section__header">
-                    <div className="cc-section__icon"><HiTag size={18} /></div>
-                    <div>
-                      <h2 className="cc-section__title">
-                        {language === 'en' ? 'Contest Name' : 'কনটেস্টের নাম'}
-                      </h2>
-                      <p className="cc-section__desc">
-                        {language === 'en' ? 'Enter a descriptive name for your contest.' : 'আপনার কনটেস্টের জন্য একটি বর্ণনামূলক নাম লিখুন।'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="cc-name-input-container">
+                <div className="cc-basics-grid">
+                  <div className="cc-field-block">
+                    <label className="cc-label cc-field-label" htmlFor="contest-name">
+                      {language === 'en' ? 'Contest Name' : 'কনটেস্টের নাম'}
+                    </label>
                     <input
                       type="text"
                       id="contest-name"
+                      name="contestName"
+                      autoComplete="off"
                       className="cc-input"
-                      placeholder={language === 'en' ? 'e.g. Science Olympiad 2026' : 'যেমন: বিজ্ঞান অলিম্পিয়াড ২০২৬'}
+                      placeholder={language === 'en' ? 'e.g. Science Olympiad 2026' : 'যেমন: বিজ্ঞান অলিম্পিয়াড ২০২৬'}
                       value={contestName}
                       onChange={(e) => setContestName(e.target.value)}
                     />
                   </div>
-                </section>
 
-                {/* ──────── 2. CONTEST DATE ──────── */}
-                <section className="cc-section cc-section--date">
-                  <div className="cc-section__header">
-                    <div className="cc-section__icon"><HiCalendar size={18} /></div>
-                    <div>
-                      <h2 className="cc-section__title">
-                        {language === 'en' ? 'Contest Date' : 'কনটেস্টের তারিখ'}
-                      </h2>
-                      <p className="cc-section__desc">
-                        {language === 'en' ? 'Select the date when the contest will take place.' : 'কনটেস্ট অনুষ্ঠিত হওয়ার তারিখ নির্বাচন করুন।'}
-                      </p>
+                  <div className="cc-field-block">
+                    <label className="cc-label cc-field-label" htmlFor="contest-date">
+                      {language === 'en' ? 'Contest Date' : 'কনটেস্টের তারিখ'}
+                    </label>
+                    <div className="cc-date-picker">
+                      <input
+                        type="date"
+                        id="contest-date"
+                        name="contestDate"
+                        autoComplete="off"
+                        className="cc-input cc-input--date"
+                        value={contestDate}
+                        onChange={(e) => setContestDate(e.target.value)}
+                        min={today}
+                      />
+                      {contestDate && (
+                        <div className="cc-date-preview">
+                          <HiCalendar size={16} aria-hidden="true" />
+                          <span>{new Date(contestDate + 'T00:00:00').toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', {
+                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                          })}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="cc-date-picker">
-                    <input
-                      type="date"
-                      id="contest-date"
-                      className="cc-input cc-input--date"
-                      value={contestDate}
-                      onChange={(e) => setContestDate(e.target.value)}
-                      min={today}
-                    />
-                    {contestDate && (
-                      <div className="cc-date-preview">
-                        <HiCalendar size={16} />
-                        <span>{new Date(contestDate + 'T00:00:00').toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', {
-                          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                        })}</span>
-                      </div>
-                    )}
-                  </div>
-                </section>
 
-                {/* ──────── 3. DURATION ──────── */}
-                <section className="cc-section cc-section--duration">
-                  <div className="cc-section__header">
-                    <div className="cc-section__icon"><HiClock size={18} /></div>
-                    <div>
-                      <h2 className="cc-section__title">
-                        {language === 'en' ? 'Duration' : 'সময়কাল'}
-                      </h2>
-                      <p className="cc-section__desc">
-                        {language === 'en' ? 'Set how long the contest will last (hours and minutes).' : 'কনটেস্ট কতক্ষণ চলবে তা নির্ধারণ করুন (ঘণ্টা ও মিনিট)।'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="cc-duration-row">
-                    <div className="cc-duration-group">
-                      <label className="cc-label" htmlFor="dur-hours">{language === 'en' ? 'Hours' : 'ঘণ্টা'}</label>
-                      <select
-                        id="dur-hours"
-                        className="cc-select"
-                        value={durationHours}
-                        onChange={(e) => setDurationHours(e.target.value)}
-                      >
-                        {[0, 1, 2, 3, 4, 5, 6].map(h => (
-                          <option key={h} value={h}>{h} {language === 'en' ? 'hr' : 'ঘণ্টা'}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <span className="cc-duration-colon">:</span>
-                    <div className="cc-duration-group">
-                      <label className="cc-label" htmlFor="dur-mins">{language === 'en' ? 'Minutes' : 'মিনিট'}</label>
-                      <select
-                        id="dur-mins"
-                        className="cc-select"
-                        value={durationMinutes}
-                        onChange={(e) => setDurationMinutes(e.target.value)}
-                      >
-                        {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
-                          <option key={m} value={m}>{String(m).padStart(2, '0')} {language === 'en' ? 'min' : 'মিনিট'}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="cc-duration-preview">
-                      <HiClock size={16} />
-                      <span>{durationHours}h {String(durationMinutes).padStart(2, '0')}m</span>
-                    </div>
-                  </div>
-                </section>
-
-                {/* ──────── 4. STARTING TIME ──────── */}
-                <section className="cc-section cc-section--start">
-                  <div className="cc-section__header">
-                    <div className="cc-section__icon"><HiGlobeAlt size={18} /></div>
-                    <div>
-                      <h2 className="cc-section__title">
-                        {language === 'en' ? 'Starting Time' : 'শুরুর সময়'}
-                      </h2>
-                      <p className="cc-section__desc">
-                        {language === 'en' ? 'Set the contest start time with timezone (world clock).' : 'টাইমজোন সহ কনটেস্টের শুরুর সময় নির্ধারণ করুন (বিশ্ব ঘড়ি)।'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="cc-time-row">
-                    <div className="cc-time-group">
-                      <label className="cc-label" htmlFor="start-hour">{language === 'en' ? 'Hour' : 'ঘণ্টা'}</label>
-                      <select
-                        id="start-hour"
-                        className="cc-select"
-                        value={startHour}
-                        onChange={(e) => setStartHour(e.target.value)}
-                      >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
-                          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <span className="cc-time-colon">:</span>
-                    <div className="cc-time-group">
-                      <label className="cc-label" htmlFor="start-min">{language === 'en' ? 'Minute' : 'মিনিট'}</label>
-                      <select
-                        id="start-min"
-                        className="cc-select"
-                        value={startMinute}
-                        onChange={(e) => setStartMinute(e.target.value)}
-                      >
-                        {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="cc-time-group">
-                      <label className="cc-label">{language === 'en' ? 'Period' : 'পর্ব'}</label>
-                      <div className="cc-period-toggle">
-                        <button
-                          type="button"
-                          className={`cc-period-btn ${startPeriod === 'AM' ? 'cc-period-btn--active' : ''}`}
-                          onClick={() => setStartPeriod('AM')}
+                  <div className="cc-field-block">
+                    <span className="cc-label cc-field-label" id="starting-time-label">
+                      {language === 'en' ? 'Starting Time' : 'শুরুর সময়'}
+                    </span>
+                    <div className="cc-time-row" role="group" aria-labelledby="starting-time-label">
+                      <div className="cc-time-group">
+                        <label className="cc-label cc-label--subtle" htmlFor="start-hour">{language === 'en' ? 'Hour' : 'ঘণ্টা'}</label>
+                        <select
+                          id="start-hour"
+                          name="startHour"
+                          className="cc-select"
+                          value={startHour}
+                          onChange={(e) => setStartHour(e.target.value)}
                         >
-                          AM
-                        </button>
-                        <button
-                          type="button"
-                          className={`cc-period-btn ${startPeriod === 'PM' ? 'cc-period-btn--active' : ''}`}
-                          onClick={() => setStartPeriod('PM')}
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                            <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <span className="cc-time-colon" aria-hidden="true">:</span>
+                      <div className="cc-time-group">
+                        <label className="cc-label cc-label--subtle" htmlFor="start-min">{language === 'en' ? 'Minute' : 'মিনিট'}</label>
+                        <select
+                          id="start-min"
+                          name="startMinute"
+                          className="cc-select"
+                          value={startMinute}
+                          onChange={(e) => setStartMinute(e.target.value)}
                         >
-                          PM
-                        </button>
+                          {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="cc-time-group">
+                        <span className="cc-label cc-label--subtle">{language === 'en' ? 'Period' : 'পর্ব'}</span>
+                        <div className="cc-period-toggle" role="group" aria-label={language === 'en' ? 'Period' : 'পর্ব'}>
+                          <button
+                            type="button"
+                            className={`cc-period-btn ${startPeriod === 'AM' ? 'cc-period-btn--active' : ''}`}
+                            aria-pressed={startPeriod === 'AM'}
+                            onClick={() => setStartPeriod('AM')}
+                          >
+                            AM
+                          </button>
+                          <button
+                            type="button"
+                            className={`cc-period-btn ${startPeriod === 'PM' ? 'cc-period-btn--active' : ''}`}
+                            aria-pressed={startPeriod === 'PM'}
+                            onClick={() => setStartPeriod('PM')}
+                          >
+                            PM
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="cc-timezone-row">
-                    <div className="cc-time-group cc-time-group--tz">
-                      <label className="cc-label" htmlFor="timezone-select">{language === 'en' ? 'Timezone' : 'টাইমজোন'}</label>
-                      <select
-                        id="timezone-select"
-                        className="cc-select cc-select--tz"
-                        value={timezone}
-                        onChange={(e) => setTimezone(e.target.value)}
+                  <div className="cc-field-block">
+                    <span className="cc-label cc-field-label" id="duration-label">
+                      {language === 'en' ? 'Duration' : 'সময়কাল'}
+                    </span>
+                    <div className="cc-duration-row" role="group" aria-labelledby="duration-label">
+                      <div className="cc-duration-group">
+                        <label className="cc-label cc-label--subtle" htmlFor="dur-hours">{language === 'en' ? 'Hours' : 'ঘণ্টা'}</label>
+                        <select
+                          id="dur-hours"
+                          name="durationHours"
+                          className="cc-select"
+                          value={durationHours}
+                          onChange={(e) => setDurationHours(e.target.value)}
+                        >
+                          {[0, 1, 2, 3, 4, 5, 6].map(h => (
+                            <option key={h} value={h}>{h} {language === 'en' ? 'hr' : 'ঘণ্টা'}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <span className="cc-duration-colon" aria-hidden="true">:</span>
+                      <div className="cc-duration-group">
+                        <label className="cc-label cc-label--subtle" htmlFor="dur-mins">{language === 'en' ? 'Minutes' : 'মিনিট'}</label>
+                        <select
+                          id="dur-mins"
+                          name="durationMinutes"
+                          className="cc-select"
+                          value={durationMinutes}
+                          onChange={(e) => setDurationMinutes(e.target.value)}
+                        >
+                          {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                            <option key={m} value={m}>{String(m).padStart(2, '0')} {language === 'en' ? 'min' : 'মিনিট'}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="cc-duration-preview" aria-live="polite">
+                        <HiClock size={16} aria-hidden="true" />
+                        <span>{durationHours}h {String(durationMinutes).padStart(2, '0')}m</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="cc-field-block">
+                    <label className="cc-label cc-field-label" htmlFor="timezone-select">
+                      {language === 'en' ? 'Timezone' : 'টাইমজোন'}
+                    </label>
+                    <select
+                      id="timezone-select"
+                      name="timezone"
+                      className="cc-select cc-select--tz"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                    >
+                      {TIMEZONES.map(tz => (
+                        <option key={tz.id} value={tz.id}>{tz.label} ({tz.offset})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              {/* ──────── 2. ACADEMIC CONFIGURATION ──────── */}
+              <section className="cc-section cc-workflow-section" aria-labelledby="academic-configuration-title">
+                <div className="cc-section__header">
+                  <div className="cc-section__icon"><HiAcademicCap size={18} aria-hidden="true" /></div>
+                  <h2 id="academic-configuration-title" className="cc-section__title">
+                    {language === 'en' ? '2. Academic Configuration' : '২. একাডেমিক কনফিগারেশন'}
+                  </h2>
+                </div>
+
+                <div className="cc-academic-grid">
+                  <div className="cc-config-group">
+                    <span className="cc-label cc-field-label" id="standard-level-label">
+                      {language === 'en' ? 'Standard Level' : 'স্ট্যান্ডার্ড লেভেল'}
+                    </span>
+                    <div className="cc-level-chips" role="group" aria-labelledby="standard-level-label">
+                      <button
+                        type="button"
+                        className={`cc-level-chip ${level === 'hsc' ? 'cc-level-chip--active' : ''}`}
+                        aria-pressed={level === 'hsc'}
+                        onClick={() => handleLevelChange('hsc')}
                       >
-                        {TIMEZONES.map(tz => (
-                          <option key={tz.id} value={tz.id}>{tz.label} ({tz.offset})</option>
-                        ))}
-                      </select>
+                        <HiAcademicCap size={16} aria-hidden="true" />
+                        <span>HSC</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`cc-level-chip ${level === 'admission' ? 'cc-level-chip--active' : ''}`}
+                        aria-pressed={level === 'admission'}
+                        onClick={() => handleLevelChange('admission')}
+                      >
+                        <HiLibrary size={16} aria-hidden="true" />
+                        <span>{language === 'en' ? 'Admission' : 'এডমিশন'}</span>
+                      </button>
                     </div>
                   </div>
-                </section>
 
-                {/* ──────── 5. LEVEL ──────── */}
-                <section className="cc-section cc-section--level">
-                  <div className="cc-section__header">
-                    <div className="cc-section__icon"><HiAcademicCap size={18} /></div>
-                    <div>
-                      <h2 className="cc-section__title">
-                        {language === 'en' ? 'Standard Level' : 'স্ট্যান্ডার্ড লেভেল'}
-                      </h2>
-                      <p className="cc-section__desc">
-                        {language === 'en' ? 'Choose whether this contest follows HSC syllabus or Admission standards.' : 'এই কনটেস্টটি HSC সিলেবাস নাকি এডমিশন স্ট্যান্ডার্ড অনুসরণ করে তা নির্বাচন করুন।'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="cc-level-toggle">
-                    <button
-                      type="button"
-                      className={`cc-level-btn ${level === 'hsc' ? 'cc-level-btn--active' : ''}`}
-                      onClick={() => handleLevelChange('hsc')}
-                    >
-                      <span className="cc-level-btn__icon">🎓</span>
-                      <div className="cc-level-btn__label-group">
-                        <strong className="cc-level-btn__title">HSC</strong>
-                        <span className="cc-level-btn__subtitle">{language === 'en' ? 'Academic Syllabus' : 'একাডেমিক সিলেবাস'}</span>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      className={`cc-level-btn ${level === 'admission' ? 'cc-level-btn--active' : ''}`}
-                      onClick={() => handleLevelChange('admission')}
-                    >
-                      <span className="cc-level-btn__icon">🏛️</span>
-                      <div className="cc-level-btn__label-group">
-                        <strong className="cc-level-btn__title">{language === 'en' ? 'Admission' : 'এডমিশন'}</strong>
-                        <span className="cc-level-btn__subtitle">{language === 'en' ? 'University Standards' : 'বিশ্ববিদ্যালয় স্ট্যান্ডার্ড'}</span>
-                      </div>
-                    </button>
-                  </div>
-
-                  {/* HSC Subjects selection */}
                   {level === 'hsc' && (
-                    <div className="cc-subject-section cc-section-fade">
-                      <label className="cc-label">{language === 'en' ? 'Select Subjects' : 'বিষয় নির্বাচন করুন'}</label>
-                      <div className="cc-subject-grid">
+                    <div className="cc-config-group cc-section-fade">
+                      <span className="cc-label cc-field-label" id="hsc-subjects-label">
+                        {language === 'en' ? 'Select Subjects' : 'বিষয় নির্বাচন করুন'}
+                      </span>
+                      <div className="cc-subject-grid" role="group" aria-labelledby="hsc-subjects-label">
                         {HSC_SUBJECTS.map((sub) => {
                           const isSelected = selectedSubjects.includes(sub.id);
                           return (
@@ -1055,10 +1030,11 @@ export default function MakeContestQuestion() {
                               key={sub.id}
                               type="button"
                               className={`cc-subject-chip ${isSelected ? 'cc-subject-chip--active' : ''}`}
+                              aria-pressed={isSelected}
                               onClick={() => toggleSubject(sub.id)}
                             >
                               {language === 'en' ? sub.labelEn : sub.labelBn}
-                              {isSelected && <HiCheckCircle size={16} className="cc-subject-chip__check" />}
+                              {isSelected && <HiCheckCircle size={16} className="cc-subject-chip__check" aria-hidden="true" />}
                             </button>
                           );
                         })}
@@ -1066,118 +1042,102 @@ export default function MakeContestQuestion() {
                     </div>
                   )}
 
-                  {/* Admission Type selection */}
                   {level === 'admission' && (
-                    <div className="cc-admission-section cc-section-fade">
-                      <label className="cc-label">{language === 'en' ? 'Admission Program' : 'এডমিশন প্রোগ্রাম'}</label>
-                      <div className="cc-admission-grid">
-                        {ADMISSION_OPTIONS.map(opt => {
-                          const OptionIcon = opt.icon;
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              className={`cc-admission-card ${selectedAdmission === opt.id ? 'cc-admission-card--active' : ''}`}
-                              onClick={() => {
-                                setSelectedAdmission(opt.id);
-                                setVarsitySubtype('');
-                              }}
-                            >
-                              <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
-                              <span className="cc-admission-card__label">
-                                {language === 'en' ? opt.labelEn : opt.labelBn}
-                              </span>
-                              {selectedAdmission === opt.id && (
-                                <HiCheckCircle size={18} className="cc-admission-card__check" />
-                              )}
-                            </button>
-                          );
-                        })}
+                    <>
+                      <div className="cc-config-group cc-section-fade">
+                        <span className="cc-label cc-field-label" id="admission-program-label">
+                          {language === 'en' ? 'Admission Program' : 'এডমিশন প্রোগ্রাম'}
+                        </span>
+                        <div className="cc-admission-chips" role="group" aria-labelledby="admission-program-label">
+                          {ADMISSION_OPTIONS.map(opt => {
+                            const OptionIcon = opt.icon;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                className={`cc-admission-chip ${selectedAdmission === opt.id ? 'cc-admission-chip--active' : ''}`}
+                                aria-pressed={selectedAdmission === opt.id}
+                                onClick={() => {
+                                  setSelectedAdmission(opt.id);
+                                  setVarsitySubtype('');
+                                }}
+                              >
+                                <OptionIcon size={16} aria-hidden="true" />
+                                <span>{language === 'en' ? opt.labelEn : opt.labelBn}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {/* Varsity Subtype selection */}
                       {selectedAdmission === 'varsity' && (
-                        <div className="cc-varsity-section cc-section-fade">
-                          <label className="cc-label">{language === 'en' ? 'Select Target Unit' : 'টার্গেট ইউনিট নির্বাচন করুন'}</label>
-                          <div className="cc-admission-grid cc-admission-grid--varsity">
+                        <div className="cc-config-group cc-section-fade">
+                          <span className="cc-label cc-field-label" id="target-unit-label">
+                            {language === 'en' ? 'Target Unit' : 'টার্গেট ইউনিট'}
+                          </span>
+                          <div className="cc-varsity-chips" role="group" aria-labelledby="target-unit-label">
                             {VARSITY_OPTIONS.map(opt => {
                               const OptionIcon = opt.icon;
                               return (
                                 <button
                                   key={opt.id}
                                   type="button"
-                                  className={`cc-admission-card cc-admission-card--varsity ${varsitySubtype === opt.id ? 'cc-admission-card--active' : ''}`}
+                                  className={`cc-varsity-chip ${varsitySubtype === opt.id ? 'cc-varsity-chip--active' : ''}`}
+                                  aria-pressed={varsitySubtype === opt.id}
                                   onClick={() => setVarsitySubtype(opt.id)}
                                 >
-                                  {opt.badgeEn && (
-                                    <span className="cc-admission-card__badge">
-                                      {language === 'en' ? opt.badgeEn : opt.badgeBn}
-                                    </span>
-                                  )}
-                                  <span className="cc-admission-card__icon"><OptionIcon size={22} /></span>
-                                  <span className="cc-admission-card__label" style={{ padding: opt.badgeEn ? '0.4rem 0.2rem 0' : '0' }}>
-                                    {language === 'en' ? opt.labelEn : opt.labelBn}
-                                  </span>
-                                  {varsitySubtype === opt.id && (
-                                    <HiCheckCircle size={18} className={`cc-admission-card__check ${opt.badgeEn ? 'cc-admission-card__check--left' : ''}`} />
-                                  )}
+                                  <OptionIcon size={16} className="cc-varsity-chip__icon" aria-hidden="true" />
+                                  <span>{language === 'en' ? opt.labelEn : opt.labelBn}</span>
                                 </button>
                               );
                             })}
                           </div>
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
-                </section>
+                </div>
+              </section>
 
-              </div>
-
-              {/* ──────── 6. QUESTION TYPE ──────── */}
-              <section className="cc-section">
+              {/* ──────── 3. QUESTION CONFIGURATION ──────── */}
+              <section className="cc-section cc-workflow-section" aria-labelledby="question-configuration-title">
                 <div className="cc-section__header">
-                  <div className="cc-section__icon"><HiDocumentText size={18} /></div>
-                  <div>
-                    <h2 className="cc-section__title">
-                      {language === 'en' ? 'Question Type' : 'প্রশ্নের ধরন'}
-                    </h2>
-                    <p className="cc-section__desc">
-                      {language === 'en' ? 'Select the format of the questions in this contest.' : 'এই কনটেস্টে প্রশ্নের ফরম্যাট নির্বাচন করুন।'}
-                    </p>
-                  </div>
+                  <div className="cc-section__icon"><HiDocumentText size={18} aria-hidden="true" /></div>
+                  <h2 id="question-configuration-title" className="cc-section__title">
+                    {language === 'en' ? '3. Question Configuration' : '৩. প্রশ্ন কনফিগারেশন'}
+                  </h2>
                 </div>
 
-                <div className="cc-qtype-grid">
+                <span className="cc-label cc-field-label" id="question-type-label">
+                  {language === 'en' ? 'Question Type' : 'প্রশ্নের ধরন'}
+                </span>
+                <div className="cc-qtype-chips" role="group" aria-labelledby="question-type-label">
                   {questionTypeOptions.map(opt => {
                     const OptionIcon = opt.icon;
                     return (
                       <button
                         key={opt.id}
                         type="button"
-                        className={`cc-qtype-card ${questionType === opt.id ? 'cc-qtype-card--active' : ''}`}
+                        className={`cc-qtype-chip ${questionType === opt.id ? 'cc-qtype-chip--active' : ''}`}
+                        aria-pressed={questionType === opt.id}
                         onClick={() => setQuestionType(opt.id)}
                       >
-                        <span className="cc-qtype-card__icon"><OptionIcon size={22} /></span>
-                        <span className="cc-qtype-card__label">
-                          {language === 'en' ? opt.labelEn : opt.labelBn}
-                        </span>
-                        {questionType === opt.id && (
-                          <HiCheckCircle size={18} className="cc-qtype-card__check" />
-                        )}
+                        <OptionIcon size={16} aria-hidden="true" />
+                        <span>{language === 'en' ? opt.shortLabel : opt.shortLabelBn}</span>
                       </button>
                     );
                   })}
                 </div>
               </section>
 
-              {/* ──────── PROCEED TO QUESTIONS ──────── */}
+              {/* ──────── PRIMARY ACTION ──────── */}
               <div className="cc-submit-bar">
                 <button
                   type="button"
                   className="cc-submit-btn"
                   onClick={handleProceedToQuestions}
                 >
-                  <HiDocumentText size={18} />
+                  <HiDocumentText size={18} aria-hidden="true" />
                   <span>{language === 'en' ? 'Make Contest Question' : 'কনটেস্টের প্রশ্ন তৈরি করুন'}</span>
                 </button>
               </div>
