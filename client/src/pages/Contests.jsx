@@ -644,8 +644,8 @@ export default function Contests() {
         );
       }
 
-      const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
-      const isRegistrationOpen = timeInfo.startDate ? (timeInfo.startDate.getTime() - now.getTime() >= ONE_HOUR_MS) : false;
+      const TEN_MINUTES_MS = 10 * 60 * 1000;
+      const isRegistrationOpen = timeInfo.startDate ? (timeInfo.startDate.getTime() - now.getTime() >= TEN_MINUTES_MS) : false;
 
       if (isRegistrationOpen) {
         return (
