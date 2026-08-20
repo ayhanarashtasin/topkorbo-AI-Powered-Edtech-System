@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 const CELL_PHONE_CLASS_ID = 67; // COCO dataset class for 'cell phone'
-const CONFIDENCE_THRESHOLD = 0.55; // 55% confidence threshold
-const INFERENCE_INTERVAL_MS = 250; // Run inference every 250ms (~4 FPS)
-const DEBOUNCE_MS = 4000; // Min 4 seconds between violation reports
-const CONSECUTIVE_FRAMES_REQUIRED = 2; // Must detect phone in 2 consecutive frames
-const MODEL_INPUT_SIZE = 320; // YOLOv8 nano input resolution
+const CONFIDENCE_THRESHOLD = 0.40; // 40% confidence threshold for responsive detection
+const INFERENCE_INTERVAL_MS = 300; // Run inference every 300ms (~3.3 FPS)
+const DEBOUNCE_MS = 3000; // Min 3 seconds between backend snapshot uploads
+const MODEL_INPUT_SIZE = 640; // Standard YOLOv8 ONNX input resolution (640x640)
 
 /**
  * useYoloProctor — real-time mobile phone detection during contests.
@@ -163,7 +162,7 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
       const canvas = canvasRef.current;
       canvas.width = MODEL_INPUT_SIZE;
       canvas.height = MODEL_INPUT_SIZE;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(video, 0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
 
       const imageData = ctx.getImageData(0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
@@ -171,8 +170,10 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
 
       const feeds = { images: inputTensor };
       const results = await session.run(feeds);
-      const outputKey = Object.keys(results)[0];
+      const outputKey = session.outputNames?.[0] || Object.keys(results)[0];
       const output = results[outputKey];
+
+      if (!output || !output.data) return;
 
       const detections = postprocessYOLO(output.data, output.dims);
       const phoneDetection = detections.find(
@@ -181,7 +182,10 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
 
       if (phoneDetection) {
         consecutiveDetectionsRef.current += 1;
-        if (consecutiveDetectionsRef.current >= CONSECUTIVE_FRAMES_REQUIRED) {
+        // Instant trigger if confidence >= 50%, or 2 frames if confidence >= 40%
+        const isConfirmed = phoneDetection.confidence >= 0.50 || consecutiveDetectionsRef.current >= 2;
+
+        if (isConfirmed) {
           setPhoneDetected(true);
           const now = Date.now();
           if (now - lastViolationTimeRef.current > DEBOUNCE_MS) {
@@ -194,7 +198,6 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
         setPhoneDetected(false);
       }
     } catch (err) {
-      // Silently handle inference errors to avoid crashing the exam
       console.warn('[Proctor] Inference error:', err.message);
     }
   };
@@ -223,7 +226,7 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
       captureCtx.fillStyle = '#ef4444';
       captureCtx.font = 'bold 14px sans-serif';
       captureCtx.fillText(
-        `Phone ${Math.round(detection.confidence * 100)}%`,
+        `Mobile Phone ${Math.round(detection.confidence * 100)}%`,
         bx * scaleX,
         Math.max(by * scaleY - 6, 14)
       );
@@ -231,27 +234,27 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
 
     const snapshotBase64 = captureCanvas.toDataURL('image/jpeg', 0.8);
 
-    setViolationCount(prev => {
-      const newCount = prev + 1;
-      return newCount;
-    });
+    // Increment client-side violation counter immediately
+    setViolationCount(prev => prev + 1);
 
     // Report to backend
-    const token = localStorage.getItem('topkorbo_token') || '';
-    const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    if (contestId) {
+      const token = localStorage.getItem('topkorbo_token') || '';
+      const backendBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-    fetch(`${backendBaseUrl}/contests/${contestId}/proctor/violation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        violationType: 'MOBILE_PHONE_DETECTED',
-        confidence: Math.round(detection.confidence * 100),
-        image: snapshotBase64
-      })
-    }).catch(err => console.warn('[Proctor] Failed to report violation:', err.message));
+      fetch(`${backendBaseUrl}/contests/${contestId}/proctor/violation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          violationType: 'MOBILE_PHONE_DETECTED',
+          confidence: Math.round(detection.confidence * 100),
+          image: snapshotBase64
+        })
+      }).catch(err => console.warn('[Proctor] Failed to report violation to server:', err.message));
+    }
 
     if (onViolation) {
       onViolation({
@@ -292,8 +295,8 @@ function preprocessImage(ort, data, width, height) {
 function postprocessYOLO(output, dims) {
   const detections = [];
   const numClasses = 80;
-  // dims is [1, 84, N]
-  const numAnchors = dims[2] || 2100;
+  // dims is [1, 84, N] - for 640x640 input, N is 8400
+  const numAnchors = dims && dims[2] ? dims[2] : 8400;
 
   for (let i = 0; i < numAnchors; i++) {
     let maxScore = -Infinity;
@@ -307,7 +310,7 @@ function postprocessYOLO(output, dims) {
       }
     }
 
-    if (maxScore > 0.4) { // Pre-filter threshold
+    if (maxScore >= 0.35) { // Pre-filter threshold
       const cx = output[0 * numAnchors + i];
       const cy = output[1 * numAnchors + i];
       const w = output[2 * numAnchors + i];
