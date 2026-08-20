@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const CELL_PHONE_CLASS_ID = 67; // COCO dataset class for 'cell phone'
 const CONFIDENCE_THRESHOLD = 0.40; // 40% confidence threshold for responsive detection
-const INFERENCE_INTERVAL_MS = 300; // Run inference every 300ms (~3.3 FPS)
+const INFERENCE_INTERVAL_MS = 300; // CPU (WASM) fallback: run inference every 300ms (~3.3 FPS)
+const WEBGPU_INTERVAL_MS = 150; // GPU (WebGPU): run every 150ms (~6.6 FPS) for real-time response
 const DEBOUNCE_MS = 3000; // Min 3 seconds between backend snapshot uploads
-const MODEL_INPUT_SIZE = 640; // Standard YOLOv8 ONNX input resolution (640x640)
+const MODEL_INPUT_SIZE = 640; // Fixed YOLOv8 ONNX input resolution (model is exported at 640x640)
 
 /**
  * useYoloProctor — real-time mobile phone detection during contests.
@@ -25,8 +26,10 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
   const canvasRef = useRef(document.createElement('canvas'));
   const sessionRef = useRef(null);
   const streamRef = useRef(null);
+  const ortRef = useRef(null);
   const isRunningRef = useRef(false);
   const intervalRef = useRef(null);
+  const inFlightRef = useRef(false);
   const consecutiveDetectionsRef = useRef(0);
   const lastViolationTimeRef = useRef(0);
 
@@ -93,18 +96,31 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
 
       // 2. Load YOLO model in background without blocking camera feed
       try {
-        const ort = await import('onnxruntime-web');
-        // Configure for mobile compatibility (single thread avoids SharedArrayBuffer / COOP/COEP requirement on mobile)
+        // Prefer GPU (WebGPU) for real-time inference (~10-30ms/frame). Devices
+        // without WebGPU (older iOS/iPadOS, old browsers) automatically fall back
+        // to CPU (WASM) via the executionProviders chain — the feature still works,
+        // just slower. The /webgpu bundle bundles both providers.
+        const gpuAvailable = typeof navigator !== 'undefined' && 'gpu' in navigator;
+        const ort = await import('onnxruntime-web/webgpu');
+        ortRef.current = ort;
+
+        // WASM settings only apply when it falls back to CPU. Single thread avoids
+        // the SharedArrayBuffer / COOP-COEP requirement on mobile.
         if (ort.env && ort.env.wasm) {
           ort.env.wasm.numThreads = 1;
           ort.env.wasm.simd = true;
         }
 
         sessionRef.current = await ort.InferenceSession.create('/models/yolov8n.onnx', {
-          executionProviders: ['wasm']
+          executionProviders: gpuAvailable ? ['webgpu', 'wasm'] : ['wasm'],
+          graphOptimizationLevel: 'all'
         });
 
         setStatus('active');
+
+        // On GPU we poll faster for real-time response; on CPU fallback we poll
+        // slower and rely on the in-flight guard to prevent overlapping runs.
+        const intervalMs = gpuAvailable ? WEBGPU_INTERVAL_MS : INFERENCE_INTERVAL_MS;
 
         // Start detection loop
         if (isRunningRef.current && sessionRef.current) {
@@ -113,7 +129,7 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
             if (isRunningRef.current) {
               runInference();
             }
-          }, INFERENCE_INTERVAL_MS);
+          }, intervalMs);
         }
       } catch (modelErr) {
         console.warn('[Proctor] YOLO model failed to load, running in camera-only fallback mode:', modelErr);
@@ -146,6 +162,7 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
     if (sessionRef.current) {
       sessionRef.current = null;
     }
+    inFlightRef.current = false;
     setStatus('idle');
     setPhoneDetected(false);
     consecutiveDetectionsRef.current = 0;
@@ -155,10 +172,16 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
   const runInference = async () => {
     const video = videoRef.current;
     const session = sessionRef.current;
-    if (!video || !session || video.readyState < 2) return;
+    const ort = ortRef.current;
+    if (!video || !session || !ort || video.readyState < 2) return;
+
+    // In-flight guard: never start a new inference while one is still running.
+    // Without this, the interval stacks overlapping runs that thrash the GPU/CPU
+    // and make every inference slower.
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     try {
-      const ort = await import('onnxruntime-web');
       const canvas = canvasRef.current;
       canvas.width = MODEL_INPUT_SIZE;
       canvas.height = MODEL_INPUT_SIZE;
@@ -199,6 +222,8 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
       }
     } catch (err) {
       console.warn('[Proctor] Inference error:', err.message);
+    } finally {
+      inFlightRef.current = false;
     }
   };
 
