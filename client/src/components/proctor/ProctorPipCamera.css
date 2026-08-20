@@ -1,0 +1,270 @@
+/* ── Proctor PiP Camera ─────────────────────────────────────────────────── */
+
+.proctor-pip {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  width: 200px;
+  z-index: 9999;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(100, 116, 139, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.proctor-pip--active {
+  border-color: rgba(34, 197, 94, 0.6);
+}
+
+.proctor-pip--alert {
+  border-color: #ef4444;
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(239, 68, 68, 0.4);
+  animation: proctor-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes proctor-pulse {
+  0%, 100% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.6), 0 0 16px rgba(239, 68, 68, 0.4); }
+}
+
+.proctor-pip__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(30, 41, 59, 0.8);
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.proctor-pip__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+.proctor-pip--alert .proctor-pip__status-dot {
+  background: #ef4444;
+  animation: proctor-blink 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes proctor-blink {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+.proctor-pip__status-text {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.proctor-pip__minimize {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.proctor-pip__minimize:hover {
+  color: #e2e8f0;
+}
+
+.proctor-pip__video-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0f172a;
+}
+
+.proctor-pip__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1); /* Mirror for selfie view */
+}
+
+.proctor-pip__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.proctor-pip__overlay--error {
+  background: rgba(127, 29, 29, 0.7);
+}
+.proctor-pip__overlay--error p {
+  color: #fca5a5;
+  font-size: 11px;
+  text-align: center;
+  padding: 8px;
+  margin: 0;
+}
+
+.proctor-pip__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: proctor-spin 0.8s linear infinite;
+}
+
+@keyframes proctor-spin {
+  to { transform: rotate(360deg); }
+}
+
+.proctor-pip__footer {
+  padding: 4px 8px;
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.proctor-pip__violations {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.proctor-pip__violations--warning {
+  color: #f59e0b;
+}
+.proctor-pip__violations--critical {
+  color: #ef4444;
+}
+
+.proctor-pip__alert-banner {
+  padding: 6px 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border-top: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* ── Minimized state ──────────────────────────────────────────────────── */
+
+.proctor-pip-minimized {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  z-index: 9999;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, border-color 0.3s ease;
+}
+.proctor-pip-minimized:hover {
+  transform: scale(1.1);
+}
+.proctor-pip-minimized--alert {
+  border-color: #ef4444;
+  animation: proctor-pulse 1.5s ease-in-out infinite;
+}
+.proctor-pip-minimized__icon {
+  font-size: 16px;
+}
+.proctor-pip-minimized__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Retry button for camera permission failures on mobile ────────────── */
+
+.proctor-pip__retry-btn {
+  margin-top: 6px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #6366f1;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.proctor-pip__retry-btn:hover {
+  background: #4f46e5;
+}
+
+/* ── Mobile Responsive Overrides ─────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .proctor-pip {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
+    width: 140px;
+    border-radius: 10px;
+    z-index: 100000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .proctor-pip__header {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .proctor-pip__status-text {
+    font-size: 9px;
+  }
+
+  .proctor-pip__minimize {
+    font-size: 14px;
+  }
+
+  .proctor-pip__footer {
+    padding: 3px 6px;
+  }
+
+  .proctor-pip__violations {
+    font-size: 9px;
+  }
+
+  .proctor-pip__alert-banner {
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+
+  .proctor-pip-minimized {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
+    width: 38px;
+    height: 38px;
+    z-index: 100000;
+  }
+
+  .proctor-pip-minimized__icon {
+    font-size: 14px;
+  }
+}

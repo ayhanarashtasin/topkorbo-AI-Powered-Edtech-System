@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const contestController = require('../controllers/contestController');
+const proctorController = require('../controllers/proctorController');
 
 // @desc    Create a new contest
 // @route   POST /api/contests/create
@@ -23,6 +24,18 @@ router.get('/rating/me', auth, contestController.getMyRating);
 // @route   GET /api/contests/leaderboard?by=points|rating
 // NOTE: must be declared before the '/:id' catch-all route below.
 router.get('/leaderboard', auth, contestController.getGlobalLeaderboard);
+
+// @desc    Log an AI proctor violation (mobile phone detected)
+// @route   POST /api/contests/:id/proctor/violation
+router.post('/:id/proctor/violation', auth, proctorController.logViolation);
+
+// @desc    Get proctor violations for a contest
+// @route   GET /api/contests/:id/proctor/violations  
+router.get('/:id/proctor/violations', auth, proctorController.getViolations);
+
+// @desc    Review a proctor violation (admin/teacher)
+// @route   PATCH /api/contests/proctor/violations/:violationId/review
+router.patch('/proctor/violations/:violationId/review', auth, proctorController.reviewViolation);
 
 // @desc    Delete a contest owned by current teacher
 // @route   DELETE /api/contests/:id

@@ -907,14 +907,10 @@ exports.registerForContest = async (req, res, next) => {
     }
 
     const { startDate } = resolveContestDates(contest);
-
-    // Registration closes 10 minutes before contest start
-    const TEN_MINUTES_MS = 10 * 60 * 1000;
-    const registrationDeadline = new Date(startDate.getTime() - TEN_MINUTES_MS);
     const now = new Date();
 
-    if (now >= registrationDeadline) {
-      return ApiResponse.error(res, 'Registration has closed for this contest (closes 10 minutes before start)', 400);
+    if (now >= startDate) {
+      return ApiResponse.error(res, 'Registration has closed for this contest (closes when contest starts)', 400);
     }
 
     // Update student's user profile database

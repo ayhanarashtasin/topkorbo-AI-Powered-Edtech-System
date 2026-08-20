@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import { createMockTestAttempt } from "../services/mockTestApi";
 import { buildAttemptPayload, submitAttempt as savePracticeAttempt } from "../services/practiceApi";
 import { submitAnswer as submitContestAnswer } from "../services/contestApi";
+import ProctorPipCamera from "../components/proctor/ProctorPipCamera";
 import "./MockTestExam.css";
 
 // ── Abbreviation Maps ───────────────────────────────────────────────────────
@@ -1528,6 +1529,20 @@ export default function MockTestExam() {
     <div
       className={`exam-room-container ${showResultModal ? "exam-room-container--dimmed" : ""} ${isContestActive ? "no-copy-select" : ""}`}
     >
+      {/* AI Proctor: floating PiP camera for mobile phone detection during live contests */}
+      <ProctorPipCamera
+        contestId={config?.contestId}
+        enabled={isContestActive}
+        maxViolations={3}
+        onViolation={(violation) => {
+          toast.error(
+            language === "en"
+              ? `⚠️ Mobile phone detected (${violation.confidence ? Math.round(violation.confidence * 100) + '% confidence' : ''}). A screenshot has been sent to the proctor.`
+              : `⚠️ মোবাইল ফোন শনাক্ত হয়েছে! একটি স্ক্রিনশট প্রক্টরের কাছে পাঠানো হয়েছে।`,
+            { duration: 5000, icon: "🚨" }
+          );
+        }}
+      />
       <div className="exam-layout-wrapper">
         <div className="exam-main-content">
           <header

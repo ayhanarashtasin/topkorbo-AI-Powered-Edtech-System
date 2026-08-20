@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminActionButton from './AdminActionButton';
 import AdminBadge from './AdminBadge';
 import AdminEmptyState from './AdminEmptyState';
@@ -27,6 +27,24 @@ export default function AdminContestAttemptDrawer({
   onSaveNote
 }) {
   const [note, setNote] = useState('');
+  const [violations, setViolations] = useState([]);
+  const [violationsLoading, setViolationsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!attempt?.contest?._id && !attempt?.contestId) return;
+    if (!attempt?.user?._id && !attempt?.studentId) return;
+    setViolationsLoading(true);
+    const contestId = attempt.contest?._id || attempt.contestId;
+    const studentId = attempt.user?._id || attempt.studentId;
+    
+    // Import httpClient inline since this is an admin component
+    import('../../services/httpClient').then(({ httpClient }) => {
+      httpClient.request(`/contests/${contestId}/proctor/violations?studentId=${studentId}&limit=50`)
+        .then(data => setViolations(data?.items || []))
+        .catch(() => setViolations([]))
+        .finally(() => setViolationsLoading(false));
+    });
+  }, [attempt]);
 
   return (
     <div className={`admin-drawer ${open ? 'admin-drawer--open' : ''}`}>
@@ -106,6 +124,61 @@ export default function AdminContestAttemptDrawer({
                 </div>
               ) : (
                 <AdminEmptyState compact title="No rule-based signals" description="This attempt does not currently match the Phase 7B anti-cheat rules." />
+              )}
+            </section>
+
+            <section className="admin-panel">
+              <div className="admin-panel__header">
+                <div>
+                  <h3>AI Proctor Violations</h3>
+                  <p className="admin-panel__subtext">Mobile phone detection snapshots captured by the in-browser YOLO AI model during the contest.</p>
+                </div>
+              </div>
+              {violationsLoading ? (
+                <div className="admin-empty-state"><p>Loading violations...</p></div>
+              ) : violations.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', padding: '0 16px 16px' }}>
+                  {violations.map((v) => (
+                    <div key={v._id} style={{
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      background: '#fff'
+                    }}>
+                      {v.snapshotUrl && v.snapshotUrl.startsWith('http') ? (
+                        <img
+                          src={v.snapshotUrl}
+                          alt="Violation snapshot"
+                          style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : v.snapshotUrl && v.snapshotUrl.startsWith('data:image') ? (
+                        <img
+                          src={v.snapshotUrl}
+                          alt="Violation snapshot"
+                          style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : (
+                        <div style={{ width: '100%', height: '120px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                          No preview
+                        </div>
+                      )}
+                      <div style={{ padding: '8px', fontSize: '11px', color: '#475569' }}>
+                        <div style={{ fontWeight: 600, color: '#ef4444', marginBottom: '2px' }}>
+                          {v.violationType?.replace(/_/g, ' ') || 'MOBILE PHONE'}
+                        </div>
+                        <div>Confidence: {v.confidence}%</div>
+                        <div>{v.timestamp ? new Intl.DateTimeFormat('en-US', { timeStyle: 'medium' }).format(new Date(v.timestamp)) : 'N/A'}</div>
+                        <div style={{ marginTop: '4px' }}>
+                          <AdminBadge tone={v.status === 'confirmed_cheating' ? 'danger' : v.status === 'dismissed_false_positive' ? 'success' : 'warning'}>
+                            {v.status?.replace(/_/g, ' ') || 'pending'}
+                          </AdminBadge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <AdminEmptyState compact title="No AI proctor violations" description="The YOLO model did not detect any mobile phones during this student's attempt." />
               )}
             </section>
 
