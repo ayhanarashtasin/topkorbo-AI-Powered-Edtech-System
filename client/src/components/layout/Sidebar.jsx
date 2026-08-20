@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX, HiLockClosed, HiSparkles, HiSupport } from 'react-icons/hi';
+import { HiHome, HiAcademicCap, HiBookOpen, HiUpload, HiClipboardList, HiCalendar, HiLibrary, HiChatAlt2, HiLightningBolt, HiClipboardCheck, HiVideoCamera, HiSearch, HiMenu, HiX, HiLockClosed, HiSparkles, HiSupport, HiShieldExclamation } from 'react-icons/hi';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import { usePlan } from '../../hooks/usePlan';
@@ -171,6 +171,12 @@ export default function Sidebar({ activeTab, user }) {
       label: language === 'en' ? 'IELTS' : 'আইইএলটিএস',
       icon: <HiClipboardList size={20} />
     });
+
+    menuItems.push({
+      id: 'cheating-verify',
+      label: language === 'en' ? 'Cheating Verify' : 'চিটিং যাচাই',
+      icon: <HiShieldExclamation size={20} />
+    });
   }
 
   menuItems.push({
@@ -197,6 +203,7 @@ export default function Sidebar({ activeTab, user }) {
     }
     else if (item.id === 'upload-question') navigate('/upload-question');
     else if (item.id === 'ielts-teacher') navigate('/ielts-teacher');
+    else if (item.id === 'cheating-verify') navigate('/cheating-verify');
     else if (item.id === 'make-contest-question') navigate('/make-contest-question');
     else if (item.id === 'study-routine') navigate('/study-routine');
     else if (item.id === 'mock-test') navigate('/mock-test');
@@ -233,7 +240,7 @@ export default function Sidebar({ activeTab, user }) {
     },
     {
       label: language === 'en' ? 'More' : 'আরও',
-      ids: ['teacher', 'pricing', 'upload-question', 'make-contest-question', 'ielts-teacher', 'support']
+      ids: ['teacher', 'pricing', 'upload-question', 'make-contest-question', 'ielts-teacher', 'cheating-verify', 'support']
     }
   ];
 

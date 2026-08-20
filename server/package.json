@@ -4,7 +4,7 @@
   "description": "TopKorbo Backend API",
   "main": "server.js",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "node --watch server.js",
     "start": "node server.js",
     "bootstrap:admin": "node scripts/bootstrapAdminCli.js",
     "seed:admin": "node scripts/seedAdmin.js",

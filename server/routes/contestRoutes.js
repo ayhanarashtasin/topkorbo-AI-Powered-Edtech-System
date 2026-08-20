@@ -30,12 +30,28 @@ router.get('/leaderboard', auth, contestController.getGlobalLeaderboard);
 router.post('/:id/proctor/violation', auth, proctorController.logViolation);
 
 // @desc    Get proctor violations for a contest
-// @route   GET /api/contests/:id/proctor/violations  
+// @route   GET /api/contests/:id/proctor/violations
 router.get('/:id/proctor/violations', auth, proctorController.getViolations);
+
+// @desc    Get proctor violations across the teacher's own contests
+// @route   GET /api/contests/proctor/violations/mine
+router.get('/proctor/violations/mine', auth, proctorController.getMyContestViolations);
 
 // @desc    Review a proctor violation (admin/teacher)
 // @route   PATCH /api/contests/proctor/violations/:violationId/review
 router.patch('/proctor/violations/:violationId/review', auth, proctorController.reviewViolation);
+
+// @desc    Batch review all proctor violations for a student in a contest (admin/teacher)
+// @route   PATCH /api/contests/:id/proctor/students/:studentId/review
+router.patch('/:id/proctor/students/:studentId/review', auth, proctorController.reviewStudentContestViolations);
+
+// @desc    Delete all proctor violations for a student in a contest (admin/teacher)
+// @route   DELETE /api/contests/:id/proctor/students/:studentId
+router.delete('/:id/proctor/students/:studentId', auth, proctorController.deleteStudentContestViolations);
+
+// @desc    Delete a single proctor violation (admin/teacher)
+// @route   DELETE /api/contests/proctor/violations/:violationId
+router.delete('/proctor/violations/:violationId', auth, proctorController.deleteViolation);
 
 // @desc    Delete a contest owned by current teacher
 // @route   DELETE /api/contests/:id

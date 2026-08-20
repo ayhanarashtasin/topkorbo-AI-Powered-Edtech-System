@@ -59,6 +59,7 @@ const IeltsWritingUpload = lazyWithRetry(() => import('./pages/IeltsWritingUploa
 const IeltsSpeakingUpload = lazyWithRetry(() => import('./pages/IeltsSpeakingUpload'));
 const IeltsListening = lazyWithRetry(() => import('./pages/IeltsListening'));
 const IeltsReading = lazyWithRetry(() => import('./pages/IeltsReading'));
+const CheatingVerify = lazyWithRetry(() => import('./pages/CheatingVerify'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
 const SupportTicketDetails = lazyWithRetry(() => import('./pages/SupportTicketDetails'));
 const IeltsWriting = lazyWithRetry(() => import('./pages/IeltsWriting'));
@@ -142,6 +143,7 @@ function AppContent() {
           <Route path="/make-contest-question/next-two" element={<MakeContestQuestionNextTwo />} />
           <Route path="/make-contest-question/choose-qbank" element={<MakeContestQuestionChooseQBank />} />
           <Route path="/make-contest-question/confirm" element={<MakeContestQuestionConfirm />} />
+          <Route path="/cheating-verify" element={<CheatingVerify />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/mentor-pricing" element={<MentorPricing />} />
           <Route path="/payment-status" element={<PaymentStatus />} />
