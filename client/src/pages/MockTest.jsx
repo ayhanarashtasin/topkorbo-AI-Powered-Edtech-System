@@ -1,7 +1,29 @@
 import { useState, useEffect, Fragment } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiCheckCircle, HiArrowRight, HiArrowLeft, HiCheck, HiClock, HiMinusCircle, HiAcademicCap, HiBookOpen, HiBeaker, HiCollection, HiPencil, HiDocumentText, HiLightningBolt, HiChevronDown, HiChevronUp, HiX } from 'react-icons/hi';
+import {
+  HiCheckCircle,
+  HiArrowRight,
+  HiArrowLeft,
+  HiCheck,
+  HiClock,
+  HiMinusCircle,
+  HiAcademicCap,
+  HiBookOpen,
+  HiBeaker,
+  HiCollection,
+  HiPencil,
+  HiDocumentText,
+  HiLightningBolt,
+  HiChevronDown,
+  HiChevronUp,
+  HiX,
+  HiGlobeAlt,
+  HiDesktopComputer,
+  HiSparkles,
+  HiOfficeBuilding,
+  HiInformationCircle
+} from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import { notifyPaywall } from '../utils/paywall';
@@ -15,13 +37,13 @@ import './MockTest.css';
 const MOCK_SUBJECTS = [
   { id: 'bangla', labelEn: 'Bangla', labelBn: 'বাংলা', letter: 'অ', color: '#C08552', bg: 'rgba(192, 133, 82, 0.08)', prefixType: 'letter' },
   { id: 'english', labelEn: 'English', labelBn: 'English', letter: 'Aa', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)', prefixType: 'letter' },
-  { id: 'gk', labelEn: 'GK', labelBn: 'GK', icon: '🧠', color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)', prefixType: 'icon' },
-  { id: 'ict', labelEn: 'ICT', labelBn: 'ICT', icon: '💻', color: '#EC4899', bg: 'rgba(236, 72, 153, 0.08)', prefixType: 'icon' },
-  { id: 'physics', labelEn: 'Physics', labelBn: 'Physics', icon: '🧲', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)', prefixType: 'icon' },
-  { id: 'chemistry', labelEn: 'Chemistry', labelBn: 'Chemistry', icon: '🧪', color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.08)', prefixType: 'icon' },
+  { id: 'gk', labelEn: 'GK', labelBn: 'GK', icon: HiGlobeAlt, color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)', prefixType: 'icon' },
+  { id: 'ict', labelEn: 'ICT', labelBn: 'ICT', icon: HiDesktopComputer, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.08)', prefixType: 'icon' },
+  { id: 'physics', labelEn: 'Physics', labelBn: 'Physics', icon: HiLightningBolt, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)', prefixType: 'icon' },
+  { id: 'chemistry', labelEn: 'Chemistry', labelBn: 'Chemistry', icon: HiBeaker, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.08)', prefixType: 'icon' },
   { id: 'highermath', labelEn: 'Higher Math', labelBn: 'Higher Math', letter: 'π', color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.08)', prefixType: 'letter' },
-  { id: 'biology', labelEn: 'Biology', labelBn: 'Biology', icon: '🧬', color: '#14B8A6', bg: 'rgba(20, 184, 166, 0.08)', prefixType: 'icon' },
-  { id: 'iba', labelEn: 'IBA', labelBn: 'IBA', icon: '🏢', color: '#6B7280', bg: 'rgba(107, 114, 128, 0.08)', prefixType: 'icon' },
+  { id: 'biology', labelEn: 'Biology', labelBn: 'Biology', icon: HiSparkles, color: '#14B8A6', bg: 'rgba(20, 184, 166, 0.08)', prefixType: 'icon' },
+  { id: 'iba', labelEn: 'IBA', labelBn: 'IBA', icon: HiOfficeBuilding, color: '#6B7280', bg: 'rgba(107, 114, 128, 0.08)', prefixType: 'icon' },
 ];
 
 const ENGINEERING_UNIVERSITIES = [
@@ -771,7 +793,13 @@ export default function MockTest() {
                           {subject.prefixType === 'letter' ? (
                             <span className="mock-prefix-letter">{subject.letter}</span>
                           ) : (
-                            <span className="mock-prefix-icon">{subject.icon}</span>
+                            <span className="mock-prefix-icon">
+                              {typeof subject.icon === 'function' ? (
+                                <subject.icon size={20} />
+                              ) : (
+                                subject.icon
+                              )}
+                            </span>
                           )}
                         </div>
                         <span className="mock-card-label">
@@ -852,7 +880,9 @@ export default function MockTest() {
                             className="mock-card-prefix"
                             style={{ backgroundColor: subject.bg, color: subject.color }}
                           >
-                            {subject.prefixType === 'letter' ? subject.letter : subject.icon}
+                            {subject.prefixType === 'letter'
+                              ? subject.letter
+                              : (typeof subject.icon === 'function' ? <subject.icon size={20} /> : subject.icon)}
                           </div>
                           <span className="mock-config-subject-title">
                             {language === 'en' ? subject.labelEn : subject.labelBn}
@@ -944,7 +974,7 @@ export default function MockTest() {
                         <div className="mock-paper-column">
                           {all2ndChapters.length === 0 ? (
                             <div className="mock-empty-paper-notice animate-fade-in">
-                              <span style={{ fontSize: '1.25rem', marginBottom: '8px' }}>ℹ️</span>
+                              <HiInformationCircle size={22} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
                               <span>
                                 {language === 'en'
                                   ? 'This subject does not have a 2nd paper syllabus.'

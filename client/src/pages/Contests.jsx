@@ -10,7 +10,10 @@ import {
   HiCollection,
   HiArrowRight,
   HiCheckCircle,
-  HiBan
+  HiBan,
+  HiDocumentText,
+  HiExclamationCircle,
+  HiSparkles
 } from 'react-icons/hi';
 import { HiTrophy } from 'react-icons/hi2';
 import Sidebar from '../components/layout/Sidebar';
@@ -274,7 +277,33 @@ export default function Contests() {
     ? (language === 'en' ? 'Points' : 'পয়েন্ট')
     : (language === 'en' ? 'Rating' : 'রেটিং');
   const lbMetricValue = (row) => (lbBy === 'points' ? row.contestPoints : `${row.rating} (${row.rankTitle})`);
-  const lbRankMedal = (rank) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`);
+  const renderRankBadge = (rank) => {
+    if (rank === 1) {
+      return (
+        <span className="contest-rank-medal gold" title="1st Place">
+          <HiTrophy size={13} style={{ color: '#B45309' }} />
+          <span>1st</span>
+        </span>
+      );
+    }
+    if (rank === 2) {
+      return (
+        <span className="contest-rank-medal silver" title="2nd Place">
+          <HiTrophy size={13} style={{ color: '#4B5563' }} />
+          <span>2nd</span>
+        </span>
+      );
+    }
+    if (rank === 3) {
+      return (
+        <span className="contest-rank-medal bronze" title="3rd Place">
+          <HiTrophy size={13} style={{ color: '#9A3412' }} />
+          <span>3rd</span>
+        </span>
+      );
+    }
+    return <span className="contest-rank-num">#{rank}</span>;
+  };
 
   // ─── Time helpers ──────────────────────────────────────────────────────────
 
@@ -682,7 +711,9 @@ export default function Contests() {
     if (contestList.length === 0) {
       return (
         <div className="contests-empty-state">
-          <div className="empty-icon-wrap">📅</div>
+          <div className="empty-icon-wrap">
+            <HiCalendar size={36} />
+          </div>
           <h3>{language === 'en' ? 'No Contests Found' : 'কোনো কনটেস্ট পাওয়া যায়নি'}</h3>
           <p>{emptyMsg}</p>
         </div>
@@ -916,7 +947,9 @@ export default function Contests() {
                 background: 'rgba(140, 90, 60, 0.08)', border: '1px solid rgba(140, 90, 60, 0.25)', fontWeight: 700
               }}
             >
-              <span>{language === 'en' ? 'Your rank' : 'আপনার র‍্যাংক'}: {lbRankMedal(lbMe.rank)}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                {language === 'en' ? 'Your rank' : 'আপনার র‍্যাংক'}: {renderRankBadge(lbMe.rank)}
+              </span>
               <span>{lbMetricLabel}: {lbBy === 'points' ? lbMe.contestPoints : `${lbMe.rating} (${lbMe.rankTitle})`}</span>
             </div>
           )}
@@ -946,7 +979,7 @@ export default function Contests() {
                       const isMe = lbMe && row._id && String(row._id) === String(lbMe._id);
                       return (
                         <tr key={row._id || row.rank} style={{ background: isMe ? 'rgba(140, 90, 60, 0.08)' : 'transparent' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: 700 }}>{lbRankMedal(row.rank)}</td>
+                          <td style={{ padding: '10px 14px', fontWeight: 700 }}>{renderRankBadge(row.rank)}</td>
                           <td style={{ padding: '10px 14px' }}>
                             {row.name || row.username || (language === 'en' ? 'Student' : 'শিক্ষার্থী')}
                           </td>
@@ -1012,7 +1045,9 @@ export default function Contests() {
               &times;
             </button>
             <div className="contest-modal-header">
-              <span className="contest-modal-header-icon">🏆</span>
+              <span className="contest-modal-header-icon" style={{ display: 'flex', alignItems: 'center' }}>
+                <HiTrophy size={24} style={{ color: '#d97706' }} />
+              </span>
               <h2>{language === 'en' ? 'Contest Results' : 'কনটেস্টের ফলাফল'}</h2>
             </div>
 
@@ -1029,7 +1064,19 @@ export default function Contests() {
                   boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)'
                 }}
               >
-                <div style={{ fontSize: '2.2rem', marginBottom: '8px' }}>⚠️</div>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 10px'
+                }}>
+                  <HiExclamationCircle size={28} />
+                </div>
                 <h3 style={{ margin: '0 0 8px 0', fontWeight: '800', fontSize: '1.2rem', color: '#991b1b' }}>
                   {language === 'en' ? 'Disqualified' : 'অযোগ্য ঘোষিত'}
                 </h3>
@@ -1088,7 +1135,9 @@ export default function Contests() {
 
             <div className="contest-leaderboard-section">
               <h3>
-                <span className="leaderboard-icon">👑</span>
+                <span className="leaderboard-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <HiSparkles size={18} style={{ color: '#d97706' }} />
+                </span>
                 {language === 'en' ? 'Leaderboard (Top 3)' : 'লিডারবোর্ড (শীর্ষ ৩)'}
               </h3>
               <div className="leaderboard-ranks">
@@ -1118,7 +1167,9 @@ export default function Contests() {
               &times;
             </button>
             <div className="contest-modal-header">
-              <span className="contest-modal-header-icon">📝</span>
+              <span className="contest-modal-header-icon" style={{ display: 'flex', alignItems: 'center' }}>
+                <HiDocumentText size={24} style={{ color: 'var(--sky-blue)' }} />
+              </span>
               <h2>{language === 'en' ? 'Contest Registration' : 'কনটেস্ট নিবন্ধন'}</h2>
             </div>
 

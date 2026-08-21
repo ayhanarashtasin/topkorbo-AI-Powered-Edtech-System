@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiCheckCircle, HiArrowLeft, HiPlusCircle } from 'react-icons/hi';
+import { HiCheckCircle, HiArrowLeft, HiPlusCircle, HiDocumentText } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import './MakeContestQuestion.css'; // Reuse form styles
 
@@ -46,7 +46,20 @@ export default function MakeContestQuestionNext() {
         {/* ── Info Card ── */}
         <div className="cc-form">
           <section className="cc-section" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>📝</div>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '16px',
+              background: 'rgba(192, 133, 82, 0.1)',
+              color: '#C08552',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              border: '1.2px solid rgba(192, 133, 82, 0.2)'
+            }}>
+              <HiDocumentText size={32} />
+            </div>
             
             <h2 className="cc-section__title" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>
               {language === 'en' ? 'Contest Details Saved!' : 'কনটেস্টের তথ্য সংরক্ষিত!'}

@@ -1479,8 +1479,9 @@ export default function MakeContestQuestionNextTwo() {
                   <HiArrowLeft size={16} />
                   {language === 'en' ? 'Back' : 'ফিরে যান'}
                 </button>
-                <h3 className="cc-section__title" style={{ margin: 0 }}>
-                  ✏️ {language === 'en' ? 'Upload New Question' : 'নতুন প্রশ্ন আপলোড করুন'}
+                <h3 className="cc-section__title" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <HiPencilAlt size={20} style={{ color: '#C08552' }} />
+                  <span>{language === 'en' ? 'Upload New Question' : 'নতুন প্রশ্ন আপলোড করুন'}</span>
                 </h3>
               </div>
 

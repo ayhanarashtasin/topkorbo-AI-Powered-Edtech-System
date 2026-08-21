@@ -483,8 +483,16 @@
 }
 
 .empty-icon-wrap {
-  font-size: 3rem;
-  margin-bottom: 16px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(192, 133, 82, 0.1);
+  color: #C08552;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  border: 1.2px solid rgba(192, 133, 82, 0.2);
 }
 
 .contests-empty-state h3 {
@@ -906,6 +914,43 @@
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+/* Rank Medals for Global Leaderboard */
+.contest-rank-medal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.contest-rank-medal.gold {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  color: #B45309;
+  border: 1px solid #F59E0B;
+}
+
+.contest-rank-medal.silver {
+  background: linear-gradient(135deg, #F3F4F6, #E5E7EB);
+  color: #4B5563;
+  border: 1px solid #9CA3AF;
+}
+
+.contest-rank-medal.bronze {
+  background: linear-gradient(135deg, #FFEDD5, #FED7AA);
+  color: #9A3412;
+  border: 1px solid #EA580C;
+}
+
+.contest-rank-num {
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
 /* Animations */

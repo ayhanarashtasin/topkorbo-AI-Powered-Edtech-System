@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useLanguage';
-import { HiCheckCircle, HiArrowLeft, HiCalendar, HiClock, HiAcademicCap, HiBookOpen, HiPencilAlt, HiTag } from 'react-icons/hi';
+import { HiCheckCircle, HiArrowLeft, HiCalendar, HiClock, HiAcademicCap, HiBookOpen, HiPencilAlt, HiTag, HiDocumentText } from 'react-icons/hi';
 import Sidebar from '../components/layout/Sidebar';
 import toast from 'react-hot-toast';
 import './MakeContestQuestion.css';
@@ -172,7 +172,7 @@ export default function MakeContestQuestionConfirm() {
               {contestData && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🏷️</span>
+                    <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiTag size={20} style={{ color: '#C08552' }} /></span>
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {language === 'en' ? 'Contest Name' : 'কনটেস্টের নাম'}
@@ -184,7 +184,7 @@ export default function MakeContestQuestionConfirm() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}><HiCalendar size={20} style={{ color: '#C08552' }} /></span>
+                    <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiCalendar size={20} style={{ color: '#C08552' }} /></span>
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {language === 'en' ? 'Date' : 'তারিখ'}
@@ -196,7 +196,7 @@ export default function MakeContestQuestionConfirm() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}><HiClock size={20} style={{ color: '#C08552' }} /></span>
+                    <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiClock size={20} style={{ color: '#C08552' }} /></span>
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {language === 'en' ? 'Duration' : 'সময়কাল'}
@@ -208,7 +208,7 @@ export default function MakeContestQuestionConfirm() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>⏰</span>
+                    <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiClock size={20} style={{ color: '#C08552' }} /></span>
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {language === 'en' ? 'Start Time' : 'শুরুর সময়'}
@@ -220,7 +220,7 @@ export default function MakeContestQuestionConfirm() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}><HiAcademicCap size={20} style={{ color: '#C08552' }} /></span>
+                    <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiAcademicCap size={20} style={{ color: '#C08552' }} /></span>
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {language === 'en' ? 'Standard Level' : 'স্ট্যান্ডার্ড লেভেল'}
@@ -233,7 +233,7 @@ export default function MakeContestQuestionConfirm() {
 
                   {contestData.subjects && contestData.subjects.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '1.2rem' }}>📚</span>
+                      <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiBookOpen size={20} style={{ color: '#C08552' }} /></span>
                       <div>
                         <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                           {language === 'en' ? 'Subjects' : 'বিষয়সমূহ'}
@@ -250,7 +250,7 @@ export default function MakeContestQuestionConfirm() {
                   )}
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem' }}>📝</span>
+                    <span style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center' }}><HiDocumentText size={20} style={{ color: '#C08552' }} /></span>
                     <div>
                       <strong style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {language === 'en' ? 'Question Format' : 'প্রশ্নের ফরম্যাট'}

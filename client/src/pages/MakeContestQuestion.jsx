@@ -623,7 +623,20 @@ export default function MakeContestQuestion() {
               </div>
             ) : myContests.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 24px', background: 'var(--white)', border: '1.2px solid rgba(192, 133, 82, 0.15)', borderRadius: '16px', marginBottom: '2rem' }}>
-                <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>📅</span>
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '14px',
+                  background: 'rgba(192, 133, 82, 0.1)',
+                  color: '#C08552',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1.25rem',
+                  border: '1.2px solid rgba(192, 133, 82, 0.2)'
+                }}>
+                  <HiCalendar size={28} />
+                </div>
                 <h3 style={{ fontWeight: '800', fontSize: '1.2rem', margin: '0 0 8px 0' }}>
                   {language === 'en' ? 'No Contests Found' : 'কোনো কনটেস্ট পাওয়া যায়নি'}
                 </h3>
