@@ -32,6 +32,8 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
   const inFlightRef = useRef(false);
   const consecutiveDetectionsRef = useRef(0);
   const lastViolationTimeRef = useRef(0);
+  // Reused input buffer avoids allocating ~1.2M floats per frame (less GC jank).
+  const inputBufferRef = useRef(new Float32Array(3 * MODEL_INPUT_SIZE * MODEL_INPUT_SIZE));
 
   const [status, setStatus] = useState('idle'); // idle | requesting_camera | camera_ready | active | camera_only | error
   const [phoneDetected, setPhoneDetected] = useState(false);
@@ -116,6 +118,19 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
           graphOptimizationLevel: 'all'
         });
 
+        // Warmup: the first inference lazily compiles GPU shaders / WASM kernels
+        // (can take 1-2s). Running one throwaway pass now — before the detection
+        // loop — means the FIRST real phone that appears is detected at full speed
+        // instead of being missed during the cold-start stall.
+        try {
+          const inputName = sessionRef.current.inputNames?.[0] || 'images';
+          const warmData = new Float32Array(3 * MODEL_INPUT_SIZE * MODEL_INPUT_SIZE);
+          const warmTensor = new ort.Tensor('float32', warmData, [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
+          await sessionRef.current.run({ [inputName]: warmTensor });
+        } catch (warmErr) {
+          console.warn('[Proctor] Warmup inference skipped:', warmErr.message);
+        }
+
         setStatus('active');
 
         // On GPU we poll faster for real-time response; on CPU fallback we poll
@@ -186,10 +201,26 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
       canvas.width = MODEL_INPUT_SIZE;
       canvas.height = MODEL_INPUT_SIZE;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(video, 0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+
+      // Letterbox: preserve the camera's aspect ratio instead of stretching it
+      // into a square. YOLOv8 is trained on aspect-preserved + padded frames, so
+      // stretching (old behaviour) distorted phones and tanked confidence. We
+      // scale the frame to fit 640x640 and pad the remainder with neutral gray
+      // (114) — the exact letterbox the model expects.
+      const vw = video.videoWidth || MODEL_INPUT_SIZE;
+      const vh = video.videoHeight || MODEL_INPUT_SIZE;
+      const scale = Math.min(MODEL_INPUT_SIZE / vw, MODEL_INPUT_SIZE / vh);
+      const drawW = vw * scale;
+      const drawH = vh * scale;
+      const padX = (MODEL_INPUT_SIZE - drawW) / 2;
+      const padY = (MODEL_INPUT_SIZE - drawH) / 2;
+
+      ctx.fillStyle = 'rgb(114,114,114)';
+      ctx.fillRect(0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+      ctx.drawImage(video, padX, padY, drawW, drawH);
 
       const imageData = ctx.getImageData(0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
-      const inputTensor = preprocessImage(ort, imageData.data, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+      const inputTensor = preprocessImage(ort, imageData.data, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, inputBufferRef.current);
 
       const feeds = { images: inputTensor };
       const results = await session.run(feeds);
@@ -198,10 +229,24 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
 
       if (!output || !output.data) return;
 
-      const detections = postprocessYOLO(output.data, output.dims);
-      const phoneDetection = detections.find(
-        d => d.classId === CELL_PHONE_CLASS_ID && d.confidence >= CONFIDENCE_THRESHOLD
-      );
+      // Only scan the cell-phone class (67) instead of all 80 COCO classes.
+      // ~80x less main-thread work per frame => faster cycles, less UI jank.
+      const phoneModel = findBestPhone(output.data, output.dims);
+      const phoneDetection = phoneModel && phoneModel.confidence >= CONFIDENCE_THRESHOLD
+        ? phoneModel
+        : null;
+
+      // Map the box from letterboxed model space back to real video pixels so the
+      // snapshot draws the red box in the right place.
+      if (phoneDetection) {
+        const [mx, my, mw, mh] = phoneDetection.bbox;
+        phoneDetection.videoBbox = [
+          (mx - padX) / scale,
+          (my - padY) / scale,
+          mw / scale,
+          mh / scale
+        ];
+      }
 
       if (phoneDetection) {
         consecutiveDetectionsRef.current += 1;
@@ -239,21 +284,21 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
     const captureCtx = captureCanvas.getContext('2d');
     captureCtx.drawImage(video, 0, 0);
 
-    // Draw red bounding box on the snapshot
-    if (detection.bbox) {
-      const [bx, by, bw, bh] = detection.bbox;
-      const scaleX = captureCanvas.width / MODEL_INPUT_SIZE;
-      const scaleY = captureCanvas.height / MODEL_INPUT_SIZE;
+    // Draw red bounding box on the snapshot. videoBbox is already in the
+    // full-resolution video coordinate space (mapped out of the letterbox), so
+    // no extra scaling is needed here.
+    if (detection.videoBbox) {
+      const [bx, by, bw, bh] = detection.videoBbox;
       captureCtx.strokeStyle = '#ef4444';
       captureCtx.lineWidth = 3;
-      captureCtx.strokeRect(bx * scaleX, by * scaleY, bw * scaleX, bh * scaleY);
+      captureCtx.strokeRect(bx, by, bw, bh);
       // Label
       captureCtx.fillStyle = '#ef4444';
       captureCtx.font = 'bold 14px sans-serif';
       captureCtx.fillText(
         `Mobile Phone ${Math.round(detection.confidence * 100)}%`,
-        bx * scaleX,
-        Math.max(by * scaleY - 6, 14)
+        bx,
+        Math.max(by - 6, 14)
       );
     }
 
@@ -304,49 +349,48 @@ export default function useYoloProctor({ contestId, enabled = false, onViolation
 }
 
 // ── Tensor Preprocessing ──────────────────────────────────────────────────
-// Converts RGBA Uint8ClampedArray to Float32 CHW Tensor [1, 3, H, W]
-function preprocessImage(ort, data, width, height) {
-  const float32Data = new Float32Array(3 * width * height);
-  for (let i = 0; i < width * height; i++) {
-    float32Data[i] = data[i * 4] / 255.0;                          // R channel
-    float32Data[width * height + i] = data[i * 4 + 1] / 255.0;     // G channel
-    float32Data[2 * width * height + i] = data[i * 4 + 2] / 255.0; // B channel
+// Converts RGBA Uint8ClampedArray to Float32 CHW Tensor [1, 3, H, W].
+// Writes into a caller-provided buffer to avoid per-frame allocations.
+function preprocessImage(ort, data, width, height, buffer) {
+  const float32Data = buffer || new Float32Array(3 * width * height);
+  const plane = width * height;
+  for (let i = 0; i < plane; i++) {
+    float32Data[i] = data[i * 4] / 255.0;             // R channel
+    float32Data[plane + i] = data[i * 4 + 1] / 255.0; // G channel
+    float32Data[2 * plane + i] = data[i * 4 + 2] / 255.0; // B channel
   }
   return new ort.Tensor('float32', float32Data, [1, 3, height, width]);
 }
 
 // ── YOLO Output Postprocessing ────────────────────────────────────────────
-// YOLOv8 output shape: [1, 84, N] where 84 = 4 bbox coords + 80 class scores
-function postprocessYOLO(output, dims) {
-  const detections = [];
-  const numClasses = 80;
-  // dims is [1, 84, N] - for 640x640 input, N is 8400
+// YOLOv8 output shape: [1, 84, N] where 84 = 4 bbox coords + 80 class scores.
+// We only care about phones, so we scan a single class row (67) instead of the
+// full 80-class argmax — ~80x fewer reads per frame — and return just the
+// highest-confidence phone box (no NMS needed for a single best pick).
+function findBestPhone(output, dims) {
   const numAnchors = dims && dims[2] ? dims[2] : 8400;
+  const scoreRow = (4 + CELL_PHONE_CLASS_ID) * numAnchors; // class 67 score offset
 
+  let bestScore = -Infinity;
+  let bestIdx = -1;
   for (let i = 0; i < numAnchors; i++) {
-    let maxScore = -Infinity;
-    let classId = -1;
-
-    for (let c = 0; c < numClasses; c++) {
-      const score = output[(4 + c) * numAnchors + i];
-      if (score > maxScore) {
-        maxScore = score;
-        classId = c;
-      }
-    }
-
-    if (maxScore >= 0.35) { // Pre-filter threshold
-      const cx = output[0 * numAnchors + i];
-      const cy = output[1 * numAnchors + i];
-      const w = output[2 * numAnchors + i];
-      const h = output[3 * numAnchors + i];
-
-      detections.push({
-        classId,
-        confidence: maxScore,
-        bbox: [cx - w / 2, cy - h / 2, w, h]
-      });
+    const score = output[scoreRow + i];
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
     }
   }
-  return detections;
+
+  if (bestIdx < 0 || bestScore < 0.35) return null; // Pre-filter threshold
+
+  const cx = output[bestIdx];
+  const cy = output[numAnchors + bestIdx];
+  const w = output[2 * numAnchors + bestIdx];
+  const h = output[3 * numAnchors + bestIdx];
+
+  return {
+    classId: CELL_PHONE_CLASS_ID,
+    confidence: bestScore,
+    bbox: [cx - w / 2, cy - h / 2, w, h]
+  };
 }
